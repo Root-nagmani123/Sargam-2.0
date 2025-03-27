@@ -7,20 +7,21 @@
 </head>
 
 <body>
-    <?php //@include('admin.layouts.sidebar') ?>
-
-    <div class="container-fluid">
-        <div class="main-content d-flex flex-column">
+    <!-- Preloader -->
+    <div class="preloader">
+        <img src="{{asset('admin_assets/images/logos/favicon.ico')}}" alt="loader" class="lds-ripple img-fluid">
+    </div>
+    <div id="main-wrapper">
+        @include('admin.layouts.sidebar')
+        <div class="page-wrapper">
             @include('admin.layouts.header')
-
-            <div class="content">
+            @include('admin.layouts.aside')
+            <div class="body-wrapper">
                 @yield('content')
             </div>
-
-            @include('admin.layouts.footer')
         </div>
     </div>
-
+    @include('admin.layouts.footer')
 </body>
 
 </html>

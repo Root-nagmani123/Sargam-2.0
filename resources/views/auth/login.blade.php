@@ -1,47 +1,146 @@
-@extends('layouts.app')
+<!DOCTYPE html>
+<html lang="en" dir="ltr" data-bs-theme="light" data-color-theme="Blue_Theme" data-layout="vertical">
 
-@section('content')
-<div class="row m-0">
-    <div class="col-12 p-0">
-        <div class="login-card login-dark"
-            style="background-image:url({{asset('admin_assets/images/login/login_bg.jpg')}}); background-size:cover; background-position:center; background-repeat:no-repeat; height:98vh; overflow-y:hidden;">
-            <div>
-                <!-- <div><a class="logo" href="index.html"><img class="img-fluid" src="{{asset('admin_assets/images/logo/logo.png')}}"
-                            alt="looginpage" width="300"></a></div> -->
-                <div><a class="logo" href="{{ route('login') }}"><img class="img-fluid" src="{{asset('admin_assets/images/logo/logo_sargam.png')}}"
-                            alt="looginpage" width="300"></a></div>
-                <div class="login-main">
-                    <form class="theme-form" method="POST" action="{{ route('post_login') }}">
-                        @csrf
-                        <h4>Sign in to account </h4>
-                        <p>Enter your email & password to login</p>
-                        <div class="form-group">
-                            <label class="col-form-label">Email Address</label>
-                            <input class="form-control" type="email" required="" name="email" value="{{ old('email') }}" placeholder="Test@gmail.com">
-                        </div>
+<head>
+  <!-- Required meta tags -->
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-                        <div class="form-group">
-                            <label class="col-form-label">Password </label>
-                            <div class="form-input position-relative">
-                                <input class="form-control" type="password" required="" placeholder="*********" name="password">
-                                <div class="show-hide"> <span class="show"></span></div>
+  <!-- Favicon icon-->
+  <link rel="shortcut icon" type="image/png" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
+
+  <!-- Core Css -->
+  <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
+
+  <title>Login - Sargam | Lal Bahadur Shastri National Academy of Administration</title>
+</head>
+
+<body>
+  <!-- Preloader -->
+  <div class="preloader">
+    <img src="{{asset('admin_assets/images/logos/favicon.ico')}}" alt="loader" class="lds-ripple img-fluid">
+  </div>
+  <div id="main-wrapper">
+    <div class="position-relative overflow-hidden auth-bg min-vh-100 w-100 d-flex align-items-center justify-content-center" style="background-image: url(admin_assets/images/backgrounds/login-bg.jpg);">
+      <div class="d-flex align-items-center justify-content-center w-100">
+        <div class="row justify-content-center w-100 my-5 my-xl-0">
+          <div class="col-md-9 d-flex flex-column justify-content-center">
+            <div class="card mb-0 bg-body auth-login m-auto w-100">
+              <div class="row gx-0">
+                <!-- ------------------------------------------------- -->
+                <!-- Part 1 -->
+                <!-- ------------------------------------------------- -->
+                <div class="col-xl-6 border-end">
+                  <div class="row justify-content-center py-4">
+                    <div class="col-lg-11">
+                      <div class="card-body">
+                        <a href="index.html" class="text-nowrap logo-img d-block mb-4 w-100">
+                          <img src="{{asset('admin_assets/images/logos/logo.svg')}}" class="dark-logo" alt="Logo-Dark">
+                        </a>
+                        <h2 class="lh-base mb-4">Let's get you signed in</h2>
+                        <form>
+                          <div class="mb-3">
+                            <label for="exampleInputEmail1" class="form-label">Email Address</label>
+                            <input type="email" class="form-control" id="exampleInputEmail1" placeholder="Enter your email" aria-describedby="emailHelp">
+                          </div>
+                          <div class="mb-4">
+                            <div class="d-flex align-items-center justify-content-between">
+                              <label for="exampleInputPassword1" class="form-label">Password</label>
+                              <a class="text-primary link-dark fs-2" href="authentication-forgot-password2.html">Forgot
+                                Password ?</a>
                             </div>
-                        </div>
-
-                        <div class="form-group mb-0">
-                            <div class="checkbox p-0">
-                                <input id="checkbox1" type="checkbox">
-                                <label class="text-muted" for="checkbox1">Remember password</label>
-                            </div><a class="link" href="forget-password.html">Forgot password?</a>
-                            <div class="text-end mt-3">
-                                <button class="btn btn-primary btn-block w-100" type="submit">Sign in</button>
+                            <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Enter your password">
+                          </div>
+                          <div class="d-flex align-items-center justify-content-between mb-4">
+                            <div class="form-check">
+                              <input class="form-check-input primary" type="checkbox" value="" id="flexCheckChecked" checked="">
+                              <label class="form-check-label text-dark" for="flexCheckChecked">
+                                Keep me logged in
+                              </label>
                             </div>
-                        </div>
-                    </form>
+                          </div>
+                          <a href="index.html" class="btn btn-dark w-100 py-8 mb-4 rounded-1">Sign In</a>
+                          <!-- <div class="d-flex align-items-center">
+                            <p class="fs-12 mb-0 fw-medium">Don’t have an account yet?</p>
+                            <a class="text-primary fw-bolder ms-2" href="authentication-register2.html">Sign Up Now</a>
+                          </div> -->
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
+                <!-- ------------------------------------------------- -->
+                <!-- Part 2 -->
+                <!-- ------------------------------------------------- -->
+                <div class="col-xl-6 d-none d-xl-block">
+                  <div class="row justify-content-center align-items-start h-100">
+                    <div class="col-lg-9">
+                      <div id="auth-login" class="carousel slide auth-carousel" data-bs-ride="carousel">
+                        <div class="carousel-indicators">
+                          <button type="button" data-bs-target="#auth-login" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                          <button type="button" data-bs-target="#auth-login" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                          <button type="button" data-bs-target="#auth-login" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                        </div>
+                        <div class="carousel-inner">
+                          <div class="carousel-item active">
+                            <div class="d-flex align-items-center justify-content-center w-100 h-100 flex-column gap-9 text-center">
+                              <img src="admin_assets/images/backgrounds/login-side.png" alt="login-side-img" width="300" class="img-fluid">
+                              <h4 class="mb-0">Feature Rich 3D Charts</h4>
+                              <p class="fs-12 mb-0">Donec justo tortor, malesuada vitae faucibus ac, tristique sit amet
+                                massa.
+                                Aliquam dignissim nec felis quis imperdiet.</p>
+                              <a href="javascript:void(0)" class="btn btn-primary rounded-1">Learn More</a>
+                            </div>
+                          </div>
+                          <div class="carousel-item">
+                            <div class="d-flex align-items-center justify-content-center w-100 h-100 flex-column gap-9 text-center">
+                              <img src="admin_assets/images/backgrounds/login-side.png" alt="login-side-img" width="300" class="img-fluid">
+                              <h4 class="mb-0">Feature Rich 2D Charts</h4>
+                              <p class="fs-12 mb-0">Donec justo tortor, malesuada vitae faucibus ac, tristique sit amet
+                                massa.
+                                Aliquam dignissim nec felis quis imperdiet.</p>
+                              <a href="javascript:void(0)" class="btn btn-primary rounded-1">Learn More</a>
+                            </div>
+                          </div>
+                          <div class="carousel-item">
+                            <div class="d-flex align-items-center justify-content-center w-100 h-100 flex-column gap-9 text-center">
+                              <img src="admin_assets/images/backgrounds/login-side.png" alt="login-side-img" width="300" class="img-fluid">
+                              <h4 class="mb-0">Feature Rich 1D Charts</h4>
+                              <p class="fs-12 mb-0">Donec justo tortor, malesuada vitae faucibus ac, tristique sit amet
+                                massa.
+                                Aliquam dignissim nec felis quis imperdiet.</p>
+                              <a href="javascript:void(0)" class="btn btn-primary rounded-1">Learn More</a>
+                            </div>
+                          </div>
+                        </div>
 
-@endsection
+                      </div>
+
+
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="dark-transparent sidebartoggler"></div>
+  <!-- Import Js Files -->
+  <script src="{{asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js')}}"></script>
+  <script src="{{asset('admin_assets/libs/simplebar/dist/simplebar.min.js')}}"></script>
+  <script src="{{asset('admin_assets/js/theme/app.init.js')}}"></script>
+  <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
+  <script src="{{asset('admin_assets/js/theme/app.min.js')}}"></script>
+
+  <!-- solar icons -->
+  <script src="{{asset('admin_assets/css/iconify-icon.min.js')}}"></script>
+</body>
+
+</html>

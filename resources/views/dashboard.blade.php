@@ -1,1 +1,10 @@
-<h1>Dashboard Page</h1>
+@extends('admin.layouts.master')
+
+@section('title', 'Member - Sargam | Lal Bahadur')
+
+@section('content')
+
+
+
+
+@endsection
