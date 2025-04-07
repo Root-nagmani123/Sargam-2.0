@@ -13,7 +13,6 @@
             <h4 class="card-title mb-0">Edit Role</h4>
             <h6 class="card-subtitle mb-3"></h6>
             <hr>
-            <div id="example-vertical" class="mt-5">
                 
                 <form method="POST" action="{{ route('admin.roles.update', $role->id) }}">
                     @csrf
@@ -51,8 +50,6 @@
                     </button>
                 </form>
                 
-                
-            </div>
         </div>
     </div>
     <!-- end Vertical Steps Example -->
