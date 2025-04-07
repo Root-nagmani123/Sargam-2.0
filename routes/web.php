@@ -1,9 +1,18 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Admin\{
+    RoleController,
+    PermissionController
+};
 
+Route::get('clear-cache', function() {
+    Artisan::call('cache:clear');
+    return redirect()->back()->with('success', 'Cache cleared successfully');
+});
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
@@ -13,6 +22,12 @@ Route::post('/login', [LoginController::class, 'authenticate'])->name('post_logi
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+        Route::resource('roles', RoleController::class);
+        Route::resource('permissions', PermissionController::class);
+    });
+
     // Dashboard
     Route::get('/dashboard', function() {
         return view('dashboard');
