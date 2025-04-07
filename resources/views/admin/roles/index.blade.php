@@ -46,6 +46,7 @@
                                         aria-label="Name: activate to sort column descending" style="width: 224.625px;">
                                         S.No.</th>
                                     <th>Role Name</th>
+                                    <th>Permission</th>
                                     <th>Action</th>
                                 </tr>
                                 <!-- end row -->
@@ -56,6 +57,11 @@
                                 <tr class="odd">
                                     <td>{{ $role->id }}</td>
                                     <td class="sorting_1">{{ $role->name }}</td>
+                                    <td>
+                                        @foreach($role->permissions as $permission)
+                                            <span class="badge bg-primary">{{ $permission->name }}</span>
+                                        @endforeach
+                                    </td>
                                     <td>
                                         <a href="{{ route('admin.roles.edit', $role->id) }}" class="btn btn-primary">Edit</a>
                                     </td>

@@ -57,31 +57,26 @@ class RoleController extends Controller
 
     public function update(Request $request, Role $role)
     {
-        $validated = $request->validate([
-            'name' => [
-                'required', 
-                'string', 
-                'max:255', 
-                Rule::unique('roles', 'name')->ignore($role->id)
-            ],
-            'permission' => ['required', 'array', 'min:1'],
-            'permission.*' => ['exists:permissions,id']
-        ]);
-
         try {
             $this->validate($request, [
-                'name' => 'required|unique:roles,name',
-                'permission' => 'required',
-        ]);
+                'name' => [
+                    'required', 
+                    'string', 
+                    'max:255', 
+                    Rule::unique('roles', 'name')->ignore($role->id)
+                ],
+                'permission' => ['required', 'array', 'min:1'],
+                'permission.*' => ['exists:permissions,id']
+            ]);
 
-        $permissionsID = array_map(
-            function($value) { return (int)$value; },
-            $request->input('permission')
-        );
+            $permissionsID = array_map(
+                function($value) { return (int)$value; },
+                $request->input('permission')
+            );
 
-        $role->update(['name' => $request->input('name')]);
+            $role->update(['name' => $request->input('name')]);
 
-        $role->syncPermissions($permissionsID);
+            $role->syncPermissions($permissionsID);
 
             return redirect()->route('admin.roles.index')->with('success','Role updated successfully');
         } catch (\Exception $e) {
