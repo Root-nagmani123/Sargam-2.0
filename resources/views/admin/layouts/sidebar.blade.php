@@ -137,7 +137,20 @@
                                                         <span class="hide-menu">Country/State</span>
                                                     </a>
                                                 </li>
-
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="./" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Course Curriculum</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="./" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Faculty Topic Mapping</span>
+                                                    </a>
+                                                </li>
                                                 <li>
                                                     <span class="sidebar-divider"></span>
                                                 </li>
