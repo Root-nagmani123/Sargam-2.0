@@ -76,9 +76,12 @@
                                         <a href="page-account-settings.html" class="p-2 dropdown-item h6 rounded-1">
                                             Account Settings
                                         </a>
-                                        <a href="authentication-login2.html" class="p-2 dropdown-item h6 rounded-1">
-                                            Sign Out
-                                        </a>
+                                        <form action="{{route('logout')}}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="p-2 dropdown-item h6 rounded-1">
+                                                Sign Out
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>
