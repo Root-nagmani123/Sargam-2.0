@@ -102,6 +102,41 @@
                                                         <span class="hide-menu">Faculty</span>
                                                     </a>
                                                 </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="./" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Programme</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="./" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Batch</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="./" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Stream</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="./" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Subject</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="./" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Country/State</span>
+                                                    </a>
+                                                </li>
 
                                                 <li>
                                                     <span class="sidebar-divider"></span>

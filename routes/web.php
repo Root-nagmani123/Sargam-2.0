@@ -37,3 +37,12 @@ Route::get('/faculty-edit', function(){
 Route::get('/faculty', function(){
     return view('admin.faculty.index');
 });
+Route::get('/programme', function(){
+    return view('admin.programme.index');
+});
+Route::get('/programme-create', function(){
+    return view('admin.programme.create');
+});
+Route::get('/programme-edit', function(){
+    return view('admin.programme.edit');
+});
