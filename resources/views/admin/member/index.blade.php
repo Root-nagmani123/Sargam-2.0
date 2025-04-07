@@ -12,7 +12,7 @@
                     <nav aria-label="breadcrumb" class="ms-auto">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="../main/index.html">
+                                <a class="text-muted text-decoration-none d-flex" href="{{ route('dashboard') }}">
                                     <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
                                 </a>
                             </li>
@@ -39,7 +39,7 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="#" class="btn btn-primary">+ Add Member</a>
+                                <a href="{{ route('admin.member.create') }}" class="btn btn-primary">+ Add Member</a>
                                 <a href="#" class="btn btn-success" data-bs-toggle="modal"
                                 data-bs-target="#vertical-center-scroll-modal">Bulk Upload</a>
 
