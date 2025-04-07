@@ -10,10 +10,10 @@
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
-            <h4 class="card-title mb-0">Add Permissions</h4>
+            <h4 class="card-title mb-0">Edit Permissions</h4>
             <h6 class="card-subtitle mb-3"></h6>
             <hr>
-            <div id="example-vertical" class="mt-5">
+            
                 
                 <form action="{{ route('admin.permissions.update', $permission->id) }}" method="POST">
                     @csrf
@@ -35,7 +35,7 @@
                     </button>
                 </form>
                 
-            </div>
+           
         </div>
     </div>
     <!-- end Vertical Steps Example -->

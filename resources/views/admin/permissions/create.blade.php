@@ -13,14 +13,14 @@
             <h4 class="card-title mb-0">Add Permissions</h4>
             <h6 class="card-subtitle mb-3"></h6>
             <hr>
-            <div id="example-vertical" class="mt-5">
+            
                 
                 <form action="{{ route('admin.permissions.store') }}" method="POST">
                     @csrf
                     <div class="row">
                         <div class="col-md-12">
                             <div class="mb-3">
-                                <label class="form-label" for="title">PermissionName :</label>
+                                <label class="form-label" for="title">Permission Name :</label>
                                 <input type="text" class="form-control" id="title" placeholder="Enter Permissions Name" name="name" value="{{ old('name') }}">
                             </div>
                         </div>   
@@ -34,7 +34,7 @@
                     </button>
                 </form>
                 
-            </div>
+            
         </div>
     </div>
     <!-- end Vertical Steps Example -->

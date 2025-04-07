@@ -14,7 +14,6 @@
             <h4 class="card-title mb-0">Add Role</h4>
             <h6 class="card-subtitle mb-3"></h6>
             <hr>
-            <div id="example-vertical" class="mt-5">
                 
                 <form action="{{ route('admin.roles.store') }}" method="POST">
                     @csrf
@@ -31,7 +30,7 @@
                         
                         <div class="col-md-12">
                             <div class="mb-3">
-                                <label class="form-label" for="caste">Permission :</label>
+                                <label class="form-label" for="caste">Permission :</label> <br/>
                                 @foreach($all_permissions as $value)
                                     <label><input type="checkbox" name="permission[{{$value->id}}]" value="{{$value->id}}" class="name">
                                     {{ $value->name }}</label>
@@ -50,7 +49,6 @@
                     </button>
                 </form>
                 
-            </div>
         </div>
     </div>
     <!-- end Vertical Steps Example -->
