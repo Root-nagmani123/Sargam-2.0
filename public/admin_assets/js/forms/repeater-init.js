@@ -108,3 +108,96 @@ function experience_fields() {
 function remove_experience_fields(rid) {
   $(".removeclass" + rid).remove();
 }
+
+
+// Batch repeater
+
+function remove_batch_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
+function batch_fields() {
+  room++;
+  var objTo = document.getElementById("batch_fields");
+  var divtest = document.createElement("div");
+  divtest.setAttribute("class", "mb-3 removeclass" + room);
+  var rdiv = "removeclass" + room;
+  divtest.innerHTML =
+    '<form class="row"><div class="col-sm-5"><div class="form-group"><label for="Schoolname" class="form-label">Batch Name :</label><input type="text" class="form-control" id="Schoolname" name="Schoolname" placeholder="Batch Name"></div></div><div class="col-sm-5"> <div class="form-group"> <label for="Schoolname" class="form-label">Abbreviation :</label><input type="text" class="form-control" id="Age" name="Age" placeholder="Abbreviation"> </div></div><div class="col-sm-2"> <div class="form-group"> <button class="btn btn-danger" type="button" onclick="remove_course_fields(' +
+    room +
+    ');"> <i class="material-icons menu-icon">remove</i> </button> </div></div></form>';
+
+  objTo.appendChild(divtest);
+}
+
+function remove_batch_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
+
+// Subject repeater
+
+function remove_subject_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
+function subject_fields() {
+  room++;
+  var objTo = document.getElementById("subject_fields");
+  var divtest = document.createElement("div");
+  divtest.setAttribute("class", "mb-3 removeclass" + room);
+  var rdiv = "removeclass" + room;
+  divtest.innerHTML =
+    '<form class="row"><div class="col-sm-5"><div class="form-group"><label for="Schoolname" class="form-label">Major Subject :</label><input type="text" class="form-control" id="Schoolname" name="Schoolname" placeholder="Major Subject"></div></div><div class="col-sm-5"> <div class="form-group"> <label for="Schoolname" class="form-label">Abbreviation :</label><input type="text" class="form-control" id="Age" name="Age" placeholder="Abbreviation"> </div></div><div class="col-sm-2"> <div class="form-group"> <button class="btn btn-danger" type="button" onclick="remove_course_fields(' +
+    room +
+    ');"> <i class="material-icons menu-icon">remove</i> </button> </div></div></form>';
+
+  objTo.appendChild(divtest);
+}
+
+function remove_subject_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
+
+// Stream repeater
+
+function remove_stream_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
+function stream_fields() {
+  room++;
+  var objTo = document.getElementById("stream_fields");
+  var divtest = document.createElement("div");
+  divtest.setAttribute("class", "mb-3 removeclass" + room);
+  var rdiv = "removeclass" + room;
+  divtest.innerHTML =
+    '<form class="row"><div class="col-sm-10"><div class="form-group"><label for="Schoolname" class="form-label">Stream :</label><input type="text" class="form-control" id="Schoolname" name="Schoolname" placeholder="Stream"></div></div><div class="col-sm-2"> <div class="form-group"> <button class="btn btn-danger" type="button" onclick="remove_course_fields(' +
+    room +
+    ');"> <i class="material-icons menu-icon">remove</i> </button> </div></div></form>';
+
+  objTo.appendChild(divtest);
+}
+
+function remove_stream_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
+
+// Country repeater
+
+function remove_country_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
+function country_fields() {
+  room++;
+  var objTo = document.getElementById("country_fields");
+  var divtest = document.createElement("div");
+  divtest.setAttribute("class", "mb-3 removeclass" + room);
+  var rdiv = "removeclass" + room;
+  divtest.innerHTML =
+    '<form class="row"><div class="col-sm-10"><div class="form-group"><label for="Schoolname" class="form-label">Country Name :</label><input type="text" class="form-control" id="Schoolname" name="Schoolname" placeholder="Country Name"></div></div><div class="col-sm-2"> <div class="form-group"> <button class="btn btn-danger" type="button" onclick="remove_course_fields(' +
+    room +
+    ');"> <i class="material-icons menu-icon">remove</i> </button> </div></div></form>';
+
+  objTo.appendChild(divtest);
+}
+
+function remove_country_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
