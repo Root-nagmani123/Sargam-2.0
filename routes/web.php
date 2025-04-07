@@ -2,47 +2,70 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\HomeController;
 
+// Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
+// Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('post_login');
+Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
-// Route::middleware(['auth', 'verified'])->group(function () {
+// Protected Routes
+Route::middleware(['auth'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', function() {
+        return view('dashboard');
+    })->name('dashboard');
     
-//     // Route::name('admin.')->group(function () { // prefix for route name
+    // Route::get('/home', [HomeController::class, 'index'])->name('home');
+    
+    // Member Routes
+    Route::prefix('member')->name('member.')->group(function () {
+        Route::get('/', function() {
+            return view('admin.member.index');
+        })->name('index');
         
-//     // });
-// });
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index']);
+        Route::get('/create', function() {
+            return view('admin.member.create');
+        })->name('create');
+        
+        Route::get('/edit', function() {
+            return view('admin.member.edit');
+        })->name('edit');
+    });
+    
+    // Faculty Routes
+    Route::prefix('faculty')->name('faculty.')->group(function () {
+        Route::get('/', function() {
+            return view('admin.faculty.index');
+        })->name('index');
+        
+        Route::get('/create', function() {
+            return view('admin.faculty.create');
+        })->name('create');
+        
+        Route::get('/edit', function() {
+            return view('admin.faculty.edit');
+        })->name('edit');
+    });
+    
+    // Programme Routes
+    Route::prefix('programme')->name('programme.')->group(function () {
+        Route::get('/', function() {
+            return view('admin.programme.index');
+        })->name('index');
+        
+        Route::get('/create', function() {
+            return view('admin.programme.create');
+        })->name('create');
+        
+        Route::get('/edit', function() {
+            return view('admin.programme.edit');
+        })->name('edit');
+    });
+});
 
-Route::get('/dashboard', function(){
-    return view('dashboard');
-});
-Route::get('/member-create', function(){
-    return view('admin.member.create');
-});
-Route::get('/member-edit', function(){
-    return view('admin.member.edit');
-});
-Route::get('/member', function(){
-    return view('admin.member.index');
-});
-Route::get('/faculty-create', function(){
-    return view('admin.faculty.create');
-});
-Route::get('/faculty-edit', function(){
-    return view('admin.faculty.edit');
-});
-Route::get('/faculty', function(){
-    return view('admin.faculty.index');
-});
-Route::get('/programme', function(){
-    return view('admin.programme.index');
-});
-Route::get('/programme-create', function(){
-    return view('admin.programme.create');
-});
-Route::get('/programme-edit', function(){
-    return view('admin.programme.edit');
-});
+
+
+
