@@ -39,7 +39,8 @@
                           <img src="{{asset('admin_assets/images/logos/logo.svg')}}" class="dark-logo" alt="Logo-Dark">
                         </a>
                         <h2 class="lh-base mb-4">Let's get you signed in</h2>
-                        <form>
+                        <form action="{{route('login')}}" method="POST">
+                          @csrf
                           <div class="mb-3">
                             <label for="exampleInputEmail1" class="form-label">Email Address</label>
                             <input type="email" class="form-control" id="exampleInputEmail1" placeholder="Enter your email" aria-describedby="emailHelp">
@@ -60,7 +61,8 @@
                               </label>
                             </div>
                           </div>
-                          <a href="index.html" class="btn btn-dark w-100 py-8 mb-4 rounded-1">Sign In</a>
+                          <button type="submit" class="btn btn-dark w-100 py-8 mb-4 rounded-1">Sign In</button>
+                          {{-- <a href="index.html" class="btn btn-dark w-100 py-8 mb-4 rounded-1">Sign In</a> --}}
                           <!-- <div class="d-flex align-items-center">
                             <p class="fs-12 mb-0 fw-medium">Don’t have an account yet?</p>
                             <a class="text-primary fw-bolder ms-2" href="authentication-register2.html">Sign Up Now</a>
