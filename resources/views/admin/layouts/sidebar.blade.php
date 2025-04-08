@@ -161,6 +161,27 @@
                                                 <li>
                                                     <span class="sidebar-divider"></span>
                                                 </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('admin.users.index') }}" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Users</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('admin.roles.index') }}" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Roles</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('admin.permissions.index') }}" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">Permissions</span>
+                                                    </a>
+                                                </li>
                                             </ul>
                                         </div>
                                     </div>
