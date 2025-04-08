@@ -6,7 +6,8 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\{
     RoleController,
-    PermissionController
+    PermissionController,
+    UserController
 };
 
 Route::get('clear-cache', function() {
@@ -26,6 +27,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('roles', RoleController::class);
         Route::resource('permissions', PermissionController::class);
+        Route::resource('users', UserController::class);
     });
 
     // Dashboard
@@ -86,7 +88,7 @@ Route::middleware(['auth'])->group(function () {
 
 Route::get('/dashboard', function(){
     return view('dashboard');
-});
+})->name('dashboard');
 Route::get('/member-create', function(){
     return view('admin.member.create');
 });

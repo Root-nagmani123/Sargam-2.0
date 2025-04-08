@@ -76,4 +76,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(ActionLog::class, 'action_by');
     }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class);
+    }
 }

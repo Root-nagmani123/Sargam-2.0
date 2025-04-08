@@ -19,11 +19,10 @@ class UserController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = [];
-        // dd($users);
-        return view('admin.users.index', compact('users'));
+        $users = User::latest()->paginate(5);
+        return view('admin.users.index',compact('users'));
     }
 
     /**

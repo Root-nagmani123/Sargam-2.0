@@ -33,7 +33,7 @@
                                 <label class="form-label" for="caste">Permission :</label> <br/>
                                 @foreach($all_permissions as $value)
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="{{$value->id}}" id="flexCheckDefault_{{$value->id}}">
+                                        <input name="permission[]" class="form-check-input" type="checkbox" value="{{$value->id}}" id="flexCheckDefault_{{$value->id}}">
                                         <label class="form-check-label" for="flexCheckDefault_{{$value->id}}">
                                             {{ $value->name }}
                                         </label>

@@ -1,7 +1,11 @@
-@extends('layouts.app')
+@extends('admin.layouts.master')
+
+@section('title', 'Member - Sargam | Lal Bahadur')  
 
 @section('content')
-<div class="container">
+<div class="container-fluid">
+    <x-breadcrum title="Users" />
+    <x-session_message />
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
@@ -65,21 +69,23 @@
 
                         <div class="row mb-3">
                             <label for="roles" class="col-md-4 col-form-label text-md-end">Roles</label>
-
+                            <br/>
                             <div class="col-md-6">
                                 <div class="form-check">
                                     @foreach($roles as $role)
                                         <div class="mb-2">
-                                            <input 
-                                                class="form-check-input" 
-                                                type="checkbox" name="roles[]" 
-                                                value="{{ $role->name }}" 
-                                                id="role{{ $role->id }}" 
-                                                {{ in_array($role->name, old('roles', [])) ? 'checked' : '' }}
-                                            />
-                                            <label class="form-check-label" for="role{{ $role->id }}">
-                                                {{ $role->name }}
-                                            </label>
+                                            <div class="form-check">
+                                                <input 
+                                                    class="form-check-input" 
+                                                    type="checkbox" name="roles[]" 
+                                                    value="{{ $role->name }}" 
+                                                    id="role{{ $role->id }}" 
+                                                    {{ in_array($role->name, old('roles', [])) ? 'checked' : '' }}
+                                                />
+                                                <label class="form-check-label" for="role{{ $role->id }}">
+                                                    {{ $role->name }}
+                                                </label>
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
