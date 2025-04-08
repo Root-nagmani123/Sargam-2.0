@@ -28,6 +28,7 @@
                             <p class="text-danger">{{ $message }}</p>
                         @enderror                     
                     </div>
+                    <hr>
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit">
                         <i class="material-icons menu-icon">send</i>
                             Submit

@@ -21,7 +21,7 @@
                     <div class="row">
                         <div class="col-md-12">
                             <div class="mb-3">
-                                <label class="form-label" for="title">PermissionName :</label>
+                                <label class="form-label" for="title">Permission Name :</label>
                                 <input type="text" class="form-control" id="title" placeholder="Enter Permissions Name" name="name" value="{{ $permission->name }}">
                             </div>
                         </div>  
@@ -29,6 +29,7 @@
                             <p class="text-danger">{{ $message }}</p>
                         @enderror                      
                     </div>
+                    <hr>
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit">
                         <i class="material-icons menu-icon">send</i>
                             Submit
