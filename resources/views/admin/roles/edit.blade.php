@@ -33,9 +33,13 @@
                                 <label class="form-label" for="caste">Permission :</label>
                                 <br/>
                                 @foreach($all_permissions as $value)
-                                    <label><input type="checkbox" name="permission[{{$value->id}}]" value="{{$value->id}}" class="name" {{ in_array($value->id, $rolePermissions) ? 'checked' : ''}}>
-                                    {{ $value->name }}</label>
-                                <br/>
+
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="{{$value->id}}" id="flexCheckDefault_{{$value->id}}" {{ in_array($value->id, $rolePermissions) ? 'checked' : ''}} name="permission[{{$value->id}}]" >
+                                        <label class="form-check-label" for="flexCheckDefault_{{$value->id}}">
+                                            {{ $value->name }}
+                                        </label>
+                                    </div>  
                                 @endforeach
                             </div>
                         </div>
