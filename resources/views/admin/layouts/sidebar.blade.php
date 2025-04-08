@@ -134,7 +134,14 @@
                                                     <a class="sidebar-link" href="{{ route('country.index') }}" id="get-url"
                                                         aria-expanded="false">
                                                         <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
-                                                        <span class="hide-menu">Country/State</span>
+                                                        <span class="hide-menu">Country</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('state.index') }}" id="get-url"
+                                                        aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <span class="hide-menu">State</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
