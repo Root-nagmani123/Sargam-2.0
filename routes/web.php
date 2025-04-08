@@ -82,6 +82,7 @@ Route::middleware(['auth'])->group(function () {
         })->name('edit');
     });
 
+    // batch route
     Route::prefix('batch')->name('batch.')->group(function () {
         Route::get('/', function() {
             return view('admin.batch.index');
@@ -96,6 +97,8 @@ Route::middleware(['auth'])->group(function () {
         })->name('edit');
     });
 
+
+    // subject route
     Route::prefix('subject')->name('subject.')->group(function () {
         Route::get('/', function() {
             return view('admin.subject.index');
@@ -110,6 +113,7 @@ Route::middleware(['auth'])->group(function () {
         })->name('edit');
     });
 
+    // stream route
     Route::prefix('stream')->name('stream.')->group(function () {
         Route::get('/', function() {
             return view('admin.stream.index');
@@ -123,6 +127,8 @@ Route::middleware(['auth'])->group(function () {
             return view('admin.stream.edit');
         })->name('edit');
     });
+
+    // country route
     Route::prefix('country')->name('country.')->group(function () {
         Route::get('/', function() {
             return view('admin.country.index');
@@ -136,6 +142,8 @@ Route::middleware(['auth'])->group(function () {
             return view('admin.country.edit');
         })->name('edit');
     });
+
+    // curriculum route
     Route::prefix('curriculum')->name('curriculum.')->group(function () {
         Route::get('/', function() {
             return view('admin.curriculum.index');
@@ -149,6 +157,9 @@ Route::middleware(['auth'])->group(function () {
             return view('admin.curriculum.edit');
         })->name('edit');
     });
+
+    // mapping routes
+
     Route::prefix('mapping')->name('mapping.')->group(function () {
         Route::get('/', function() {
             return view('admin.mapping.index');
@@ -160,6 +171,22 @@ Route::middleware(['auth'])->group(function () {
         
         Route::get('/edit', function() {
             return view('admin.mapping.edit');
+        })->name('edit');
+    });
+
+// state
+
+    Route::prefix('state')->name('state.')->group(function () {
+        Route::get('/', function() {
+            return view('admin.state.index');
+        })->name('index');
+        
+        Route::get('/create', function() {
+            return view('admin.state.create');
+        })->name('create');
+        
+        Route::get('/edit', function() {
+            return view('admin.state.edit');
         })->name('edit');
     });
   
