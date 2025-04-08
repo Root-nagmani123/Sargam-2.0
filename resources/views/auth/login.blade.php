@@ -48,7 +48,7 @@
                                                         <div class="mb-4">
                                                             <div class="d-flex align-items-center justify-content-between">
                                                                 <label for="exampleInputPassword1" class="form-label">Password</label>
-                                                                <a class="text-primary link-dark fs-2" href="authentication-forgot-password2.html">Forgot
+                                                                <a class="text-primary link-dark fs-2" href="#">Forgot
                                                                 Password ?</a>
                                                             </div>
                                                             <input type="password" class="form-control" id="exampleInputPassword1" placeholder="Enter your password" name="password">
