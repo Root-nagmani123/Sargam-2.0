@@ -201,3 +201,26 @@ function country_fields() {
 function remove_country_fields(rid) {
   $(".removeclass" + rid).remove();
 }
+
+// State repeater
+
+function remove_state_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
+function state_fields() {
+  room++;
+  var objTo = document.getElementById("state_fields");
+  var divtest = document.createElement("div");
+  divtest.setAttribute("class", "mb-3 removeclass" + room);
+  var rdiv = "removeclass" + room;
+  divtest.innerHTML =
+    '<form class="row"><div class="col-sm-10"><div class="form-group"><label for="Schoolname" class="form-label">State Name :</label><input type="text" class="form-control" id="Schoolname" name="Schoolname" placeholder="State Name"></div></div><div class="col-sm-2"> <div class="form-group"> <button class="btn btn-danger" type="button" onclick="remove_course_fields(' +
+    room +
+    ');"> <i class="material-icons menu-icon">remove</i> </button> </div></div></form>';
+
+  objTo.appendChild(divtest);
+}
+
+function remove_state_fields(rid) {
+  $(".removeclass" + rid).remove();
+}
