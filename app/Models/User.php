@@ -7,10 +7,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -41,4 +44,41 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    public static function getpermissionGroups()
+    {
+        return DB::table('permissions')
+            ->select('group_name as name')
+            ->groupBy('group_name')
+            ->get();
+    }
+
+    public static function getpermissionsByGroupName(string $group_name)
+    {
+        return DB::table('permissions')
+            ->select('name', 'id')
+            ->where('group_name', $group_name)
+            ->get();
+    }
+
+    public static function roleHasPermissions(Role $role, $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if (! $role->hasPermissionTo($permission->name)) {
+                return false;
+            }
+        }
+
+        return true; // ensure returning true if all permissions are granted
+    }
+
+    public function actionLogs()
+    {
+        return $this->hasMany(ActionLog::class, 'action_by');
+    }
+
+    public function roles()
+    {
+        return $this->belongsToMany(Role::class);
+    }
 }
