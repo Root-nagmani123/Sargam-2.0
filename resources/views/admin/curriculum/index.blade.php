@@ -39,7 +39,7 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="#" class="btn btn-primary">+ Add Curriculum</a>
+                                <a href="{{ route('curriculum.create') }}" class="btn btn-primary">+ Add Curriculum</a>
                             </div>
                         </div>
                     </div>

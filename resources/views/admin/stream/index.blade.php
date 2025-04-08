@@ -39,7 +39,7 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="#" class="btn btn-primary">+ Add Stream</a>
+                                <a href="{{route('stream.create')}}" class="btn btn-primary">+ Add Stream</a>
                             </div>
                         </div>
                     </div>

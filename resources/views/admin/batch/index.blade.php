@@ -39,7 +39,7 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="#" class="btn btn-primary">+ Add Batch</a>
+                                <a href="{{route('batch.create')}}" class="btn btn-primary">+ Add Batch</a>
                             </div>
                         </div>
                     </div>
