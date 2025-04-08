@@ -40,15 +40,13 @@
                             <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
-                                        colspan="1" aria-sort="ascending"
-                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">
-                                        S.No.</th>
+                                    <th>S.No.</th>
                                     <th>Name</th>
                                     <th>Email</th>
                                     <th>Roles</th>
                                     <th>Created At</th>
                                     <th>Action</th>
+                                    <th>Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -66,9 +64,27 @@
                                     </td>
                                     <td>{{ $user->created_at->format('Y-m-d H:i:s') }}</td>
                                     <td>
-                                        <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-primary">Edit</a>
+                                    <div class="d-flex justify-content-start align-items-start gap-2">
+                                            <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-success text-white btn-sm">
+                                                Edit
+                                            </a>
+                                            <form action="#" method="POST" class="m-0">
+                                                <input type="hidden" name="_token"
+                                                    value="7m53OwU7KaFp1PPyJcyUuVMXW7xvrGr12yL6QycA"> <input
+                                                    type="hidden" name="_method" value="DELETE"> <button type="submit"
+                                                    class="btn btn-danger text-white btn-sm"
+                                                    onclick="return confirm('Are you sure you want to delete?')">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
-                                    
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                data-table="news" data-column="status" data-id="21" checked="">
+                                        </div>
+                                    </td>
                                 </tr>
                                 @endforeach
                                 @else
