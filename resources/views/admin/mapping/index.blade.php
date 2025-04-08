@@ -39,7 +39,7 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="#" class="btn btn-primary">+ Add Faculty Topic Mapping</a>
+                                <a href="{{route('mapping.create')}}" class="btn btn-primary">+ Add Faculty Topic Mapping</a>
                             </div>
                         </div>
                     </div>
