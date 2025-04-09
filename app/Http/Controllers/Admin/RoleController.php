@@ -16,7 +16,7 @@ class RoleController extends Controller
 {
     public function index()
     {
-        return view('admin.roles.index', [
+        return view('admin.user_management.roles.index', [
             'roles' => Role::all(),
         ]);
     }
@@ -25,7 +25,7 @@ class RoleController extends Controller
     {
         $all_permissions = Permission::all();
         
-        return view('admin.roles.create', compact('all_permissions'));
+        return view('admin.user_management.roles.create', compact('all_permissions'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -52,7 +52,7 @@ class RoleController extends Controller
         $all_permissions = Permission::all();
         $rolePermissions = $role->permissions->pluck('id')->toArray();
         
-        return view('admin.roles.edit', compact('role', 'all_permissions', 'rolePermissions'));
+        return view('admin.user_management.roles.edit', compact('role', 'all_permissions', 'rolePermissions'));
     }
 
     public function update(Request $request, Role $role)
