@@ -9,14 +9,14 @@ class PermissionController extends Controller
 {
     public function index()
     {
-        return view('admin.permissions.index', [
+        return view('admin.user_management.permissions.index', [
             'permissions' => Permission::all(),
         ]);
     }
 
     public function create()
     {
-        return view('admin.permissions.create', [
+        return view('admin.user_management.permissions.create', [
             'all_permissions' => Permission::all(),
         ]);
     }
@@ -33,7 +33,7 @@ class PermissionController extends Controller
 
     public function edit(Permission $permission)
     {
-        return view('admin.permissions.edit', [
+        return view('admin.user_management.permissions.edit', [
             'permission' => $permission,
         ]);
     }

@@ -22,7 +22,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $users = User::latest()->paginate(5);
-        return view('admin.users.index',compact('users'));
+        return view('admin.user_management.users.index',compact('users'));
     }
 
     /**
@@ -33,7 +33,7 @@ class UserController extends Controller
     public function create()
     {
         $roles = Role::all();
-        return view('admin.users.create', compact('roles'));
+        return view('admin.user_management.users.create', compact('roles'));
     }
 
     /**
@@ -77,7 +77,7 @@ class UserController extends Controller
     public function show(User $user)
     {
         $user->load('roles', 'permissions');
-        return view('admin.users.show', compact('user'));
+        return view('admin.user_management.users.show', compact('user'));
     }
 
     /**
@@ -90,7 +90,7 @@ class UserController extends Controller
     {
         $roles = Role::all();
         $userRoles = $user->roles->pluck('id')->toArray();
-        return view('admin.users.edit', compact('user', 'roles', 'userRoles'));
+        return view('admin.user_management.users.edit', compact('user', 'roles', 'userRoles'));
     }
 
     /**
