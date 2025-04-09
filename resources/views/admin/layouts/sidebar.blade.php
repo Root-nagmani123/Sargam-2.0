@@ -88,99 +88,119 @@
                                                         <span class="hide-menu">Dashboard</span>
                                                     </a>
                                                 </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('member.index') }}" id="get-url"
+                                                <!-- <li class="sidebar-item">
+                                                    <a class="sidebar-link has-arrow" href="javascript:void(0)"
                                                         aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                        <iconify-icon icon="solar:home-angle-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">User Management</span>
+                                                    </a>
+                                                    <ul aria-expanded="false" class="collapse first-level">
+                                                        <li class="sidebar-item">
+                                                            <a class="sidebar-link"
+                                                                href="{{ route('admin.users.index') }}">
+                                                                <span class="icon-small"></span>
+                                                                Users
+                                                            </a>
+                                                        </li>
+                                                        <li class="sidebar-item">
+                                                            <a class="sidebar-link"
+                                                                href="{{ route('admin.roles.index') }}">
+                                                                <span class="icon-small"></span>
+                                                                Roles
+                                                            </a>
+                                                        </li>
+                                                        <li class="sidebar-item">
+                                                            <a class="sidebar-link"
+                                                                href="{{ route('admin.permissions.index') }}">
+                                                                <span class="icon-small"></span>
+                                                                Permissions
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </li> -->
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('member.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Member</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('faculty.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('faculty.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Faculty</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('programme.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('programme.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Programme</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('batch.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('batch.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Batch</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('stream.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('stream.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Stream</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('subject.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('subject.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Subject</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('country.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('country.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Country</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('state.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('state.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">State</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('curriculum.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('curriculum.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Course Curriculum</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('mapping.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
+                                                    <a class="sidebar-link" href="{{ route('mapping.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
                                                         <span class="hide-menu">Faculty Topic Mapping</span>
                                                     </a>
                                                 </li>
                                                 <li>
                                                     <span class="sidebar-divider"></span>
-                                                </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('admin.users.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
-                                                        <span class="hide-menu">Users</span>
-                                                    </a>
-                                                </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('admin.roles.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
-                                                        <span class="hide-menu">Roles</span>
-                                                    </a>
-                                                </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('admin.permissions.index') }}" id="get-url"
-                                                        aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon>
-                                                        <span class="hide-menu">Permissions</span>
-                                                    </a>
                                                 </li>
                                             </ul>
                                         </div>
