@@ -7,7 +7,8 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
-    UserController
+    UserController,
+    MemberController
 };
 
 Route::get('clear-cache', function() {
@@ -40,8 +41,24 @@ Route::middleware(['auth'])->group(function () {
     // Member Routes
     Route::prefix('member')->name('member.')->group(function () {
         Route::get('/', [MemberController::class, 'index'])->name('index');
-        Route::get('/create', [MemberController::class, 'create'])->name('create');
-        Route::get('/edit', [MemberController::class, 'edit'])->name('edit');
+        Route::get('create', [MemberController::class, 'create'])->name('create');
+        Route::get('edit', [MemberController::class, 'edit'])->name('edit');
+        // Route::get('load-step', [MemberController::class, 'loadStep'])->name('load-step');
+        // Route::post('store', [MemberController::class, 'store'])->name('store');
+        // Route::get('step1', [MemberController::class, 'step1'])->name('step1');
+        // Route::post('step1', [MemberController::class, 'step1Store'])->name('step1Store');
+        // Route::get('step2', [MemberController::class, 'step2'])->name('step2'); 
+        // Route::get('step3', [MemberController::class, 'step3'])->name('step3');
+        // Route::get('step4', [MemberController::class, 'step4'])->name('step4');
+        // Route::get('step5', [MemberController::class, 'step5'])->name('step5');
+        
+        
+        
+        Route::get('/step/{step}', [MemberController::class, 'loadStep'])->name('load-step');
+        Route::post('/validate-step/{step}', [MemberController::class, 'validateStep']);
+Route::post('/admin/member/store', [MemberController::class, 'store'])->name('store');
+
+
     });
     
     // Faculty Routes
