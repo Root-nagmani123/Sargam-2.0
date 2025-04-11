@@ -13,7 +13,7 @@ class StoreMemberStep3Request extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        return true;
     }
 
     /**
@@ -24,7 +24,17 @@ class StoreMemberStep3Request extends FormRequest
     public function rules()
     {
         return [
-            //
+            'userrole' => ['required', 'string'], // you may replace with: exists:roles,id if it's from DB
+            'styled_max_checkbox' => ['required', 'array', 'min:1', 'max:2'], // max 2 checkboxes allowed
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'userrole.required' => 'Please select a user role.',
+            'styled_max_checkbox.required' => 'Please select at least one role option.',
+            'styled_max_checkbox.max' => 'You can select up to 2 role options only.',
         ];
     }
 }
