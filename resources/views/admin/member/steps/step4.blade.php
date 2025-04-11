@@ -1,0 +1,116 @@
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="address">Address :</label>
+            <input type="text" name="address" id="address" class="form-control">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="country">Country :</label>
+            <select class="form-select" id="country" name="country">
+                <option value="">Select</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="state">State :</label>
+            <select class="form-select" id="state" name="state">
+                <option value="">Select</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="city ">City :</label>
+            <input type="text" class="form-control" id="city">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="postal">Postal Code :</label>
+            <input type="text" class="form-control" id="postal">
+        </div>
+    </div>
+</div>
+<fieldset>
+    <div class="form-check py-2">
+        <input type="checkbox" name="styled_max_checkbox" data-validation-maxchecked-maxchecked="2"
+            data-validation-maxchecked-message="Don't be greedy!" required=""
+            class="form-check-input" id="customCheck4" aria-invalid="false">
+        <label class="form-check-label" for="customCheck4">Current & Permanent Address both are same</label>
+    </div>
+</fieldset>
+<p>Permanent Address</p>
+<hr>
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="permanentaddress">Address :</label>
+            <input type="text" name="permanentaddress" id="permanentaddress" class="form-control">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="permanentcountry">Country :</label>
+            <select class="form-select" id="permanentcountry" name="permanentcountry">
+                <option value="">Select</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="permanentstate">State :</label>
+            <select class="form-select" id="permanentstate" name="permanentstate">
+                <option value="">Select</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="permanentcity ">City :</label>
+            <input type="text" class="form-control" id="permanentcity">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="permanentpostal">Postal Code :</label>
+            <input type="text" class="form-control" id="permanentpostal">
+        </div>
+    </div>
+</div>
+<p>Communication Details</p>
+<hr>
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="personalemail">Personal Email :</label>
+            <input type="email" name="personalemail" id="personalemail" class="form-control">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="officialemail">Official Email :</label>
+           <input type="email" name="officialemail" id="officialemail" class="form-control">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="mnumber">Mobile Number :</label>
+            <input type="number" name="mnumber" id="mnumber" class="form-control">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="emergencynumber ">Emergency Contact Number :</label>
+            <input type="number" class="form-control" id="emergencynumber">
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <label class="form-label" for="landlinenumber">Landline Number :</label>
+            <input type="number" class="form-control" id="landlinenumber">
+        </div>
+    </div>
+</div>
