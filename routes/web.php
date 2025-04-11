@@ -39,17 +39,9 @@ Route::middleware(['auth'])->group(function () {
     
     // Member Routes
     Route::prefix('member')->name('member.')->group(function () {
-        Route::get('/', function() {
-            return view('admin.member.index');
-        })->name('index');
-        
-        Route::get('/create', function() {
-            return view('admin.member.create');
-        })->name('create');
-        
-        Route::get('/edit', function() {
-            return view('admin.member.edit');
-        })->name('edit');
+        Route::get('/', [MemberController::class, 'index'])->name('index');
+        Route::get('/create', [MemberController::class, 'create'])->name('create');
+        Route::get('/edit', [MemberController::class, 'edit'])->name('edit');
     });
     
     // Faculty Routes
