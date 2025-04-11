@@ -13,7 +13,7 @@ class StoreMemberStep5Request extends FormRequest
      */
     public function authorize()
     {
-        return false;
+        return true;
     }
 
     /**
@@ -24,7 +24,24 @@ class StoreMemberStep5Request extends FormRequest
     public function rules()
     {
         return [
-            //
+            'homeaddress'         => ['nullable', 'string', 'max:255'],
+            'residencenumber'     => ['nullable', 'numeric', 'digits_between:6,15'],
+            'miscellaneous'       => ['nullable', 'string', 'max:255'],
+
+            // Validate uploaded image and documents
+            'picture'             => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'], // max 2MB
+            'additionaldocument'  => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:4096'], // max 4MB
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'picture.image'        => 'The uploaded file must be an image.',
+            'picture.mimes'        => 'Picture must be a file of type: jpg, jpeg, png.',
+            'picture.max'          => 'Picture size must not exceed 2MB.',
+            'additionaldocument.mimes' => 'Document must be of type: pdf, doc, docx, jpg, jpeg, or png.',
+            'additionaldocument.max'   => 'Document size must not exceed 4MB.',
         ];
     }
 }
