@@ -128,6 +128,14 @@
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('expertise.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Area of Expertise</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('faculty.index') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:shield-user-line-duotone">
@@ -184,6 +192,22 @@
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="#"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">District</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="#"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">City</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('curriculum.index') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:shield-user-line-duotone">
@@ -197,6 +221,14 @@
                                                         <iconify-icon icon="solar:shield-user-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Faculty Topic Mapping</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('calendar.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Calendar</span>
                                                     </a>
                                                 </li>
                                                 <li>

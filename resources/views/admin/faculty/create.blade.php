@@ -157,39 +157,40 @@
                     <div id="education_fields" class="my-4"></div>
                     <div class="row" id="education_fields">
                         <div class="col-3">
-                            <label for="Schoolname" class="form-label">School Name :</label>
+                            <label for="Schoolname" class="form-label">Degree :</label>
                             <div class="mb-3">
                                 <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="School Name">
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <label for="Schoolname" class="form-label">School Name :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Age" name="Age" placeholder="Age">
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <label for="Schoolname" class="form-label">School Name :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Degree" name="Degree" placeholder="Degree">
+                                    placeholder="Degree Name">
+                                    <small>Bachelors, Masters, PhD</small>
                             </div>
                         </div>
                         <div class="col-3">
-                            <label for="Schoolname" class="form-label">School Name :</label>
+                            <label for="Schoolname" class="form-label">University/Institution Name :</label>
                             <div class="mb-3">
-                                <select class="form-select" id="educationDate" name="educationDate">
-                                    <option>Date</option>
-                                    <option value="2015">2015</option>
-                                    <option value="2016">2016</option>
-                                    <option value="2023">2023</option>
-                                    <option value="2023">2023</option>
-                                </select>
+                                <input type="text" class="form-control" id="Age" name="Age" placeholder="University/Institution Name">
                             </div>
                         </div>
-                        <div class="col-2">
-                            <label for="Schoolname" class="form-label"></label>
+                        <div class="col-3">
+                            <label for="Schoolname" class="form-label">Year of Passing :</label>
                             <div class="mb-3">
+                                <input type="date" class="form-control" id="Degree" name="Degree" placeholder="Year of Passing">
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <label for="Schoolname" class="form-label">Percentage/CGPA :</label>
+                            <div class="mb-3">
+                                <input type="text" name="percentage" placeholder="Percentage/CGPA" id="percentage" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <label for="certificate" class="form-label">Certificates/Documents Upload :</label>
+                            <div class="mb-3">
+                                <input type="file" name="certificate" placeholder="Certificates/Documents Upload" id="certificate" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-9">
+                            <label for="Schoolname" class="form-label"></label>
+                            <div class="mb-3 float-end">
                                 <button onclick="education_fields();" class="btn btn-success fw-medium" type="button">
                                     <i class="material-icons menu-icon">add</i>
                                 </button>
@@ -201,47 +202,118 @@
                     <div id="experience_fields" class="my-4"></div>
                     <div class="row" id="experience_fields">
                         <div class="col-3">
-                            <label for="Schoolname" class="form-label">School Name :</label>
+                            <label for="Schoolname" class="form-label">Years of Experience :</label>
                             <div class="mb-3">
-                                <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="School Name">
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <label for="Schoolname" class="form-label">School Name :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Age" name="Age" placeholder="Age">
-                            </div>
-                        </div>
-                        <div class="col-2">
-                            <label for="Schoolname" class="form-label">School Name :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Degree" name="Degree" placeholder="Degree">
+                                <input type="text" class="form-control" id="experience" name="experience"
+                                    placeholder="Years of Experience">
                             </div>
                         </div>
                         <div class="col-3">
-                            <label for="Schoolname" class="form-label">School Name :</label>
+                            <label for="Schoolname" class="form-label">Area of Specialization :</label>
                             <div class="mb-3">
-                                <select class="form-select" id="educationDate" name="educationDate">
-                                    <option>Date</option>
-                                    <option value="2015">2015</option>
-                                    <option value="2016">2016</option>
-                                    <option value="2023">2023</option>
-                                    <option value="2023">2023</option>
-                                </select>
+                                <input type="text" class="form-control" id="specialization" name="specialization" placeholder="Area of Specialization">
                             </div>
                         </div>
-                        <div class="col-2">
-                            <label for="Schoolname" class="form-label"></label>
+                        <div class="col-3">
+                            <label for="Schoolname" class="form-label">Previous Institutions :</label>
                             <div class="mb-3">
-                                <button onclick="experience_fields();" class="btn btn-success fw-medium" type="button">
+                                <input type="text" class="form-control" id="institution" name="institution" placeholder="Previous Institutions">
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <label for="Schoolname" class="form-label">Position Held :</label>
+                            <div class="mb-3">
+                                <input type="text" name="position" placeholder="Position Held" id="position" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <label for="Schoolname" class="form-label">Duration :</label>
+                            <div class="mb-3">
+                                <input type="text" name="duration" placeholder="Duration" id="duration" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-3">
+                            <label for="Schoolname" class="form-label">Nature of Work :</label>
+                            <div class="mb-3">
+                                <input type="text" name="work" placeholder="Nature of Work" id="work" class="form-control">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label for="Schoolname" class="form-label"></label>
+                            <div class="mb-3 float-end">
+                                <button onclick="experience_fields();" class="btn btn-success btn-sm" type="button">
                                     <i class="material-icons menu-icon">add</i>
                                 </button>
                             </div>
                         </div>
                     </div>
-                    <hr>
                 </div>
+                <div>
+                    <h4 class="card-subtitle mb-3 mt-3">Bank Details</h4>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <label for="bankname" class="form-label">Bank Name :</label>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="bankname" name="bankname"
+                                    placeholder="Bank Name">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label for="accountnumber" class="form-label">Account Number :</label>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="accountnumber" name="accountnumber" placeholder="Account Number">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label for="ifsccode" class="form-label">IFSC Code :</label>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="ifsccode" name="ifsccode" placeholder="IFSC Code">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label for="pannumber" class="form-label">PAN Number :</label>
+                            <div class="mb-3">
+                                <input type="text" name="pannumber" placeholder="PAN Number" id="pannumber" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="card-subtitle mb-3 mt-3">Other information</h4>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <label for="researchpublications" class="form-label">Research Publications :</label>
+                            <div class="mb-3">
+                                <input type="file" class="form-control" id="researchpublications" name="researchpublications"
+                                    placeholder="Research Publications ">
+                                    <small>Please upload your research publications, if any</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label for="professionalmemberships" class="form-label">Professional Memberships :</label>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="professionalmemberships" name="professionalmemberships" placeholder="Professional Memberships">
+                                    <small>Please upload your professional memberships, if any</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label for="recommendationdetails" class="form-label">Reference/Recommendation Details :</label>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="recommendationdetails" name="recommendationdetails" placeholder="Reference/Recommendation Details">
+                                    <small>Please upload your reference/recommendation details, if any</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label for="joiningdate" class="form-label">Joining Date :</label>
+                            <div class="mb-3">
+                                <input type="text" name="joiningdate" placeholder="Joining Date" id="joiningdate" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr>
                 <div class="row">
                     <div class="col-12">
                         <label for="sector" class="form-label">Current Sector :</label>
@@ -267,112 +339,6 @@
                                         <input class="form-check-input" type="checkbox" id="success-check"
                                             value="option1">
                                         <label class="form-check-label" for="success-check">Energy</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Health</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Education</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Land Administration</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Waste Management</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Mobility</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Water</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Environment</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Financial Services</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Agriculture/farmers</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Gender</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Housing</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Law And Order</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Infrastructure</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Citizen Services /
-                                            Governance</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Others</label>
                                     </div>
                                 </div>
                             </div>
