@@ -52,9 +52,9 @@
                         <button type="submit" class="btn btn-primary">
                             Submit
                         </button>
-                        <button type="button" class="btn bg-danger-subtle text-danger ms-6">
+                        <a href="{{ route('admin.roles.index') }}" class="btn bg-danger-subtle text-danger ms-6">
                             Cancel
-                        </button>
+                        </a>
                     </div>
                 </div>
             </form>
