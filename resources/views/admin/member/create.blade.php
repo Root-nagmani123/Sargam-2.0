@@ -119,6 +119,7 @@
                 success: function () {
                     alert("Member created successfully!");
                     window.location.href = "/admin/member";
+                    return false;
                 },
                 error: function (xhr) {
                     const errors = xhr.responseJSON.errors || {};

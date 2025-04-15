@@ -1,20 +1,21 @@
 <div class="row">
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="homeaddress">Home Address Data : (Optional)</label>
-            <input type="text" class="form-control" id="homeaddress" name="homeaddress">
+            <x-input name="homeaddress" formLabelClass="form-label" label="Home Address Data : (Optional)" id="homeaddress" value="{{ old('homeaddress') }}" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="residencenumber">Residence Number :</label>
-            <input type="number" class="form-control" id="residencenumber" name="residencenumber">
+
+            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number :" id="residencenumber" value="{{ old('residencenumber') }}" />
+
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="miscellaneous">Other Miscellaneous Fields :</label>
-            <input type="text" class="form-control" id="miscellaneous" name="miscellaneous">
+
+            <x-input name="miscellaneous" formLabelClass="form-label" label="Other Miscellaneous Fields :" id="miscellaneous" value="{{ old('miscellaneous') }}" />
+
         </div>
     </div>
     <div class="col-md-6">

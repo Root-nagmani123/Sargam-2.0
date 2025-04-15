@@ -25,8 +25,8 @@ class StoreMemberStep5Request extends FormRequest
     {
         return [
             'homeaddress'         => ['nullable', 'string', 'max:255'],
-            'residencenumber'     => ['nullable', 'numeric', 'digits_between:6,15'],
-            'miscellaneous'       => ['nullable', 'string', 'max:255'],
+            'residencenumber'     => ['required', 'numeric', 'digits_between:6,15'],
+            'miscellaneous'       => ['required', 'string', 'max:255'],
 
             // Validate uploaded image and documents
             'picture'             => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'], // max 2MB
