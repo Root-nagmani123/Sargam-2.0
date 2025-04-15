@@ -4,8 +4,10 @@
 
 @section('content')
 <div class="container-fluid">
+    
     <x-breadcrum title="Users" />
     <x-session_message />
+
     <div class="row justify-content-center">
         <div class="col-md-12">
             <div class="card">

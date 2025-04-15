@@ -1,7 +1,13 @@
-@extends('layouts.app')
+@extends('admin.layouts.master')
+
+@section('title', 'Member - Sargam | Lal Bahadur')
 
 @section('content')
-<div class="container">
+<div class="container-fluid">
+    
+    <x-breadcrum title="Users" />
+    <x-session_message />
+
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="card">
