@@ -1,10 +1,16 @@
 <div class="row">
     <div class="col-md-12">
         <div class="mb-3">
-            <label class="form-label" for="userrole">User Role :</label>
-            <select class="form-select" id="userrole" name="userrole">
-                <option value="">Select</option>
-            </select>
+
+            @php
+                $userRoleOptions = [
+                    
+                ];
+            @endphp
+
+            <x-select name="userrole" label="User Role :" :options="$userRoleOptions" :value="old('userrole')" formLabelClass="form-label" formSelectClass="form-select @error('userrole') is-invalid @enderror" />
+
+            
         </div>
     </div>
     <div class="col-md-12">
@@ -13,13 +19,17 @@
             <div class="controls">
                 <div class="row">
                     <div class="col-md-4">
-                        <fieldset>
-                            <div class="form-check py-2">
-                                <input type="checkbox" name="styled_max_checkbox[]" value="Academy Staff" class="form-check-input" id="customCheck4">
-                                <label class="form-check-label" for="customCheck4">Academy Staff</label>
 
-                            </div>
-                        </fieldset>
+                        @php
+                            $checkboxOptions = [
+                                'Academy Staff',
+                                'Academy Staff1',
+                                'Academy Staff2',
+                            ];
+                        @endphp
+
+                        <x-checkbox name="styled_max_checkbox[]" id="customCheck4" :options="$checkboxOptions" />
+
                     </div>
                     
                 </div>

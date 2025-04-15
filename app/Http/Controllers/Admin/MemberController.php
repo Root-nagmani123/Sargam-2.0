@@ -59,6 +59,14 @@ class MemberController extends Controller
     
 public function store(Request $request)
 {
+    
+    $validator = Validator::make($request->all(), (new StoreMemberStep5Request())->rules());
+
+    if ($validator->fails()) {
+        // echo "inside the if"; die;
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+    
     $rules = [
         // Step 1: Member Info
         'name' => 'required|string|max:255',
