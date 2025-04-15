@@ -124,7 +124,7 @@
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:shield-user-line-duotone">
                                                         </iconify-icon>
-                                                        <span class="hide-menu">Member</span>
+                                                        <span class="hide-menu">Role Mapping</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
@@ -170,7 +170,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('subject.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:speaker-minimalistic-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Subject</span>
                                                     </a>
@@ -178,7 +178,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('country.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:airbuds-case-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Country</span>
                                                     </a>
@@ -186,7 +186,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('state.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="material-symbols:distance">
                                                         </iconify-icon>
                                                         <span class="hide-menu">State</span>
                                                     </a>
@@ -194,7 +194,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('district.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="arcticons:district">
                                                         </iconify-icon>
                                                         <span class="hide-menu">District</span>
                                                     </a>
@@ -202,7 +202,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('city.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:city-bold-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">City</span>
                                                     </a>
@@ -210,7 +210,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('curriculum.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:iphone-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Course Curriculum</span>
                                                     </a>
@@ -218,7 +218,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('mapping.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:map-arrow-up-bold-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Faculty Topic Mapping</span>
                                                     </a>
@@ -226,7 +226,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('calendar.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Calendar</span>
                                                     </a>
