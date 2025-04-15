@@ -192,7 +192,7 @@
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="#"
+                                                    <a class="sidebar-link" href="{{ route('district.index') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:shield-user-line-duotone">
                                                         </iconify-icon>
@@ -200,7 +200,7 @@
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="#"
+                                                    <a class="sidebar-link" href="{{ route('city.index') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:shield-user-line-duotone">
                                                         </iconify-icon>
