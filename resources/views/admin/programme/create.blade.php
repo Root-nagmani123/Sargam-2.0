@@ -37,17 +37,35 @@
                 <div class="row">
                     <div id="course_fields" class="my-2"></div>
                     <div class="row" id="course_fields">
-                        <div class="col-sm-5">
-                            <label for="Schoolname" class="form-label">School Name :</label>
+                        <div class="col-md-6">
+                            <label for="coursename" class="form-label">Course Name :</label>
                             <div class="mb-3">
-                                <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="School Name">
+                                <input type="text" class="form-control" id="coursename" name="coursename"
+                                    placeholder="Course Name">
                             </div>
                         </div>
-                        <div class="col-sm-5">
-                            <label for="Schoolname" class="form-label">School Name :</label>
+                        <div class="col-md-6">
+                            <label for="abbreviation" class="form-label">Abbreviation :</label>
                             <div class="mb-3">
-                                <input type="text" class="form-control" id="Age" name="Age" placeholder="Age">
+                                <input type="text" class="form-control" id="abbreviation" name="abbreviation" placeholder="Abbreviation">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="courseyear" class="form-label">Course Year :</label>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="courseyear" name="courseyear" placeholder="Course Year">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="startdate" class="form-label">Start Date :</label>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="startdate" name="startdate" placeholder="Start Date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="enddate" class="form-label">End Date :</label>
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="enddate" name="enddate" placeholder="End Date">
                             </div>
                         </div>
                         <div class="col-sm-2">
