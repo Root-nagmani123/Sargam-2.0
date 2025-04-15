@@ -66,6 +66,12 @@
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
+                            <label class="form-label" for="fullname">Full Name :</label>
+                            <input type="text" class="form-control" id="fullname" name="fullname">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
                             <label class="form-label" for="gender">Gender :</label>
                             <select class="form-select" id="gender" name="gender">
                                 <option value="">Select</option>
@@ -104,6 +110,19 @@
                         <div class="mb-3">
                             <label class="form-label" for="state">State :</label>
                             <select class="form-select" id="state" name="state">
+                                <option value="">Select</option>
+                                <option value="general">General</option>
+                                <option value="obc">OBC</option>
+                                <option value="sc">SC</option>
+                                <option value="st">ST</option>
+                                <option value="ews">EWS</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label" for="district">District  :</label>
+                            <select class="form-select" id="district" name="district">
                                 <option value="">Select</option>
                                 <option value="general">General</option>
                                 <option value="obc">OBC</option>
