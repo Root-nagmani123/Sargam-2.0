@@ -2,8 +2,9 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="title" label="Title :" type="text" value="{{ old('title') }}" formLabelClass="form-label" formInputClass="form-control @error('title') is-invalid @enderror" />
-            
+            @php $titleOptions = App\Models\EmployeeMaster::title; @endphp
+
+            <x-select name="title" label="Title :" :options="$titleOptions" :value="old('title')" formLabelClass="form-label" formSelectClass="form-select @error('title') is-invalid @enderror" />
         </div>
     </div>
     <div class="col-md-6">
@@ -36,13 +37,7 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            @php
-                $maritalStatusOptions = [
-                    'single' => 'Single',
-                    'married' => 'Married',
-                    'other' => 'Other'
-                ];
-            @endphp
+            @php $maritalStatusOptions = App\Models\EmployeeMaster::maritalStatus; @endphp
 
             <x-select name="marital_status" label="Marital Status :" :options="$maritalStatusOptions" :value="old('marital_status')" formLabelClass="form-label" formSelectClass="form-select @error('marital_status') is-invalid @enderror" />
 
@@ -51,13 +46,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            @php
-                $genderOptions = [
-                    'male' => 'Male',
-                    'female' => 'Female',
-                    'other' => 'Other'
-                ];
-            @endphp
+            @php $genderOptions = App\Models\EmployeeMaster::gender; @endphp
 
             <x-select name="gender" label="Gender :" :options="$genderOptions" :value="old('gender')" formLabelClass="form-label" formSelectClass="form-select @error('gender') is-invalid @enderror" />
 
@@ -66,15 +55,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            @php
-                $casteCategoryOptions = [
-                    'general' => 'General',
-                    'obc' => 'OBC',
-                    'sc' => 'SC',
-                    'st' => 'ST',
-                    'ews' => 'EWS'
-                ];
-            @endphp
+            @php $casteCategoryOptions = App\Models\EmployeeMaster::casteCategory; @endphp
 
             <x-select name="caste_category" label="Caste Category :" :options="$casteCategoryOptions" :value="old('caste_category')" formLabelClass="form-label" formSelectClass="form-select @error('caste_category') is-invalid @enderror" />
 
