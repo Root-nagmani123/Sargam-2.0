@@ -189,7 +189,80 @@ Route::middleware(['auth'])->group(function () {
             return view('admin.state.edit');
         })->name('edit');
     });
-  
+
+    
+// district route
+    Route::prefix('district')->name('district.')->group(function () {
+        Route::get('/', function() {
+            return view('admin.district.index');
+        })->name('index');
+        
+        Route::get('/create', function() {
+            return view('admin.district.create');
+        })->name('create');
+        
+        Route::get('/edit', function() {
+            return view('admin.district.edit');
+        })->name('edit');
+    });
+
+// city route
+    Route::prefix('city')->name('city.')->group(function () {
+        Route::get('/', function() {
+            return view('admin.city.index');
+        })->name('index');
+        
+        Route::get('/create', function() {
+            return view('admin.city.create');
+        })->name('create');
+        
+        Route::get('/edit', function() {
+            return view('admin.city.edit');
+        })->name('edit');
+    });
+    
+    // state route
+
+Route::prefix('state')->name('state.')->group(function () {
+    Route::get('/', function() {
+        return view('admin.state.index');
+    })->name('index');
+    
+    Route::get('/create', function() {
+        return view('admin.state.create');
+    })->name('create');
+    
+    Route::get('/edit', function() {
+        return view('admin.state.edit');
+    })->name('edit');
 });
+    // calendar
+    Route::prefix('calendar')->name('calendar.')->group(function () {
+        Route::get('/', function() {
+            return view('admin.calendar.index');
+        })->name('index');
+        
+        Route::get('/create', function() {
+            return view('admin.calendar.create');
+        })->name('create');
+        
+        Route::get('/edit', function() {
+            return view('admin.calendar.edit');
+        })->name('edit');
+    });
 
-
+        // Area of Expertise
+        Route::prefix('expertise')->name('expertise.')->group(function () {
+            Route::get('/', function() {
+                return view('admin.expertise.index');
+            })->name('index');
+            
+            Route::get('/create', function() {
+                return view('admin.expertise.create');
+            })->name('create');
+            
+            Route::get('/edit', function() {
+                return view('admin.expertise.edit');
+            })->name('edit');
+        });
+});
