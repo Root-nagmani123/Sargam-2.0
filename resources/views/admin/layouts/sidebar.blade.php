@@ -130,7 +130,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('expertise.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:airbuds-case-minimalistic-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Area of Expertise</span>
                                                     </a>
@@ -138,7 +138,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('faculty.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:document-text-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Faculty</span>
                                                     </a>
@@ -146,7 +146,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('programme.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:mask-happly-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Programme</span>
                                                     </a>
@@ -154,7 +154,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('batch.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:file-text-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Batch</span>
                                                     </a>
@@ -162,7 +162,7 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('stream.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:shield-user-line-duotone">
+                                                        <iconify-icon icon="solar:widget-4-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Stream</span>
                                                     </a>
