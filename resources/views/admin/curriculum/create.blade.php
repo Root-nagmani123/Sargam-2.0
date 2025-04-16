@@ -49,25 +49,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Batch Name</label>
-                                    <select class="form-select">
-                                        <option>--Select Batch Name--</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
                                     <label class="form-label">Major Subject Name</label>
                                     <select class="form-select">
                                         <option>--Select Major Subject Name--</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Minor Subject Number</label>
-                                    <select class="form-select">
-                                        <option>--Select Minor Subject Number--</option>
                                     </select>
                                 </div>
                             </div>
