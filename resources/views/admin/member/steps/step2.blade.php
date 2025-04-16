@@ -3,9 +3,9 @@
         <div class="mb-3">
 
             @php
-                $employeeTypeOptions = [
-                    
-                ];
+                $employeeTypeOptions = App\Models\EmployeeTypeMaster::getEmployeeTypeList();
+                $employeeTypeOptions = array_column($employeeTypeOptions, 'category_type_name', 'pk');
+                
             @endphp
 
             <x-select name="type" label="Employee Type :" :options="$employeeTypeOptions" :value="old('type')" formLabelClass="form-label" formSelectClass="form-select @error('type') is-invalid @enderror" />
@@ -24,9 +24,8 @@
         <div class="mb-3">
 
             @php
-                $employeeGroupOptions = [
-                    
-                ];
+                $employeeGroupOptions = App\Models\EmployeeGroupMaster::getEmployeeGroupList();
+                $employeeGroupOptions = array_column($employeeGroupOptions, 'group_name', 'pk');
             @endphp 
 
             <x-select name="group" label="Employee Group :" :options="$employeeGroupOptions" :value="old('group')" formLabelClass="form-label" formSelectClass="form-select @error('group') is-invalid @enderror" />
@@ -37,9 +36,8 @@
         <div class="mb-3">
 
             @php
-                $designationOptions = [
-                    
-                ];
+                $designationOptions = App\Models\DesignationMaster::getDesignationList();
+                $designationOptions = array_column($designationOptions, 'designation_name', 'pk');
             @endphp
 
             <x-select name="designation" label="Designation :" :options="$designationOptions" :value="old('designation')" formLabelClass="form-label" formSelectClass="form-select @error('designation') is-invalid @enderror" />
@@ -57,12 +55,11 @@
         <div class="mb-3">
 
             @php
-                $sectionOptions = [
-                    
-                ];
+                $sectionOptions = App\Models\DepartmentMaster::getDepartmentList();
+                $sectionOptions = array_column($sectionOptions, 'department_name', 'pk');
             @endphp
 
-            <x-select name="section" label="Section :" :options="$sectionOptions" :value="old('section')" formLabelClass="form-label" formSelectClass="form-select @error('section') is-invalid @enderror" />
+            <x-select name="section" label="Department Name :" :options="$sectionOptions" :value="old('section')" formLabelClass="form-label" formSelectClass="form-select @error('section') is-invalid @enderror" />
 
         </div>
     </div>
