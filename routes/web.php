@@ -265,16 +265,38 @@ Route::middleware(['auth'])->group(function () {
                 return view('admin.expertise.edit');
             })->name('edit');
         });
-          
-          
-                  // section route
-                  Route::prefix('section')->name('section.')->group(function () {
-                    Route::get('/', function() {
-                        return view('admin.section.index');
-                    })->name('index');
-                });
-              
+          // District route
+          Route::prefix('district')->name('district.')->group(function () {
+            Route::get('/', function() {
+                return view('admin.district.index');
+            })->name('index');
+            
+            Route::get('/create', function() {
+                return view('admin.district.create');
+            })->name('create');
+            
+            Route::get('/edit', function() {
+                return view('admin.district.edit');
+            })->name('edit');
+        });
+          // City route
+          Route::prefix('city')->name('city.')->group(function () {
+            Route::get('/', function() {
+                return view('admin.city.index');
+            })->name('index');
+            
+            Route::get('/create', function() {
+                return view('admin.city.create');
+            })->name('create');
+            
+            Route::get('/edit', function() {
+                return view('admin.city.edit');
+            })->name('edit');
+        });
+
+        Route::prefix('section')->name('section.')->group(function () {
+            Route::get('/', function() {
+                return view('admin.section.index');
+            })->name('index');
+        });
 });
-    
-    
-    
