@@ -293,10 +293,11 @@ Route::middleware(['auth'])->group(function () {
                 return view('admin.city.edit');
             })->name('edit');
         });
-
-        Route::prefix('section')->name('section.')->group(function () {
-            Route::get('/', function() {
-                return view('admin.section.index');
-            })->name('index');
-        });
+                  // section route
+                  Route::prefix('section')->name('section.')->group(function () {
+                    Route::get('/', function() {
+                        return view('admin.section.index');
+                    })->name('index');
+                });
+              
 });
