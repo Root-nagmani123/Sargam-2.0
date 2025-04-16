@@ -1,36 +1,31 @@
+<p>Current Address</p>
+<hr>
 <div class="row">
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="address">Address :</label>
-            <input type="text" name="address" id="address" class="form-control">
+            <x-input name="address" label="Address :" formLabelClass="form-label" formInputClass="form-control" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="country">Country :</label>
-            <select class="form-select" id="country" name="country">
-                <option value="">Select</option>
-            </select>
+
+            <x-select name="country" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" />
+
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="state">State :</label>
-            <select class="form-select" id="state" name="state">
-                <option value="">Select</option>
-            </select>
+            <x-select name="state" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="city ">City :</label>
-            <input type="text" class="form-control" id="city">
+            <x-input name="city" label="City :" formLabelClass="form-label" formInputClass="form-control" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="postal">Postal Code :</label>
-            <input type="text" class="form-control" id="postal">
+            <x-input name="postal" label="Postal Code :" formLabelClass="form-label" formInputClass="form-control" />
         </div>
     </div>
 </div>
@@ -54,7 +49,7 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="permanentcountry">Country :</label>
-            <select class="form-select" id="permanentcountry" name="permanentcountry">
+            <select class="form-select" id="permanentcountry" name="permanentcountry" name="permanentcountry">
                 <option value="">Select</option>
             </select>
         </div>
@@ -62,7 +57,7 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="permanentstate">State :</label>
-            <select class="form-select" id="permanentstate" name="permanentstate">
+            <select class="form-select" id="permanentstate" name="permanentstate" name="permanentstate">
                 <option value="">Select</option>
             </select>
         </div>
@@ -70,13 +65,13 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="permanentcity ">City :</label>
-            <input type="text" class="form-control" id="permanentcity">
+            <input type="text" class="form-control" id="permanentcity" name="permanentcity">
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="permanentpostal">Postal Code :</label>
-            <input type="text" class="form-control" id="permanentpostal">
+            <input type="text" class="form-control" id="permanentpostal" name="permanentpostal">
         </div>
     </div>
 </div>
