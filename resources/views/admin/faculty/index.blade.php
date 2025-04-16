@@ -40,7 +40,7 @@
                 </div>
                 <div
                     class="col-md-8 col-xl-9 text-end d-flex justify-content-md-end justify-content-center mt-3 mt-md-0 gap-3">
-                    <a href="javascript:void(0)" id="btn-add-contact" class="btn btn-primary d-flex align-items-center">Add Faculty
+                    <a href="{{route('faculty.create')}}" id="btn-add-contact" class="btn btn-primary d-flex align-items-center">Add Faculty
                     </a>
                     <a href="javascript:void(0)" id="btn-add-contact" class="btn btn-success d-flex align-items-center" data-bs-toggle="modal"
                     data-bs-target="#vertical-center-scroll-modal">Bulk Upload
