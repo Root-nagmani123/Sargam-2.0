@@ -88,7 +88,7 @@
                                                         <span class="hide-menu">Dashboard</span>
                                                     </a>
                                                 </li>
-                                                <!-- <li class="sidebar-item">
+                                                <li class="sidebar-item">
                                                     <a class="sidebar-link has-arrow" href="javascript:void(0)"
                                                         aria-expanded="false">
                                                         <iconify-icon icon="solar:home-angle-line-duotone">
@@ -118,7 +118,7 @@
                                                             </a>
                                                         </li>
                                                     </ul>
-                                                </li> -->
+                                                </li>
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('member.index') }}"
                                                         id="get-url" aria-expanded="false">
@@ -232,7 +232,7 @@
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('calendar.index') }}"
+                                                    <a class="sidebar-link" href="{{ route('section.index') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:calendar-mark-line-duotone">
                                                         </iconify-icon>
