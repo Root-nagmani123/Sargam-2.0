@@ -74,6 +74,9 @@
                             <div class="mb-3">
                             <select name="assistantcoursecoordinator" id="assistantcoursecoordinator" class="form-control">
                                 <option value="0">Select Assistant Course Coordinator</option>
+                                <option value="0">1</option>
+                                <option value="0">2</option>
+                                <option value="0">3</option>
                             </select>
                             </div>
                         </div>
