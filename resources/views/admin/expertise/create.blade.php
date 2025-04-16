@@ -35,15 +35,12 @@
             <hr>
             <form>
                 <div class="row">
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <div class="mb-3">
-                            <label class="form-label" for="facultytype">Faculty Type :</label>
-                            <select class="form-select" id="facultytype" name="facultytype">
-                                <option value="">Select</option>
-                                <option value="internal">Internal</option>
-                                <option value="guest">Guest</option>
-                                <option value="research">Research</option>
-                            </select>
+                            <label class="form-label" for="expertise">Expertise :</label>
+                           <div class="mb-3">
+                            <input type="text" name="expertise" id="expertise" class="form-control">
+                           </div>
                         </div>
                     </div>
                 </div>

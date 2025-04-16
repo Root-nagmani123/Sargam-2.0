@@ -35,19 +35,12 @@
             <hr>
             <form>
                 <div class="row">
-                    <div id="course_fields" class="my-2"></div>
                     <div class="row" id="course_fields">
                         <div class="col-md-6">
                             <label for="coursename" class="form-label">Course Name :</label>
                             <div class="mb-3">
                                 <input type="text" class="form-control" id="coursename" name="coursename"
                                     placeholder="Course Name">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="abbreviation" class="form-label">Abbreviation :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="abbreviation" name="abbreviation" placeholder="Abbreviation">
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -68,17 +61,26 @@
                                 <input type="text" class="form-control" id="enddate" name="enddate" placeholder="End Date">
                             </div>
                         </div>
-                        <div class="col-sm-2">
-                            <label for="Schoolname" class="form-label"></label>
+                        <div class="col-md-6">
+                            <label for="coursecoordinator" class="form-label">Course coordinator :</label>
                             <div class="mb-3">
-                                <button onclick="course_fields();" class="btn btn-success fw-medium" type="button">
-                                    <i class="material-icons menu-icon">add</i>
-                                </button>
+                            <select name="coursecoordinator" id="coursecoordinator" class="form-control">
+                                <option value="0">Select Coordinator</option>
+                            </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="assistantcoursecoordinator" class="form-label">Assistant Course Coordinator :</label>
+                            <div class="mb-3">
+                            <select name="assistantcoursecoordinator" id="assistantcoursecoordinator" class="form-control">
+                                <option value="0">Select Assistant Course Coordinator</option>
+                            </select>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="mb-3">
+                <hr>
+                <div class="mb-3 mt-4">
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit">
                     <i class="material-icons menu-icon">send</i>
                         Submit
