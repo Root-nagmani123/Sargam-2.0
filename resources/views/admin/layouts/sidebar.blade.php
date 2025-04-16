@@ -148,17 +148,17 @@
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:mask-happly-line-duotone">
                                                         </iconify-icon>
-                                                        <span class="hide-menu">Programme</span>
+                                                        <span class="hide-menu">Course Master</span>
                                                     </a>
                                                 </li>
-                                                <li class="sidebar-item">
+                                                <!-- <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('batch.index') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:file-text-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Batch</span>
                                                     </a>
-                                                </li>
+                                                </li> -->
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('stream.index') }}"
                                                         id="get-url" aria-expanded="false">
@@ -229,6 +229,14 @@
                                                         <iconify-icon icon="solar:calendar-mark-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Calendar</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('calendar.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Section</span>
                                                     </a>
                                                 </li>
                                                 <li>
