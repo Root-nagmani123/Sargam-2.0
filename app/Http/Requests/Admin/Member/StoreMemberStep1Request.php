@@ -4,7 +4,7 @@ namespace App\Http\Requests\Admin\Member;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-
+use App\Models\EmployeeMaster;
 class StoreMemberStep1Request extends FormRequest
 {
     /**
@@ -32,15 +32,15 @@ class StoreMemberStep1Request extends FormRequest
             'father_husband_name' => 'required|string|max:100',
             'marital_status' => [
                 'required',
-                Rule::in(['single', 'married', 'other'])
+                Rule::in(array_keys(EmployeeMaster::maritalStatus))
             ],
             'gender' => [
                 'required',
-                Rule::in(['male', 'female', 'other'])
+                Rule::in(array_keys(EmployeeMaster::gender))
             ],
             'caste_category' => [
                 'required',
-                Rule::in(['general', 'obc', 'sc', 'st', 'ews'])
+                Rule::in(array_keys(EmployeeMaster::casteCategory))
             ],
             'height' => 'nullable|string|max:20',
             'date_of_birth' => 'required|date|before_or_equal:today',
