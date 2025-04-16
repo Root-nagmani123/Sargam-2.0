@@ -251,46 +251,52 @@ Route::middleware(['auth'])->group(function () {
         })->name('edit');
     });
 
-    // Area of Expertise
-    Route::prefix('expertise')->name('expertise.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.expertise.index');
-        })->name('index');
+        // Area of Expertise
+        Route::prefix('expertise')->name('expertise.')->group(function () {
+            Route::get('/', function() {
+                return view('admin.expertise.index');
+            })->name('index');
+            
+            Route::get('/create', function() {
+                return view('admin.expertise.create');
+            })->name('create');
+            
+            Route::get('/edit', function() {
+                return view('admin.expertise.edit');
+            })->name('edit');
+        });
+          // District route
+          Route::prefix('district')->name('district.')->group(function () {
+            Route::get('/', function() {
+                return view('admin.district.index');
+            })->name('index');
+            
+            Route::get('/create', function() {
+                return view('admin.district.create');
+            })->name('create');
+            
+            Route::get('/edit', function() {
+                return view('admin.district.edit');
+            })->name('edit');
+        });
+          // City route
+          Route::prefix('city')->name('city.')->group(function () {
+            Route::get('/', function() {
+                return view('admin.city.index');
+            })->name('index');
+            
+            Route::get('/create', function() {
+                return view('admin.city.create');
+            })->name('create');
+            
+            Route::get('/edit', function() {
+                return view('admin.city.edit');
+            })->name('edit');
+        });
 
-        Route::get('/create', function () {
-            return view('admin.expertise.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.expertise.edit');
-        })->name('edit');
-    });
-    // District route
-    Route::prefix('district')->name('district.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.district.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.district.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.district.edit');
-        })->name('edit');
-    });
-    // City route
-    Route::prefix('city')->name('city.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.city.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.city.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.city.edit');
-        })->name('edit');
-    });
+        Route::prefix('section')->name('section.')->group(function () {
+            Route::get('/', function() {
+                return view('admin.section.index');
+            })->name('index');
+        });
 });
