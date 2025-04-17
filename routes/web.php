@@ -12,7 +12,6 @@ use App\Http\Controllers\Admin\{
     MemberController
 };
 
-Route::get('clear-cache', function  () {
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
     Artisan::call('config:clear');
@@ -295,4 +294,11 @@ Route::middleware(['auth'])->group(function () {
                 return view('admin.city.edit');
             })->name('edit');
         });
+                  // section route
+                  Route::prefix('section')->name('section.')->group(function () {
+                    Route::get('/', function() {
+                        return view('admin.section.index');
+                    })->name('index');
+                });
+              
 });
