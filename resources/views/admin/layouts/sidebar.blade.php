@@ -26,11 +26,21 @@
                                             <!-- --------------------------------------------------------------------------------------------------------- -->
                                             <!-- Dashboards -->
                                             <!-- --------------------------------------------------------------------------------------------------------- -->
-                                            <li class="mini-nav-item selected" id="mini-1">
+                                            <li class="mini-nav-item" id="mini-1">
                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
                                                     data-bs-title="General">
                                                     <iconify-icon icon="solar:layers-line-duotone" class="fs-7">
+                                                    </iconify-icon>
+                                                </a>
+                                            </li>
+                                            <!-- Master -->
+                                            <!-- --------------------------------------------------------------------------------------------------------- -->
+                                            <li class="mini-nav-item" id="mini-3">
+                                                <a href="javascript:void(0)" data-bs-toggle="tooltip"
+                                                    data-bs-custom-class="custom-tooltip" data-bs-placement="right"
+                                                    data-bs-title="Master">
+                                                    <iconify-icon icon="solar:notes-line-duotone" class="fs-7">
                                                     </iconify-icon>
                                                 </a>
                                             </li>
@@ -130,7 +140,8 @@
                                                 <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('expertise.index') }}"
                                                         id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:airbuds-case-minimalistic-line-duotone">
+                                                        <iconify-icon
+                                                            icon="solar:airbuds-case-minimalistic-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Area of Expertise</span>
                                                     </a>
@@ -173,38 +184,6 @@
                                                         <iconify-icon icon="solar:speaker-minimalistic-line-duotone">
                                                         </iconify-icon>
                                                         <span class="hide-menu">Subject</span>
-                                                    </a>
-                                                </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('country.index') }}"
-                                                        id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                                        </iconify-icon>
-                                                        <span class="hide-menu">Country</span>
-                                                    </a>
-                                                </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('state.index') }}"
-                                                        id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="material-symbols:distance">
-                                                        </iconify-icon>
-                                                        <span class="hide-menu">State</span>
-                                                    </a>
-                                                </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('district.index') }}"
-                                                        id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="arcticons:district">
-                                                        </iconify-icon>
-                                                        <span class="hide-menu">District</span>
-                                                    </a>
-                                                </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('city.index') }}"
-                                                        id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:city-bold-duotone">
-                                                        </iconify-icon>
-                                                        <span class="hide-menu">City</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
@@ -256,6 +235,54 @@
                             <div class="simplebar-scrollbar"
                                 style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);"></div>
                         </div>
+                    </nav>
+
+                    <!-- Master -->
+                    <!-- ---------------------------------- -->
+                    <nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-3" data-simplebar="">
+                        <ul class="sidebar-menu" id="sidebarnav">
+                            <!-- ---------------------------------- -->
+                            <!-- Home -->
+                            <!-- ---------------------------------- -->
+                            <li class="nav-small-cap">
+                                <span class="hide-menu">Master</span>
+                            </li>
+                            <li class="sidebar-item">
+                                <a href="../landingpage/index.html" class="sidebar-link">
+                                    <iconify-icon icon="solar:notes-line-duotone"></iconify-icon>
+                                    <span class="hide-menu">Landingpage</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('country.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Country</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('state.index') }}">
+                                    <iconify-icon icon="material-symbols:distance">
+                                    </iconify-icon>
+                                    <span class="hide-menu">State</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('district.index') }}">
+                                    <iconify-icon icon="arcticons:district">
+                                    </iconify-icon>
+                                    <span class="hide-menu">District</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('city.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:city-bold-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">City</span>
+                                </a>
+                            </li>
+                        </ul>
                     </nav>
                 </div>
             </div>
