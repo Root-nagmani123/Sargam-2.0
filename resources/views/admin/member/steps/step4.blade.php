@@ -20,6 +20,11 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
+            <x-input name="district" label="District :" formLabelClass="form-label" formInputClass="form-control" />
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
             <x-input name="city" label="City :" formLabelClass="form-label" formInputClass="form-control" />
         </div>
     </div>
