@@ -11,9 +11,19 @@ class EmployeeTypeMaster extends Model
     protected $primaryKey = 'pk';
     public $timestamps = false;
 
+    // get employee type list
     public static function getEmployeeTypeList()
     {
         $employeeTypeList = self::select('pk', 'category_type_name')->get();
         return $employeeTypeList->toArray();
     }
+
+    // get deputation pk
+    public static function getDeputationPK()
+    {
+        $deputationPK = self::where(strtolower('category_type_name'), 'deputation')->first()->pk;
+        return $deputationPK;
+    }
+
+
 }

@@ -34,13 +34,15 @@
                         </div>
 
                         <div class="col-md-6 mt-4">
+                            
+                            
 
-                            <x-select name="coursecoordinator" label="Course Coordinator" placeholder="Course Coordinator" formLabelClass="form-label" />
+                            <x-select name="coursecoordinator" label="Course Coordinator" placeholder="Course Coordinator" formLabelClass="form-label" :options="$deputationEmployeeList" />
 
                         </div>
 
                         <div class="col-md-6 mt-4">
-                            <x-select name="assistantcoursecoordinator" label="Assistant Course Coordinator" placeholder="Assistant Course Coordinator" formLabelClass="form-label" />
+                            <x-select name="assistantcoursecoordinator" label="Assistant Course Coordinator" placeholder="Assistant Course Coordinator" formLabelClass="form-label" :options="$deputationEmployeeList" />
                         </div>
 
                     </div>

@@ -11,6 +11,7 @@ class EmployeeMaster extends Model
     public $timestamps = false;
 
     protected $guarded = [];
+    protected $primaryKey = 'pk';
 
     public const title = [
         1 => 'Mr',
@@ -37,4 +38,15 @@ class EmployeeMaster extends Model
         5 => 'Other'
     ];
     
+    public static function getDeputationEmployeeList()
+    {
+        $deputationEmployeeList = self::where('emp_type', EmployeeTypeMaster::getDeputationPK())->get();
+        return $deputationEmployeeList;
+    }
+
+    public static function getFullName($pk)
+    {
+        $employee = self::find($pk);
+        return $employee->first_name . ' ' . $employee->last_name;
+    }
 }
