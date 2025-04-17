@@ -248,12 +248,6 @@
                                 <span class="hide-menu">Master</span>
                             </li>
                             <li class="sidebar-item">
-                                <a href="../landingpage/index.html" class="sidebar-link">
-                                    <iconify-icon icon="solar:notes-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Landingpage</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('country.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
