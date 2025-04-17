@@ -40,9 +40,16 @@
                             <x-select name="coursecoordinator" label="Course Coordinator" placeholder="Course Coordinator" formLabelClass="form-label" :options="$deputationEmployeeList" />
 
                         </div>
-
-                        <div class="col-md-6 mt-4">
-                            <x-select name="assistantcoursecoordinator" label="Assistant Course Coordinator" placeholder="Assistant Course Coordinator" formLabelClass="form-label" :options="$deputationEmployeeList" />
+                        <div class="col-md-6">
+                            <label for="assistantcoursecoordinator" class="form-label">Assistant Course Coordinator :</label>
+                            <div class="mb-3">
+                            <select name="assistantcoursecoordinator" id="assistantcoursecoordinator" class="form-control" multiple>
+                                <option value="0">Select Assistant Course Coordinator</option>
+                                <option value="0">1</option>
+                                <option value="0">2</option>
+                                <option value="0">3</option>
+                            </select>
+                            </div>
                         </div>
 
                     </div>
