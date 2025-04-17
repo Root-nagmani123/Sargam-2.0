@@ -9,7 +9,8 @@ use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
     UserController,
-    MemberController
+    MemberController,
+    CourseController
 };
 
 Route::get('clear-cache', function () {
@@ -69,18 +70,12 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Programme Routes
-    Route::prefix('programme')->name('programme.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.programme.index');
-        })->name('index');
+    Route::prefix('programme')->name('programme.')->controller(CourseController::class)->group(function () {
 
-        Route::get('/create', function () {
-            return view('admin.programme.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.programme.edit');
-        })->name('edit');
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::get('/edit', 'edit')->name('edit');
+        Route::post('/store', 'store')->name('store');
     });
 
     // batch route
