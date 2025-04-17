@@ -39,10 +39,11 @@
                 </div>
                 <div
                     class="col-md-8 col-xl-9 text-end d-flex justify-content-md-end justify-content-center mt-3 mt-md-0">
-                    <a href="{{ route('expertise.create') }}" id="btn-add-contact"
-                        class="btn btn-primary d-flex align-items-center">
+                    <!-- Button trigger modal -->
+                    <button type="button" class="btn mb-1 btn-primary px-4 fs-4 " data-bs-toggle="modal"
+                        data-bs-target="#vertical-center-scroll-modal">
                         <i class="ri-add-line text-white me-1 fs-5"></i> Add Expertise
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -88,7 +89,8 @@
                             </td>
                             <td>
                                 <div class="action-btn">
-                                    <a href="{{ route('expertise.edit', 1) }}" class="text-primary edit">
+                                    <a href="{{ route('expertise.edit', 1) }}" class="text-primary edit"
+                                        data-bs-toggle="modal" data-bs-target="#vertical-center-scroll-modal">
                                         <i class="ri-eye-line fs-5"></i>
                                     </a>
                                     <a href="javascript:void(0)" class="text-dark delete ms-2">
@@ -110,6 +112,109 @@
         </div>
     </div>
 </div>
+<!-- Vertically centered modal -->
+<div class="modal fade" id="vertical-center-scroll-modal" tabindex="-1" aria-labelledby="vertical-center-modal"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header d-flex align-items-center">
+                <h4 class="modal-title" id="myLargeModalLabel">
+                    Vertically centered scrollable Modal
+                </h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h4>Overflowing text to show scroll behavior</h4>
+                <p>
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Vivamus sagittis lacus vel
+                    augue laoreet rutrum faucibus dolor auctor.
+                </p>
+                <p>
+                    Aenean lacinia bibendum nulla sed consectetur.
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Donec sed odio dui. Donec
+                    ullamcorper nulla non metus auctor fringilla.
+                </p>
+                <p>
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Vivamus sagittis lacus vel
+                    augue laoreet rutrum faucibus dolor auctor.
+                </p>
+                <p>
+                    Aenean lacinia bibendum nulla sed consectetur.
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Donec sed odio dui. Donec
+                    ullamcorper nulla non metus auctor fringilla.
+                </p>
+                <p>
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Vivamus sagittis lacus vel
+                    augue laoreet rutrum faucibus dolor auctor.
+                </p>
+                <p>
+                    Aenean lacinia bibendum nulla sed consectetur.
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Donec sed odio dui. Donec
+                    ullamcorper nulla non metus auctor fringilla.
+                </p>
+                <p>
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Vivamus sagittis lacus vel
+                    augue laoreet rutrum faucibus dolor auctor.
+                </p>
+                <p>
+                    Aenean lacinia bibendum nulla sed consectetur.
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Donec sed odio dui. Donec
+                    ullamcorper nulla non metus auctor fringilla.
+                </p>
+                <p>
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Vivamus sagittis lacus vel
+                    augue laoreet rutrum faucibus dolor auctor.
+                </p>
+                <p>
+                    Aenean lacinia bibendum nulla sed consectetur.
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Donec sed odio dui. Donec
+                    ullamcorper nulla non metus auctor fringilla.
+                </p>
+                <p>
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Vivamus sagittis lacus vel
+                    augue laoreet rutrum faucibus dolor auctor.
+                </p>
+                <p>
+                    Aenean lacinia bibendum nulla sed consectetur.
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Donec sed odio dui. Donec
+                    ullamcorper nulla non metus auctor fringilla.
+                </p>
+                <p>
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Vivamus sagittis lacus vel
+                    augue laoreet rutrum faucibus dolor auctor.
+                </p>
+                <p>
+                    Aenean lacinia bibendum nulla sed consectetur.
+                    Praesent commodo cursus magna, vel scelerisque
+                    nisl consectetur et. Donec sed odio dui. Donec
+                    ullamcorper nulla non metus auctor fringilla.
+                </p>
+            </div>
+            <div class="modal-footer gap-2">
+                <button type="submit" class="btn bg-success-subtle text-success  waves-effect text-start">
+                    Submit
+                </button>
+                <button type="button" class="btn bg-danger-subtle text-danger  waves-effect text-start"
+                    data-bs-dismiss="modal">
+                    Close
+                </button>
 
+            </div>
+        </div>
+    </div>
+</div>
 
 @endsection

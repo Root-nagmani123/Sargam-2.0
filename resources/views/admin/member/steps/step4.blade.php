@@ -23,8 +23,18 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
+            <label class="form-label" for="district ">District :</label>
+            <select class="form-select" id="district" name="district">
+                <option value="">Select</option>
+            </select>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
             <label class="form-label" for="city ">City :</label>
-            <input type="text" class="form-control" id="city">
+            <select class="form-select" id="city" name="city">
+                <option value="">Select</option>
+            </select>
         </div>
     </div>
     <div class="col-md-6">
