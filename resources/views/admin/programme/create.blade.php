@@ -72,7 +72,7 @@
                         <div class="col-md-6">
                             <label for="assistantcoursecoordinator" class="form-label">Assistant Course Coordinator :</label>
                             <div class="mb-3">
-                            <select name="assistantcoursecoordinator" id="assistantcoursecoordinator" class="form-control">
+                            <select name="assistantcoursecoordinator" id="assistantcoursecoordinator" class="form-control" multiple>
                                 <option value="0">Select Assistant Course Coordinator</option>
                                 <option value="0">1</option>
                                 <option value="0">2</option>
