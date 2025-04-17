@@ -28,8 +28,8 @@ class ProgrammeRequest extends FormRequest
             'courseyear' => 'required|date_format:Y-m',
             'startdate' => 'required|date',
             'enddate' => 'required|date',
-            'coursecoordinator' => 'nullable|string|max:255',
-            'assistantcoursecoordinator' => 'nullable|string|max:255',
+            'coursecoordinator' => 'required|string|max:255',
+            'assistantcoursecoordinator' => 'required|string|max:255',
         ];
     }
 
