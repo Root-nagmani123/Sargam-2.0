@@ -17,7 +17,12 @@
     <option value="">Select</option>
     @foreach($options as $optionValue => $optionLabel)
         <option value="{{ $optionValue }}" 
-            {{ old($name, $value) == $optionValue ? 'selected' : '' }}>
+            @if($multiple) 
+                {{ in_array($optionValue, old($name, $value)) ? 'selected' : '' }}
+            @else
+                {{ old($name, $value) == $optionValue ? 'selected' : '' }}
+            @endif
+        >
             {{ $optionLabel }}
         </option>
     @endforeach
