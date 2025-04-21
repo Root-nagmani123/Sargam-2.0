@@ -73,9 +73,9 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('programme')->name('programme.')->controller(CourseController::class)->group(function () {
 
         Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::get('/edit', 'edit')->name('edit');
-        Route::post('/store', 'store')->name('store');
+        Route::get('create', 'create')->name('create');
+        Route::get('edit/{id}', 'edit')->name('edit');
+        Route::post('store', 'store')->name('store');
     });
 
     // batch route
