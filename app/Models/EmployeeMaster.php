@@ -49,4 +49,16 @@ class EmployeeMaster extends Model
         $employee = self::find($pk);
         return $employee->first_name . ' ' . $employee->last_name;
     }
+
+    public static function getDeputationEmployeeListNameAndPK() {
+        $deputationEmployeeList = self::getDeputationEmployeeList();
+        $deputationEmployeeList = $deputationEmployeeList->map(function ($item) {
+            $item['name'] = $item->first_name . ' ' . $item->last_name;
+            return $item;
+        });
+        $deputationEmployeeList = $deputationEmployeeList->toArray();
+        $deputationEmployeeList = array_column($deputationEmployeeList, 'name', 'pk');
+
+        return $deputationEmployeeList;
+    }
 }
