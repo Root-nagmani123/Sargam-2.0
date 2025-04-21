@@ -12,6 +12,7 @@
     id="{{ $name }}"
     name="{{ $name }}"
     @if($required) required @endif
+    @if($multiple) multiple @endif
 >
     <option value="">Select</option>
     @foreach($options as $optionValue => $optionLabel)
