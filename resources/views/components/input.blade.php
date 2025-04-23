@@ -5,7 +5,7 @@
 @endif
 
 @php
-    $formInputClass = 'form-control' . ($errors->has($name) ? ' is-invalid' : '');
+    $formInputClass = 'form-control' . ($errors->has($name) ? ' is-invalid' : '') . ' ' . ($formInputClass ?? '');
 @endphp
 <input
     type="{{ $type }}"
