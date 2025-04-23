@@ -4,9 +4,8 @@ namespace App\View\Components;
 
 use Illuminate\View\Component;
 
-class Input extends Component
+class InputFile extends Component
 {
-
     public $name;
     public $label;
     public $type;
@@ -49,6 +48,6 @@ class Input extends Component
      */
     public function render()
     {
-        return view('components.input');
+        return view('components.input-file');
     }
 }
