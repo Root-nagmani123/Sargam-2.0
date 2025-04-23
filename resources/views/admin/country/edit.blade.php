@@ -19,7 +19,7 @@
                             </li>
                             <li class="breadcrumb-item" aria-current="page">
                                 <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                Country
+                                    Country
                                 </span>
                             </li>
                         </ol>
@@ -33,49 +33,45 @@
         {{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-@endif
+    @endif
 
-@if (session('error'))
+    @if (session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-@endif
+    @endif
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">Country</h4>
             <hr>
             <form method="POST" action="{{ route('country.update', $country->pk) }}">
-            @csrf
-            @method('PUT')
+                @csrf
+                @method('PUT')
                 <div class="row">
-                    <div id="country_fields" class="my-2"></div>
-                    <div class="row" id="country_fields">
-                        <div class="col-sm-10">
-                            <label for="Schoolname" class="form-label">Country Name :</label>
-                            <div class="mb-3">
-                            <input type="text" class="form-control" name="country_name" value="{{ $country->country_name }}" required>
-                            </div>
+                    <div class="col-sm-10">
+                        <label for="country_name" class="form-label">Country Name :</label>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" name="country_name"
+                                value="{{ old('country_name', $country->country_name) }}" required>
+                            @error('country_name')
+                            <p class="text-danger">{{ $message }}</p>
+                            @enderror
                         </div>
-                        <div class="col-sm-2">
-                            <label for="Schoolname" class="form-label"></label>
-                            <!-- <div class="mb-3">
-                                <button onclick="country_fields();" class="btn btn-success fw-medium" type="button">
-                                    <i class="material-icons menu-icon">add</i>
-                                </button>
-                            </div> -->
-                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        <label for="Schoolname" class="form-label"></label>
                     </div>
                 </div>
                 <hr>
                 <div class="mb-3">
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                    <i class="material-icons menu-icon">send</i>
-                        Submit
+                        <i class="material-icons menu-icon">send</i> Submit
                     </button>
                 </div>
             </form>
+
         </div>
     </div>
     <!-- end Vertical Steps Example -->

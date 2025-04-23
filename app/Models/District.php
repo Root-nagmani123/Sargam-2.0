@@ -15,4 +15,8 @@ class District extends Model
         'state_master_pk',
         'district_name',
     ];
+    public function cities()
+    {
+        return $this->hasMany(City::class, 'district_master_pk', 'pk');
+    }
 }
