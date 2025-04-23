@@ -27,10 +27,10 @@ class LocationController extends Controller
         ]);
     
         foreach ($request->country_name as $name) {
-            DB::table('country_master')->insert([
+            Country::create([
                 'country_name' => $name,
-                'created_by' => auth()->id() ?? 1,
-                'created_date' => now(),
+                'created_by' => auth()->id() ?? 1,  // Use current logged-in user ID or fallback to 1
+                'created_date' => now(),  // Use current timestamp
             ]);
         }
     
@@ -43,6 +43,10 @@ class LocationController extends Controller
     }
 
     public function countryUpdate(Request $request, $id) {
+        $request->validate([
+            'country_name' => 'required|string|max:255',
+        ]);
+    
         $country = Country::findOrFail($id);
         $country->country_name = $request->country_name;
         $country->save();
@@ -141,7 +145,8 @@ class LocationController extends Controller
             'district_name' => 'required|string|max:100',
         ]);
     
-        DB::table('state_district_mapping')->insert([
+       
+        District::create([
             'state_master_pk' => $request->state_master_pk,
             'district_name' => $request->district_name,
         ]);
@@ -161,12 +166,12 @@ class LocationController extends Controller
             'district_name' => 'required|string|max:100',
         ]);
     
-        DB::table('state_district_mapping')
-            ->where('pk', $id)
-            ->update([
-                'state_master_pk' => $request->state_master_pk,
-                'district_name' => $request->district_name,
-            ]);
+        $district = District::findOrFail($id);
+        $district->update([
+            'state_master_pk' => $request->state_master_pk,
+            'district_name' => $request->district_name,
+        ]);
+    
     
         return redirect()->route('district.index')->with('success', 'District updated successfully');
     }
@@ -178,18 +183,14 @@ class LocationController extends Controller
 
     // City
     public function cityIndex() {
-        $cities = DB::table('city_master')
-        ->join('state_master', 'city_master.state_master_pk', '=', 'state_master.pk')
-        ->join('state_district_mapping', 'city_master.district_master_pk', '=', 'state_district_mapping.pk')
-        ->select('city_master.*', 'state_master.state_name', 'state_district_mapping.district_name')
-        ->get();
-        // print_r($cities);die;
+      
+        $cities = City::with(['state', 'district'])->get();
         return view('admin.city.index', compact('cities'));
     }
 
     public function cityCreate() {
-        $states = DB::table('state_master')->get();
-        $districts = DB::table('state_district_mapping')->get();
+        $states = State::all();  // Fetch all states
+        $districts = District::all(); 
         return view('admin.city.create', compact('states','districts'));
     }
 
@@ -200,7 +201,7 @@ class LocationController extends Controller
             'city_name' => 'required|string|max:100',
         ]);
     
-        DB::table('city_master')->insert([
+        City::create([
             'state_master_pk' => $request->state_master_pk,
             'district_master_pk' => $request->district_master_pk,
             'city_name' => $request->city_name,
@@ -210,9 +211,11 @@ class LocationController extends Controller
     }
 
     public function cityEdit($id) {
-        $city = DB::table('city_master')->where('pk', $id)->first();
-    $states = DB::table('state_master')->get();
-    $districts = DB::table('state_district_mapping')->get();
+        $city = City::findOrFail($id);  // This will automatically handle finding by primary key 'pk'
+
+    
+        $states = State::all();  // Get all states
+        $districts = District::all();  // Get all districts
         return view('admin.city.edit', compact('city', 'districts','states'));
     }
 
@@ -223,11 +226,14 @@ class LocationController extends Controller
             'city_name' => 'required|string|max:100',
         ]);
     
-        DB::table('city_master')->where('pk', $id)->update([
-            'state_master_pk' => $request->state_master_pk,
-            'district_master_pk' => $request->district_master_pk,
-            'city_name' => $request->city_name,
-        ]);
+        $city = City::findOrFail($id);
+
+    // Update the city details using the model
+    $city->update([
+        'state_master_pk' => $request->state_master_pk,
+        'district_master_pk' => $request->district_master_pk,
+        'city_name' => $request->city_name,
+    ]);
     
         return redirect()->route('city.index')->with('success', 'City updated successfully');
     }
