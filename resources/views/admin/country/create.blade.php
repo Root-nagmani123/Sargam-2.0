@@ -28,40 +28,80 @@
             </div>
         </div>
     </div>
+    @if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">Country</h4>
             <hr>
-            <form>
+            <form action="{{ route('country.store') }}" method="POST">
+    @csrf
+    <div class="card">
+        <div class="card-body">
+            <h4 class="card-title mb-3">Country</h4>
+            <hr>
+            <div class="row" id="country_fields">
                 <div class="row">
-                    <div id="country_fields" class="my-2"></div>
-                    <div class="row" id="country_fields">
-                        <div class="col-sm-10">
-                            <label for="Schoolname" class="form-label">Country Name :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="Country Name">
-                            </div>
+                    <div class="col-sm-10">
+                        <label class="form-label">Country Name :</label>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" name="country_name[]" placeholder="Country Name">
                         </div>
-                        <div class="col-sm-2">
-                            <label for="Schoolname" class="form-label"></label>
-                            <div class="mb-3">
-                                <button onclick="country_fields();" class="btn btn-success fw-medium" type="button">
-                                    <i class="material-icons menu-icon">add</i>
-                                </button>
-                            </div>
+                    </div>
+                    <div class="col-sm-2">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="mb-3">
+                            <button onclick="addCountryField();" class="btn btn-success fw-medium" type="button">
+                                <i class="material-icons menu-icon">add</i>
+                            </button>
                         </div>
                     </div>
                 </div>
-                <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                    <i class="material-icons menu-icon">send</i>
-                        Submit
-                    </button>
+            </div>
+            <hr>
+            <div class="mb-3">
+                <button class="btn btn-primary hstack gap-6 float-end" type="submit">
+                    <i class="material-icons menu-icon">send</i> Submit
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    function addCountryField() {
+        const html = `
+            <div class="row">
+                <div class="col-sm-10">
+                    <div class="mb-3">
+                        <input type="text" class="form-control" name="country_name[]" placeholder="Country Name">
+                    </div>
                 </div>
-            </form>
+                <div class="col-sm-2">
+                    <div class="mb-3">
+                        <button class="btn btn-danger" type="button" onclick="this.parentElement.parentElement.parentElement.remove()">
+                            <i class="material-icons menu-icon">remove</i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.getElementById('country_fields').insertAdjacentHTML('beforeend', html);
+    }
+</script>
+
         </div>
     </div>
     <!-- end Vertical Steps Example -->

@@ -28,29 +28,43 @@
             </div>
         </div>
     </div>
+    @if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">Country</h4>
             <hr>
-            <form>
+            <form method="POST" action="{{ route('country.update', $country->pk) }}">
+            @csrf
+            @method('PUT')
                 <div class="row">
                     <div id="country_fields" class="my-2"></div>
                     <div class="row" id="country_fields">
                         <div class="col-sm-10">
                             <label for="Schoolname" class="form-label">Country Name :</label>
                             <div class="mb-3">
-                                <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="Country Name">
+                            <input type="text" class="form-control" name="country_name" value="{{ $country->country_name }}" required>
                             </div>
                         </div>
                         <div class="col-sm-2">
                             <label for="Schoolname" class="form-label"></label>
-                            <div class="mb-3">
+                            <!-- <div class="mb-3">
                                 <button onclick="country_fields();" class="btn btn-success fw-medium" type="button">
                                     <i class="material-icons menu-icon">add</i>
                                 </button>
-                            </div>
+                            </div> -->
                         </div>
                     </div>
                 </div>
