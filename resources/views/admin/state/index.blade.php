@@ -27,7 +27,19 @@
             </div>
         </div>
     </div>
+    @if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif 
 
+@if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card">
@@ -45,15 +57,7 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
-                        <div class="dataTables_length" id="zero_config_length"><label>Show <select
-                                    name="zero_config_length" aria-controls="zero_config" class="">
-                                    <option value="10">10</option>
-                                    <option value="25">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select> entries</label></div>
-                        <div id="zero_config_filter" class="dataTables_filter"><label>Search:<input type="search"
-                                    class="" placeholder="" aria-controls="zero_config"></label></div>
+                        
                         <table id="zero_config"
                             class="table table-striped table-bordered text-nowrap align-middle dataTable"
                             aria-describedby="zero_config_info">
@@ -70,62 +74,53 @@
                                     <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
                                         aria-label="Salary: activate to sort column ascending"
                                         style="width: 85.8906px;">Action</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
+                                    <!-- <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
                                         aria-label="Salary: activate to sort column ascending"
-                                        style="width: 85.8906px;">Status</th>
+                                        style="width: 85.8906px;">Status</th> -->
                                 </tr>
                                 <!-- end row -->
                             </thead>
                             <tbody>
-                                <tr class="odd">
-                                    <td>1</td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0"> Airi Satou</h6>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex justify-content-start align-items-start gap-2">
-                                            <a href="#" class="btn btn-success text-white btn-sm">
-                                                Edit
-                                            </a>
-                                            <form action="#" method="POST" class="m-0">
-                                                <input type="hidden" name="_token"
-                                                    value="7m53OwU7KaFp1PPyJcyUuVMXW7xvrGr12yL6QycA"> <input
-                                                    type="hidden" name="_method" value="DELETE"> <button type="submit"
-                                                    class="btn btn-danger text-white btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete?')">
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="news" data-column="status" data-id="21" checked="">
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
+    @foreach($states as $key => $state)
+        <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+            <td>{{ $key + 1 }}</td>
+            <td class="sorting_1">
+                <div class="d-flex align-items-center gap-6">
+                    <h6 class="mb-0">{{ $state->state_name }}</h6>
+                </div>
+            </td>
+            <td>
+                <div class="d-flex justify-content-start align-items-start gap-2">
+                    <a href="{{ route('state.edit', $state->Pk) }}" class="btn btn-success text-white btn-sm">
+                        Edit
+                    </a>
+                    <form action="{{ route('state.delete', $state->Pk) }}" method="POST" class="m-0">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger text-white btn-sm"
+                            onclick="return confirm('Are you sure you want to delete?')">
+                            Delete
+                        </button>
+                    </form>
+                </div>
+            </td>
+            <!-- <td>
+                <div class="form-check form-switch">
+                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                        data-table="states" data-column="status" data-id="{{ $state->Pk }}"
+                        {{ $state->status ? 'checked' : '' }}>
+                </div>
+            </td> -->
+        </tr>
+    @endforeach
+</tbody>
+
                         </table>
-                        <div class="dataTables_info" id="zero_config_info" role="status" aria-live="polite">Showing 1 to
-                            10 of 57 entries</div>
-                        <div class="dataTables_paginate paging_simple_numbers" id="zero_config_paginate"><a
-                                class="paginate_button previous disabled" aria-controls="zero_config"
-                                aria-disabled="true" role="link" data-dt-idx="previous" tabindex="-1"
-                                id="zero_config_previous">Previous</a><span><a class="paginate_button current"
-                                    aria-controls="zero_config" role="link" aria-current="page" data-dt-idx="0"
-                                    tabindex="0">1</a><a class="paginate_button " aria-controls="zero_config"
-                                    role="link" data-dt-idx="1" tabindex="0">2</a><a class="paginate_button "
-                                    aria-controls="zero_config" role="link" data-dt-idx="2" tabindex="0">3</a><a
-                                    class="paginate_button " aria-controls="zero_config" role="link" data-dt-idx="3"
-                                    tabindex="0">4</a><a class="paginate_button " aria-controls="zero_config"
-                                    role="link" data-dt-idx="4" tabindex="0">5</a><a class="paginate_button "
-                                    aria-controls="zero_config" role="link" data-dt-idx="5" tabindex="0">6</a></span><a
-                                class="paginate_button next" aria-controls="zero_config" role="link" data-dt-idx="next"
-                                tabindex="0" id="zero_config_next">Next</a></div>
-                    </div>
+                        <div class="mt-3">
+                        {{ $states->links('pagination::bootstrap-5') }}
+
+</div>
+
                 </div>
             </div>
         </div>

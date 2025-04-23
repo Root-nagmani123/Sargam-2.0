@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
@@ -130,17 +131,25 @@ Route::middleware(['auth'])->group(function () {
 
     // country route
     Route::prefix('country')->name('country.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.country.index');
-        })->name('index');
+        //      Route::get('/', function () {
+        //     return view('admin.country.index');
+        // })->name('index');
+       
 
-        Route::get('/create', function () {
-            return view('admin.country.create');
-        })->name('create');
+        // Route::get('/create', function () {
+        //     return view('admin.country.create');
+        // })->name('create');
 
-        Route::get('/edit', function () {
-            return view('admin.country.edit');
-        })->name('edit');
+        // Route::get('/edit', function () {
+        //     return view('admin.country.edit');
+        // })->name('edit');
+
+    Route::get('/', [LocationController::class, 'countryIndex'])->name('index');
+    Route::get('/create', [LocationController::class, 'countryCreate'])->name('create');
+    Route::post('/store', [LocationController::class, 'countryStore'])->name('store');
+    Route::get('/edit/{id}', [LocationController::class, 'countryEdit'])->name('edit');
+    Route::PUT('/update/{id}', [LocationController::class, 'countryUpdate'])->name('update');
+    Route::delete('/delete/{id}', [LocationController::class, 'countryDelete'])->name('delete');
     });
 
     // curriculum route
@@ -177,65 +186,50 @@ Route::middleware(['auth'])->group(function () {
     // state
 
     Route::prefix('state')->name('state.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.state.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.state.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.state.edit');
-        })->name('edit');
+      
+        Route::get('/', [LocationController::class, 'stateIndex'])->name('index');
+        Route::get('/create', [LocationController::class, 'stateCreate'])->name('create');
+        Route::post('/store', [LocationController::class, 'stateStore'])->name('store');
+        Route::get('/edit/{id}', [LocationController::class, 'stateEdit'])->name('edit');
+        Route::post('/update/{id}', [LocationController::class, 'stateUpdate'])->name('update');
+        Route::delete('/delete/{id}', [LocationController::class, 'stateDelete'])->name('delete');
     });
 
 
     // district route
     Route::prefix('district')->name('district.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.district.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.district.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.district.edit');
-        })->name('edit');
+        
+    Route::get('/', [LocationController::class, 'districtIndex'])->name('index');
+    Route::get('/create', [LocationController::class, 'districtCreate'])->name('create');
+    Route::post('/store', [LocationController::class, 'districtStore'])->name('store');
+    Route::get('/edit/{id}', [LocationController::class, 'districtEdit'])->name('edit');
+    Route::post('/update/{id}', [LocationController::class, 'districtUpdate'])->name('update');
+    Route::delete('/delete/{id}', [LocationController::class, 'districtDelete'])->name('delete');
     });
 
     // city route
     Route::prefix('city')->name('city.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.city.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.city.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.city.edit');
-        })->name('edit');
+        // Route::get('/', function() {
+       
+    Route::get('/', [LocationController::class, 'cityIndex'])->name('index');
+    Route::get('/create', [LocationController::class, 'cityCreate'])->name('create');
+    Route::post('/store', [LocationController::class, 'cityStore'])->name('store');
+    Route::get('/edit/{id}', [LocationController::class, 'cityEdit'])->name('edit');
+    Route::post('/update/{id}', [LocationController::class, 'cityUpdate'])->name('update');
+    Route::delete('/delete/{id}', [LocationController::class, 'cityDelete'])->name('delete');
     });
 
     // state route
 
-    Route::prefix('state')->name('state.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.state.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.state.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.state.edit');
-        })->name('edit');
-    });
+Route::prefix('state')->name('state.')->group(function () {
+    
+    Route::get('/', [LocationController::class, 'stateIndex'])->name('index');
+    Route::get('/create', [LocationController::class, 'stateCreate'])->name('create');
+    Route::post('/store', [LocationController::class, 'stateStore'])->name('store');
+    Route::get('/edit/{id}', [LocationController::class, 'stateEdit'])->name('edit');
+    Route::post('/update/{id}', [LocationController::class, 'stateUpdate'])->name('update');
+    Route::delete('/delete/{id}', [LocationController::class, 'stateDelete'])->name('delete');
+});
     // calendar
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', function () {
@@ -265,34 +259,9 @@ Route::middleware(['auth'])->group(function () {
                 return view('admin.expertise.edit');
             })->name('edit');
         });
-          // District route
-          Route::prefix('district')->name('district.')->group(function () {
-            Route::get('/', function() {
-                return view('admin.district.index');
-            })->name('index');
-            
-            Route::get('/create', function() {
-                return view('admin.district.create');
-            })->name('create');
-            
-            Route::get('/edit', function() {
-                return view('admin.district.edit');
-            })->name('edit');
-        });
+       
           // City route
-          Route::prefix('city')->name('city.')->group(function () {
-            Route::get('/', function() {
-                return view('admin.city.index');
-            })->name('index');
-            
-            Route::get('/create', function() {
-                return view('admin.city.create');
-            })->name('create');
-            
-            Route::get('/edit', function() {
-                return view('admin.city.edit');
-            })->name('edit');
-        });
+         
                   // section route
                   Route::prefix('section')->name('section.')->group(function () {
                     Route::get('/', function() {

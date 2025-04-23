@@ -28,40 +28,45 @@
             </div>
         </div>
     </div>
+    @if (session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+@if (session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">State</h4>
             <hr>
-            <form>
-                <div class="row">
-                    <div id="state_fields" class="my-2"></div>
-                    <div class="row" id="state_fields">
-                        <div class="col-sm-10">
-                            <label for="Schoolname" class="form-label">State Name :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="State Name">
-                            </div>
-                        </div>
-                        <div class="col-sm-2">
-                            <label for="Schoolname" class="form-label"></label>
-                            <div class="mb-3">
-                                <button onclick="state_fields();" class="btn btn-success fw-medium" type="button">
-                                    <i class="material-icons menu-icon">add</i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                    <i class="material-icons menu-icon">send</i>
-                        Submit
-                    </button>
-                </div>
-            </form>
+            <form action="{{ route('state.store') }}" method="POST">
+            @csrf
+
+            <div class="mb-3">
+                <label for="state_name" class="form-label">State Name</label>
+                <input type="text" class="form-control" id="state_name" name="state_name" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="country_master_pk" class="form-label">Select Country</label>
+                <select class="form-select" id="country_master_pk" name="country_master_pk" required>
+                    <option value="">-- Select Country --</option>
+                    @foreach($countries as $country)
+                        <option value="{{ $country->pk }}">{{ $country->country_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save</button>
+            <a href="{{ route('state.index') }}" class="btn btn-secondary">Back</a>
+        </form>
         </div>
     </div>
     <!-- end Vertical Steps Example -->
