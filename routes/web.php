@@ -125,7 +125,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // country route
-    Route::prefix('country')->name('country.')->group(function () {
+    Route::prefix('country')->name('country.')->group(function () { 
         //      Route::get('/', function () {
         //     return view('admin.country.index');
         // })->name('index');
