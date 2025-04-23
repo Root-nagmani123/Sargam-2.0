@@ -4,40 +4,84 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="card card-body py-3">
-        <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Faculty</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="../main/index.html">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    Faculty
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
+
+    <x-breadcrum title="Faculty" />
+    <x-session_message />
+
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-6">
+                            <h4>Faculty</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <a href="{{route('faculty.create')}}" class="btn btn-primary">+ Add Faculty</a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div id="zero_config_wrapper" class="dataTables_wrapper">
+                        <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
+                            <thead>
+                                <!-- start row -->
+                                <tr>
+                                    <th>S.No.</th>
+                                    <th>Course Name</th>
+                                    <th>Short Name</th>
+                                    <th>Course Year</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Action</th>
+                                </tr>
+                                <!-- end row -->
+                            </thead>
+                            <tbody>
+                                @if (!empty($courseMasterList) && count($courseMasterList) > 0)
+                                    @foreach ($courseMasterList as $courseMaster)
+                                        <tr class="odd">
+                                            <td>{{ $loop->iteration }}</td>
+                                            <td>{{ $courseMaster->course_name ?? 'N/A' }}</td>
+                                            <td>{{ $courseMaster->couse_short_name ?? 'N/A' }}</td>
+                                            <td>{{ $courseMaster->course_year }}</td>
+                                            <td>{{ $courseMaster->start_year }}</td>
+                                            <td>{{ $courseMaster->end_date }}</td>
+                                            <td>
+                                                <a href="{{ route('programme.edit', ['id' => encrypt($courseMaster->pk)]) }}"
+                                                    class="btn btn-primary btn-sm">Edit</a>
+                                                {{-- <form action="{{ route('programme.destroy', $courseMaster->id) }}"
+                                                    method="POST" class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                                </form> --}}
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    
+                                @endif
+                               
+                            </tbody>
+                        </table>
+                        
+                    </div>
                 </div>
             </div>
         </div>
+        <!-- end Zero Configuration -->
     </div>
+
+
     <div class="widget-content searchable-container list">
         <div class="card card-body">
             <div class="row">
-                <div class="col-md-4 col-xl-3">
-                    <form class="position-relative">
-                        <input type="text" class="form-control product-search ps-5" id="input-search"
-                            placeholder="Search Contacts...">
-                        <i
-                            class="ti ti-search position-absolute top-50 start-0 translate-middle-y fs-6 text-dark ms-3"></i>
-                    </form>
-                </div>
+                
                 <div
                     class="col-md-8 col-xl-9 text-end d-flex justify-content-md-end justify-content-center mt-3 mt-md-0 gap-3">
                     <a href="{{route('faculty.create')}}" id="btn-add-contact" class="btn btn-primary d-flex align-items-center">Add Faculty

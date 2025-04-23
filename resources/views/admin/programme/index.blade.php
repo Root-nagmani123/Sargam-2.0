@@ -41,7 +41,7 @@
                                 <!-- end row -->
                             </thead>
                             <tbody>
-                                @if (count($courseMasterList) > 0)
+                                @if (!empty($courseMasterList) && count($courseMasterList) > 0)
                                     @foreach ($courseMasterList as $courseMaster)
                                         <tr class="odd">
                                             <td>{{ $loop->iteration }}</td>
