@@ -76,8 +76,8 @@
                 <tr>
                     <td>{{ $key+1 }}</td>
                     <td>{{ $city->city_name }}</td>
-                    <td>{{ $city->district_name }}</td>
-                    <td>{{ $city->state_name }}</td>
+                        <td>{{ $city->state->state_name }}</td>
+                        <td>{{ $city->district->district_name }}</td>
                     <td>
                         <a href="{{ route('city.edit', $city->pk) }}" class="btn btn-success btn-sm">Edit</a>
                         <form action="{{ route('city.delete', $city->pk) }}" method="POST" style="display:inline;">

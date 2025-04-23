@@ -19,7 +19,10 @@ class State extends Model
         'modified_by',
         'modified_date',
     ];
-
+    public function cities()
+    {
+        return $this->hasMany(City::class, 'state_master_pk', 'pk');
+    }
     public function country()
     {
         return $this->belongsTo(Country::class, 'country_master_pk', 'pk');

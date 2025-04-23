@@ -19,7 +19,7 @@
                             </li>
                             <li class="breadcrumb-item" aria-current="page">
                                 <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                City
+                                    City
                                 </span>
                             </li>
                         </ol>
@@ -33,54 +33,68 @@
         {{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-@endif 
+    @endif
 
-@if (session('error'))
+    @if (session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         {{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
-@endif
+    @endif
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">Edit City</h4>
             <hr>
             <form action="{{ route('city.update', $city->pk) }}" method="POST">
-        @csrf
+                @csrf
+                @method('PUT')
 
-        <div class="mb-3">
-            <label for="state" class="form-label">State</label>
-            <select name="state_master_pk" class="form-select" required>
-                <option value="">Select State</option>
-                @foreach($states as $state)
-                    <option value="{{ $state->Pk }}" {{ $city->state_master_pk == $state->Pk ? 'selected' : '' }}>
-                        {{ $state->state_name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+                <div class="mb-3">
+                    <label for="state" class="form-label">State</label>
+                    <select name="state_master_pk" class="form-select" required>
+                        <option value="">Select State</option>
+                        @foreach($states as $state)
+                        <option value="{{ $state->Pk }}"
+                            {{ old('state_master_pk', $city->state_master_pk) == $state->Pk ? 'selected' : '' }}>
+                            {{ $state->state_name }}
+                        </option>
+                        @endforeach
+                    </select>
+                    @error('state_master_pk')
+                    <p class="text-danger">{{ $message }}</p>
+                    @enderror
+                </div>
 
-        <div class="mb-3">
-            <label for="district" class="form-label">District</label>
-            <select name="district_master_pk" class="form-select" required>
-                <option value="">Select District</option>
-                @foreach($districts as $district)
-                    <option value="{{ $district->pk }}" {{ $city->district_master_pk == $district->pk ? 'selected' : '' }}>
-                        {{ $district->district_name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
+                <div class="mb-3">
+                    <label for="district" class="form-label">District</label>
+                    <select name="district_master_pk" class="form-select" required>
+                        <option value="">Select District</option>
+                        @foreach($districts as $district)
+                        <option value="{{ $district->pk }}"
+                            {{ old('district_master_pk', $city->district_master_pk) == $district->pk ? 'selected' : '' }}>
+                            {{ $district->district_name }}
+                        </option>
+                        @endforeach
+                    </select>
+                    @error('district_master_pk')
+                    <p class="text-danger">{{ $message }}</p>
+                    @enderror
+                </div>
 
-        <div class="mb-3">
-            <label for="city_name" class="form-label">City Name</label>
-            <input type="text" name="city_name" class="form-control" value="{{ $city->city_name }}" required>
-        </div>
+                <div class="mb-3">
+                    <label for="city_name" class="form-label">City Name</label>
+                    <input type="text" name="city_name" class="form-control"
+                        value="{{ old('city_name', $city->city_name) }}" required>
+                    @error('city_name')
+                    <p class="text-danger">{{ $message }}</p>
+                    @enderror
+                </div>
 
-        <button type="submit" class="btn btn-success">Update</button>
-        <a href="{{ route('city.index') }}" class="btn btn-secondary">Back</a>
-    </form>
+                <button type="submit" class="btn btn-success">Update</button>
+                <a href="{{ route('city.index') }}" class="btn btn-secondary">Back</a>
+            </form>
+
         </div>
     </div>
     <!-- end Vertical Steps Example -->
