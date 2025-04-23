@@ -56,6 +56,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Faculty Routes
     Route::prefix('faculty')->name('faculty.')->group(function () {
+
+        Route::get('/', [MemberController::class,'index'])->name('index');
+        Route::get('create', [MemberController::class,'create'])->name('create');
+        
         Route::get('/', function () {
             return view('admin.faculty.index');
         })->name('index');
