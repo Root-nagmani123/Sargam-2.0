@@ -43,12 +43,15 @@
                         </div>
                         <div class="col-md-6 mt-4">
                             <x-input 
-                                type="month" 
+                                type="text" 
                                 name="courseyear" 
                                 label="Course Year" 
                                 placeholder="Course Year" 
                                 value="{{ $courseMasterObj->course_year ?? '' }}"
-                                formLabelClass="form-label" />
+                                formLabelClass="form-label"
+                                min="1900"
+                                max="2100" 
+                                required="true"/>
                         </div>
 
                         <div class="col-md-6 mt-4">
