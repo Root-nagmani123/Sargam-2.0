@@ -26,7 +26,7 @@ class ProgrammeRequest extends FormRequest
         return [
             'coursename' => 'required|string|max:255',
             'courseshortname' => 'required|string|max:255',
-            'courseyear' => 'required|date_format:Y-m',
+            'courseyear' => 'required|date_format:Y|integer|between:1900,2099', //in between 1900 and 2099
             'startdate' => 'required|date',
             'enddate' => 'required|date',
             'coursecoordinator' => 'required|string|max:255',
