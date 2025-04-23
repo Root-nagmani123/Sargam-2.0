@@ -11,7 +11,8 @@ use App\Http\Controllers\Admin\{
     PermissionController,
     UserController,
     MemberController,
-    CourseController
+    CourseController,
+    FacultyController
 };
 
 Route::get('clear-cache', function () {
@@ -58,20 +59,14 @@ Route::middleware(['auth'])->group(function () {
     // Faculty Routes
     Route::prefix('faculty')->name('faculty.')->group(function () {
 
-        Route::get('/', [MemberController::class,'index'])->name('index');
-        Route::get('create', [MemberController::class,'create'])->name('create');
-        
-        Route::get('/', function () {
-            return view('admin.faculty.index');
-        })->name('index');
+        Route::get('/', [FacultyController::class,'index'])->name('index');
+        Route::get('create', [FacultyController::class,'create'])->name('create');
+        Route::post('store', [FacultyController::class,'store'])->name('store');
 
-        Route::get('/create', function () {
-            return view('admin.faculty.create');
-        })->name('create');
 
-        Route::get('/edit', function () {
-            return view('admin.faculty.edit');
-        })->name('edit');
+        // Route::get('/edit', function () {
+        //     return view('admin.faculty.edit');
+        // })->name('edit');
     });
 
     // Programme Routes

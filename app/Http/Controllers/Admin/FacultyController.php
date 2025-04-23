@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
+use App\Http\Requests\FacultyRequest;
 class FacultyController extends Controller
 {
     public function index() {
@@ -13,6 +13,12 @@ class FacultyController extends Controller
 
     public function create() {
         return view("admin.faculty.create");
+    }
+
+    public function store(FacultyRequest $request) {
+        \Log::alert($request->all());
+        // Store logic here
+        return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
     }
 //     public function edit($id) {
 //         return view("admin.facult.edit", compact('id') );
@@ -29,3 +35,4 @@ class FacultyController extends Controller
 //         return redirect()->route('facult.index')->with('success', 'Facult deleted successfully');
 //     }
 // }
+}
