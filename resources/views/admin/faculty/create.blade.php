@@ -5,29 +5,8 @@
 @section('content')
 
 <div class="container-fluid">
-    <div class="card card-body py-3">
-        <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Create Faculty</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="index.html">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    Faculty
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-breadcrum title="Faculty" />
+    <x-session_message />
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
@@ -37,60 +16,119 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label" for="facultytype">Faculty Type :</label>
-                            <select class="form-select" id="facultytype" name="facultytype">
-                                <option value="">Select</option>
-                                <option value="internal">Internal</option>
-                                <option value="guest">Guest</option>
-                                <option value="research">Research</option>
-                            </select>
+                            @php 
+                                $facultyTypeList = [
+                                    '1' => 'Internal',
+                                    '2' => 'Guest',
+                                    '3' => 'Research',
+                                ];
+                            @endphp
+                            <x-select 
+                                name="facultytype" 
+                                label="Faculty Type :" 
+                                formLabelClass="form-label"
+                                :options="$facultyTypeList"
+                                required="true"
+                                />
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label" for="firstName1">First Name :</label>
-                            <input type="text" class="form-control" id="firstName1">
+                            <x-input 
+                                name="firstName" 
+                                label="First Name :" 
+                                placeholder="First Name" 
+                                formLabelClass="form-label"
+                                required="true"
+                                />
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label" for="middleName1">Middle Name :</label>
-                            <input type="text" class="form-control" id="middleName1">
+
+                            <x-input
+                                name="middlename"
+                                label="Middle Name :" 
+                                placeholder="Middle Name"
+                                formLabelClass="form-label"
+                                required="true"
+                                />
+
+                            
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label" for="lastName1">Last Name :</label>
-                            <input type="text" class="form-control" id="lastName1">
+
+                            <x-input
+                                name="lastname"
+                                label="Last Name :" 
+                                placeholder="Last Name"
+                                formLabelClass="form-label"
+                                required="true"
+                                />
+
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label" for="fullname">Full Name :</label>
-                            <input type="text" class="form-control" id="fullname" name="fullname">
+
+                            <x-input
+                                name="fullname"
+                                label="Full Name :" 
+                                placeholder="Full Name"
+                                formLabelClass="form-label"
+                                required="true"
+                                />
+
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label" for="gender">Gender :</label>
-                            <select class="form-select" id="gender" name="gender">
-                                <option value="">Select</option>
-                                <option value="male">Male</option>
-                                <option value="female">Female</option>
-                                <option value="other">Other</option>
-                            </select>
+
+                            @php
+                                $genderList = [
+
+                                    'male' => 'Male',
+                                    'female' => 'Female',
+                                    'other' => 'Other',
+                                ];
+                            @endphp
+                            <x-select 
+                                name="gender" 
+                                label="Gender : :" 
+                                placeholder="Gender" 
+                                formLabelClass="form-label" 
+                                :options="$genderList" 
+                                required="true"
+                                />
+                                
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label" for="landline">Landline Number :</label>
-                            <input type="text" class="form-control" id="landline">
+
+                            <x-input 
+                                type="text" 
+                                name="landline" 
+                                label="Landline Number" 
+                                placeholder="Landline Number" 
+                                formLabelClass="form-label"
+                                required="true"
+                                />
+
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label" for="mobile">Mobile Number :</label>
-                            <input type="text" class="form-control" id="mobile">
+                            <x-input 
+                                type="text" 
+                                name="mobile" 
+                                label="Mobile Number :" 
+                                placeholder="Mobile Number" 
+                                formLabelClass="form-label"
+                                required="true"
+                                />
                         </div>
                     </div>
                     <div class="col-md-6">
@@ -370,6 +408,10 @@
                     <i class="material-icons menu-icon">send</i>
                         Submit
                     </button>
+                    <a href="{{ route('faculty.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
+                        <i class="material-icons menu-icon">arrow_back</i>
+                        Back
+                    </a>
                 </div>
             </form>
         </div>
