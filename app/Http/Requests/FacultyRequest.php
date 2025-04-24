@@ -100,7 +100,7 @@ class FacultyRequest extends FormRequest
             'university_institution_name[].required' => 'University/Institution name is required',
             'year_of_passing[].required' => 'Year of passing is required',
             'percentage_CGPA[].required' => 'Percentage/CGPA is required',
-            'certificate[].nullable' => 'Certificates are optional',
+            'certificate[].required' => 'Certificates are required',
 
             // Experience Details
             'experience[].required' => 'Experience is required',
