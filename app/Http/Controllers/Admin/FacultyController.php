@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\{Country, State, City};
 use Illuminate\Http\Request;
 use App\Http\Requests\FacultyRequest;
 class FacultyController extends Controller
@@ -12,7 +13,12 @@ class FacultyController extends Controller
     }
 
     public function create() {
-        return view("admin.faculty.create");
+
+        $country = Country::pluck('country_name', 'pk')->toArray();
+        $state = State::get();
+        $city = City::get();
+        
+        return view("admin.faculty.create", compact('country', 'state', 'city'));
     }
 
     public function store(FacultyRequest $request) {
