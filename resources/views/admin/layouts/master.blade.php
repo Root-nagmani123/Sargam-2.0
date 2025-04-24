@@ -3,7 +3,7 @@
 
 <head>
     @include('admin.layouts.pre_header')
-    <title>@yield('title')</title>
+    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
 </head>
 
 <body>

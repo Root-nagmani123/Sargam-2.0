@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member - Sargam | Lal Bahadur')
+@section('title', 'Faculty')
 
 @section('content')
 
@@ -133,12 +133,13 @@
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-
                             <x-select
                                 name="country"
                                 label="Country :"
                                 placeholder="Country"
                                 formLabelClass="form-label"
+                                :options="$country" 
+                                required="true"
                                 />
 
                         </div>
