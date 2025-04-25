@@ -4,42 +4,10 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="card card-body py-3">
-        <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">District</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="../main/index.html">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    District
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-        </div>
-    </div>
-    @if (session('success'))
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif 
+    
+    <x-breadcrum title="District" />
+    <x-session_message />
 
-@if (session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
-@endif
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card">
@@ -51,7 +19,7 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{ route('district.create') }}" class="btn btn-primary">+ Add District</a>
+                                <a href="{{ route('master.district.create') }}" class="btn btn-primary">+ Add District</a>
                             </div>
                         </div>
                     </div>
@@ -81,10 +49,10 @@
                                 </td>
                                 <td>
                                     <div class="d-flex justify-content-start align-items-start gap-2">
-                                        <a href="{{ route('district.edit', $district->pk) }}" class="btn btn-success text-white btn-sm">
+                                        <a href="{{ route('master.district.edit', $district->pk) }}" class="btn btn-success text-white btn-sm">
                                             Edit
                                         </a>
-                                        <form action="{{ route('district.delete', $district->pk) }}" method="POST" class="m-0">
+                                        <form action="{{ route('master.district.delete', $district->pk) }}" method="POST" class="m-0">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger text-white btn-sm"
