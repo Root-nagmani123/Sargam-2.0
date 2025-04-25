@@ -46,7 +46,7 @@
         <div class="card-body">
             <h4 class="card-title mb-3">Country</h4>
             <hr>
-            <form method="POST" action="{{ route('country.update', $country->pk) }}">
+            <form method="POST" action="{{ route('master.country.update', $country->pk) }}">
                 @csrf
                 @method('PUT')
                 <div class="row">

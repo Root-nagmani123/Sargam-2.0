@@ -248,28 +248,28 @@
                                 <span class="hide-menu">Master</span>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('country.index') }}">
+                                <a class="sidebar-link" href="{{ route('master.country.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Country</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('state.index') }}">
+                                <a class="sidebar-link" href="{{ route('master.state.index') }}">
                                     <iconify-icon icon="material-symbols:distance">
                                     </iconify-icon>
                                     <span class="hide-menu">State</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('district.index') }}">
+                                <a class="sidebar-link" href="{{ route('master.district.index') }}">
                                     <iconify-icon icon="arcticons:district">
                                     </iconify-icon>
                                     <span class="hide-menu">District</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('city.index') }}" id="get-url"
+                                <a class="sidebar-link" href="{{ route('master.city.index') }}" id="get-url"
                                     aria-expanded="false">
                                     <iconify-icon icon="solar:city-bold-duotone">
                                     </iconify-icon>
