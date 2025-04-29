@@ -1,3 +1,12 @@
+// Show Loader
+function showLoader() {
+    $('.preloader').show();
+}
+// Hide Loader
+function hideLoader() {
+    $('.preloader').hide();
+}
+
 // Step 4 : Contact Information
 
 $(document).on('change', 'input[name="styled_max_checkbox"]', function() {
