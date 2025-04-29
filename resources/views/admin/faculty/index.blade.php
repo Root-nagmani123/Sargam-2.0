@@ -36,31 +36,25 @@
                                     <th>Full Name</th>
                                     <th>Mobile Number</th>
                                     <th>Current Sector</th>
-                                    <th>Area of Expertise</th>
-                                    <th>Created At</th>
+                                    
                                     <th>Action</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
                             <tbody>
-                                @if (!empty($courseMasterList) && count($courseMasterList) > 0)
-                                    @foreach ($courseMasterList as $courseMaster)
+                                @if (!empty($faculties) && count($faculties) > 0)
+                                    @foreach ($faculties as $faculty)
                                         <tr class="odd">
                                             <td>{{ $loop->iteration }}</td>
-                                            <td>{{ $courseMaster->course_name ?? 'N/A' }}</td>
-                                            <td>{{ $courseMaster->couse_short_name ?? 'N/A' }}</td>
-                                            <td>{{ $courseMaster->course_year }}</td>
-                                            <td>{{ $courseMaster->start_year }}</td>
-                                            <td>{{ $courseMaster->end_date }}</td>
+                                            <td>{{ $faculty->faculty_type == 1 ? 'Govt' : 'Private' }}</td>
+                                            <td>{{ $faculty->full_name ?? 'N/A' }}</td>
+                                            <td>{{ $faculty->mobile_no }}</td>
+                                            <td>{{ $faculty->faculty_sector }}</td>
+                                           
                                             <td>
-                                                <a href="{{ route('programme.edit', ['id' => encrypt($courseMaster->pk)]) }}"
+                                                <a href="{{ route('programme.edit', ['id' => encrypt($faculty->pk)]) }}"
                                                     class="btn btn-primary btn-sm">Edit</a>
-                                                {{-- <form action="{{ route('programme.destroy', $courseMaster->id) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                                </form> --}}
+                                                
                                             </td>
                                         </tr>
                                     @endforeach
