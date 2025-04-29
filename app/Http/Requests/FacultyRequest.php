@@ -43,20 +43,20 @@ class FacultyRequest extends FormRequest
             "photo" => "required|mimes:jpg,jpeg,png|max:2048",
             "document" => "required|mimes:pdf,jpg,jpeg,png|max:2048",
 
-            // Qualification Details
-            "degree[]" => "required|string|max:255",
-            "university_institution_name[]" => "required|string|max:255",
-            "year_of_passing[]" => "required|date_format:Y",
-            "percentage_CGPA[]" => "required|numeric|min:0|max:100",
-            "certificate[]" => "required|mimes:pdf,jpg,jpeg,png|max:2048",
+            // Qualification Details (array fields)
+            'degree.*' => 'required|string|max:255',
+            'university_institution_name.*' => 'required|string|max:255',
+            'year_of_passing.*' => 'required|date_format:Y',
+            'percentage_CGPA.*' => 'required|numeric|min:0|max:100',
+            'certificate.*' => 'required|mimes:pdf,jpg,jpeg,png|max:2048',
 
-            // Experience Details
-            "experience[]" => "required|numeric|min:0|max:100",
-            "specialization[]" => "required|string|max:255",
-            "institution[]" => "required|string|max:255",
-            "position[]" => "required|string|max:255",
-            "duration[]" => "required|string|max:255",
-            "work[]" => "required|string|max:255",
+            // Experience Details (array fields)
+            'experience.*' => 'required|numeric|min:0|max:100',
+            'specialization.*' => 'required|string|max:255',
+            'institution.*' => 'required|string|max:255',
+            'position.*' => 'required|string|max:255',
+            'duration.*' => 'required|numeric|min:0|max:100',
+            'work.*' => 'required|string|max:255',
 
             // Bank Details
             "bankname" => "required|string|max:255",
@@ -96,19 +96,19 @@ class FacultyRequest extends FormRequest
             'document.required' => 'Document is required',
 
             // Qualification Details
-            'degree[].required' => 'Degree is required',
-            'university_institution_name[].required' => 'University/Institution name is required',
-            'year_of_passing[].required' => 'Year of passing is required',
-            'percentage_CGPA[].required' => 'Percentage/CGPA is required',
-            'certificate[].required' => 'Certificates are required',
+            'degree.*.required' => 'Degree is required',
+            'university_institution_name.*.required' => 'University/Institution name is required',
+            'year_of_passing.*.required' => 'Year of passing is required',
+            'percentage_CGPA.*.required' => 'Percentage/CGPA is required',
+            'certificate.*.required' => 'Certificates are required',
 
             // Experience Details
-            'experience[].required' => 'Experience is required',
-            'specialization[].required' => 'Specialization is required',
-            'institution[].required' => 'Institution is required',
-            'position[].required' => 'Position is required',
-            'duration[].required' => 'Duration is required',
-            'work[].required' => 'Work is required',
+            'experience.*.required' => 'Experience is required',
+            'specialization.*.required' => 'Specialization is required',
+            'institution.*.required' => 'Institution is required',
+            'position.*.required' => 'Position is required',
+            'duration.*.required' => 'Duration is required',
+            'work.*.required' => 'Work is required',
 
 
             // Bank Details

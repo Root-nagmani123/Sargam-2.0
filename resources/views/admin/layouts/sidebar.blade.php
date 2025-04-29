@@ -276,6 +276,13 @@
                                     <span class="hide-menu">City</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.faculty.expertise.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">Faculty Expertise</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                 </div>
