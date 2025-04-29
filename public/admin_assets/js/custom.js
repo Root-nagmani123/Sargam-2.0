@@ -210,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // current_sector
         let currentSector = $('input[name="current_sector"]:checked').val();
         formData.append('current_sector', currentSector);
-        
+        addEventListener
         // append csrf token
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
         formData.append('joiningdate', joiningDate);
