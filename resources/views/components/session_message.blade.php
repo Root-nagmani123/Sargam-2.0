@@ -10,3 +10,4 @@
         <strong>Error - </strong> {{ session('error') }}
     </div>
 @endif
+<div id="status-msg"></div>
