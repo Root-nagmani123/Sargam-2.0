@@ -155,4 +155,14 @@ class UserController extends Controller
                 ->with('error', 'Failed to delete user: ' . $e->getMessage());
         }
     }
+
+    public function toggleStatus(Request $request)
+{
+    DB::table($request->table)
+        ->where('pk', $request->id)
+        ->update([$request->column => $request->status]);
+
+    return response()->json(['message' => 'Status updated successfully']);
+}
+
 } 

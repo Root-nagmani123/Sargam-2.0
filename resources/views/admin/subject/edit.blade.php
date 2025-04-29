@@ -33,41 +33,63 @@
         <div class="card-body">
             <h4 class="card-title mb-3">Edit Major Subject</h4>
             <hr>
-            <form>
-                <div class="row">
-                    <div id="subject_fields" class="my-2"></div>
-                    <div class="row" id="subject_fields">
-                        <div class="col-sm-5">
-                            <label for="Schoolname" class="form-label">Major Subject :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="Major Subject">
-                            </div>
-                        </div>
-                        <div class="col-sm-5">
-                            <label for="Schoolname" class="form-label">Abbreviation :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Age" name="Age" placeholder="Abbreviation">
-                            </div>
-                        </div>
-                        <div class="col-sm-2">
-                            <label for="Schoolname" class="form-label"></label>
-                            <div class="mb-3">
-                                <button onclick="subject_fields();" class="btn btn-success fw-medium" type="button">
-                                    <i class="material-icons menu-icon">add</i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                    <i class="material-icons menu-icon">send</i>
-                        Submit
-                    </button>
-                </div>
-            </form>
+            <form action="{{ route('subject.update', $subject->pk) }}" method="POST">
+        @csrf
+        @method('PUT') <!-- This is necessary for the update request -->
+
+        <!-- Major Subject Name -->
+        <div class="mb-3">
+            <label for="major_subject_name" class="form-label">Major Subject Name</label>
+            <input type="text" name="major_subject_name" id="major_subject_name" class="form-control" value="{{ old('major_subject_name', $subject->subject_name) }}" required>
+            @error('major_subject_name')
+                <div class="text-danger">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <!-- Short Name -->
+        <div class="mb-3">
+            <label for="short_name" class="form-label">Short Name</label>
+            <input type="text" name="short_name" id="short_name" class="form-control" value="{{ old('short_name', $subject->sub_short_name) }}" required>
+            @error('short_name')
+                <div class="text-danger">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <!-- Topic Name -->
+        <div class="mb-3">
+            <label for="topic_name" class="form-label">Topic Name</label>
+            <input type="text" name="topic_name" id="topic_name" class="form-control" value="{{ old('topic_name', $subject->Topic_name) }}">
+            @error('topic_name')
+                <div class="text-danger">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <!-- Subject Module -->
+        <div class="mb-3">
+            <label for="subject_module" class="form-label">Subject Module</label>
+            <select name="subject_module" id="subject_module" class="form-select" required>
+                <option value="">-- Select Subject Module --</option>
+                @foreach($subjects as $module)
+                    <option value="{{ $module->pk }}" {{ $subject->subject_module_master_pk == $module->pk ? 'selected' : '' }}>
+                        {{ $module->module_name }}
+                    </option>
+                @endforeach
+            </select>
+            @error('subject_module')
+                <div class="text-danger">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <!-- Status -->
+        <div class="mb-3 form-check form-switch">
+            <input type="checkbox" name="status" id="status" class="form-check-input" {{ $subject->active_inactive ? 'checked' : '' }}>
+            <label for="status" class="form-check-label">Active</label>
+        </div>
+
+        <!-- Submit & Cancel Buttons -->
+        <button type="submit" class="btn btn-success">Update</button>
+        <a href="{{ route('subject.index') }}" class="btn btn-secondary">Cancel</a>
+    </form>
         </div>
     </div>
     <!-- end Vertical Steps Example -->

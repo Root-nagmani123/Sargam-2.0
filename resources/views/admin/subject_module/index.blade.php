@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Stream - Sargam | Lal Bahadur')
+@section('title', 'Subject module - Sargam | Lal Bahadur')
 
 @section('content')
 <div class="container-fluid">
-<x-breadcrum title="Stream" />
+<x-breadcrum title="Subject module" />
 <x-session_message />
 
     <div class="datatables">
@@ -14,11 +14,11 @@
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Stream</h4>
+                            <h4>Subject module</h4>
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{route('stream.create')}}" class="btn btn-primary">+ Add Stream</a>
+                                <a href="{{route('subject-module.create')}}" class="btn btn-primary">+ Add Subject module</a>
                             </div>
                         </div>
                     </div>
@@ -49,21 +49,21 @@
                                 <!-- end row -->
                             </thead>
                             <tbody>
-    @foreach($streams as $key => $stream)
+    @foreach($modules as $key => $modules)
         <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
             <td>{{ $key + 1 }}</td>
             <td class="sorting_1">
                 <div class="d-flex align-items-center gap-6">
-                    <h6 class="mb-0">{{ $stream->stream_name }}</h6>
+                    <h6 class="mb-0">{{ $modules->module_name }}</h6>
                 </div>
             </td>
             <td>
                 <div class="d-flex justify-content-start align-items-start gap-2">
-                    <a href="{{ route('stream.edit', $stream->pk) }}"
+                    <a href="{{ route('subject-module.edit', $modules->pk) }}"
                        class="btn btn-success text-white btn-sm">
                         Edit
                     </a>
-                    <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST" class="m-0">
+                    <form action="{{ route('subject-module.destroy', $modules->pk) }}" method="POST" class="m-0">
                         @csrf
                         @method('DELETE')
                         <button type="submit"
@@ -79,10 +79,10 @@
         <input class="form-check-input status-toggle" 
                type="checkbox" 
                role="switch"
-               data-table="stream_master" 
-               data-column="status" 
-               data-id="{{ $stream->pk }}"
-               {{ $stream->status == 1 ? 'checked' : '' }}>
+               data-table="subject_module_master" 
+               data-column="active_inactive" 
+               data-id="{{ $modules->pk }}"
+               {{ $modules->active_inactive == 1 ? 'checked' : '' }}>
     </div>
 </td>
 

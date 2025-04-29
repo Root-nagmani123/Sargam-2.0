@@ -30,40 +30,40 @@
     </div>
     <!-- start Vertical Steps Example -->
     <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-3">Stream</h4>
-            <hr>
-            <form>
-                <div class="row">
-                    <div id="stream_fields" class="my-2"></div>
-                    <div class="row" id="stream_fields">
-                        <div class="col-sm-10">
-                            <label for="Schoolname" class="form-label">Stream :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="Stream">
-                            </div>
-                        </div>
-                        <div class="col-sm-2">
-                            <label for="Schoolname" class="form-label"></label>
-                            <div class="mb-3">
-                                <button onclick="stream_fields();" class="btn btn-success fw-medium" type="button">
-                                    <i class="material-icons menu-icon">add</i>
-                                </button>
-                            </div>
-                        </div>
+    <div class="card-body">
+        <h4 class="card-title mb-3">Edit Stream</h4>
+        <hr>
+        <form action="{{ route('stream.update', $stream->pk) }}" method="POST">
+            @csrf
+            @method('PUT')
+            
+            <div class="row">
+                <div class="col-sm-10">
+                    <label for="stream_name" class="form-label">Stream :</label>
+                    <div class="mb-3">
+                        <input type="text" 
+                               class="form-control" 
+                               id="stream_name" 
+                               name="stream_name" 
+                               placeholder="Enter Stream Name"
+                               value="{{ old('stream_name', $stream->stream_name) }}">
+                        @error('stream_name')
+                            <small class="text-danger">{{ $message }}</small>
+                        @enderror
                     </div>
                 </div>
-                <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                    <i class="material-icons menu-icon">send</i>
-                        Submit
-                    </button>
-                </div>
-            </form>
-        </div>
+            </div>
+
+            <hr>
+            <div class="mb-3">
+                <button class="btn btn-primary hstack gap-6 float-end" type="submit">
+                    <i class="material-icons menu-icon">send</i> Update
+                </button>
+            </div>
+        </form>
     </div>
+</div>
+
     <!-- end Vertical Steps Example -->
 </div>
 

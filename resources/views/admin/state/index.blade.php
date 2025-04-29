@@ -84,10 +84,7 @@
                                 </tbody>
 
                             </table>
-                            <div class="mt-3">
-                                {{ $states->links('pagination::bootstrap-5') }}
-
-                            </div>
+                           
 
                         </div>
                     </div>
