@@ -271,3 +271,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     })
 });
+$(document).on('change', '.status-toggle', function () {
+    const toggleUrl = "{{ route('admin.toggleStatus') }}";
+
+    let table = $(this).data('table');
+    let column = $(this).data('column');
+    let id = $(this).data('id');
+    let status = $(this).is(':checked') ? 1 : 0;
+
+    $.ajax({
+        url: window.statusToggleUrl, // Update with correct route
+        type: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            table: table,
+            column: column,
+            id: id,
+            status: status
+        },
+        success: function (response) {
+            $('#status-msg').html(`
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    ${response.message || 'Status updated successfully'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `);
+        },
+        error: function () {
+            alert('Error updating status');
+        }
+    });
+});

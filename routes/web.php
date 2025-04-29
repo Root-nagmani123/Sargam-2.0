@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\LocationController;
+use App\Http\Controllers\Admin\StreamController;
+use App\Http\Controllers\Admin\SubjectModuleController;
+use App\Http\Controllers\Admin\SubjectMasterController;
 use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
@@ -64,9 +67,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', [FacultyController::class, 'store'])->name('store');
 
 
-        // Route::get('/edit', function () {
-        //     return view('admin.faculty.edit');
-        // })->name('edit');
+       
     });
 
     // Programme Routes
@@ -93,36 +94,18 @@ Route::middleware(['auth'])->group(function () {
         })->name('edit');
     });
 
-
+        Route::resource('subject', SubjectMasterController::class);
+   
     // subject route
-    Route::prefix('subject')->name('subject.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.subject.index');
-        })->name('index');
+   
 
-        Route::get('/create', function () {
-            return view('admin.subject.create');
-        })->name('create');
+    Route::resource('stream', StreamController::class);
 
-        Route::get('/edit', function () {
-            return view('admin.subject.edit');
-        })->name('edit');
-    });
+        Route::resource('subject-module', SubjectModuleController::class);
+  
+    
+    Route::post('/admin/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.toggleStatus');
 
-    // stream route
-    Route::prefix('stream')->name('stream.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.stream.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.stream.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.stream.edit');
-        })->name('edit');
-    });
 
     
 

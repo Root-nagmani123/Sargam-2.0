@@ -179,6 +179,14 @@
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('subject-module.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:widget-4-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Subject Module</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('subject.index') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:speaker-minimalistic-line-duotone">

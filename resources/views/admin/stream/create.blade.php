@@ -30,42 +30,75 @@
     </div>
     <!-- start Vertical Steps Example -->
     <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-3">Stream</h4>
-            <hr>
-            <form>
-                <div class="row">
-                    <div id="stream_fields" class="my-2"></div>
-                    <div class="row" id="stream_fields">
-                        <div class="col-sm-10">
-                            <label for="Schoolname" class="form-label">Stream :</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                    placeholder="Stream">
+    <div class="card-body">
+        <h4 class="card-title mb-3">Stream</h4>
+        <hr>
+        <form action="{{ route('stream.store') }}" method="POST">
+            @csrf
+
+            <div id="stream_fields">
+                @if(old('stream_name'))
+                    @foreach(old('stream_name') as $key => $value)
+                        <div class="row my-2">
+                            <div class="col-sm-10">
+                                <input type="text" name="stream_name[]" class="form-control @error('stream_name.' . $key) is-invalid @enderror" value="{{ $value }}" placeholder="Stream" required>
+                                @error('stream_name.' . $key)
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
-                        </div>
-                        <div class="col-sm-2">
-                            <label for="Schoolname" class="form-label"></label>
-                            <div class="mb-3">
-                                <button onclick="stream_fields();" class="btn btn-success fw-medium" type="button">
-                                    <i class="material-icons menu-icon">add</i>
+                            <div class="col-sm-2 d-flex align-items-end">
+                                <button type="button" class="btn btn-danger" onclick="removeField(this)">
+                                    <i class="material-icons menu-icon">delete</i>
                                 </button>
                             </div>
                         </div>
+                    @endforeach
+                @else
+                    <div class="row my-2">
+                        <div class="col-sm-10">
+                            <input type="text" name="stream_name[]" class="form-control" placeholder="Stream" required>
+                        </div>
+                        <div class="col-sm-2 d-flex align-items-end">
+                            <button onclick="addStreamField()" class="btn btn-success" type="button">
+                                <i class="material-icons menu-icon">add</i>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                    <i class="material-icons menu-icon">send</i>
-                        Submit
-                    </button>
-                </div>
-            </form>
-        </div>
+                @endif
+            </div>
+
+            <hr>
+            <div class="mb-3">
+                <button class="btn btn-primary float-end" type="submit">
+                    <i class="material-icons menu-icon">send</i> Submit
+                </button>
+            </div>
+        </form>
     </div>
+</div>
     <!-- end Vertical Steps Example -->
 </div>
 
 
 @endsection
+<script>
+    function addStreamField() {
+        const field = `
+            <div class="row my-2">
+                <div class="col-sm-10">
+                    <input type="text" name="stream_name[]" class="form-control" placeholder="Stream" required>
+                </div>
+                <div class="col-sm-2 d-flex align-items-end">
+                    <button type="button" class="btn btn-danger" onclick="removeField(this)">
+                        <i class="material-icons menu-icon">delete</i>
+                    </button>
+                </div>
+            </div>
+        `;
+        document.getElementById('stream_fields').insertAdjacentHTML('beforeend', field);
+    }
+
+    function removeField(button) {
+        button.closest('.row').remove();
+    }
+</script>
