@@ -15,7 +15,8 @@ use Auth;
 class FacultyController extends Controller
 {
     public function index() {
-        return view("admin.faculty.index");
+        $faculties = FacultyMaster::all();
+        return view("admin.faculty.index", compact('faculties'));
     }
 
     public function create() {
@@ -31,7 +32,7 @@ class FacultyController extends Controller
     public function store(FacultyRequest $request) { //FacultyRequest
         
         try {
-
+            // dd($request->all());
             DB::beginTransaction();
 
             # Step : 1
@@ -88,7 +89,7 @@ class FacultyController extends Controller
             $facultyDetails['joining_date'] = Carbon::parse($request->joiningdate);
 
             $facultyDetails['created_by'] = Auth::id();
-            $facultyDetails['faculty_sector'] = 1;
+            $facultyDetails['faculty_sector'] = $request->current_sector;
 
             $facultyDetails['last_update'] = now();   
             $facultyDetails['active_deactive'] = 1;
