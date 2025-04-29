@@ -152,6 +152,8 @@
                                 label="State :"
                                 placeholder="State"
                                 formLabelClass="form-label"
+                                :options="$state"
+                                required="true"
                                 />
 
                         </div>
@@ -164,6 +166,8 @@
                                 label="District :"
                                 placeholder="District"
                                 formLabelClass="form-label"
+                                :options="$district"
+                                required="true"
                                 />
 
                         </div>
@@ -176,6 +180,8 @@
                                 label="City :"
                                 placeholder="City"
                                 formLabelClass="form-label"
+                                :options="$city"
+                                required="true"
                                 />
 
                         </div>
@@ -249,16 +255,22 @@
                         </div>
                         <div class="col-3">
                             <x-input
-                                type="date"
+                                type="number"
                                 name="year_of_passing[]"
                                 label="Year of Passing :"
                                 placeholder="Year of Passing"
                                 formLabelClass="form-label"
+                                min="1900"
+                                max="{{ date('Y') }}"
+                                step="1"
                                 required="true"
                                 />
                         </div>
                         <div class="col-3">
                             <x-input
+                                type="number"
+                                min="0"
+                                max="100"
                                 name="percentage_CGPA[]"
                                 label="Percentage/CGPA"
                                 placeholder="Percentage/CGPA"
@@ -335,10 +347,12 @@
                         </div>
                         <div class="col-3 mt-3">
                             <x-input
+                                type="number"
                                 name="duration[]"
                                 label="Duration :"
                                 placeholder="Duration"
                                 formLabelClass="form-label"
+                                min="0"
                                 required="true"
                                 />
                         </div>
@@ -486,17 +500,17 @@
                         </div>
                     </div>
                     <div class="col-12">
+
                         <label for="expertise" class="form-label">Area of Expertise :</label>
                         <div class="mb-3">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="checkbox" id="success-check"
-                                            value="option1">
-                                        <label class="form-check-label" for="success-check">Energy</label>
-                                    </div>
-                                </div>
-                            </div>
+                            {{-- faculties --}}
+                            <x-checkbox
+                                name="faculties[]"
+                                label="Area of Expertise :"
+                                formLabelClass="form-label"
+                                :options="$faculties"
+                                required="true"
+                                />
                         </div>
                     </div>
                 </div>
@@ -528,7 +542,10 @@
         $('#saveFacultyForm').click(function (e) {
             
             const formData = new FormData();
-
+            // remove all error class
+            $('input').removeClass('is-invalid');
+            $('span.text-danger').remove();
+            
             let facultyType = $('select[name="facultytype"]').val();
             let firstName = $('input[name="firstName"]').val();
             let middleName = $('input[name="middlename"]').val();
@@ -572,73 +589,70 @@
                 formData.append('document', document);
             }
 
-
             // Qualification Details
-            let degree = universityInstitutionName = yearOfPassing = percentageCGPA = certificates = '';
+            let degrees = [];
+            let universities = [];
+            let years = [];
+            let percentages = [];
+            let certFiles = [];
 
-            // degree is dyanmic more than 1
-
-            if ($('input[name="degree[]"]').length > 0) {
-                for (let i = 0; i < $('input[name="degree[]"]').length; i++) {
-                    if($('input[name="degree[]"]')[i]) {
-                        degree = $('input[name="degree[]"]')[i].value;
-                    }
-                    if($('input[name="university_institution_name[]"]')[i]) {
-                        universityInstitutionName = $('input[name="university_institution_name[]"]')[i].value;
-                        formData.append('university_institution_name[]', universityInstitutionName);
-                    }
-                    if($('input[name="year_of_passing[]"]')[i]) {
-                        yearOfPassing = $('input[name="year_of_passing[]"]')[i].value;
-                        formData.append('year_of_passing[]', yearOfPassing);
-                    }
-                    if($('input[name="percentage_CGPA[]"]')[i]) {
-                        percentageCGPA = $('input[name="percentage_CGPA[]"]')[i].value;
-                        formData.append('percentage_CGPA[]', percentageCGPA);
-                    }
-
-                    // Certificates is file
-                    if ($('input[name="certificate[]"]')[i].files.length > 0) {
-                        certificates = $('input[name="certificate[]"]')[i].files[0];
-                        formData.append('certificate[]', certificates);
-                    }
+            // Collect all education fields
+            $('input[name="degree[]"]').each(function(index) {
+                degrees.push($(this).val());
+                universities.push($('input[name="university_institution_name[]"]').eq(index).val());
+                years.push($('input[name="year_of_passing[]"]').eq(index).val());
+                percentages.push($('input[name="percentage_CGPA[]"]').eq(index).val());
+                
+                // Handle certificate files
+                let certInput = $('input[name="certificate[]"]')[index];
+                if (certInput.files.length > 0) {
+                    certFiles.push(certInput.files[0]);
+                } else {
+                    certFiles.push(null);
                 }
-            }
+            });
+
+            // Append all education data to formData
+            degrees.forEach((degree, index) => {
+                formData.append('degree[]', degree);
+                formData.append('university_institution_name[]', universities[index]);
+                formData.append('year_of_passing[]', years[index]);
+                formData.append('percentage_CGPA[]', percentages[index]);
+                
+                if (certFiles[index]) {
+                    formData.append('certificate[]', certFiles[index]);
+                }
+            });
+
+            // Collecting the Experience Details
+            let experience = [];
+            let specialization = [];
+            let institution = [];
+            let position = [];
+            let duration = [];
+            let work = [];
+
+            // Collect all experience fields
+            $('input[name="experience[]"]').each(function(index) {
+                experience.push($(this).val());
+                specialization.push($('input[name="specialization[]"]').eq(index).val());
+                institution.push($('input[name="institution[]"]').eq(index).val());
+                position.push($('input[name="position[]"]').eq(index).val());
+                duration.push($('input[name="duration[]"]').eq(index).val());
+                work.push($('input[name="work[]"]').eq(index).val());
+            });
 
             // Experience Details
-
-            let experience = specialization = institution = position = duration = work = '';
-
-            // experience is dyanmic more than 1
-
-            if ($('input[name="experience"]').length > 0) {
-                for (let i = 0; i < $('input[name="experience[]"]').length; i++) {
-                    if($('input[name="experience[]"]')[i]) {
-                        experience = $('input[name="experience[]"]')[i].value;
-                        formData.append('experience[]', experience);
-                    }
-                    if($('input[name="specialization[]"]')[i]) {
-                        specialization = $('input[name="specialization[]"]')[i].value;
-                        formData.append('specialization[]', specialization);
-                    }
-                    if($('input[name="institution[]"]')[i]) {
-                        institution = $('input[name="institution[]"]')[i].value;
-                        formData.append('institution[]', institution);
-                    }
-                    if($('input[name="position[]"]')[i]){
-                        position = $('input[name="position[]"]')[i].value;
-                        formData.append('position[]', position);
-                    }
-                    if($('input[name="duration[]"]')[i]) {
-                        duration = $('input[name="duration[]"]')[i].value;
-                        formData.append('duration[]', duration);
-                    }
-                    if($('input[name="work[]"]')[i]) {
-                        work = $('input[name="work[]"]')[i].value;
-                        formData.append('work[]', work);
-                    }
-                }
+            if (experience.length > 0) {
+                experience.forEach((exp, index) => {
+                    formData.append('experience[]', exp);
+                    formData.append('specialization[]', specialization[index]);
+                    formData.append('institution[]', institution[index]);
+                    formData.append('position[]', position[index]);
+                    formData.append('duration[]', duration[index]);
+                    formData.append('work[]', work[index]);
+                });
             }
-
 
             // Bank Details
             let bankName = $('input[name="bankname"]').val();
@@ -675,6 +689,14 @@
                 formData.append('recommendationdetails', recommendationDetails);
             }
 
+            // faculties
+            let faculties = [];
+            $('input[name="faculties[]"]:checked').each(function() {
+                faculties.push($(this).val());
+            });
+            faculties.forEach((faculty) => {
+                formData.append('faculties[]', faculty);
+            });
             // append csrf token
             formData.append('_token', '{{ csrf_token() }}');
             formData.append('joiningdate', joiningDate);
@@ -686,6 +708,9 @@
                 data: formData,
                 contentType: false,
                 processData: false,
+                beforeSend: function () {
+                    showLoader();
+                },
                 success: function (response) {
                     console.log('Success:', response);
                     // Handle success response
@@ -697,22 +722,35 @@
                 },
                 error: function (error) {
                     console.log('Error:', error);
-                    // Handle error response
                     if (error.status == 422) {
                         let errors = error.responseJSON.errors;
-                        let errorMessage = '';
+                        
                         for (let key in errors) {
-                            // display in span with error class and also highlight the input field with error class
-                            let inputField = $('input[name="' + key + '"]');
-                            if (inputField.length > 0) {
-
-                                const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
-                                inputField.addClass('is-invalid').after(errorDiv); 
+                            // Handle array fields (e.g., degree.0, university_institution_name.1)
+                            if (key.includes('.')) {
+                                const [fieldName, index] = key.split('.');
+                                const inputField = $(`[name="${fieldName}[]"]`).eq(index);
+                                
+                                if (inputField.length > 0) {
+                                    const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
+                                    inputField.addClass('is-invalid').after(errorDiv);
+                                }
+                            } 
+                            // Handle regular fields
+                            else {
+                                const inputField = $(`[name="${key}"], select[name="${key}"]`);
+                                if (inputField.length > 0) {
+                                    const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
+                                    inputField.addClass('is-invalid').after(errorDiv);
+                                }
                             }
                         }
                     } else {
                         alert('Something went wrong. Please try again.');
                     }
+                },
+                complete: function () {
+                    hideLoader();
                 }
             });
         })
