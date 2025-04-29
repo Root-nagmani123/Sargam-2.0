@@ -71,6 +71,8 @@ class FacultyRequest extends FormRequest
             'recommendationdetails' => 'required|mimes:pdf,jpg,jpeg|max:255',
             'joiningdate'=> 'required|date',
             
+            // Radio button
+            'current_sector' => 'required|string|in:1,2',
         ];
     }
 
