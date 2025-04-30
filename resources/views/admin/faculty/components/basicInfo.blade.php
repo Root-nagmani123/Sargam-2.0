@@ -14,6 +14,7 @@
                 formLabelClass="form-label"
                 :options="$facultyTypeList"
                 required="true"
+                value="{{ $faculty->faculty_type }}"
                 />
         </div>
     </div>
@@ -205,10 +206,8 @@
     </div>
     <div class="col-md-6 mt-3">
 
-        @if(!empty($faculty->photo_uplode_path))
-            <img src="{{ asset($faculty->photo_uplode_path) }}" alt="Faculty Photo" class="img-fluid mb-2" style="width: 100px; height: 100px;">
-        @endif
-
+        
+        
         <x-input 
             type="file"
             name="photo"
@@ -217,12 +216,17 @@
             formLabelClass="form-label"
             />
         
+            @if(!empty($faculty->photo_uplode_path))
+            <br/>
+            <span class="text-info text-bold">Previously Uploaded Photo</span>
+            <a href="{{ asset('storage/'.$faculty->photo_uplode_path) }}" target="_blank" class="rounded-circle" title="View Photo">
+                <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
+            </a>
+        @endif
     </div>
     <div class="col-md-6 mt-3">
 
-        @if(!empty($faculty->Doc_uplode_path))
-            <img src="{{ asset($faculty->Doc_uplode_path) }}" alt="Document" class="img-fluid mb-2" style="width: 100px; height: 100px;">
-        @endif
+        
 
         <x-input 
             type="file"
@@ -231,6 +235,14 @@
             placeholder="Document upload :"
             formLabelClass="form-label"
             />
+
+            @if(!empty($faculty->Doc_uplode_path))
+            <br/>
+            <span class="text-info text-bold">Previously Uploaded Document</span>
+            <a href="{{ asset('storage/'.$faculty->Doc_uplode_path) }}" target="_blank" class="rounded-circle" title="View Document">
+                <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
+            </a>
+        @endif
 
     </div>
 </div>
