@@ -177,4 +177,17 @@ class FacultyController extends Controller
         }
     }
 
+
+    public function edit(Request $request, $id) {
+        $faculty = FacultyMaster::find(decrypt($id));
+        if (!$faculty) {
+            return redirect()->route('faculty.index')->with('error', 'Faculty not found');
+        }
+        $faculties = FacultyExpertiseMaster::pluck('expertise_name', 'pk')->toArray();
+        $country = Country::pluck('country_name', 'pk')->toArray();
+        $state = State::pluck('state_name', 'pk')->toArray();
+        $district = District::pluck('district_name', 'pk')->toArray();
+        $city = City::pluck('city_name', 'pk')->toArray();
+        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city'));
+    }
 }

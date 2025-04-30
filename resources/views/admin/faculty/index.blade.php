@@ -52,7 +52,7 @@
                                             <td>{{ $faculty->faculty_sector }}</td>
                                            
                                             <td>
-                                                <a href="{{ route('programme.edit', ['id' => encrypt($faculty->pk)]) }}"
+                                                <a href="{{ route('faculty.edit', ['id' => encrypt($faculty->pk)]) }}"
                                                     class="btn btn-primary btn-sm">Edit</a>
                                                 
                                             </td>
