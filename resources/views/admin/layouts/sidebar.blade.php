@@ -120,13 +120,13 @@
                                                                 Roles
                                                             </a>
                                                         </li>
-                                                        <li class="sidebar-item">
+                                                        {{-- <li class="sidebar-item">
                                                             <a class="sidebar-link"
                                                                 href="{{ route('admin.permissions.index') }}">
                                                                 <span class="icon-small"></span>
                                                                 Permissions
                                                             </a>
-                                                        </li>
+                                                        </li> --}}
                                                     </ul>
                                                 </li>
                                                 <li class="sidebar-item">
