@@ -266,12 +266,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 showLoader();
             },
             success: function (response) {
-                console.log('Success:', response);
+                
                 // Handle success response
-                if (response.status == 200) {
+                if (response.status) {
                     window.location.href = indexUrl;
                 } else {
-                    alert(response.message);
+                    toastr.error(response.message);
                 }
             },
             error: function (error) {
@@ -300,7 +300,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 } else {
-                    alert('Something went wrong. Please try again.');
+                    toastr.error('Something went wrong. Please try again.');
                 }
             },
             complete: function () {
