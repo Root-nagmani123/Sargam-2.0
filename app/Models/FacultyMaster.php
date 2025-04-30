@@ -11,8 +11,23 @@ class FacultyMaster extends Model
     public $timestamps = false;
     public $primaryKey = "pk";
 
+    protected $casts = [
+        'joining_date' => 'date'
+    ];
+
     public function facultyQualificationMap()
     {
         return $this->hasMany(FacultyQualificationMap::class, 'faculty_master_pk', 'pk');
     }
+
+    public function facultyExpertiseMap()
+    {
+        return $this->hasMany(FacultyExpertiseMap::class, 'faculty_master_pk', 'pk');
+    }
+
+    public function facultyExperienceMap()
+    {
+        return $this->hasMany(FacultyExperienceMap::class, 'faculty_master_pk', 'pk');
+    }
+
 }

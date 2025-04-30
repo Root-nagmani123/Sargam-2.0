@@ -161,6 +161,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (certFiles[index]) {
                 formData.append('certificate[]', certFiles[index]);
+            } else {
+                formData.append('certificate[]', null);
             }
         });
 
@@ -199,11 +201,16 @@ document.addEventListener('DOMContentLoaded', function() {
         let accountNumber = $('input[name="accountnumber"]').val();
         let ifscCode = $('input[name="ifsccode"]').val();
         let panNumber = $('input[name="pannumber"]').val();
+        let facultyId = $('input[name="faculty_id"]').val();
 
         formData.append('bankname', bankName);
         formData.append('accountnumber', accountNumber);
         formData.append('ifsccode', ifscCode);
         formData.append('pannumber', panNumber);
+
+        if( facultyId != '' && facultyId != null && facultyId != undefined) {  
+            formData.append('faculty_id', facultyId);
+        }  
 
         // Other information
         let researchPublications = $('input[name="researchpublications"]').val();

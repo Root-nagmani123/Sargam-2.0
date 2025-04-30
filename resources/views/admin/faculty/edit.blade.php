@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty')
+@section('title', 'Edit Faculty')
 
 @section('content')
 
@@ -8,267 +8,17 @@
     <x-breadcrum title="Faculty" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
+    <div class="card" id="facultyForm" data-store-url="{{ route('faculty.update') }}" data-index-url="{{ route('faculty.index') }}">
         <div class="card-body">
-            <h4 class="card-title mb-3">Create Faculty</h4>
+            <h4 class="card-title mb-3">Edit Faculty</h4>
             <hr>
             <form>
+                <input type="hidden" name="faculty_id" value="{{ $faculty->pk }}">
                 @include('admin.faculty.components.basicInfo')
-                <div>
-                    <h4 class="card-subtitle mb-3 mt-3">Qualification Details</h4>
-                    <hr>
-                    <div id="education_fields" class="my-4"></div>
-                    <div class="row" id="education_fields">
-                        <div class="col-3">
-
-                            <x-input
-                                name="degree[]"
-                                label="Degree :"
-                                placeholder="Degree"
-                                formLabelClass="form-label"
-                                required="true"
-                                helperSmallText="Bachelors, Masters, PhD"
-                                />
-
-                        </div>
-                        <div class="col-3">
-                            <x-input
-                                name="university_institution_name[]"
-                                label="University/Institution Name :"
-                                placeholder="University/Institution Name"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                        </div>
-                        <div class="col-3">
-                            <x-input
-                                type="number"
-                                name="year_of_passing[]"
-                                label="Year of Passing :"
-                                placeholder="Year of Passing"
-                                formLabelClass="form-label"
-                                min="1900"
-                                max="{{ date('Y') }}"
-                                step="1"
-                                required="true"
-                                />
-                        </div>
-                        <div class="col-3">
-                            <x-input
-                                type="number"
-                                min="0"
-                                max="100"
-                                name="percentage_CGPA[]"
-                                label="Percentage/CGPA"
-                                placeholder="Percentage/CGPA"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                            
-                        </div>
-                        <div class="col-3 mt-3">
-
-                            <x-input
-                                type="file"
-                                name="certificate[]"
-                                label="Certificates/Documents Upload :"
-                                placeholder="Certificates/Documents Upload"
-                                formLabelClass="form-label"
-                                required="true"
-                                helperSmallText="Please upload your certificates/documents, if any"
-                                />
-
-                            
-                        </div>
-                        <div class="col-9">
-                            <label for="Schoolname" class="form-label"></label>
-                            <div class="mb-3 float-end">
-                                <button onclick="education_fields();" class="btn btn-success fw-medium" type="button">
-                                    <i class="material-icons menu-icon">add</i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <h4 class="card-subtitle mb-3 mt-3">Experience Details</h4>
-                    <hr>
-                    <div id="experience_fields" class="my-4"></div>
-                    <div class="row" id="experience_fields">
-                        <div class="col-3">
-                            <x-input
-                                name="experience[]"
-                                label="Years of Experience :"
-                                placeholder="Years of Experience"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                        </div>
-                        <div class="col-3">
-
-                            <x-input
-                                name="specialization[]"
-                                label="Area of Specialization :"
-                                placeholder="Area of Specialization"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-
-                        </div>
-                        <div class="col-3">
-                            <x-input
-                                name="institution[]"
-                                label="Previous Institutions :"
-                                placeholder="Previous Institutions"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                        </div>
-                        <div class="col-3">
-                            <x-input 
-                                name="position[]"
-                                label="Position Held :"
-                                placeholder="Position Held"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                            
-                        </div>
-                        <div class="col-3 mt-3">
-                            <x-input
-                                type="number"
-                                name="duration[]"
-                                label="Duration :"
-                                placeholder="Duration"
-                                formLabelClass="form-label"
-                                min="0"
-                                required="true"
-                                />
-                        </div>
-                        <div class="col-3 mt-3">
-                            <x-input
-                                name="work[]"
-                                label="Nature of Work :"
-                                placeholder="Nature of Work"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                        </div>
-                        <div class="col-6">
-                            
-                            <label for="Schoolname" class="form-label"></label>
-                            <div class="mb-3 float-end">
-                                <button onclick="experience_fields();" class="btn btn-success btn-sm" type="button">
-                                    <i class="material-icons menu-icon">add</i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="card-subtitle mb-3 mt-3">Bank Details</h4>
-                    <hr>
-                    <div class="row">
-                        <div class="col-6">
-                            <x-input 
-                                name="bankname"
-                                label="Bank Name :"
-                                placeholder="Bank Name"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                            
-                        </div>
-                        <div class="col-6">
-
-                            <x-input
-                                type="text"
-                                name="accountnumber"
-                                label="Account Number :"
-                                placeholder="Account Number"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                            
-                        </div>
-                        <div class="col-6 mt-3">
-
-                            <x-input
-                                name="ifsccode"
-                                label="IFSC Code :"
-                                placeholder="IFSC Code"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                            
-                        </div>
-                        <div class="col-6 mt-3">
-                            
-                            <x-input
-                                type="text"
-                                name="pannumber"
-                                label="PAN Number :"
-                                placeholder="PAN Number"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="card-subtitle mb-3 mt-3">Other information</h4>
-                    <hr>
-                    <div class="row">
-                        <div class="col-6">
-
-                            <x-input
-                                type="file"
-                                name="researchpublications"
-                                label="Research Publications :"
-                                placeholder="Research Publications"
-                                formLabelClass="form-label"
-                                required="true"
-                                helperSmallText="Please upload your research publications, if any"
-                                />
-                            
-                        </div>
-                        <div class="col-6">
-
-                            <x-input
-                                type="file"
-                                name="professionalmemberships"
-                                label="Professional Memberships :"
-                                placeholder="Professional Memberships"
-                                formLabelClass="form-label"
-                                required="true"
-                                helperSmallText="Please upload your professional memberships, if any"
-                                />
-
-                        </div>
-                        <div class="col-6 mt-3">
-                            
-                            <x-input
-                                type="file"
-                                name="recommendationdetails"
-                                label="Reference/Recommendation Details :"
-                                placeholder="Reference/Recommendation Details"
-                                formLabelClass="form-label"
-                                required="true"
-                                helperSmallText="Please upload your reference/recommendation details, if any"
-                                />
-
-                        </div>
-                        <div class="col-6 mt-3">
-                            <x-input
-                                type="date"
-                                name="joiningdate"
-                                label="Joining Date :"
-                                placeholder="Joining Date"
-                                formLabelClass="form-label"
-                                required="true"
-                                />
-                            
-                        </div>
-                    </div>
-                </div>
+                @include('admin.faculty.components.degree')
+                @include('admin.faculty.components.experienceDetails')
+                @include('admin.faculty.components.bankDetails')
+                @include('admin.faculty.components.researchPublication')
                 <hr>
                 <div class="row">
                     <div class="col-12">
@@ -276,12 +26,12 @@
                         <div class="mb-3">
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input success" type="radio" name="current_sector"
-                                    id="success-radio" value="1">
+                                    id="success-radio" value="1" {{ $faculty->faculty_sector == 1 ? 'checked' : '' }}>
                                 <label class="form-check-label" for="success-radio">Government Sector</label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input success" type="radio" name="current_sector"
-                                    id="success2-radio" value="2" checked>
+                                    id="success2-radio" value="2" {{ $faculty->faculty_sector == 2 ? 'checked' : '' }}>
                                 <label class="form-check-label" for="success2-radio">Private Sector</label>
                             </div>
                         </div>
@@ -290,14 +40,19 @@
 
                         <label for="expertise" class="form-label">Area of Expertise :</label>
                         <div class="mb-3">
-                            {{-- faculties --}}
-                            <x-checkbox
-                                name="faculties[]"
-                                label="Area of Expertise :"
-                                formLabelClass="form-label"
-                                :options="$faculties"
-                                required="true"
-                                />
+                            @if(!empty($faculties))
+                                <fieldset>
+                                    @foreach ($faculties as $key => $option)
+                                    <div class="form-check py-2">
+                                        <input type="checkbox" name="faculties[]" value="{{ $key }}" class="form-check-input" id="{{ $loop->index }}" {{ in_array($key, $facultExpertise) ? 'checked' : '' }}>
+                                        <label class="form-check-label" for="{{ $loop->index }}">{{ $option }}</label>
+                                    </div>
+                                    @endforeach
+                                    @error('faculties[]')
+                                        <span class="text-danger">{{ $message }}</span>
+                                    @enderror
+                                </fieldset>
+                            @endif
                         </div>
                     </div>
                 </div>
