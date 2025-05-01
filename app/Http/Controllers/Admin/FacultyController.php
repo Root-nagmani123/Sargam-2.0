@@ -23,7 +23,7 @@ class FacultyController extends Controller
 
     public function create()
     {
-        $faculties = FacultyExpertiseMaster::pluck('expertise_name', 'pk')->toArray();
+        $faculties = FacultyExpertiseMaster::where('active_inactive', 1)->pluck('expertise_name', 'pk')->toArray();
         $country = Country::pluck('country_name', 'pk')->toArray();
         $state = State::pluck('state_name', 'pk')->toArray();
         $district = District::pluck('district_name', 'pk')->toArray();
@@ -185,7 +185,7 @@ class FacultyController extends Controller
         if (!$faculty) {
             return redirect()->route('faculty.index')->with('error', 'Faculty not found');
         }
-        $faculties = FacultyExpertiseMaster::pluck('expertise_name', 'pk')->toArray();
+        $faculties = FacultyExpertiseMaster::where('active_inactive', 1)->pluck('expertise_name', 'pk')->toArray();
         $country = Country::pluck('country_name', 'pk')->toArray();
         $state = State::pluck('state_name', 'pk')->toArray();
         $district = District::pluck('district_name', 'pk')->toArray();
