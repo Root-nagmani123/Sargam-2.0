@@ -94,7 +94,7 @@ class FacultyController extends Controller
             $facultyDetails['faculty_sector'] = $request->current_sector;
 
             $facultyDetails['last_update'] = now();
-            $facultyDetails['active_deactive'] = 1;
+            $facultyDetails['active_inactive'] = 1;
 
             $faculty = FacultyMaster::create($facultyDetails);
 
@@ -254,7 +254,7 @@ class FacultyController extends Controller
             $facultyDetails['faculty_sector'] = $request->current_sector;
 
             $facultyDetails['last_update'] = now();
-            $facultyDetails['active_deactive'] = 1;
+            $facultyDetails['active_inactive'] = 1;
 
             $faculty = FacultyMaster::find($request->faculty_id);
             if (!$faculty) {

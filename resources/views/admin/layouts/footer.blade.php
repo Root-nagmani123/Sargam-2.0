@@ -33,5 +33,6 @@
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="{{asset('admin_assets/js/apps/contact.js')}}"></script>
   <script src="{{asset('admin_assets/js/plugins/toastr-init.js')}}"></script>
+  <script src="{{asset('admin_assets/js/routes.js')}}"></script>
   <script src="{{asset('admin_assets/js/custom.js')}}"></script>
   @yield('scripts')

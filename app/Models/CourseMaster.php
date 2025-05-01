@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CourseMaster extends Model
 {
-    protected $table = 'courses_master';
+    protected $table = 'course_master';
     protected $guarded = [];
     protected $primaryKey = 'pk';
 
