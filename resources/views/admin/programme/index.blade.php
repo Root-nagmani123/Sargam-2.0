@@ -53,12 +53,10 @@
                                             <td>
                                                 <a href="{{ route('programme.edit', ['id' => encrypt($courseMaster->pk)]) }}"
                                                     class="btn btn-primary btn-sm">Edit</a>
-                                                {{-- <form action="{{ route('programme.destroy', $courseMaster->id) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                                </form> --}}
+                                                <div class="form-check form-switch d-inline-block">
+                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                        data-table="course_master" data-column="active_inactive" data-id="{{ $courseMaster->pk }}" {{ $courseMaster->active_inactive == 1 ? 'checked' : '' }}>
+                                                </div>
                                             </td>
                                         </tr>
                                     @endforeach

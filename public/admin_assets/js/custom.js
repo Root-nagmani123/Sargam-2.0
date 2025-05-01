@@ -45,7 +45,6 @@ $(document).on('change', 'input[name="styled_max_checkbox"]', function() {
 });
 
 $(document).on('change', '.status-toggle', function () {
-    const toggleUrl = "{{ route('admin.toggleStatus') }}";
 
     let table = $(this).data('table');
     let column = $(this).data('column');
@@ -53,7 +52,7 @@ $(document).on('change', '.status-toggle', function () {
     let status = $(this).is(':checked') ? 1 : 0;
 
     $.ajax({
-        url: window.statusToggleUrl, // Update with correct route
+        url: routes.toggleStatus, // Update with correct route
         type: 'POST',
         data: {
             _token: $('meta[name="csrf-token"]').attr('content'),
