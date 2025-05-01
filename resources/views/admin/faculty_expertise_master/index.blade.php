@@ -62,8 +62,11 @@
                                                         }">
                                                         Delete
                                                     </button>
-                                                    
                                                 </form>
+                                                <div class="form-check form-switch d-inline-block">
+                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                        data-table="faculty_expertise_master" data-column="active_inactive" data-id="{{ $faculty->pk }}" {{ $faculty->active_inactive == 1 ? 'checked' : '' }}>
+                                                </div>
                                             </td>
                                         </tr>
                                     @endforeach
