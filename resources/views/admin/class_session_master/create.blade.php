@@ -65,7 +65,7 @@
                         <i class="material-icons menu-icon">save</i>
                         Save
                     </button>
-                    <a href="{{ route('faculty.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
+                    <a href="{{ route('master.class.session.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
                         <i class="material-icons menu-icon">arrow_back</i>
                         Back
                     </a>
