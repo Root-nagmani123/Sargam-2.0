@@ -291,6 +291,13 @@
                                     <span class="hide-menu">Faculty Expertise</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.class.session.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">Class Session</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                 </div>
