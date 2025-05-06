@@ -46,15 +46,25 @@
                                     @foreach ($faculties as $faculty)
                                         <tr class="odd">
                                             <td>{{ $loop->iteration }}</td>
-                                            <td>{{ $faculty->faculty_type == 1 ? 'Govt' : 'Private' }}</td>
+                                            <td>
+                                                @if ($faculty->faculty_type == 1)
+                                                    <span class="badge bg-success">Internal</span>
+                                                @elseif ($faculty->faculty_type == 2)
+                                                    <span class="badge bg-warning">Guest</span>
+                                                @elseif ($faculty->faculty_type == 3)
+                                                    <span class="badge bg-info">Research</span>
+                                                @endif
                                             <td>{{ $faculty->full_name ?? 'N/A' }}</td>
                                             <td>{{ $faculty->mobile_no }}</td>
-                                            <td>{{ $faculty->faculty_sector }}</td>
+                                            <td><span class="badge bg-info">{{ $faculty->faculty_sector == 1 ? 'Govt' : 'Private' }}</span></td>
                                            
                                             <td>
-                                                <a href="{{ route('programme.edit', ['id' => encrypt($faculty->pk)]) }}"
+                                                <a href="{{ route('faculty.edit', ['id' => encrypt($faculty->pk)]) }}"
                                                     class="btn btn-primary btn-sm">Edit</a>
-                                                
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                            data-table="faculty_master" data-column="active_inactive" data-id="{{ $faculty->pk }}" {{ $faculty->active_inactive == 1 ? 'checked' : '' }}>
+                                                    </div>
                                             </td>
                                         </tr>
                                     @endforeach

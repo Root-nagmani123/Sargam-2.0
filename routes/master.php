@@ -1,6 +1,6 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\{FacultyExpertiseMasterController, LocationController};
+use App\Http\Controllers\Admin\{FacultyExpertiseMasterController, LocationController, ClassSessionMasterController};
 
 Route::prefix('master')->name('master.')->group(function () {
     
@@ -56,4 +56,12 @@ Route::prefix('master')->name('master.')->group(function () {
         Route::delete('/delete/{id}', [FacultyExpertiseMasterController::class, 'delete'])->name('delete');
     });
     
+    // Class Session Master Routes
+    Route::prefix('class-session')->name('class.session.')->group(function () {
+        Route::get('/', [ClassSessionMasterController::class, 'index'])->name('index');
+        Route::get('/create', [ClassSessionMasterController::class, 'create'])->name('create');
+        Route::post('/store', [ClassSessionMasterController::class, 'store'])->name('store');
+        Route::get('/edit/{id}', [ClassSessionMasterController::class, 'edit'])->name('edit');
+        Route::delete('/delete/{id}', [ClassSessionMasterController::class, 'delete'])->name('delete');
+    });
 });

@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class FacultyRequest extends FormRequest
+class FacultyUpdateRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -24,9 +24,7 @@ class FacultyRequest extends FormRequest
     public function rules()
     {
         return [
-
-            // Basic Info
-
+            // non mandatory photo and documents in update
             "facultyType" => "",
             "firstName"=> "required|string|max:255",
             "middlename"=> "required|string|max:255",
@@ -40,10 +38,11 @@ class FacultyRequest extends FormRequest
             "city"=> "required|string",
             "email"=> "required|email|max:255",
             "alternativeEmail" => "required|email|max:255",
-            "photo" => "required|mimes:jpg,jpeg,png|max:2048",
-            "document" => "required|mimes:pdf,jpg,jpeg,png|max:2048",
+            "photo" => "nullable|mimes:jpg,jpeg,png|max:2048",
+            "document" => "nullable|mimes:pdf,jpg,jpeg,png|max:2048",
 
             // Qualification Details (array fields)
+            
             'degree.*' => 'required|string|max:255',
             'university_institution_name.*' => 'required|string|max:255',
             'year_of_passing.*' => 'required|date_format:Y',
@@ -66,9 +65,9 @@ class FacultyRequest extends FormRequest
             
 
             // Other information
-            'researchpublications' => 'required|mimes:pdf,jpg,jpeg|max:255',
-            'professionalmemberships' => 'required|mimes:pdf,jpg,jpeg|max:255',
-            'recommendationdetails' => 'required|mimes:pdf,jpg,jpeg|max:255',
+            'researchpublications' => 'nullable|mimes:pdf,jpg,jpeg|max:255',
+            'professionalmemberships' => 'nullable|mimes:pdf,jpg,jpeg|max:255',
+            'recommendationdetails' => 'nullable|mimes:pdf,jpg,jpeg|max:255',
             'joiningdate'=> 'required|date',
             
             // Radio button
@@ -76,7 +75,7 @@ class FacultyRequest extends FormRequest
         ];
     }
 
-    public function messages()
+    public function messages() 
     {
         return [
             // Basic Info
@@ -129,6 +128,6 @@ class FacultyRequest extends FormRequest
             'professionalmemberships.required' => 'Professional memberships are required',
             'recommendationdetails.required' => 'Recommendation details are required',
             'joiningdate.required' => 'Joining date is required',
-        ]; 
+        ];
     }
 }

@@ -10,7 +10,9 @@
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
-            <h4 class="card-title mb-3">Create Faculty Expertise</h4>
+            <h4 class="card-title mb-3">
+                {{ !empty($expertise) ? 'Edit Faculty Expertise' : 'Create Faculty Expertise' }}
+            </h4>
             <hr>
             <form action="{{ route('master.faculty.expertise.store') }}" method="POST" id="facultyForm">
                 @csrf
@@ -37,7 +39,7 @@
                         <i class="material-icons menu-icon">save</i>
                         Save
                     </button>
-                    <a href="{{ route('faculty.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
+                    <a href="{{ route('master.faculty.expertise.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
                         <i class="material-icons menu-icon">arrow_back</i>
                         Back
                     </a>
