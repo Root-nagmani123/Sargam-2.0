@@ -50,6 +50,7 @@ $(document).on('change', '.status-toggle', function () {
     let table = $(this).data('table');
     let column = $(this).data('column');
     let id = $(this).data('id');
+    let id_column =  $(this).data('id_column');
     let status = $(this).is(':checked') ? 1 : 0;
 
     $.ajax({
@@ -60,6 +61,7 @@ $(document).on('change', '.status-toggle', function () {
             table: table,
             column: column,
             id: id,
+            id_column: id_column,
             status: status
         },
         success: function (response) {

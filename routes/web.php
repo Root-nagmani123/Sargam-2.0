@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\StreamController;
 use App\Http\Controllers\Admin\SubjectModuleController;
 use App\Http\Controllers\Admin\SubjectMasterController;
+use App\Http\Controllers\Admin\VenueMasterController;
 use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
@@ -99,10 +100,11 @@ Route::middleware(['auth'])->group(function () {
     // subject route
    
 
-    Route::resource('stream', StreamController::class);
+        Route::resource('stream', StreamController::class);
 
         Route::resource('subject-module', SubjectModuleController::class);
-  
+        Route::resource('Venue-Master', VenueMasterController::class);
+
     
     Route::post('/admin/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.toggleStatus');
 
