@@ -1,11 +1,11 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\{FacultyExpertiseMasterController, LocationController, ClassSessionMasterController};
+use App\Http\Controllers\Admin\{FacultyExpertiseMasterController, LocationController, ClassSessionMasterController, CourseGroupTypeController};
 
 Route::prefix('master')->name('master.')->group(function () {
-    
+
     // country route
-    Route::prefix('country')->name('country.')->group(function () {    
+    Route::prefix('country')->name('country.')->group(function () {
         Route::get('/', [LocationController::class, 'countryIndex'])->name('index');
         Route::get('/create', [LocationController::class, 'countryCreate'])->name('create');
         Route::post('/store', [LocationController::class, 'countryStore'])->name('store');
@@ -55,7 +55,7 @@ Route::prefix('master')->name('master.')->group(function () {
         Route::get('/edit/{id}', [FacultyExpertiseMasterController::class, 'edit'])->name('edit');
         Route::delete('/delete/{id}', [FacultyExpertiseMasterController::class, 'delete'])->name('delete');
     });
-    
+
     // Class Session Master Routes
     Route::prefix('class-session')->name('class.session.')->group(function () {
         Route::get('/', [ClassSessionMasterController::class, 'index'])->name('index');
@@ -63,5 +63,14 @@ Route::prefix('master')->name('master.')->group(function () {
         Route::post('/store', [ClassSessionMasterController::class, 'store'])->name('store');
         Route::get('/edit/{id}', [ClassSessionMasterController::class, 'edit'])->name('edit');
         Route::delete('/delete/{id}', [ClassSessionMasterController::class, 'delete'])->name('delete');
+    });
+
+    // Course Group Type Master Routes
+    Route::prefix('course-group-type')->name('course.group.type.')->group(function () {
+        Route::get('/', [CourseGroupTypeController::class, 'index'])->name('index');
+        Route::get('/create', [CourseGroupTypeController::class, 'create'])->name('create');
+        Route::post('/store', [CourseGroupTypeController::class, 'store'])->name('store');
+        Route::get('/edit/{id}', [CourseGroupTypeController::class, 'edit'])->name('edit');
+        Route::delete('/delete/{id}', [CourseGroupTypeController::class, 'delete'])->name('delete');
     });
 });
