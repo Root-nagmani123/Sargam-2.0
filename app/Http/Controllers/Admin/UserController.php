@@ -158,8 +158,9 @@ class UserController extends Controller
 
     public function toggleStatus(Request $request)
 {
+    $idColumn = $request->id_column ?? 'pk'; 
     DB::table($request->table)
-        ->where('pk', $request->id)
+        ->where($idColumn, $request->id)
         ->update([$request->column => $request->status]);
 
     return response()->json(['message' => 'Status updated successfully']);
