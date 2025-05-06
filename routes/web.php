@@ -66,8 +66,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [FacultyController::class, 'index'])->name('index');
         Route::get('create', [FacultyController::class, 'create'])->name('create');
         Route::post('store', [FacultyController::class, 'store'])->name('store');
-
-
+        Route::get('edit/{id}', [FacultyController::class, 'edit'])->name('edit');
+        Route::post('update', [FacultyController::class, 'update'])->name('update');
        
     });
 

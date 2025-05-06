@@ -45,7 +45,6 @@ $(document).on('change', 'input[name="styled_max_checkbox"]', function() {
 });
 
 $(document).on('change', '.status-toggle', function () {
-    const toggleUrl = "{{ route('admin.toggleStatus') }}";
 
     let table = $(this).data('table');
     let column = $(this).data('column');
@@ -54,7 +53,7 @@ $(document).on('change', '.status-toggle', function () {
     let status = $(this).is(':checked') ? 1 : 0;
 
     $.ajax({
-        url: window.statusToggleUrl, // Update with correct route
+        url: routes.toggleStatus, // Update with correct route
         type: 'POST',
         data: {
             _token: $('meta[name="csrf-token"]').attr('content'),
@@ -163,6 +162,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (certFiles[index]) {
                 formData.append('certificate[]', certFiles[index]);
+            } else {
+                formData.append('certificate[]', null);
             }
         });
 
@@ -201,11 +202,16 @@ document.addEventListener('DOMContentLoaded', function() {
         let accountNumber = $('input[name="accountnumber"]').val();
         let ifscCode = $('input[name="ifsccode"]').val();
         let panNumber = $('input[name="pannumber"]').val();
+        let facultyId = $('input[name="faculty_id"]').val();
 
         formData.append('bankname', bankName);
         formData.append('accountnumber', accountNumber);
         formData.append('ifsccode', ifscCode);
         formData.append('pannumber', panNumber);
+
+        if( facultyId != '' && facultyId != null && facultyId != undefined) {  
+            formData.append('faculty_id', facultyId);
+        }  
 
         // Other information
         let researchPublications = $('input[name="researchpublications"]').val();
@@ -261,12 +267,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 showLoader();
             },
             success: function (response) {
-                console.log('Success:', response);
+                
                 // Handle success response
-                if (response.status == 200) {
+                if (response.status) {
                     window.location.href = indexUrl;
                 } else {
-                    alert(response.message);
+                    toastr.error(response.message);
                 }
             },
             error: function (error) {
@@ -295,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 } else {
-                    alert('Something went wrong. Please try again.');
+                    toastr.error('Something went wrong. Please try again.');
                 }
             },
             complete: function () {

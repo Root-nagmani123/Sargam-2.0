@@ -120,13 +120,13 @@
                                                                 Roles
                                                             </a>
                                                         </li>
-                                                        <li class="sidebar-item">
+                                                        {{-- <li class="sidebar-item">
                                                             <a class="sidebar-link"
                                                                 href="{{ route('admin.permissions.index') }}">
                                                                 <span class="icon-small"></span>
                                                                 Permissions
                                                             </a>
-                                                        </li>
+                                                        </li> --}}
                                                     </ul>
                                                 </li>
                                                 <li class="sidebar-item">
@@ -296,6 +296,10 @@
                                     aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
                                     <span class="hide-menu">Venue Master</span>
+                                <a class="sidebar-link" href="{{ route('master.class.session.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">Class Session</span>
                                 </a>
                             </li>
                         </ul>

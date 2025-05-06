@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty Expertise')
+@section('title', 'Class Session Master')
 
 @section('content')
 <div class="container-fluid">
 
-    <x-breadcrum title="Faculty Expertise" />
+    <x-breadcrum title="Class Session Master" />
     <x-session_message />
 
     <div class="datatables">
@@ -15,11 +15,11 @@
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Faculty Expertise</h4>
+                            <h4>Class Session Master</h4>
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{route('master.faculty.expertise.create')}}" class="btn btn-primary">+ Add Faculty Expertise</a>
+                                <a href="{{route('master.class.session.create')}}" class="btn btn-primary">+ Add Class Session</a>
                             </div>
                         </div>
                     </div>
@@ -32,26 +32,30 @@
                                 <!-- start row -->
                                 <tr>
                                     <th>S.No.</th>
-                                    <th>Faculty Expertise</th>
+                                    <th>Shift Name</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
                                     <th>Action</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
                             <tbody>
-                                @if (!empty($faculties) && count($faculties) > 0)
-                                    @foreach ($faculties as $faculty)
+                                @if (!empty($classSessionMaster) && count($classSessionMaster) > 0)
+                                    @foreach ($classSessionMaster as $classSession)
                                         <tr class="odd">
                                             <td>{{ $loop->iteration }}</td>
-                                            <td>{{ $faculty->expertise_name ?? 'N/A' }}</td>
+                                            <td>{{ $classSession->shift_name ?? 'N/A' }}</td>
+                                            <td>{{ $classSession->start_time ?? 'N/A' }}</td>
+                                            <td>{{ $classSession->end_time ?? 'N/A' }}</td>
                                             <td>
                                                 <a 
-                                                    href="{{ route('master.faculty.expertise.edit', 
-                                                    ['id' => encrypt($faculty->pk)]) }}"
+                                                    href="{{ route('master.class.session.edit', 
+                                                    ['id' => encrypt(value: $classSession->pk)]) }}"
                                                     class="btn btn-primary btn-sm"
                                                 >Edit</a>
                                                 <form 
-                                                    action="{{ route('master.faculty.expertise.delete', 
-                                                    ['id' => encrypt($faculty->pk)]) }}"
+                                                    action="{{ route('master.class.session.delete', 
+                                                    ['id' => encrypt($classSession->pk)]) }}"
                                                     method="POST" class="d-inline">
                                                     @csrf
                                                     @method('DELETE')
@@ -65,7 +69,7 @@
                                                 </form>
                                                 <div class="form-check form-switch d-inline-block">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                        data-table="faculty_expertise_master" data-column="active_inactive" data-id="{{ $faculty->pk }}" {{ $faculty->active_inactive == 1 ? 'checked' : '' }}>
+                                                        data-table="class_session_master" data-column="active_inactive" data-id="{{ $classSession->pk }}" {{ $classSession->active_inactive == 1 ? 'checked' : '' }}>
                                                 </div>
                                             </td>
                                         </tr>

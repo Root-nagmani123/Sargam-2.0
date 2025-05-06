@@ -11,7 +11,9 @@
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
-            <h4 class="card-title mb-3">Create Programme</h4>
+            <h4 class="card-title mb-3">
+                {{ !empty($courseMasterObj) && $courseMasterObj->pk ? 'Edit Programme' : 'Create Programme' }}
+            </h4>
             <hr>
             <form action="{{ route('programme.store') }}" method="POST">
                 @csrf
