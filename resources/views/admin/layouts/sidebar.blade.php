@@ -229,6 +229,14 @@
                                                 <li>
                                                     <span class="sidebar-divider"></span>
                                                 </li>
+                                                {{-- <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('section.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Group Mapping</span>
+                                                    </a>
+                                                </li> --}}
                                             </ul>
                                         </div>
                                     </div>
@@ -296,10 +304,20 @@
                                     aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
                                     <span class="hide-menu">Venue Master</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('master.class.session.index') }}" id="get-url"
                                     aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
                                     <span class="hide-menu">Class Session</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.course.group.type.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">Course Group Type</span>
                                 </a>
                             </li>
                         </ul>
