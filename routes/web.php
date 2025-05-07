@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
@@ -16,7 +15,8 @@ use App\Http\Controllers\Admin\{
     StreamController,
     SubjectModuleController,
     SubjectMasterController,
-    VenueMasterController
+    VenueMasterController,
+    GroupMappingController
 };
 
 Route::get('clear-cache', function () {
@@ -182,7 +182,9 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Group Mapping Routes
-    // Route::prefix('group-mapping')->name('group.mapping.')->controller(CourseController::class)->group(function () {
-        
-    // });
+    Route::prefix('group-mapping')->name('group.mapping.')->controller(GroupMappingController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('store', 'strore')->name('store');
+    });
 });
