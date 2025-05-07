@@ -6,17 +6,17 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Admin\LocationController;
-use App\Http\Controllers\Admin\StreamController;
-use App\Http\Controllers\Admin\SubjectModuleController;
-use App\Http\Controllers\Admin\SubjectMasterController;
-use App\Http\Controllers\Admin\VenueMasterController;
 use App\Http\Controllers\Admin\{
     RoleController,
     PermissionController,
     UserController,
     MemberController,
     CourseController,
-    FacultyController
+    FacultyController,
+    StreamController,
+    SubjectModuleController,
+    SubjectMasterController,
+    VenueMasterController
 };
 
 Route::get('clear-cache', function () {
@@ -181,6 +181,8 @@ Route::middleware(['auth'])->group(function () {
         })->name('index');
     });
 
-
-    
+    // Group Mapping Routes
+    // Route::prefix('group-mapping')->name('group.mapping.')->controller(CourseController::class)->group(function () {
+        
+    // });
 });
