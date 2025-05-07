@@ -5,72 +5,72 @@ use App\Http\Controllers\Admin\{FacultyExpertiseMasterController, LocationContro
 Route::prefix('master')->name('master.')->group(function () {
 
     // country route
-    Route::prefix('country')->name('country.')->group(function () {
-        Route::get('/', [LocationController::class, 'countryIndex'])->name('index');
-        Route::get('/create', [LocationController::class, 'countryCreate'])->name('create');
-        Route::post('/store', [LocationController::class, 'countryStore'])->name('store');
-        Route::get('/edit/{id}', [LocationController::class, 'countryEdit'])->name('edit');
-        Route::PUT('/update/{id}', [LocationController::class, 'countryUpdate'])->name('update');
-        Route::delete('/delete/{id}', [LocationController::class, 'countryDelete'])->name('delete');
+    Route::prefix('country')->name('country.')->controller(LocationController::class)->group(function () {
+        Route::get('/', 'countryIndex')->name('index');
+        Route::get('/create', 'countryCreate')->name('create');
+        Route::post('/store', 'countryStore')->name('store');
+        Route::get('/edit/{id}', 'countryEdit')->name('edit');
+        Route::PUT('/update/{id}', 'countryUpdate')->name('update');
+        Route::delete('/delete/{id}', 'countryDelete')->name('delete');
     });
 
     // state
-    Route::prefix('state')->name('state.')->group(function () {
-        Route::get('/', [LocationController::class, 'stateIndex'])->name('index');
-        Route::get('/create', [LocationController::class, 'stateCreate'])->name('create');
-        Route::post('/store', [LocationController::class, 'stateStore'])->name('store');
-        Route::get('/edit/{id}', [LocationController::class, 'stateEdit'])->name('edit');
-        Route::post('/update/{id}', [LocationController::class, 'stateUpdate'])->name('update');
-        Route::delete('/delete/{id}', [LocationController::class, 'stateDelete'])->name('delete');
+    Route::prefix('state')->name('state.')->controller(LocationController::class)->group(function () {
+        Route::get('/', 'stateIndex')->name('index');
+        Route::get('/create', 'stateCreate')->name('create');
+        Route::post('/store', 'stateStore')->name('store');
+        Route::get('/edit/{id}', 'stateEdit')->name('edit');
+        Route::post('/update/{id}', 'stateUpdate')->name('update');
+        Route::delete('/delete/{id}', 'stateDelete')->name('delete');
     });
 
     // district route
-    Route::prefix('district')->name('district.')->group(function () {
+    Route::prefix('district')->name('district.')->controller(LocationController::class)->group(function () {
 
-        Route::get('/', [LocationController::class, 'districtIndex'])->name('index');
-        Route::get('/create', [LocationController::class, 'districtCreate'])->name('create');
-        Route::post('/store', [LocationController::class, 'districtStore'])->name('store');
-        Route::get('/edit/{id}', [LocationController::class, 'districtEdit'])->name('edit');
-        Route::post('/update/{id}', [LocationController::class, 'districtUpdate'])->name('update');
-        Route::delete('/delete/{id}', [LocationController::class, 'districtDelete'])->name('delete');
+        Route::get('/', 'districtIndex')->name('index');
+        Route::get('/create', 'districtCreate')->name('create');
+        Route::post('/store', 'districtStore')->name('store');
+        Route::get('/edit/{id}', 'districtEdit')->name('edit');
+        Route::post('/update/{id}', 'districtUpdate')->name('update');
+        Route::delete('/delete/{id}', 'districtDelete')->name('delete');
     });
 
     // city route
-    Route::prefix('city')->name('city.')->group(function () {
+    Route::prefix('city')->name('city.')->controller(LocationController::class)->group(function () {
         // Route::get('/', function() {
 
-        Route::get('/', [LocationController::class, 'cityIndex'])->name('index');
-        Route::get('/create', [LocationController::class, 'cityCreate'])->name('create');
-        Route::post('/store', [LocationController::class, 'cityStore'])->name('store');
-        Route::get('/edit/{id}', [LocationController::class, 'cityEdit'])->name('edit');
-        Route::post('/update/{id}', [LocationController::class, 'cityUpdate'])->name('update');
-        Route::delete('/delete/{id}', [LocationController::class, 'cityDelete'])->name('delete');
+        Route::get('/', 'cityIndex')->name('index');
+        Route::get('/create', 'cityCreate')->name('create');
+        Route::post('/store', 'cityStore')->name('store');
+        Route::get('/edit/{id}', 'cityEdit')->name('edit');
+        Route::post('/update/{id}', 'cityUpdate')->name('update');
+        Route::delete('/delete/{id}', 'cityDelete')->name('delete');
     });
 
     // Faulty Expertise Master Routes
-    Route::prefix('faculty-expertise')->name('faculty.expertise.')->group(function () {
-        Route::get('/', [FacultyExpertiseMasterController::class, 'index'])->name('index');
-        Route::get('/create', [FacultyExpertiseMasterController::class, 'create'])->name('create');
-        Route::post('/store', [FacultyExpertiseMasterController::class, 'store'])->name('store');
-        Route::get('/edit/{id}', [FacultyExpertiseMasterController::class, 'edit'])->name('edit');
-        Route::delete('/delete/{id}', [FacultyExpertiseMasterController::class, 'delete'])->name('delete');
+    Route::prefix('faculty-expertise')->name('faculty.expertise.')->controller(FacultyExpertiseMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
     // Class Session Master Routes
-    Route::prefix('class-session')->name('class.session.')->group(function () {
-        Route::get('/', [ClassSessionMasterController::class, 'index'])->name('index');
-        Route::get('/create', [ClassSessionMasterController::class, 'create'])->name('create');
-        Route::post('/store', [ClassSessionMasterController::class, 'store'])->name('store');
-        Route::get('/edit/{id}', [ClassSessionMasterController::class, 'edit'])->name('edit');
-        Route::delete('/delete/{id}', [ClassSessionMasterController::class, 'delete'])->name('delete');
+    Route::prefix('class-session')->name('class.session.')->controller(ClassSessionMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
     // Course Group Type Master Routes
-    Route::prefix('course-group-type')->name('course.group.type.')->group(function () {
-        Route::get('/', [CourseGroupTypeController::class, 'index'])->name('index');
-        Route::get('/create', [CourseGroupTypeController::class, 'create'])->name('create');
-        Route::post('/store', [CourseGroupTypeController::class, 'store'])->name('store');
-        Route::get('/edit/{id}', [CourseGroupTypeController::class, 'edit'])->name('edit');
-        Route::delete('/delete/{id}', [CourseGroupTypeController::class, 'delete'])->name('delete');
+    Route::prefix('course-group-type')->name('course.group.type.')->controller(CourseGroupTypeController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create',  'create')->name('create');
+        Route::post('/store',  'store')->name('store');
+        Route::get('/edit/{id}',  'edit')->name('edit');
+        Route::delete('/delete/{id}',  'delete')->name('delete');
     });
 });
