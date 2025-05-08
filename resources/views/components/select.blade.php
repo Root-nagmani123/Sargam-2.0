@@ -4,7 +4,7 @@
 @endif
 
 @php
-    $formSelectClass = 'form-select' . ($errors->has($name) ? ' is-invalid' : '');
+    $formSelectClass = 'form-select' . ($errors->has($name) ? ' is-invalid' : ''). ' ' . $formSelectClass;
 @endphp
 
 <select 
