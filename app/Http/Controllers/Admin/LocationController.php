@@ -80,7 +80,7 @@ class LocationController extends Controller
             'state_name' => 'required|string|max:255',
             'country_master_pk' => 'required|exists:country_master,pk',
         ]);
-
+ 
         $state = new State();
         $state->state_name = $request->state_name;
         $state->country_master_pk = $request->country_master_pk;

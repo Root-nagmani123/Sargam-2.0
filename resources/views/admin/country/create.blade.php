@@ -31,15 +31,7 @@
                                             @enderror
                                         </div>
                                     </div>
-                                    <div class="col-sm-2">
-                                        <label class="form-label">&nbsp;</label>
-                                        <div class="mb-3">
-                                            <button onclick="addCountryField();" class="btn btn-success fw-medium"
-                                                type="button">
-                                                <i class="material-icons menu-icon">add</i>
-                                            </button>
-                                        </div>
-                                    </div>
+                                    
                                 </div>
                             </div>
                             <hr>

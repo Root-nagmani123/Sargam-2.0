@@ -40,11 +40,12 @@
                             </thead>
                             <tbody>
                                 @foreach($cities as $key => $city)
-                                    <tr>
+                                    <tr> 
                                         <td>{{ $key + 1 }}</td>
                                         <td>{{ $city->city_name }}</td>
                                         <td>{{ $city->state->state_name }}</td>
-                                        <td>{{ $city->district->district_name }}</td>
+                                        <td>{{ $city->district?->district_name ?? 'N/A' }}</td>
+
                                         <td>
                                             <a href="{{ route('master.city.edit', $city->pk) }}"
                                                 class="btn btn-success btn-sm">Edit</a>
