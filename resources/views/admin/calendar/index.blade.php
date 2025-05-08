@@ -998,42 +998,39 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Programme</label>
-                                <select name="programme" id="programme" class="form-control">
-                                    <option value="">Select Course</option>
-                                </select>
+                                <label class="form-label">Course name</label>
+                                <select name="Course_name" id="Course_name" class="form-control">
+                            <option value="">Select Course</option>
+                            @foreach($courseMaster as $course)
+                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                            @endforeach
+                        </select>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Major Subject</label>
-                                <select name="programme" id="programme" class="form-control">
-                                    <option value="">Select Major Subject</option>
-                                </select>
+                                <label class="form-label">Subject Name</label>
+                                <select name="subject_name" id="subject_name" class="form-control">
+                                        <option value="">Select Subject Name</option>
+                                        @foreach($subjects as $subject)
+                                            <option value="{{ $subject->pk }}">{{ $subject->subject_name }}</option>
+                                        @endforeach
+                                    </select>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Minor Subject</label>
-                                <select name="programme" id="programme" class="form-control">
-                                    <option value="">Select minor subject</option>
+                                <label class="form-label">Subject Module</label>
+                                <select name="subject_module" id="subject_module" class="form-control">
+                                    <option value="">Select subject Module</option>
                                 </select>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Topic</label>
-                                <select name="programme" id="programme" class="form-control">
-                                    <option value="">Select Topic</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-12">
-                            <div class="mb-3">
-                                <label class="form-label">Faculty</label>
-                                <select name="programme" id="programme" class="form-control">
-                                    <option value="">Select Faculty</option>
-                                </select>
+                                <textarea name="topic" id="topic" class="form-control" row="5"></textarea>
+                               
                             </div>
                         </div>
                         <div class="col-md-12 mb-3">
@@ -1083,24 +1080,46 @@
                         </div>
                         <div class="col-md-12">
                             <div class="mb-3">
-                                <label class="form-label">Group</label>
-                                <textarea name="group" id="group" class="form-control"></textarea>
+                                <label class="form-label">Faculty</label>
+                                <select name="faculty" id="faculty" class="form-control">
+                                    <option value="">Select Faculty</option>
+                                    @foreach($facultyMaster as $faculty)
+                                        <option value="{{ $faculty->pk }}">{{ $faculty->full_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <div class="mb-3">
+                                <label class="form-label">Faculty Type</label>
+                                <select name="faculty_type" id="faculty_type" class="form-control">
+                                    <option value="">Select Faculty Type</option>
+                                </select>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Location</label>
-                                <select name="programme" id="programme" class="form-control">
-                                    <option value="">Select Location</option>
-                                </select>
+                                <select name="vanue" id="vanue" class="form-control">
+                                        <option value="">Select Location</option>
+                                        @foreach($venueMaster as $loc)
+                                            <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
+                                        @endforeach
+                                    </select>
+
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Shift</label>
-                                <select name="programme" id="programme" class="form-control">
+                                <select name="shift" id="shift" class="form-control">
                                     <option value="">Select Shift</option>
+                                    @foreach($classSessionMaster as $shift)
+                                        <option value="{{ $shift->pk }}">{{ $shift->shift_name }}</option>
+                                    @endforeach
                                 </select>
+
                             </div>
                         </div>
                         <div class="col-md-12">

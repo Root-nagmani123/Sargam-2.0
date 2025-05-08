@@ -16,7 +16,8 @@ use App\Http\Controllers\Admin\{
     SubjectModuleController,
     SubjectMasterController,
     VenueMasterController,
-    GroupMappingController
+    GroupMappingController,
+    CalendarController
 };
 
 Route::get('clear-cache', function () {
@@ -140,21 +141,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit', function () {
             return view('admin.mapping.edit');
         })->name('edit');
-    });
+    }); 
     
-    // calendar
     Route::prefix('calendar')->name('calendar.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.calendar.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.calendar.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.calendar.edit');
-        })->name('edit');
+        Route::get('/', [CalendarController::class, 'index'])->name('index');
+        Route::get('/create', [CalendarController::class, 'create'])->name('create');
+        Route::get('/edit', [CalendarController::class, 'edit'])->name('edit');
     });
 
     // Area of Expertise
