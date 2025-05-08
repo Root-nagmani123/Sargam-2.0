@@ -185,6 +185,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('group-mapping')->name('group.mapping.')->controller(GroupMappingController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
-        Route::post('store', 'strore')->name('store');
+        Route::get('edit/{id}','edit')->name('edit');
+        Route::post('store', 'store')->name('store');
+        Route::post('import-group-mapping', 'importGroupMapping')->name('import');
     });
 });
