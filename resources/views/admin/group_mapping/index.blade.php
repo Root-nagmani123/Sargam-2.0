@@ -62,19 +62,24 @@
                                             </button>
                                         </div>
                                     </form>
-                                    <div id="importErrors" class="alert  d-none">
-                                        <p class="text-danger text-center h4">Below are the validation errors</p>
-                                        <table class="table table-sm table-bordered mb-0 table-striped table-hover">
-                                            <thead>
-                                                <tr>
-                                                    <th>Row</th>
-                                                    <th>Errors</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="importErrorTableBody">
-                                                <!-- JS will insert rows here -->
-                                            </tbody>
-                                        </table>
+                                    <div id="importErrors" class="alert  d-none ">
+                                        <h5 class="text-center mb-3">
+                                            <i class="mdi mdi-alert-circle-outline"></i> Validation Errors Found
+                                        </h5>
+                                        <div class="table-responsive">
+                                            <table class="table table-striped table-hover table-sm align-middle">
+                                                <thead class="table-info">
+                                                    <tr>
+                                                        <th style="width: 10%;">Row</th>
+                                                        <th>Errors</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="importErrorTableBody">
+                                                    <!-- JS will insert rows here -->
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
                                     </div>
                                 </div>
 
@@ -82,6 +87,32 @@
                         </div>
                         <!-- End Modal -->
 
+                        <!-- Student Details Modal -->
+                        <div class="modal fade modal" id="studentDetailsModal" tabindex="-1" aria-labelledby="studentDetailsModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg"> <!-- modal-lg for wider layout -->
+                            <div class="modal-content">
+                                
+                                <div class="modal-header">
+                                <h5 class="modal-title" id="studentDetailsModalLabel">Student Details</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                
+                                <div class="modal-body">
+                                <!-- You can populate this with student details dynamically -->
+                                <div id="studentDetailsContent">
+                                    <p>Loading student details...</p>
+                                </div>
+                                </div>
+                                
+                                <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                </div>
+                                
+                            </div>
+                            </div>
+                        </div>
+
+  
                         <hr>
 
                         <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -93,6 +124,7 @@
                                     <tr>
                                         <th>S.No.</th>
                                         <th>Group Name</th>
+                                        <th>Student Count</th>
                                         <th>Action</th>
                                     </tr>
                                     <!-- end row -->
@@ -103,12 +135,18 @@
                                             <tr class="odd">
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $groupType->group_name ?? 'N/A' }}</td>
+                                                <td>{{ $groupType->student_course_group_map_count ?? '-' }}</td>
                                                 <td>
                                                     <a 
                                                         href="{{ route('group.mapping.edit', 
                                                         ['id' => encrypt($groupType->pk)]) }}"
                                                         class="btn btn-primary btn-sm"
                                                     >Edit</a>
+                                                    <a 
+                                                        href="javascript:void(0)"
+                                                        class="btn btn-info btn-sm view-student"
+                                                        data-id="{{ encrypt($groupType->pk) }}"
+                                                    >View Student</a>
                                                     {{-- <form 
                                                         action="{{ route('master.faculty.expertise.delete', 
                                                         ['id' => encrypt($groupType->pk)]) }}"
