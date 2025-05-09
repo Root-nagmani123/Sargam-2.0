@@ -362,6 +362,7 @@ $(document).ready(function () {
                 $('#upload_import').prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Uploading...');
             },
             success: function (response) {
+                return false;   
                 alert('File imported successfully!');
                 $('#importModal').modal('hide');
                 resetImportModal();
@@ -376,8 +377,8 @@ $(document).ready(function () {
                     failures.forEach(function (failure) {
                         let errorRow = `
                             <tr>
-                                <td>${failure.row}</td>
-                                <td>${failure.errors.join('<br>')}</td>
+                                <td><p class="text-danger">${failure.row}</p></td>
+                                <td><p class="text-danger">${failure.errors.join('<br>')}</p></td>
                             </tr>
                         `;
                         $('#importErrorTableBody').append(errorRow);
@@ -399,5 +400,27 @@ $(document).ready(function () {
 });
 
 
+$(document).on('click', '.view-student', function (e) {
+    e.preventDefault();
+    let groupMappingID = $(this).data('id');
+
+    let token = $('meta[name="csrf-token"]').attr('content');
+
+    $.ajax({
+        url: routes.groupMappingStudentList,
+        type: 'POST',
+        data: {
+            _token: token,
+            groupMappingID: groupMappingID
+        },
+        success: function (response) {
+            $('#studentDetailsModal .modal-body').html(response.html);
+            $('#studentDetailsModal').modal('show');
+        },
+        error: function () {
+            alert('Error fetching student details');
+        }
+    });
+})
 // End Group Mapping Modules
 
