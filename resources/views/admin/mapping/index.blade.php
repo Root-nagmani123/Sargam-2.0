@@ -45,15 +45,6 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
-                        <div class="dataTables_length" id="zero_config_length"><label>Show <select
-                                    name="zero_config_length" aria-controls="zero_config" class="">
-                                    <option value="10">10</option>
-                                    <option value="25">25</option>
-                                    <option value="50">50</option>
-                                    <option value="100">100</option>
-                                </select> entries</label></div>
-                        <div id="zero_config_filter" class="dataTables_filter"><label>Search:<input type="search"
-                                    class="" placeholder="" aria-controls="zero_config"></label></div>
                         <table id="zero_config"
                             class="table table-striped table-bordered text-nowrap align-middle dataTable"
                             aria-describedby="zero_config_info">

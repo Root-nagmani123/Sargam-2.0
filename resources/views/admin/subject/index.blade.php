@@ -23,39 +23,20 @@
                         </div>
                     </div>
                     <hr>
-                    <div id="zero_config_wrapper" class="dataTables_wrapper"  style="max-height: 500px; overflow-y: auto;">
+                    <div id="zero_config_wrapper" class="dataTables_wrapper">
 
                         <table id="zero_config"
                             class="table table-striped table-bordered text-nowrap align-middle dataTable"
                             aria-describedby="zero_config_info">
                             <thead>
                                 <tr>
-                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
-                                        colspan="1" aria-sort="ascending"
-                                        aria-label="S.No.: activate to sort column descending" style="width: 80px;">
-                                        S.No.</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Major Subject Name: activate to sort column ascending"
-                                        style="width: 200px;">
-                                        Major Subject Name</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Short Name: activate to sort column ascending"
-                                        style="width: 150px;">
-                                        Short Name</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Topic Name: activate to sort column ascending"
-                                        style="width: 150px;">
-                                        Topic Name</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Subject Module: activate to sort column ascending"
-                                        style="width: 180px;">
-                                        Subject Module</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Action: activate to sort column ascending" style="width: 120px;">
-                                        Action</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Status: activate to sort column ascending" style="width: 100px;">
-                                        Status</th>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Major Subject Name</th>
+                                    <th class="col">Short Name</th>
+                                    <th class="col">Topic Name</th>
+                                    <th class="col">Subject Module</th>
+                                    <th class="col">Action</th>
+                                    <th class="col">Status</th>
                                 </tr>
                             </thead>
 
