@@ -53,19 +53,28 @@
                                                     ['id' => encrypt(value: $classSession->pk)]) }}"
                                                     class="btn btn-primary btn-sm"
                                                 >Edit</a>
-                                                <form 
+
+                                                
+
+                                                <form title="{{ $classSession->active_inactive == 1 ? 'Cannot delete active session' : 'Delete' }}"
                                                     action="{{ route('master.class.session.delete', 
                                                     ['id' => encrypt($classSession->pk)]) }}"
                                                     method="POST" class="d-inline">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="button" class="btn btn-danger btn-sm" 
-                                                        onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }">
+                                                    <button type="button" 
+                                                            class="btn btn-danger btn-sm" 
+                                                            data-bs-toggle="tooltip" 
+                                                            data-bs-placement="top" 
+                                                            
+                                                            onclick="event.preventDefault(); 
+                                                                    if(confirm('Are you sure you want to delete this record?')) {
+                                                                        this.closest('form').submit();
+                                                                    }"
+                                                            {{ $classSession->active_inactive == 1 ? 'disabled' : '' }}>
                                                         Delete
                                                     </button>
+
                                                 </form>
                                                 <div class="form-check form-switch d-inline-block">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
