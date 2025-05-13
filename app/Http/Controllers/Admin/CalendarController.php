@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\{ClassSessionMaster, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster};
+use App\Models\{ClassSessionMaster, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster};
 use Illuminate\Support\Facades\Crypt;
 
 class CalendarController extends Controller
@@ -40,6 +40,15 @@ class CalendarController extends Controller
             'classSessionMaster'
         ));
     }
+    public function getSubjectModules(Request $request)
+{
+    $dataId = $request->input('data_id');
+
+    // Change the field name accordingly (assuming subject_module_master.pk = $dataId)
+    $modules = SubjectModuleMaster::where('pk', $dataId)->get();
+
+    return response()->json($modules);
+}
     
     
 }

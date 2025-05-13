@@ -1013,7 +1013,7 @@
                                 <select name="subject_name" id="subject_name" class="form-control">
                                         <option value="">Select Subject Name</option>
                                         @foreach($subjects as $subject)
-                                            <option value="{{ $subject->pk }}">{{ $subject->subject_name }}</option>
+                                            <option value="{{ $subject->pk }}" data-id="{{ $subject->subject_module_master_pk }}">{{ $subject->subject_name }}</option>
                                         @endforeach
                                     </select>
                             </div>
@@ -1084,7 +1084,7 @@
                                 <select name="faculty" id="faculty" class="form-control">
                                     <option value="">Select Faculty</option>
                                     @foreach($facultyMaster as $faculty)
-                                        <option value="{{ $faculty->pk }}">{{ $faculty->full_name }}</option>
+                                        <option value="{{ $faculty->pk }}"  data-faculty_type="{{ $faculty->faculty_type }}">{{ $faculty->full_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -1095,6 +1095,9 @@
                                 <label class="form-label">Faculty Type</label>
                                 <select name="faculty_type" id="faculty_type" class="form-control">
                                     <option value="">Select Faculty Type</option>
+                                    <option value="1">Internal</option>
+                                    <option value="2">Guest</option>
+                                    <option value="3">Research</option>
                                 </select>
                             </div>
                         </div>
@@ -1251,7 +1254,42 @@
     </div>
     <!-- END MODAL -->
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+     $(document).ready(function () {
+    $('#subject_name').on('change', function () {
+        // Get data-id from selected option
+        var dataId = $(this).find(':selected').data('id');
 
+        if (dataId) {
+            $.ajax({
+                url: "{{ route('calendar.get.subject.modules') }}",
+                type: 'GET',
+                data: { data_id: dataId },
+                success: function (response) {
+                    $('#subject_module').empty().append('<option value="">Select Subject Module</option>');
+                    $.each(response, function (key, module) {
+                        $('#subject_module').append('<option value="' + module.pk + '">' + module.module_name + '</option>');
+                    });
+                }
+            });
+        } else {
+            $('#subject_module').empty().append('<option value="">Select Subject Module</option>');
+        }
+    });
+   
+        $('#faculty').on('change', function () {
+            var selectedType = $(this).find(':selected').data('faculty_type');
+            
+            if (selectedType) {
+                $('#faculty_type').val(selectedType);
+            } else {
+                $('#faculty_type').val('');
+            }
+        });
+    });
+
+</script>
 <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
 <script src="{{asset('admin_assets/js/apps/calendar-init.js')}}"></script>
 @endsection
