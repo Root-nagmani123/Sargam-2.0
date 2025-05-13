@@ -8,7 +8,6 @@ use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
-use App\Exports\GroupMappingExport;
 
 class GroupMappingController extends Controller
 {
@@ -108,14 +107,14 @@ class GroupMappingController extends Controller
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
                 ->paginate(10); // Set items per page
 
-
+            
             $html = view('admin.group_mapping.student_list_ajax', compact('students'))->render();
 
             return response()->json([
                 'status' => 'success',
                 'html' => $html,
             ]);
-
+            
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
