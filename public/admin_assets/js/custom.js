@@ -46,6 +46,9 @@ $(document).on('change', 'input[name="styled_max_checkbox"]', function() {
 
 $(document).on('change', '.status-toggle', function () {
 
+    if (!confirm('Are you sure you want to change the status?')) {
+        return false;
+    }
     let table = $(this).data('table');
     let column = $(this).data('column');
     let id = $(this).data('id');
@@ -421,6 +424,30 @@ $(document).on('click', '.view-student', function (e) {
             alert('Error fetching student details');
         }
     });
-})
+});
+
+
+$(document).on('click', '.student-list-pagination .pagination a', function (e) {
+    e.preventDefault();
+    let pageUrl = $(this).attr('href');
+    let groupMappingID = $('.view-student').data('id'); // Adjust if needed
+    let token = $('meta[name="csrf-token"]').attr('content');
+
+    $.ajax({
+        url: pageUrl,
+        type: 'POST',
+        data: {
+            _token: token,
+            groupMappingID: groupMappingID
+        },
+        success: function (response) {
+            $('#studentDetailsModal .modal-body').html(response.html);
+        },
+        error: function () {
+            alert('Error loading student list');
+        }
+    });
+});
+
 // End Group Mapping Modules
 

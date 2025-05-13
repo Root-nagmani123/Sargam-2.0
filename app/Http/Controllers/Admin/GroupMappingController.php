@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap};
+use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
 
 class GroupMappingController extends Controller
 {
@@ -96,33 +96,25 @@ class GroupMappingController extends Controller
     function studentList(Request $request)
     {
         try {
-
             $request->validate([
                 'groupMappingID' => 'required|string|max:255',
             ]);
 
-            $groupMapping = GroupTypeMasterCourseMasterMap::with('studentCourseGroupMap.studentsMaster')->find(decrypt($request->groupMappingID));
+            $groupMappingID = decrypt($request->groupMappingID);
+            $groupMapping = GroupTypeMasterCourseMasterMap::findOrFail($groupMappingID);
 
-            if (!$groupMapping) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Group Mapping not found.',
-                ], 422);
-            }
+            $students = StudentCourseGroupMap::with('studentsMaster')
+                ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
+                ->paginate(10); // Set items per page
 
-            $students = [];
-            foreach ($groupMapping->studentCourseGroupMap as $studentCourseGroup) {
-                $students[] = $studentCourseGroup->studentsMaster->only(['pk', 'email', 'contact_no', 'display_name']);
-            }
-
-            $groupName = $groupMapping->group_name;
-            $html = view('admin.group_mapping.student_list', compact('students', 'groupName'))->render();
+            
+            $html = view('admin.group_mapping.student_list_ajax', compact('students'))->render();
 
             return response()->json([
                 'status' => 'success',
                 'html' => $html,
-            ], 200);
-
+            ]);
+            
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
