@@ -11,17 +11,13 @@
         <!-- start Vertical Steps Example -->
         <div class="card">
             <div class="card-body">
-                <h4 class="card-title mb-3">Country</h4>
+                <h4 class="card-title mb-3">Add Country</h4>
                 <hr>
                 <form action="{{ route('master.country.store') }}" method="POST">
                     @csrf
-                    <div class="card">
-                        <div class="card-body">
-                            <h4 class="card-title mb-3">Country</h4>
-                            <hr>
-                            <div class="row" id="country_fields">
+                    <div class="row" id="country_fields">
                                 <div class="row">
-                                    <div class="col-sm-10">
+                                    <div class="col-sm-12">
                                         <label class="form-label">Country Name :</label>
                                         <div class="mb-3">
                                             <input type="text" class="form-control" name="country_name[]"
@@ -40,8 +36,6 @@
                                     <i class="material-icons menu-icon">send</i> Submit
                                 </button>
                             </div>
-                        </div>
-                    </div>
                 </form>
 
 

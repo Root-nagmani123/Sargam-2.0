@@ -1,23 +1,23 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Course Group Type')
+@section('title', 'Group Mapping')
 
 @section('content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Course Group Type" />
+    <x-breadcrum title="Group Mapping" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">
-                {{ !empty($courseGroupTypeMaster) ? 'Edit Course Group Type' : 'Add Course Group Type' }}
+                {{ !empty($groupMapping) ? 'Edit Group Mapping' : 'Add Group Mapping' }}
             </h4>
             <hr>
             <form action="{{ route('group.mapping.store') }}" method="POST" id="classSessionForm">
                 @csrf
-                @if(!empty($courseGroupTypeMaster)) 
-                    <input type="hidden" name="id" value="{{ encrypt($courseGroupTypeMaster->pk) }}">
+                @if(!empty($groupMapping)) 
+                    <input type="hidden" name="id" value="{{ encrypt($groupMapping->pk) }}">
                 @endif
                 <div class="row">
                     
@@ -25,26 +25,30 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <x-input 
-                                name="course_name" 
+                            <x-select 
+                                name="course_id" 
                                 label="Course name :" 
                                 placeholder="Course name" 
                                 formLabelClass="form-label"
+                                formSelectClass="select2"
                                 required="true"
-                                value="{{ old('course_name', $courseGroupTypeMaster->course_name ?? '') }}"
+                                :options="$courses" 
+                                :value="old('course_id', $groupMapping->course_name ?? '')"
                                 />
                         </div>
                     </div>
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <x-input 
-                                name="type_name" 
+                            <x-select 
+                                name="type_id" 
                                 label="Group Type :" 
                                 placeholder="Group Type" 
                                 formLabelClass="form-label"
+                                formSelectClass="select2"
                                 required="true"
-                                value="{{ old('type_name', $courseGroupTypeMaster->type_name ?? '') }}"
+                                :options="$courseGroupTypeMaster" 
+                                :value="old('type_name', $groupMapping->type_name ?? '')"
                                 />
                         </div>
                     </div>
@@ -57,7 +61,7 @@
                                 placeholder="Group Name" 
                                 formLabelClass="form-label"
                                 required="true"
-                                value="{{ old('group_name', $courseGroupTypeMaster->type_name ?? '') }}"
+                                value="{{ old('group_name', $groupMapping->group_name ?? '') }}"
                                 />
                         </div>
                     </div>
@@ -68,7 +72,7 @@
                         <i class="material-icons menu-icon">save</i>
                         Save
                     </button>
-                    <a href="{{ route('master.course.group.type.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
+                    <a href="{{ route('group.mapping.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
                         <i class="material-icons menu-icon">arrow_back</i>
                         Back
                     </a>
