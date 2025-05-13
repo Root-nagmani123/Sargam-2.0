@@ -11,8 +11,7 @@
         <!-- start Zero Configuration -->
         <div class="card">
             <div class="card-body">
-            <div class="table-responsive" style="overflow-x: auto;">
-
+                <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
                             <h4>Venue Master</h4>
@@ -25,32 +24,16 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
-
-                    <table id="zero_config"
-        class="table table-striped table-bordered text-nowrap align-middle dataTable"
-        aria-describedby="zero_config_info" style="white-space: nowrap;">
+                        <table id="zero_config" class="table table-striped table-bordered table-responsive">
                             <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
-                                        colspan="1" aria-sort="ascending"
-                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">
-                                        S.No.</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Venue Name</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Short Name</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Description</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Salary: activate to sort column ascending"
-                                        style="width: 85.8906px;">Action</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Salary: activate to sort column ascending"
-                                        style="width: 85.8906px;">Status</th>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Venue Name</th>
+                                    <th class="col">Short Name</th>
+                                    <th class="col">Description</th>
+                                    <th class="col">Action</th>
+                                    <th class="col">Status</th>
 
                                 </tr>
                                 <!-- end row -->
@@ -95,7 +78,7 @@
                                         <div class="form-check form-switch">
                                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                 data-table="venue_master" data-column="active_inactive"
-                                                data-id="{{ $venue->venue_id }}"  data-id_column="venue_id"
+                                                data-id="{{ $venue->venue_id }}" data-id_column="venue_id"
                                                 {{ $venue->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
@@ -103,8 +86,7 @@
                                 </tr>
                                 @endforeach
                             </tbody>
-
-
+                        </table>
                     </div>
                 </div>
             </div>

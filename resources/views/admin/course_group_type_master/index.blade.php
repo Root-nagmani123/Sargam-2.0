@@ -34,6 +34,7 @@
                                     <th>S.No.</th>
                                     <th>Type Name</th>
                                     <th>Action</th>
+                                    <th>Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -66,6 +67,8 @@
                                                         Delete
                                                     </button>
                                                 </form>
+                                            </td>
+                                            <td>
                                                 <div class="form-check form-switch d-inline-block">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                         data-table="course_group_type_master" data-column="active_inactive" data-id="{{ $courseGroupType->pk }}" {{ $courseGroupType->active_inactive == 1 ? 'checked' : '' }}>

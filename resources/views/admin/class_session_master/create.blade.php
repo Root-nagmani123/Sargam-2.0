@@ -21,7 +21,7 @@
                 @endif
                 <div class="row">
                     
-                    <div class="col-md-12">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <x-input 
                                 name="shift_name" 
@@ -33,7 +33,7 @@
                                 />
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <x-input 
                                 type="time"
@@ -46,7 +46,7 @@
                                 />
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <x-input 
                                 type="time"
@@ -60,13 +60,12 @@
                         </div>
                     </div>
                 </div>
+                <hr>
                 <div class="mb-3">
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit" id="saveClassSessionForm">
-                        <i class="material-icons menu-icon">save</i>
                         Save
                     </button>
                     <a href="{{ route('master.class.session.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
-                        <i class="material-icons menu-icon">arrow_back</i>
                         Back
                     </a>
                 </div>
