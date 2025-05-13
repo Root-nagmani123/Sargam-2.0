@@ -9,7 +9,7 @@
         <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Edit Country</h4>
+                    <h4 class="mb-4 mb-sm-0 card-title">Country</h4>
                     <nav aria-label="breadcrumb" class="ms-auto">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item d-flex align-items-center">
@@ -44,7 +44,7 @@
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
-            <h4 class="card-title mb-3">Country</h4>
+            <h4 class="card-title mb-3">Edit Country</h4>
             <hr>
             <form method="POST" action="{{ route('master.country.update', $country->pk) }}">
                 @csrf
@@ -67,7 +67,7 @@
                 <hr>
                 <div class="mb-3">
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                        <i class="material-icons menu-icon">send</i> Submit
+                        <i class="material-icons menu-icon">send</i> Update
                     </button>
                 </div>
             </form>
