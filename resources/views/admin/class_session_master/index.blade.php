@@ -36,6 +36,7 @@
                                     <th>Start Time</th>
                                     <th>End Time</th>
                                     <th>Action</th>
+                                    <th>Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -67,6 +68,8 @@
                                                         Delete
                                                     </button>
                                                 </form>
+                                            </td>
+                                            <td>
                                                 <div class="form-check form-switch d-inline-block">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                         data-table="class_session_master" data-column="active_inactive" data-id="{{ $classSession->pk }}" {{ $classSession->active_inactive == 1 ? 'checked' : '' }}>
