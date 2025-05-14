@@ -50,7 +50,7 @@
                                                     ['id' => encrypt($faculty->pk)]) }}"
                                                     class="btn btn-primary btn-sm"
                                                 >Edit</a>
-                                                <form 
+                                                <form title="{{ $faculty->active_inactive == 1 ? 'Cannot delete active faculty expertise' : 'Delete' }}"
                                                     action="{{ route('master.faculty.expertise.delete', 
                                                     ['id' => encrypt($faculty->pk)]) }}"
                                                     method="POST" class="d-inline">
@@ -60,7 +60,9 @@
                                                         onclick="event.preventDefault(); 
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
-                                                        }">
+                                                        }"
+                                                        {{ $faculty->active_inactive == 1 ? 'disabled' : '' }}
+                                                        >
                                                         Delete
                                                     </button>
                                                 </form>

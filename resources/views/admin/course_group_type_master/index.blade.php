@@ -50,7 +50,7 @@
                                                     ['id' => encrypt(value: $courseGroupType->pk)]) }}"
                                                     class="btn btn-primary btn-sm"
                                                 >Edit</a>
-                                                <form 
+                                                <form title="{{ $courseGroupType->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
                                                     action="{{ route('master.course.group.type.delete', 
                                                     ['id' => encrypt($courseGroupType->pk)]) }}"
                                                     method="POST" class="d-inline">
@@ -60,7 +60,10 @@
                                                         onclick="event.preventDefault(); 
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
-                                                        }">
+                                                        }"
+
+                                                        {{ $courseGroupType->active_inactive == 1 ? 'disabled' : '' }}
+                                                        >
                                                         Delete
                                                     </button>
                                                 </form>
