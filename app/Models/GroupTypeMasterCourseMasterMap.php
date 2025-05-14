@@ -10,7 +10,7 @@ class GroupTypeMasterCourseMasterMap extends Model
     protected $primaryKey = "pk";
     protected $guarded = [];
     public $timestamps = false;
-    
+
 
     // public function courses()
     // {
@@ -21,4 +21,10 @@ class GroupTypeMasterCourseMasterMap extends Model
     {
         return $this->hasMany(StudentCourseGroupMap::class, 'group_type_master_course_master_map_pk', 'pk');
     }
+
+    public function courseGroupType()
+    {
+        return $this->belongsTo(CourseGroupTypeMaster::class, 'type_name', 'pk');
+    }
+
 }
