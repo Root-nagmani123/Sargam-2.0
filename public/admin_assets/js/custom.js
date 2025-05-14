@@ -82,6 +82,38 @@ $(document).on('change', 'input[name="styled_max_checkbox"]', function() {
     }
 });
 
+// $(document).on('change', '.status-toggle', function () {
+
+//     let table = $(this).data('table');
+//     let column = $(this).data('column');
+//     let id = $(this).data('id');
+//     let id_column =  $(this).data('id_column');
+//     let status = $(this).is(':checked') ? 1 : 0;
+
+//     $.ajax({
+//         url: routes.toggleStatus, // Update with correct route
+//         type: 'POST',
+//         data: {
+//             _token: $('meta[name="csrf-token"]').attr('content'),
+//             table: table,
+//             column: column,
+//             id: id,
+//             id_column: id_column,
+//             status: status
+//         },
+//         success: function (response) {
+//             $('#status-msg').html(`
+//                 <div class="alert alert-success alert-dismissible fade show" role="alert">
+//                     ${response.message || 'Status updated successfully'}
+//                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+//                 </div>
+//             `);
+//         },
+//         error: function () {
+//             alert('Error updating status');
+//         }
+//     });
+// });
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
     let table = $checkbox.data('table');
@@ -99,6 +131,8 @@ $(document).on('change', '.status-toggle', function () {
      id = $(this).data('id');
      id_column =  $(this).data('id_column');
      status = $(this).is(':checked') ? 1 : 0;
+    // SweetAlert confirmation text based on status
+    let actionText = status === 1 ? 'activate' : 'deactivate';
 
     Swal.fire({
         title: 'Are you sure?',
