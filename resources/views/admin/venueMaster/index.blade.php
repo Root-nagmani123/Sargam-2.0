@@ -81,14 +81,15 @@
                                                 Edit
                                             </a>
                                             <form action="{{ route('Venue-Master.destroy', $venue->venue_id) }}"
-                                                method="POST" class="m-0">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-danger text-white btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete?')">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                                    method="POST" class="m-0 delete-form"
+                                                    data-status="{{ $venue->active_inactive }}">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger text-white btn-sm">
+                                                        Delete
+                                                    </button>
+                                                </form>
+
                                         </div>
                                     </td>
                                     <td>
