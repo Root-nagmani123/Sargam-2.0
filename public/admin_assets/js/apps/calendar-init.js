@@ -232,27 +232,27 @@ document.addEventListener("DOMContentLoaded", function () {
   /*=====================*/
   // Add Calender Event
   /*=====================*/
-  getModalAddBtnEl.addEventListener("click", function () {
-    var getModalCheckedRadioBtnEl = document.querySelector(
-      'input[name="event-level"]:checked'
-    );
+  // getModalAddBtnEl.addEventListener("click", function () {
+  //   var getModalCheckedRadioBtnEl = document.querySelector(
+  //     'input[name="event-level"]:checked'
+  //   );
 
-    var getTitleValue = getModalTitleEl.value;
-    var setModalStartDateValue = getModalStartDateEl.value;
-    var setModalEndDateValue = getModalEndDateEl.value;
-    var getModalCheckedRadioBtnValue =
-      getModalCheckedRadioBtnEl !== null ? getModalCheckedRadioBtnEl.value : "";
+  //   var getTitleValue = getModalTitleEl.value;
+  //   var setModalStartDateValue = getModalStartDateEl.value;
+  //   var setModalEndDateValue = getModalEndDateEl.value;
+  //   var getModalCheckedRadioBtnValue =
+  //     getModalCheckedRadioBtnEl !== null ? getModalCheckedRadioBtnEl.value : "";
 
-    calendar.addEvent({
-      id: 12,
-      title: getTitleValue,
-      start: setModalStartDateValue,
-      end: setModalEndDateValue,
-      allDay: true,
-      extendedProps: { calendar: getModalCheckedRadioBtnValue },
-    });
-    myModal.hide();
-  });
+  //   calendar.addEvent({
+  //     id: 12,
+  //     title: getTitleValue,
+  //     start: setModalStartDateValue,
+  //     end: setModalEndDateValue,
+  //     allDay: true,
+  //     extendedProps: { calendar: getModalCheckedRadioBtnValue },
+  //   });
+  //   myModal.hide();
+  // });
   /*=====================*/
   // Calendar Init
   /*=====================*/
