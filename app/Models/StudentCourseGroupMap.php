@@ -21,9 +21,9 @@ class StudentCourseGroupMap extends Model
         return $this->belongsTo(StudentMaster::class, 'student_master_pk', 'pk');
     }
 
-    public function groupMap()
+    public function groupTypeMasterCourseMasterMap()
     {
-        return $this->belongsTo(GroupTypeMasterCourseMasterMap::class, 'student_master_pk', 'pk');
+        return $this->belongsTo(GroupTypeMasterCourseMasterMap::class, 'group_type_master_course_master_map_pk', 'pk');
     }
 
 }
