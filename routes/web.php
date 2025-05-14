@@ -146,7 +146,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
         Route::get('/get-subject-modules', [CalendarController::class, 'getSubjectModules'])->name('get.subject.modules');
-
+            Route::post('/events', [CalendarController::class, 'store'])->name('event.store');
+            Route::get('/calendar-details', [CalendarController::class, 'calendarDetails'])->name('event.calendar-details');
     });
 
     // Area of Expertise
