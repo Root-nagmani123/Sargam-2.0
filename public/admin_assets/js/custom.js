@@ -9,6 +9,44 @@ function hideLoader() {
 
 // Step 4 : Contact Information
 
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const deleteForms = document.querySelectorAll('.delete-form');
+
+        deleteForms.forEach(form => {
+            form.addEventListener('submit', function (e) {
+                const status = form.getAttribute('data-status');
+
+                if (status == "1") {
+                    e.preventDefault(); // Stop form submission
+
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Not Allowed',
+                        text: 'Active List cannt be delete.',
+                        confirmButtonColor: '#3085d6',
+                    });
+                } else {
+                    // For inactive venues, confirm deletion
+                    e.preventDefault(); // Stop default first
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "Do you really want to delete this?",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            form.submit(); // Submit manually
+                        }
+                    });
+                }
+            });
+        });
+    });
+
 $(document).on('change', 'input[name="styled_max_checkbox"]', function() {
     let address;
     let country;
@@ -44,43 +82,96 @@ $(document).on('change', 'input[name="styled_max_checkbox"]', function() {
     }
 });
 
+// $(document).on('change', '.status-toggle', function () {
+
+//     let table = $(this).data('table');
+//     let column = $(this).data('column');
+//     let id = $(this).data('id');
+//     let id_column =  $(this).data('id_column');
+//     let status = $(this).is(':checked') ? 1 : 0;
+
+//     $.ajax({
+//         url: routes.toggleStatus, // Update with correct route
+//         type: 'POST',
+//         data: {
+//             _token: $('meta[name="csrf-token"]').attr('content'),
+//             table: table,
+//             column: column,
+//             id: id,
+//             id_column: id_column,
+//             status: status
+//         },
+//         success: function (response) {
+//             $('#status-msg').html(`
+//                 <div class="alert alert-success alert-dismissible fade show" role="alert">
+//                     ${response.message || 'Status updated successfully'}
+//                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+//                 </div>
+//             `);
+//         },
+//         error: function () {
+//             alert('Error updating status');
+//         }
+//     });
+// });
 $(document).on('change', '.status-toggle', function () {
+    let $checkbox = $(this);
+    let table = $checkbox.data('table');
+    let column = $checkbox.data('column');
+    let id = $checkbox.data('id');
+    let id_column = $checkbox.data('id_column');
+    let status = $checkbox.is(':checked') ? 1 : 0;
 
-    if (!confirm('Are you sure you want to change the status?')) {
-        $(this).prop('checked', !$(this).prop('checked'));
-        return false;
-    }
-    let table = $(this).data('table');
-    let column = $(this).data('column');
-    let id = $(this).data('id');
-    let id_column =  $(this).data('id_column');
-    let status = $(this).is(':checked') ? 1 : 0;
+    // SweetAlert confirmation text based on status
+    let actionText = status === 1 ? 'activate' : 'deactivate';
 
-    $.ajax({
-        url: routes.toggleStatus, // Update with correct route
-        type: 'POST',
-        data: {
-            _token: $('meta[name="csrf-token"]').attr('content'),
-            table: table,
-            column: column,
-            id: id,
-            id_column: id_column,
-            status: status
-        },
-        success: function (response) {
-            $('#status-msg').html(`
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    ${response.message || 'Status updated successfully'}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `);
-            location.reload();
-        },
-        error: function () {
-            alert('Error updating status');
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `Are you sure? You want to ${actionText} this item?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: `Yes, ${actionText}`,
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Proceed with AJAX call
+            updateStatus(table, column, id, id_column, status, $checkbox);
+        } else {
+            // Revert checkbox back
+            $checkbox.prop('checked', !status);
         }
     });
+
+    function updateStatus(table, column, id, id_column, status, $checkbox) {
+        $.ajax({
+            url: routes.toggleStatus, // Laravel route name define hona chahiye JS me
+            type: 'POST',
+            data: {
+                _token: $('meta[name="csrf-token"]').attr('content'),
+                table: table,
+                column: column,
+                id: id,
+                id_column: id_column,
+                status: status
+            },
+            success: function (response) {
+                $('#status-msg').html(`
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        ${response.message || 'Status updated successfully'}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `);
+            },
+            error: function () {
+                Swal.fire('Error', 'Status update failed', 'error');
+                // Revert checkbox if error
+                $checkbox.prop('checked', !status);
+            }
+        });
+    }
 });
+
 // Faculty Form Creation
 
 document.addEventListener('DOMContentLoaded', function() {
