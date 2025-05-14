@@ -223,4 +223,3 @@ public function delete_event($id)
 }
 
 }
-

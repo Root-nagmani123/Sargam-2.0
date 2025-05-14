@@ -70,7 +70,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', [FacultyController::class, 'store'])->name('store');
         Route::get('edit/{id}', [FacultyController::class, 'edit'])->name('edit');
         Route::post('update', [FacultyController::class, 'update'])->name('update');
-       
+
     });
 
     // Programme Routes
@@ -97,21 +97,21 @@ Route::middleware(['auth'])->group(function () {
         })->name('edit');
     });
 
-        Route::resource('subject', SubjectMasterController::class);
-   
+    Route::resource('subject', SubjectMasterController::class);
+
     // subject route
-   
 
-        Route::resource('stream', StreamController::class);
 
-        Route::resource('subject-module', SubjectModuleController::class);
-        Route::resource('Venue-Master', VenueMasterController::class);
+    Route::resource('stream', StreamController::class);
 
-    
+    Route::resource('subject-module', SubjectModuleController::class);
+    Route::resource('Venue-Master', VenueMasterController::class);
+
+
     Route::post('/admin/toggle-status', [UserController::class, 'toggleStatus'])->name('admin.toggleStatus');
 
 
-    
+
 
     // curriculum route
     Route::prefix('curriculum')->name('curriculum.')->group(function () {
@@ -142,8 +142,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit', function () {
             return view('admin.mapping.edit');
         })->name('edit');
-    }); 
-    
+    });
+
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
         Route::get('/get-subject-modules', [CalendarController::class, 'getSubjectModules'])->name('get.subject.modules');
@@ -152,10 +152,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/single-calendar-details', [CalendarController::class, 'SingleCalendarDetails'])->name('event.Singlecalendar-details');
 
         Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
-       Route::put('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
-        Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');      
+        Route::put('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
+        Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
 
-Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
+        Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
     });
 
     // Area of Expertise
@@ -186,7 +186,7 @@ Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])
     Route::prefix('group-mapping')->name('group.mapping.')->controller(GroupMappingController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
-        Route::get('edit/{id}','edit')->name('edit');
+        Route::get('edit/{id}', 'edit')->name('edit');
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('student-list', 'studentList')->name('student.list');
