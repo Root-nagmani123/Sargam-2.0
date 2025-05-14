@@ -35,4 +35,5 @@
   <script src="{{asset('admin_assets/js/plugins/toastr-init.js')}}"></script>
   <script src="{{asset('admin_assets/js/routes.js')}}"></script>
   <script src="{{asset('admin_assets/js/custom.js')}}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   @yield('scripts')

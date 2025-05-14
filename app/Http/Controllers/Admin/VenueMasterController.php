@@ -16,7 +16,7 @@ class VenueMasterController extends Controller
     }
 
     public function create() {
-        return view('admin.venueMaster.create');
+        return view('admin.venueMaster.create'); 
     }
 
     public function store(Request $request) {
