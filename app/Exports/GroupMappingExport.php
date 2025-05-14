@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\{StudentMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
+use App\Models\{GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\{FromCollection, WithHeadings};
 
@@ -10,26 +10,25 @@ class GroupMappingExport implements FromCollection, WithHeadings
 {
     public function collection()
     {
-        $data = StudentCourseGroupMap::with(['groupMap'])->get();
-        dd($data->toArray());
-        // return StudentCourseGroupMap::with([
-        //         'student:id,generated_OT_code,name',
-        //         'groupMap:id,group_name,type_name',
-        //         'groupMap.courseGroupType:id,type_name'
-        //     ])
-        //     ->get()
-        //     ->map(function ($record) {
-        //         return [
-        //             'name'        => $record->student->name ?? '',
-        //             'otcode'      => $record->student->generated_OT_code ?? '',
-        //             'group_name'  => $record->groupMap->group_name ?? '',
-        //             'group_type'  => $record->groupMap->courseGroupType->type_name ?? '',
-        //         ];
-        //     });
+        $data = StudentCourseGroupMap::with([
+            'student:pk,display_name,generated_OT_code', 
+            'groupTypeMasterCourseMasterMap.courseGroup:pk,course_name,course_year',
+            'groupTypeMasterCourseMasterMap.courseGroupType:pk,type_name'
+        ])->get();
+        
+
+        return $data->map(function ($record) {
+            return [
+                'name'        => $record->student->display_name ?? '',
+                'otcode'      => $record->student->generated_OT_code ?? '',
+                'group_name'  => $record->groupTypeMasterCourseMasterMap->group_name ?? '',
+                'group_type'  => $record->groupTypeMasterCourseMasterMap->courseGroupType->type_name ?? '',
+            ];
+        });
     }
 
     public function headings(): array
     {
-        return ['name', 'otcode', 'group_name', 'group_type'];
+        return ['Name', 'OT Code', 'Group Name', 'Group Type'];
     }
 }
