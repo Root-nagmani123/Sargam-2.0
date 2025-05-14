@@ -37,6 +37,7 @@
                                     <th>Start Date</th>
                                     <th>End Date</th>
                                     <th>Action</th>
+                                    <th>status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -53,6 +54,8 @@
                                             <td>
                                                 <a href="{{ route('programme.edit', ['id' => encrypt($courseMaster->pk)]) }}"
                                                     class="btn btn-primary btn-sm">Edit</a>
+                                            </td>
+                                            <td>
                                                 <div class="form-check form-switch d-inline-block">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                         data-table="course_master" data-column="active_inactive" data-id="{{ $courseMaster->pk }}" {{ $courseMaster->active_inactive == 1 ? 'checked' : '' }}>

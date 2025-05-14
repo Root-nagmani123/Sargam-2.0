@@ -36,8 +36,8 @@
                                     <th>Full Name</th>
                                     <th>Mobile Number</th>
                                     <th>Current Sector</th>
-                                    
                                     <th>Action</th>
+                                    <th>Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -61,7 +61,9 @@
                                             <td>
                                                 <a href="{{ route('faculty.edit', ['id' => encrypt($faculty->pk)]) }}"
                                                     class="btn btn-primary btn-sm">Edit</a>
-                                                    <div class="form-check form-switch d-inline-block">
+                                            </td>
+                                            <td>
+                                                 <div class="form-check form-switch d-inline-block">
                                                         <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                             data-table="faculty_master" data-column="active_inactive" data-id="{{ $faculty->pk }}" {{ $faculty->active_inactive == 1 ? 'checked' : '' }}>
                                                     </div>

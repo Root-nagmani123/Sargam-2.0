@@ -9,10 +9,12 @@
     <x-session_message />
 
     <div class="card card-body py-3">
-        <div class="row align-items-center">
-            <div class="col-12">
-                <h4 class="mb-4">Country List</h4>
-                <a href="{{ route('master.country.create') }}" class="btn btn-primary">+ Add Country</a>
+        <div class="row">
+            <div class="col-8">
+                <h4>Country List</h4>
+            </div>
+            <div class="col-4 text-end">
+                <a href="{{ route('master.country.create') }}" class="btn btn-primary">Add Country</a>
             </div>
         </div>
     </div>

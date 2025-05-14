@@ -34,6 +34,7 @@
                                     <th>S.No.</th>
                                     <th>Type Name</th>
                                     <th>Action</th>
+                                    <th>Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -49,7 +50,7 @@
                                                     ['id' => encrypt(value: $courseGroupType->pk)]) }}"
                                                     class="btn btn-primary btn-sm"
                                                 >Edit</a>
-                                                <form 
+                                                <form title="{{ $courseGroupType->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
                                                     action="{{ route('master.course.group.type.delete', 
                                                     ['id' => encrypt($courseGroupType->pk)]) }}"
                                                     method="POST" class="d-inline">
@@ -59,10 +60,15 @@
                                                         onclick="event.preventDefault(); 
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
-                                                        }">
+                                                        }"
+
+                                                        {{ $courseGroupType->active_inactive == 1 ? 'disabled' : '' }}
+                                                        >
                                                         Delete
                                                     </button>
                                                 </form>
+                                            </td>
+                                            <td>
                                                 <div class="form-check form-switch d-inline-block">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                         data-table="course_group_type_master" data-column="active_inactive" data-id="{{ $courseGroupType->pk }}" {{ $courseGroupType->active_inactive == 1 ? 'checked' : '' }}>

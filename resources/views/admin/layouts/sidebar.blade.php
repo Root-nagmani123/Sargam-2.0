@@ -229,6 +229,14 @@
                                                 <li>
                                                     <span class="sidebar-divider"></span>
                                                 </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('group.mapping.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Group Mapping</span>
+                                                    </a>
+                                                </li>
                                                 {{-- <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('section.index') }}"
                                                         id="get-url" aria-expanded="false">

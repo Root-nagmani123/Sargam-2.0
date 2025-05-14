@@ -21,14 +21,21 @@ class ClassSessionMasterController extends Controller
         
         try {
             
-            $classSessionMaster = new ClassSessionMaster();
+            if($request->id) {
+                $classSessionMaster = ClassSessionMaster::find(decrypt($request->id));
+                $message = 'Class session updated successfully.';
+            } else {
+                $classSessionMaster = new ClassSessionMaster();
+                $message = 'Class session created successfully.';
+            }
+            
             $classSessionMaster->shift_name = $request->shift_name;
             $classSessionMaster->start_time = $request->start_time;
             $classSessionMaster->end_time = $request->end_time;
             
             $classSessionMaster->save();
 
-            return redirect()->route('master.class.session.index')->with('success', 'Class session saved successfully.');
+            return redirect()->route('master.class.session.index')->with('success', $message);
         } catch (\Exception $e) {
             return redirect()->back()->with('error',$e->getMessage())->withInput();
         }
