@@ -17,7 +17,7 @@
                     @csrf
                     <div class="row">
                         <!-- State Dropdown -->
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label" for="state">State:</label>
                                 <select class="form-select" id="state" name="state_master_pk" required>
@@ -35,7 +35,7 @@
                         </div>
 
                         <!-- District Name -->
-                        <div class="col-md-12">
+                        <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label" for="district_name">District Name:</label>
                                 <input type="text" class="form-control" id="district_name" name="district_name"

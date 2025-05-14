@@ -34,6 +34,7 @@
                                     <th>S.No.</th>
                                     <th>Faculty Expertise</th>
                                     <th>Action</th>
+                                    <th>Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -49,7 +50,7 @@
                                                     ['id' => encrypt($faculty->pk)]) }}"
                                                     class="btn btn-primary btn-sm"
                                                 >Edit</a>
-                                                <form 
+                                                <form title="{{ $faculty->active_inactive == 1 ? 'Cannot delete active faculty expertise' : 'Delete' }}"
                                                     action="{{ route('master.faculty.expertise.delete', 
                                                     ['id' => encrypt($faculty->pk)]) }}"
                                                     method="POST" class="d-inline">
@@ -59,10 +60,14 @@
                                                         onclick="event.preventDefault(); 
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
-                                                        }">
+                                                        }"
+                                                        {{ $faculty->active_inactive == 1 ? 'disabled' : '' }}
+                                                        >
                                                         Delete
                                                     </button>
                                                 </form>
+                                            </td>
+                                            <td>
                                                 <div class="form-check form-switch d-inline-block">
                                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                         data-table="faculty_expertise_master" data-column="active_inactive" data-id="{{ $faculty->pk }}" {{ $faculty->active_inactive == 1 ? 'checked' : '' }}>

@@ -8,6 +8,7 @@
 
 <!-- Core Css -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
+<link rel="stylesheet" href="{{asset('css/custom.css')}}">
 
 <!-- themify icon Css -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/themify-icons.css')}}">
@@ -20,4 +21,5 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.css"
     integrity="sha512-kJlvECunwXftkPwyvHbclArO8wszgBGisiLeuDFwNM8ws+wKIw0sv1os3ClWZOcrEB2eRXULYUsm8OVRGJKwGA=="
     crossorigin="anonymous" referrerpolicy="no-referrer" />
+<link rel="stylesheet" href="{{asset('admin_assets/libs/select2/dist/css/select2.min.css')}}">
     

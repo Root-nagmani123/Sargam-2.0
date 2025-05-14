@@ -406,3 +406,141 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     })
 });
+
+// Group Mapping Modules
+
+$(document).ready(function () {
+
+    function resetImportModal() {
+        $('#importErrorTableBody').empty();
+        $('#importErrors').addClass('d-none');
+        $('#importExcelForm')[0].reset();
+    }
+
+    // Handle close (X) and cancel buttons
+    $('#importModal').on('click', '.btn-close, .btn-cancel', function (e) {
+        e.preventDefault();
+        resetImportModal();
+    });
+
+    // Also reset when modal fully hides (in case of backdrop click or ESC key)
+    $('#importModal').on('hidden.bs.modal', function () {
+        resetImportModal();
+    });
+
+    // Handle import upload button click
+    $('#upload_import').on('click', function (e) {
+        e.preventDefault();
+
+        const fileInput = $('#importFile')[0];
+        if (fileInput.files.length === 0) {
+            alert('Please select a file to upload.');
+            return;
+        }
+
+        const fileName = fileInput.files[0].name;
+        const allowedExtensions = /\.(xlsx|xls|csv)$/i;
+        if (!allowedExtensions.test(fileName)) {
+            alert('Invalid file type. Please upload a .xlsx, .xls, or .csv file.');
+            fileInput.value = '';
+            return;
+        }
+
+        const formData = new FormData($('#importExcelForm')[0]);
+
+        $.ajax({
+            url: routes.groupMappingExcelUpload,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            beforeSend: function () {
+                $('#upload_import').prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Uploading...');
+            },
+            success: function (response) {
+                return false;   
+                alert('File imported successfully!');
+                $('#importModal').modal('hide');
+                resetImportModal();
+                location.reload(); // Refresh the table/page
+            },
+            error: function (xhr) {
+                console.log('Error response:', xhr);
+                $('#importErrorTableBody').empty();
+
+                if (xhr.status === 422 && xhr.responseJSON.failures) {
+                    let failures = xhr.responseJSON.failures;
+                    failures.forEach(function (failure) {
+                        let errorRow = `
+                            <tr>
+                                <td><p class="text-danger">${failure.row}</p></td>
+                                <td><p class="text-danger">${failure.errors.join('<br>')}</p></td>
+                            </tr>
+                        `;
+                        $('#importErrorTableBody').append(errorRow);
+                    });
+                    $('#importErrors').removeClass('d-none').addClass('');
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    alert(xhr.responseJSON.message);
+                } else {
+                    alert('An unexpected error occurred.');
+                }
+            },
+            complete: function () {
+                $('#upload_import').prop('disabled', false).html('<i class="mdi mdi-upload"></i> Upload & Import');
+            }
+        });
+    });
+
+    $(".select2").select2();
+});
+
+
+$(document).on('click', '.view-student', function (e) {
+    e.preventDefault();
+    let groupMappingID = $(this).data('id');
+
+    let token = $('meta[name="csrf-token"]').attr('content');
+
+    $.ajax({
+        url: routes.groupMappingStudentList,
+        type: 'POST',
+        data: {
+            _token: token,
+            groupMappingID: groupMappingID
+        },
+        success: function (response) {
+            $('#studentDetailsModal .modal-body').html(response.html);
+            $('#studentDetailsModal').modal('show');
+        },
+        error: function () {
+            alert('Error fetching student details');
+        }
+    });
+});
+
+
+$(document).on('click', '.student-list-pagination .pagination a', function (e) {
+    e.preventDefault();
+    let pageUrl = $(this).attr('href');
+    let groupMappingID = $('.view-student').data('id'); // Adjust if needed
+    let token = $('meta[name="csrf-token"]').attr('content');
+
+    $.ajax({
+        url: pageUrl,
+        type: 'POST',
+        data: {
+            _token: token,
+            groupMappingID: groupMappingID
+        },
+        success: function (response) {
+            $('#studentDetailsModal .modal-body').html(response.html);
+        },
+        error: function () {
+            alert('Error loading student list');
+        }
+    });
+});
+
+// End Group Mapping Modules
+
