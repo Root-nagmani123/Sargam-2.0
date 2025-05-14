@@ -15,9 +15,15 @@ class StudentCourseGroupMap extends Model
     {
         return $this->hasOne(StudentMaster::class, 'pk', 'student_master_pk');
     }
-    
-    // public function courseGroups()
-    // {
-    //     return $this->belongsTo(CourseGroup::class, 'course_group_id', 'id');
-    // }
+
+    public function student()
+    {
+        return $this->belongsTo(StudentMaster::class, 'student_master_pk', 'pk');
+    }
+
+    public function groupMap()
+    {
+        return $this->belongsTo(GroupTypeMasterCourseMasterMap::class, 'student_master_pk', 'pk');
+    }
+
 }

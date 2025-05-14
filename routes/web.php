@@ -181,5 +181,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('student-list', 'studentList')->name('student.list');
+        Route::get('export-student-list', 'exportStudentList')->name('export.student.list');
     });
 });

@@ -47,6 +47,7 @@ $(document).on('change', 'input[name="styled_max_checkbox"]', function() {
 $(document).on('change', '.status-toggle', function () {
 
     if (!confirm('Are you sure you want to change the status?')) {
+        $(this).prop('checked', !$(this).prop('checked'));
         return false;
     }
     let table = $(this).data('table');
@@ -73,6 +74,7 @@ $(document).on('change', '.status-toggle', function () {
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             `);
+            location.reload();
         },
         error: function () {
             alert('Error updating status');
