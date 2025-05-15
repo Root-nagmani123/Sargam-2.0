@@ -70,7 +70,7 @@
                         <div class="mb-3">
                             <select class="form-select" id="datatype" name="datatype">
                                 <option value="">Select Data Type</option>
-                                @foreach(['INT', 'VARCHAR', 'TEXT', 'DATE', 'BOOLEAN'] as $type)
+                                @foreach(['VARCHAR', 'TEXT', 'DATE'] as $type)
                                     <option value="{{ $type }}" {{ old('datatype') == $type ? 'selected' : '' }}>{{ $type }}</option>
                                 @endforeach
                             </select>
