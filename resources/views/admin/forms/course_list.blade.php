@@ -19,18 +19,40 @@
 
             </a>
 
-            <table class="table table-striped table-bordered table-responsive">
-                <thead>
-                    <tr>
-                        <th class="col">S.No</th>
-                        @foreach ($fields as $field)
-                        <th class="col">{{ ucfirst($field) }}</th>
-                        @endforeach
-                        <th class="col">Download PDF</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($records as $record)
+        <!-- Export Button -->
+        {{-- <a href="{{ route('forms.export', ['formid' => $formid, 'statusval' => $statusval]) }}" class="btn btn-success mb-3">
+            Export to Excel
+        </a> --}}
+
+        <!-- Export Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+            <form action="{{ route('forms.export', ['formid' => $formid]) }}" method="GET"
+                class="d-flex align-items-center gap-2">
+                <label for="format" class="form-label me-2 mb-0 fw-semibold">Export:</label>
+                <select name="format" id="format" class="form-select w-auto" required>
+                    <option value="">Select Format </option>
+                    <option value="xlsx">Excel (.xlsx)</option>
+                    <option value="csv">CSV (.csv)</option>
+                    <option value="pdf">PDF (.pdf)</option>
+                </select>
+                <input type="hidden" name="statusval" value="{{ request('statusval') }}">
+                <button type="submit" class="btn btn-primary ms-2">Download</button>
+            </form>
+        </div>
+
+
+        <table class="table table-striped table-bordered text-nowrap">
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    @foreach ($fields as $field)
+                        <th>{{ ucfirst($field) }}</th>
+                    @endforeach
+                    <th>Download PDF</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($records as $record)
                     @php $uid = $record->uid; @endphp
                     @if (isset($users[$uid]))
                     <tr>

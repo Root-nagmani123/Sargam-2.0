@@ -2,15 +2,15 @@
 
 namespace App\Exports;
 
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Maatwebsite\Excel\Concerns\FromArray;
 
 
-class FcformListExport implements FromCollection
+
+class FcformListExport implements FromArray, WithHeadings
 {
-    protected $records, $fields;
+    protected $records;
+    protected $fields;
 
     public function __construct($records, $fields)
     {
@@ -18,15 +18,23 @@ class FcformListExport implements FromCollection
         $this->fields = $fields;
     }
 
-    public function collection()
+    // Return the actual data rows
+    public function array(): array
     {
-        return collect($this->records)->map(function ($record) {
-            return collect($this->fields)->mapWithKeys(function ($field) use ($record) {
-                return [$field => $record->$field ?? ''];
-            });
-        });
+        $data = [];
+
+        foreach ($this->records as $record) {
+            $row = [];
+            foreach ($this->fields as $field) {
+                $row[] = $record->$field ?? '';
+            }
+            $data[] = $row;
+        }
+
+        return $data;
     }
 
+    // Return the column headers
     public function headings(): array
     {
         return $this->fields;
