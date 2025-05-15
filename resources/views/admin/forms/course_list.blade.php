@@ -7,8 +7,9 @@
         <div class="card-body">
             <h4>Total Registered Students: {{ $total_students }}</h4>
             <hr>
-
-            <form method="GET" class="mb-3">
+<div class="row">
+    <div class="col-6">
+ <form method="GET" class="mb-3">
                 <label>Status Filter:</label>
                 <select name="statusval" onchange="this.form.submit()" class="form-select w-auto d-inline-block ms-2">
                     <option value="">All</option>
@@ -16,16 +17,10 @@
                     <option value="2" {{ $statusval == 2 ? 'selected' : '' }}>Not confirm</option>
                 </select>
             </form>
-
-            </a>
-
-        <!-- Export Button -->
-        {{-- <a href="{{ route('forms.export', ['formid' => $formid, 'statusval' => $statusval]) }}" class="btn btn-success mb-3">
-            Export to Excel
-        </a> --}}
-
-        <!-- Export Section -->
-        <div class="d-flex justify-content-between align-items-center mb-4 mt-4">
+    </div>
+    <div class="col-6">
+                <!-- Export Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4 float-end">
             <form action="{{ route('forms.export', ['formid' => $formid]) }}" method="GET"
                 class="d-flex align-items-center gap-2">
                 <label for="format" class="form-label me-2 mb-0 fw-semibold">Export:</label>
@@ -39,9 +34,15 @@
                 <button type="submit" class="btn btn-primary ms-2">Download</button>
             </form>
         </div>
+    </div>
+</div>
+           
 
 
-        <table class="table table-striped table-bordered text-nowrap">
+
+
+       <div class="table-responsive">
+         <table class="table table-striped table-bordered text-nowrap table-responsive">
             <thead>
                 <tr>
                     <th>S.No</th>
@@ -84,6 +85,7 @@
                     @endforeach
                 </tbody>
             </table>
+       </div>
 
             <div class="d-flex justify-content-center">
                 {{-- {{ $records->appends(['statusval' => $statusval])->links() }} --}}
