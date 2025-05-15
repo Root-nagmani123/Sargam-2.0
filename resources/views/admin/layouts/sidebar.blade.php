@@ -351,28 +351,28 @@
                                 <span class="hide-menu">Forms</span>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('master.country.index') }}">
+                                <a class="sidebar-link" href="{{ route('forms.home.user') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Home Page</span>
                                 </a>
                             </li>
                              <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('master.country.index') }}">
+                                <a class="sidebar-link" href="{{ route('forms.main_page') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Landing Page</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('master.country.index') }}">
+                                <a class="sidebar-link" href="{{ route('admin.column.form') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Manage DB</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('master.country.index') }}">
+                                <a class="sidebar-link" href="{{ route('forms.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Registartion</span>
