@@ -642,4 +642,14 @@ class FormController extends Controller
 
         return $id; // Return original ID if no mapping found
     }
+    public function homeUser()
+    {
+        $forms = DB::table('local_form')->orderBy('sortorder')->get();
+        return view('admin.forms.home_page', compact('forms'));
+    }
+    public function main_page()
+    {
+        $forms = DB::table('local_form')->orderBy('sortorder')->get();
+        return view('admin.forms.main_page', compact('forms'));
+    }
 }
