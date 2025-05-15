@@ -158,11 +158,23 @@ class GroupMappingController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Symfony\Component\HttpFoundation\BinaryFileResponse|\Illuminate\Http\RedirectResponse
      */
-    public function exportStudentList(Request $request)
+    public function exportStudentList($id = null)
     {
         try {
+
+            if(!$id) {
+                return redirect()->back()->with('error', 'Group Mapping ID is required.');
+            }
+
             $fileName = 'group-mapping-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-            return Excel::download(new GroupMappingExport, $fileName);
+
+            decrypt($id);
+            if( $id ) {
+                return Excel::download(new GroupMappingExport($id), $fileName);
+            } else {
+                return Excel::download(new GroupMappingExport, $fileName);
+            }
+            
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
