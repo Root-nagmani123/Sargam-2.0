@@ -124,7 +124,7 @@ $radioOptions = $isTableField ?
         {{ $option }}
     </label> -->
 <div class="py-1 form-check form-check-inline">
-    <input type="radio" id="{{ $fieldName }}" name="{{ $fieldName }}" class="form-check-input"
+    <input type="radio" id="{{ $fieldName }}" name="{{ $fieldName }}" class="form-check-input" value="{{ $option }}"
         {{ $value == $option ? 'checked' : '' }} {{ $required ? 'required' : '' }}>
     <label class="form-check-label">{{ $option }}</label>
 </div>
