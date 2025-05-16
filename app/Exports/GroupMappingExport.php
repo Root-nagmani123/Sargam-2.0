@@ -34,10 +34,10 @@ class GroupMappingExport implements FromCollection, WithHeadings
 
         return $data->map(function ($record) {
             return [
-                'name'        => $record->student->display_name ?? '',
-                'otcode'      => $record->student->generated_OT_code ?? '',
-                'group_name'  => $record->groupTypeMasterCourseMasterMap->group_name ?? '',
-                'group_type'  => $record->groupTypeMasterCourseMasterMap->courseGroupType->type_name ?? '',
+                'name'        => optional($record->student)->display_name ?? '',
+                'otcode'      => optional($record->student)->generated_OT_code ?? '',
+                'group_name'  => optional($record->groupTypeMasterCourseMasterMap)->group_name ?? '',
+                'group_type'  => optional($record->groupTypeMasterCourseMasterMap->courseGroupType)->type_name ?? '',
             ];
         });
     }
