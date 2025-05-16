@@ -1,0 +1,54 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\MDODutyTypeMaster;
+
+class MDODutyTypeController extends Controller
+{
+    public function index()
+    {
+        $mdoDutyTypes = MDODutyTypeMaster::latest('pk')->get();
+        return view('admin.mdo_duty_type.index', compact('mdoDutyTypes'));
+    }
+
+    public function create()
+    {
+        return view('admin.mdo_duty_type.create');
+    }
+
+    public function edit($id)
+    {
+        $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($id));
+        return view('admin.mdo_duty_type.create', compact('mdoDutyType'));
+    }
+
+    public function store(Request $request)
+    {
+        try {
+            $request->validate([
+                'mdo_duty_type_name' => 'required|string|max:255'
+            ]);
+            MDODutyTypeMaster::create([
+                'mdo_duty_type_name' => $request->mdo_duty_type_name
+            ]);
+            return redirect()->route('master.mdo_duty_type.index')->with('success', 'MDO Duty Type created successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors($e->getMessage());
+        }   
+    }
+
+    public function delete($id)
+    {
+        try {
+            $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($id));
+            $mdoDutyType->delete();
+            return redirect()->route('master.mdo_duty_type.index')->with('success', 'MDO Duty Type deleted successfully');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+        
+    }
+}

@@ -1,6 +1,12 @@
 <?php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\{FacultyExpertiseMasterController, LocationController, ClassSessionMasterController, CourseGroupTypeController};
+use App\Http\Controllers\Admin\{
+    FacultyExpertiseMasterController, 
+    LocationController, 
+    ClassSessionMasterController, 
+    CourseGroupTypeController, 
+    MDODutyTypeController
+};
 
 Route::prefix('master')->name('master.')->group(function () {
 
@@ -72,5 +78,13 @@ Route::prefix('master')->name('master.')->group(function () {
         Route::post('/store',  'store')->name('store');
         Route::get('/edit/{id}',  'edit')->name('edit');
         Route::delete('/delete/{id}',  'delete')->name('delete');
+    });
+
+    Route::prefix('mdo')->name('mdo_duty_type.')->controller(MDODutyTypeController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 });
