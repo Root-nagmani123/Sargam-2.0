@@ -49,11 +49,6 @@
                                     <th class="col">Faculty Name</th>
                                     <th class="col">Subject</th>
                                     <th class="col">Topic</th>
-<<<<<<< HEAD
-=======
-                                    <th class="col">Rating</th>
-                                    <th class="col">Remarks</th>
->>>>>>> 944bac5 (feedback list view)
                                     <th class="col">Action</th>
                                 </tr>
                                 <!-- end row -->
@@ -61,16 +56,6 @@
                             <tbody>
                                 <tr class="odd">
                                     <td>1</td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">feedback</h6>
-                                        </div>
-                                    </td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">feedback</h6>
-                                        </div>
-                                    </td>
                                     <td class="sorting_1">
                                         <div class="d-flex align-items-center gap-6">
                                             <h6 class="mb-0">feedback</h6>
@@ -127,49 +112,50 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form>
-                    <div class="row g-3">
-                        <div class="col-12 col-md-6">
-                            <label for="course" class="form-label">Course</label>
-                            <input type="text" class="form-control" id="modalCourse" readonly>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label for="facultyName" class="form-label">Faculty Name</label>
-                            <input type="text" class="form-control" id="modalFacultyName" readonly>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label for="subject" class="form-label">Subject</label>
-                            <input type="text" class="form-control" id="modalSubject" readonly>
-                        </div>
-                        <div class="col-12 col-md-6">
-                            <label for="topic" class="form-label">Topic</label>
-                            <input type="text" class="form-control" id="modalTopic" readonly>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Rating</label>
-                            <select class="form-select" id="modalRating" disabled>
-                                <option disabled>Choose rating</option>
-                                <option value="1">1 - Poor</option>
-                                <option value="2">2</option>
-                                <option value="3">3 - Average</option>
-                                <option value="4">4</option>
-                                <option value="5">5 - Excellent</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Presentation</label><br>
-                            <div class="star-rating" id="modalPresentationStars"></div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Content</label><br>
-                            <div class="star-rating" id="modalContentStars"></div>
-                        </div>
-                        <div class="col-12">
-                            <label for="remarks" class="form-label">Remarks</label>
-                            <textarea class="form-control" id="modalRemarks" rows="3" readonly></textarea>
-                        </div>
+                <div id="zero_config_wrapper" class="dataTables_wrapper dt-bootstrap4 no-footer table-responsive">
+
+                        <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
+                            <thead>
+                                <!-- start row -->
+                                <tr>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Rating</th>
+                                    <th class="col">Remarks</th>
+                                </tr>
+                                <!-- end row -->
+                            </thead>
+                            <tbody>
+                                <tr class="odd">
+                                    <td>1</td>
+                                    <td class="sorting_1">
+                                        <div class="d-flex align-items-center gap-6">
+                                            <h6 class="mb-0">feedback</h6>
+                                        </div>
+                                    </td>
+                                    <td class="sorting_1">
+                                        <div class="d-flex align-items-center gap-6">
+                                            <h6 class="mb-0">feedback</h6>
+                                        </div>
+                                    </td>
+                                </tr>
+                                 <tr class="odd">
+                                    <td>2</td>
+                                    <td class="sorting_1">
+                                        <div class="d-flex align-items-center gap-6">
+                                            <h6 class="mb-0">feedback</h6>
+                                        </div>
+                                    </td>
+                                    <td class="sorting_1">
+                                        <div class="d-flex align-items-center gap-6">
+                                            <h6 class="mb-0">feedback</h6>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                </form>
             </div>
         </div>
     </div>
