@@ -151,12 +151,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/single-calendar-details', [CalendarController::class, 'SingleCalendarDetails'])->name('event.Singlecalendar-details');
 
         Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
-       Route::put('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
+        Route::put('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
         Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');      
 
-Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
+        Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
     });
 
+    Route::prefix('feedback')->name('feedback.')->group(function () {
+     
+        Route::get('/', [CalendarController::class, 'feedbackList'])->name('get.feedbackList');      
+        Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');      
+        Route::post('/submit-feedback', [CalendarController::class, 'submitFeedback'])->name('submit.feedback');
+
+    });
     // Area of Expertise
     Route::prefix('expertise')->name('expertise.')->group(function () {
         Route::get('/', function () {
@@ -193,9 +200,5 @@ Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])
     });
 
     //feedback route
-    Route::prefix('feedback')->name('feedback.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.feedback.index');
-        })->name('index');
-    });
+   
 });

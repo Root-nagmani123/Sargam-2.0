@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\{ClassSessionMaster, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent};
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class CalendarController extends Controller
 {
@@ -220,6 +222,85 @@ public function delete_event($id)
     $event = CalendarEvent::findOrFail($id);
     $event->delete();
     return response()->json(['status' => 'success']);
+}
+
+function feedbackList(){
+
+     return view('admin.feedback.index');
+}
+function studentFeedback() {
+    $student_pk = auth()->user()->id;
+
+    // Get all timetable PKs already submitted by this student
+    $submittedTimetablePks = DB::table('topic_feedback')
+        ->where('student_master_pk', $student_pk)
+        ->pluck('timetable_pk')
+        ->toArray();
+
+    $data = DB::table('timetable')
+        ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+        ->join('course_master', 'timetable.course_master_pk', '=', 'course_master.pk')
+        ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+        ->whereNotIn('timetable.pk', $submittedTimetablePks)
+        ->select(
+            'timetable.*',
+            'faculty_master.full_name as faculty_name',
+            'course_master.course_name as course_name',
+            'venue_master.venue_name as venue_name'
+        )
+        ->get();
+
+    return view('admin.feedback.student_feedback', compact('data'));
+}
+
+public function submitFeedback(Request $request)
+{
+     $rules = [
+        'timetable_pk' => 'required|array',
+        'faculty_pk' => 'required|array',
+        'topic_name' => 'required|array',
+        'rating' => 'required|array',
+        'presentation' => 'required|array',
+        'content' => 'required|array',
+        'remarks' => 'required|array',
+    ];
+
+    // Validate all items for each index (nested validation)
+    foreach ($request->timetable_pk as $index => $value) {
+        $rules["rating.$index"] = 'required|integer|min:1|max:5';
+        $rules["presentation.$index"] = 'required|integer|min:1|max:5';
+        $rules["content.$index"] = 'required|integer|min:1|max:5';
+        $rules["remarks.$index"] = 'required|string|max:255';
+    }
+
+    $validated = $request->validate($rules);
+
+     $studentId = Auth::user()->id; // Or however you fetch student ID
+    $now = Carbon::now();
+
+    $timetablePks = $request->input('timetable_pk');
+    $facultyPks = $request->input('faculty_pk');
+    $topicNames = $request->input('topic_name');
+    $ratings = $request->input('rating');
+    $presentations = $request->input('presentation');
+    $contents = $request->input('content');
+    $remarks = $request->input('remarks');
+
+    for ($i = 0; $i < count($timetablePks); $i++) {
+        DB::table('topic_feedback')->insert([
+            'timetable_pk'        => $timetablePks[$i],
+            'student_master_pk'   => $studentId,
+            'topic_name'          => $topicNames[$i],
+            'faculty_pk'          => $facultyPks[$i],
+            'presentation'        => $presentations[$i] ?? null,
+            'content'             => $contents[$i] ?? null,
+            'remark'              => $remarks[$i] ?? null,
+            'created_date'        => $now,
+            'modified_date'       => $now,
+        ]);
+    }
+
+    return redirect()->back()->with('success', 'Feedback submitted successfully!');
 }
 
 }
