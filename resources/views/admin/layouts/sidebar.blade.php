@@ -237,7 +237,7 @@
                                                     </a>
                                                 </li>
                                                  <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('feedback.index') }}"
+                                                    <a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:feed-bold-duotone">
                                                         </iconify-icon>
