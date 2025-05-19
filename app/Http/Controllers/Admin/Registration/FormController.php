@@ -655,6 +655,12 @@ class FormController extends Controller
         return view('admin.forms.main_page', compact('forms'));
 
     }
+     public function logo_page()
+    {
+        $forms = DB::table('local_form')->orderBy('sortorder')->get();
+        return view('admin.forms.logo_page', compact('forms'));
+
+    }
 
     //export function 
 

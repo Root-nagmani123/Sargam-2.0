@@ -373,6 +373,13 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('forms.logo_page') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Registration Page</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.column.form') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
