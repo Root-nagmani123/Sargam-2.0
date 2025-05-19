@@ -225,9 +225,31 @@ public function delete_event($id)
 }
 
 function feedbackList(){
+$events = DB::table('timetable')
+    ->join('course_master', 'timetable.course_master_pk', '=', 'course_master.pk')
+    ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+    ->join('subject_master', 'timetable.subject_master_pk', '=', 'subject_master.pk') // subject join
+    ->select(
+        'timetable.pk as event_id',
+        'course_master.course_name',
+        'faculty_master.full_name as faculty_name',
+        'subject_master.subject_name',
+        'timetable.subject_topic'
+    )
+    ->get();
 
-     return view('admin.feedback.index');
+     return view('admin.feedback.index', compact('events'));
 }
+public function getEventFeedback($id)
+{
+    $feedbacks = DB::table('topic_feedback')
+        ->where('timetable_pk', $id)
+        ->select('rating', 'remark')
+        ->get();
+
+    return response()->json($feedbacks);
+}
+
 function studentFeedback() {
     $student_pk = auth()->user()->id;
 

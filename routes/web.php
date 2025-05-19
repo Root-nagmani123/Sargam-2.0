@@ -196,7 +196,8 @@ Route::middleware(['auth'])->group(function () {
     //feedback route
     Route::prefix('feedback')->name('feedback.')->group(function () {
        Route::get('/', [CalendarController::class, 'feedbackList'])->name('get.feedbackList');      
-        Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');      
+      Route::get('/event-feedback/{id}', [CalendarController::class, 'getEventFeedback']);
+       Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');      
         Route::post('/submit-feedback', [CalendarController::class, 'submitFeedback'])->name('submit.feedback');
     });
     // MDO Escrot Exemption Routes

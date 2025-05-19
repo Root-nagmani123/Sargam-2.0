@@ -807,45 +807,5 @@ function waitForGroupTypeAndSet(value, callback, retries = 20) {
     }
 }
 </script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-    let calendarEl = document.getElementById('calendar');
-    let calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        editable: true,
-        selectable: true,
-        displayEventTime: false,
-        events: '/calendar/full-calendar-details',
-        // ...existing code...
-        eventMouseEnter: function(info) {
-            let eventId = info.event.id;
-            $.ajax({
-                url: '/calendar/single-calendar-details?id=' + eventId,
-                type: 'GET',
-                data: {
-                    _token: '{{ csrf_token() }}'
-                },
-                success: function(data) {
-                    $('#eventTopic').text(data.topic ?? '');
-                    const startDate = new Date(data.start).toLocaleString();
-                    const endDate = new Date(data.end).toLocaleString();
-                    $('#eventDate').html(
-                        `<b>Start:</b> ${startDate} <br><b>End:</b> ${endDate}`);
-                    $('#eventfaculty').text(data.faculty_name ?? '');
-                    $('#eventVanue').text(data.venue_name ?? '');
-                    $('#editEventBtn').attr('data-id', data.id);
-                    $('#deleteEventBtn').attr('data-id', data.id);
-                    $('#eventDetails').modal('show');
-                }
-            });
-        },
-        eventMouseLeave: function(info) {
-            $('#eventDetails').modal('hide');
-        },
-        // ...existing code...
-    });
-    calendar.render();
-    // ...existing code...
-});
-</script>
+
 @endsection
