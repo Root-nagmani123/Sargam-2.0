@@ -4,9 +4,9 @@
 
 @section('content')
 
- <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js'></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 <div class="container-fluid">
     <div class="card card-body py-3">
@@ -35,262 +35,272 @@
 
     <div class="card">
         <div class="card-body calender-sidebar app-calendar">
-             <div id='calendar'></div>
+            <div id='calendar'></div>
         </div>
     </div>
     <!-- BEGIN MODAL -->
     <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true"
         style="display: none;">
         <div class="modal-dialog modal-dialog-scrollable modal-lg">
-              <form id="eventForm">
-            @csrf
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="eventModalLabel">
-                        {{ $modalTitle ?? __('Add / Edit Calendar Event') }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Course name</label>
-                                <select name="Course_name" id="Course_name" class="form-control">
-                                    <option value="">Select Course</option>
-                                    @foreach($courseMaster as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Subject Name</label>
-                                <select name="subject_name" id="subject_name" class="form-control">
-                                    <option value="">Select Subject Name</option>
-                                    @foreach($subjects as $subject)
-                                    <option value="{{ $subject->pk }}"
-                                        data-id="{{ $subject->subject_module_master_pk }}">{{ $subject->subject_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Subject Module</label>
-                                <select name="subject_module" id="subject_module" class="form-control">
-                                    <option value="">Select subject Module</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Topic</label>
-                                <textarea name="topic" id="topic" class="form-control" row="5"></textarea>
-
-                            </div>
-                        </div>
-                        <div class="col-md-12 mb-3">
-                            <div>
-                                <label class="form-label">Group Type</label>
-                            </div>
-                            <div class="d-flex">
-                                <div class="n-chk">
-                                    <div class="form-check form-check-primary form-check-inline">
-                                        <input class="form-check-input" type="radio" name="event_level" value="1"
-                                            id="modalDanger-{{ uniqid() }}">
-                                        <label class="form-check-label" for="modalDanger-{{ uniqid() }}">Lecture</label>
-                                    </div>
-                                </div>
-                                <div class="n-chk">
-                                    <div class="form-check form-check-warning form-check-inline">
-                                        <input class="form-check-input" type="radio" name="event_level" value="2"
-                                            id="modalSuccess-{{ uniqid() }}">
-                                        <label class="form-check-label"
-                                            for="modalSuccess-{{ uniqid() }}">Language</label>
-                                    </div>
-                                </div>
-                                <div class="n-chk">
-                                    <div class="form-check form-check-success form-check-inline">
-                                        <input class="form-check-input" type="radio" name="event_level" value="3"
-                                            id="modalPrimary-{{ uniqid() }}">
-                                        <label class="form-check-label"
-                                            for="modalPrimary-{{ uniqid() }}">Counsellar</label>
-                                    </div>
-                                </div>
-                                <div class="n-chk">
-                                    <div class="form-check form-check-danger form-check-inline">
-                                        <input class="form-check-input" type="radio" name="event_level" value="4"
-                                            id="modalWarning-{{ uniqid() }}">
-                                        <label class="form-check-label" for="modalWarning-{{ uniqid() }}">Module</label>
-                                    </div>
-                                </div>
-                                <div class="n-chk">
-                                    <div class="form-check form-check-danger form-check-inline">
-                                        <input class="form-check-input" type="radio" name="event_level" value="5"
-                                            id="modalWarning-{{ uniqid() }}">
-                                        <label class="form-check-label" for="modalWarning-{{ uniqid() }}">Custom
-                                            Group</label>
-                                    </div>
+            <form id="eventForm">
+                @csrf
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="eventModalLabel">
+                            {{ $modalTitle ?? __('Add / Edit Calendar Event') }}
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Course name</label>
+                                    <select name="Course_name" id="Course_name" class="form-control">
+                                        <option value="">Select Course</option>
+                                        @foreach($courseMaster as $course)
+                                        <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-12">
-                            <div class="mb-3">
-                                <label class="form-label">Faculty</label>
-                                <select name="faculty" id="faculty" class="form-control">
-                                    <option value="">Select Faculty</option>
-                                    @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                        {{ $faculty->full_name }}</option>
-                                    @endforeach
-                                </select>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Subject Name</label>
+                                    <select name="subject_name" id="subject_name" class="form-control">
+                                        <option value="">Select Subject Name</option>
+                                        @foreach($subjects as $subject)
+                                        <option value="{{ $subject->pk }}"
+                                            data-id="{{ $subject->subject_module_master_pk }}">
+                                            {{ $subject->subject_name }}
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
-                        </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Subject Module</label>
+                                    <select name="subject_module" id="subject_module" class="form-control">
+                                        <option value="">Select subject Module</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Topic</label>
+                                    <textarea name="topic" id="topic" class="form-control" row="5"></textarea>
 
-                        <div class="col-md-12">
-                            <div class="mb-3">
-                                <label class="form-label">Faculty Type</label>
-                                <select name="faculty_type" id="faculty_type" class="form-control">
-                                    <option value="">Select Faculty Type</option>
-                                    <option value="1">Internal</option>
-                                    <option value="2">Guest</option>
-                                    <option value="3">Research</option>
-                                </select>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Location</label>
-                                <select name="vanue" id="vanue" class="form-control">
-                                    <option value="">Select Location</option>
-                                    @foreach($venueMaster as $loc)
-                                    <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
-                                    @endforeach
-                                </select>
-
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Group Type</label>
+                                    <select name="group_type" id="group_type" class="form-control">
+                                        <option value="">Select Group Type</option>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Shift</label>
-                                <select name="shift" id="shift" class="form-control">
-                                    <option value="">Select Shift</option>
-                                    @foreach($classSessionMaster as $shift)
-                                    <option value="{{ $shift->pk }}">{{ $shift->shift_name }}</option>
-                                    @endforeach
-                                </select>
-
+                            <div class="col-md-12 mb-3">
+                                <div>
+                                    <label class="form-label">Group Type Name</label>
+                                </div>
+                                <div id="type_name_container" class="mt-3">
+                                    <!-- Checkboxes will be appended here -->
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-12">
-                            <div class="mb-3 form-check">
-                                <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox" name="fullDayCheckbox">
-                                <label class="form-check-label" for="fullDayCheckbox">Full Day</label>
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Faculty</label>
+                                    <select name="faculty" id="faculty" class="form-control">
+                                        <option value="">Select Faculty</option>
+                                        @foreach($facultyMaster as $faculty)
+                                        <option value="{{ $faculty->pk }}"
+                                            data-faculty_type="{{ $faculty->faculty_type }}">
+                                            {{ $faculty->full_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
 
-                            <div id="dateTimeFields">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label for="start_datetime" class="form-label">Start</label>
-                                        <input type="datetime-local" name="start_datetime" id="start_datetime"
-                                            class="form-control" >
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="end_datetime" class="form-label">End</label>
-                                        <input type="datetime-local" name="end_datetime" id="end_datetime"
-                                            class="form-control" >
+                            <div class="col-md-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Faculty Type</label>
+                                    <select name="faculty_type" id="faculty_type" class="form-control">
+                                        <option value="">Select Faculty Type</option>
+                                        <option value="1">Internal</option>
+                                        <option value="2">Guest</option>
+                                        <option value="3">Research</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Location</label>
+                                    <select name="vanue" id="vanue" class="form-control">
+                                        <option value="">Select Location</option>
+                                        @foreach($venueMaster as $loc)
+                                        <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
+                                        @endforeach
+                                    </select>
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Shift</label>
+                                    <select name="shift" id="shift" class="form-control">
+                                        <option value="">Select Shift</option>
+                                        @foreach($classSessionMaster as $shift)
+                                        <option value="{{ $shift->pk }}">{{ $shift->shift_name }}</option>
+                                        @endforeach
+                                    </select>
+
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="mb-3 form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
+                                        name="fullDayCheckbox">
+                                    <label class="form-check-label" for="fullDayCheckbox">Full Day</label>
+                                </div>
+
+                                <div id="dateTimeFields">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="start_datetime" class="form-label">Start</label>
+                                            <input type="datetime-local" name="start_datetime" id="start_datetime"
+                                                class="form-control">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="end_datetime" class="form-label">End</label>
+                                            <input type="datetime-local" name="end_datetime" id="end_datetime"
+                                                class="form-control">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div class="col-md-3 mb-3">
-                            <div>
-                                <label class="form-label">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox" id="feedback_checkbox">
-                                        <label class="form-check-label" for="feedback_checkbox">
-                                            Feedback
-                                        </label>
-                                    </div>
-                                </label>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="feedback_checkbox" id="feedback_checkbox" checked>
+                                            <label class="form-check-label" for="feedback_checkbox">
+                                                Feedback
+                                            </label>
+                                        </div>
+                                    </label>
 
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div>
-                                <label class="form-label">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="1" name="remarkCheckbox" id="remarkCheckbox">
-                                        <label class="form-check-label" for="remarkCheckbox">
-                                            Remark
-                                        </label>
-                                    </div>
-                                </label>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="remarkCheckbox" id="remarkCheckbox">
+                                            <label class="form-check-label" for="remarkCheckbox">
+                                                Remark
+                                            </label>
+                                        </div>
+                                    </label>
 
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div>
-                                <label class="form-label">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="1" name="ratingCheckbox" id="ratingCheckbox">
-                                        <label class="form-check-label" for="ratingCheckbox">
-                                            Ratting
-                                        </label>
-                                    </div>
-                                </label>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="ratingCheckbox" id="ratingCheckbox">
+                                            <label class="form-check-label" for="ratingCheckbox">
+                                                Ratting
+                                            </label>
+                                        </div>
+                                    </label>
 
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-3 mb-3">
-                            <div>
-                                <label class="form-label">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="1" name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                        <label class="form-check-label" for="bio_attendanceCheckbox">
-                                            Bio Attendance
-                                        </label>
-                                    </div>
-                                </label>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
+                                            <label class="form-check-label" for="bio_attendanceCheckbox">
+                                                Bio Attendance
+                                            </label>
+                                        </div>
+                                    </label>
 
+                                </div>
                             </div>
+
+
                         </div>
-
-
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn bg-danger-subtle text-danger" data-bs-dismiss="modal">
+                            Close
+                        </button>
+                        <button type="button" class="btn btn-success btn-update-event"
+                            data-fc-event-public-id="{{ $event->id ?? '' }}" style="display: none;">
+                            Update changes
+                        </button>
+                        <button type="submit" class="btn btn-primary btn-add-event">
+                            Add Calendar Event
+                        </button>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn bg-danger-subtle text-danger" data-bs-dismiss="modal">
-                        Close
-                    </button>
-                    <button type="button" class="btn btn-success btn-update-event"
-                        data-fc-event-public-id="{{ $event->public_id ?? '' }}" style="display: none;">
-                        Update changes
-                    </button>
-                    <button type="submit" class="btn btn-primary btn-add-event">
-                        Add Calendar Event
-                    </button>
-                </div>
-            </div>
             </form>
         </div>
     </div>
     <!-- END MODAL -->
+    <!-- eventDetails modal do-->
+    <!-- Modal -->
+    <div class="modal fade" id="eventDetails" tabindex="-1" aria-labelledby="eventDetailsLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content shadow rounded">
+                <div class="modal-header d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="modal-title" id="eventDetailsLabel">
+                            <span id="eventTitle">Event Title</span>:<span id="eventTopic"></span>
+                        </h5>
+                        <small class="text-muted" id="eventDate">Event Date</small><br>
+                       </div>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="editEventBtn">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger me-1" id="deleteEventBtn">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+
+                <div class="modal-body">
+                <div class="mb-2">
+                    <i class="bi bi-person-fill me-2"></i>Faculty: <b><span id="eventfaculty"></span></b>
+                </div>
+                <div class="mb-2">
+                    <i class="bi bi-geo-alt-fill me-2"></i>Venue: <b><span id="eventVanue"></span></b>
+                </div>
+                <!-- <div class="mb-2">
+                    <i class="bi bi-globe me-2"></i> <span id="eventAudience">Public</span>
+                </div> -->
+            </div>
+            </div>
+        </div>
+    </div>
+
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
-    $('#fullDayCheckbox').on('change', function () {
-        if ($(this).is(':checked')) {
-            $('#dateTimeFields').hide();
-        } else {
-            $('#dateTimeFields').show();
-        }
-    });
+
     $('#subject_name').on('change', function() {
         // Get data-id from selected option
         var dataId = $(this).find(':selected').data('id');
@@ -304,195 +314,473 @@ $(document).ready(function() {
                 },
                 success: function(response) {
                     $('#subject_module').empty().append(
-                        '<option value="">Select Subject Module</option>');
+                        '<option value="">Select Subject Module</option>'
+                    );
                     $.each(response, function(key, module) {
-                        $('#subject_module').append('<option value="' + module.pk +
-                            '">' + module.module_name + '</option>');
+                        $('#subject_module').append(
+                            '<option value="' + module.pk +
+                            '">' + module.module_name +
+                            '</option>');
                     });
                 }
             });
         } else {
-            $('#subject_module').empty().append('<option value="">Select Subject Module</option>');
+            $('#subject_module').empty().append(
+                '<option value="">Select Subject Module</option>');
         }
     });
 
-   $(document).ready(function () {
-    // When faculty is selected, set the faculty_type based on its data attribute
-    $('#faculty').on('change', function () {
-        var selectedType = $(this).find(':selected').data('faculty_type'); // this must still be text: 'Internal' or 'Guest'
+    $(document).ready(function() {
+        // When faculty is selected, set the faculty_type based on its data attribute
+        $('#faculty').on('change', function() {
+            var selectedType = $(this).find(':selected').data(
+                'faculty_type'); // this must still be text: 'Internal' or 'Guest'
 
-        if (selectedType) {
-            if (selectedType === 1) {
-                $('#faculty_type').val("1").trigger('change');
-            } else if (selectedType === 2) {
-                $('#faculty_type').val("2").trigger('change');
-            } else if (selectedType === 3) {
-                $('#faculty_type').val("3").trigger('change');
+            if (selectedType) {
+                if (selectedType === 1) {
+                    $('#faculty_type').val("1").trigger('change');
+                } else if (selectedType === 2) {
+                    $('#faculty_type').val("2").trigger('change');
+                } else if (selectedType === 3) {
+                    $('#faculty_type').val("3").trigger('change');
+                } else {
+                    $('#faculty_type').val("").trigger('change');
+                }
             } else {
                 $('#faculty_type').val("").trigger('change');
             }
-        } else {
-            $('#faculty_type').val("").trigger('change');
-        }
-    });
+        });
 
-    // Now handle behavior based on the numeric faculty_type values
-    $('#faculty_type').on('change', function () {
-        let selectedVal = $(this).val();
+        // Now handle behavior based on the numeric faculty_type values
+        $('#faculty_type').on('change', function() {
+            let selectedVal = $(this).val();
 
-        if (selectedVal === "1") { // Internal
-            $('#remarkCheckbox').prop('disabled', false);
-            $('#ratingCheckbox').prop('disabled', true).prop('checked', false);
-        } else if (selectedVal === "2") { // Guest
-            $('#remarkCheckbox').prop('disabled', false).prop('checked', true);
-            $('#ratingCheckbox').prop('disabled', false).prop('checked', true);
-        } else {
-            // For Research or other, disable both
-            $('#remarkCheckbox').prop('disabled', true).prop('checked', false);
-            $('#ratingCheckbox').prop('disabled', true).prop('checked', false);
-        }
-    });
-
-    // Trigger once to set initial state
-    $('#faculty').trigger('change');
-});
-});
-
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const fullDay = document.getElementById('fullDayCheckbox');
-    const dtFields = document.getElementById('dateTimeFields');
-
-    fullDay.addEventListener('change', () => {
-        if (fullDay.checked) {
-            // Hide and remove required validation
-            dtFields.style.display = 'none';
-            dtFields.querySelectorAll('input').forEach(i => i.required = false);
-        } else {
-            // Show and re-enable validation
-            dtFields.style.display = 'block';
-            dtFields.querySelectorAll('input').forEach(i => i.required = true);
-        }
-    });
-});
-  $('#eventForm').on('submit', function (e) {
-            e.preventDefault();
-
-            let isValid = true;
-            let errorMsg = "";
-
-            const courseName = $('#Course_name').val();
-        const subjectName = $('#subject_name').val();
-        const subjectModule = $('#subject_module').val();
-        const faculty = $('#faculty').val();
-        const facultyType = $('#faculty_type').val();
-        const vanue = $('#vanue').val();
-        const shift = $('#shift').val();
-         let fullDay = $('#fullDayCheckbox').is(':checked');
-
-        // Check for empty values
-        if (!courseName) {
-            alert("Please select a Course Name.");
-            $('#Course_name').focus();
-            return false;
-        }
-        if (!subjectName) {
-            alert("Please select a Subject Name.");
-            $('#subject_name').focus();
-            return false;
-        }
-        if (!subjectModule) {
-            alert("Please select a Subject Module.");
-            $('#subject_module').focus();
-            return false;
-        }
-        if (!faculty) {
-            alert("Please select a Faculty.");
-            $('#faculty').focus();
-            return false;
-        }
-        if (!facultyType) {
-            alert("Please select Faculty Type.");
-            $('#faculty_type').focus();
-            return false;
-        }
-        if (!vanue) {
-            alert("Please select a Venue.");
-            $('#vanue').focus();
-            return false;
-        }
-        if (!shift) {
-            alert("Please select a Shift.");
-            $('#shift').focus();
-            return false;
-        }
-           
-
-          
-            if (!fullDay) {
-                let startDate = $('#start_datetime').val().trim();
-                let endDate = $('#end_datetime').val().trim();
-
-                if (startDate === "") {
-                    alert("Start Date is required.");
-                    $('#start_datetime').focus();
-                    return false;
-                   
-                }
-
-               
-                if (endDate === "") {
-                     alert("End Date is required.");
-                    $('#end_datetime').focus();
-                    return false;
-                }
-
-              
+            if (selectedVal === "1") { // Internal
+                $('#remarkCheckbox').prop('disabled', false);
+                $('#ratingCheckbox').prop('disabled', true).prop('checked',
+                    false);
+            } else if (selectedVal === "2") { // Guest
+                $('#remarkCheckbox').prop('disabled', false).prop('checked',
+                    true);
+                $('#ratingCheckbox').prop('disabled', false).prop('checked',
+                    true);
+            } else {
+                // For Research or other, disable both
+                $('#remarkCheckbox').prop('disabled', true).prop('checked',
+                    false);
+                $('#ratingCheckbox').prop('disabled', true).prop('checked',
+                    false);
             }
+        });
 
-         
-
-            // If valid, do AJAX submission
+        // Trigger once to set initial state
+        $('#faculty').trigger('change');
+    });
+    $('#Course_name').on('change', function() {
+        var courseName = $(this).val();
+        if (courseName) {
             $.ajax({
-                url: "{{ route('calendar.event.store') }}",
-                method: "POST",
-                data: $(this).serialize(),
-                success: function (response) {
-                    alert("Event created successfully!");
-                    $('#eventModal').modal('hide');
-                    $('#eventForm')[0].reset();
-                    toggleDateTimeFields();
+                url: "{{ route('calendar.get.group.types') }}",
+                type: 'GET',
+                data: {
+                    course_id: courseName
                 },
-                error: function (xhr) {
-                    if (xhr.status === 422) {
-                        let errors = xhr.responseJSON.errors;
-                        let messages = Object.values(errors).map(val => val.join('\n')).join('\n');
-                        alert("Server Validation Failed:\n\n" + messages);
+                success: function(response) {
+                    // Step 1: Group by group_type_name
+                    let groupedData = {};
+
+                    response.forEach(item => {
+                        if (!groupedData[item.group_type_name]) {
+                            groupedData[item.group_type_name] = [];
+                        }
+                        groupedData[item.group_type_name].push(
+                            item);
+                    });
+
+                    // Step 2: Fill the dropdown with unique group_type_name
+                    $('#group_type').empty().append(
+                        '<option value="">Select Group Type</option>');
+                    $('#type_name_container').html('');
+                    for (const key in groupedData) {
+                        if (groupedData[key].length > 0) {
+                            const typeName = groupedData[key][0]
+                                .type_name; // use first element's type_name
+                            $('#group_type').append(
+                                `<option value="${key}">${typeName}</option>`
+                            );
+                        }
                     }
+
+
+                    // Step 3: On change of group_type, show checkboxes
+                    $('#group_type').off('change').on('change', function() {
+                        const selectedType = $(this).val();
+                        let html = '';
+
+                        if (groupedData[selectedType]) {
+                            groupedData[selectedType].forEach(
+                                group => {
+                                    html += `
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" 
+                                        name="type_names[]" 
+                                        value="${group.pk}" 
+                                        id="type_${group.pk}" checked>
+                                    <label class="form-check-label" for="type_${group.pk}">
+                                        ${group.group_name} (${group.type_name})
+                                    </label>
+                                </div>
+                            `;
+
+                                });
+                        }
+
+                        $('#type_name_container').html(html);
+                    });
                 }
             });
-        });
-        
+        } else {
+            $('#group_type').empty().append(
+                '<option value="">Select Group Type</option>');
+            $('#type_name_container').html('');
+        }
+    });
+
+});
 </script>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+// $('.btn-update-event').on('click', function() {
+//     $('#eventForm').submit();
+// });
+$('#eventForm').on('submit', function(e) {
+    e.preventDefault();
+
+    let isValid = true;
+    let errorMsg = "";
+
+    const courseName = $('#Course_name').val();
+    const subjectName = $('#subject_name').val();
+    const subjectModule = $('#subject_module').val();
+    const faculty = $('#faculty').val();
+    const facultyType = $('#faculty_type').val();
+    const vanue = $('#vanue').val();
+    const shift = $('#shift').val();
+    //  let fullDay = $('#fullDayCheckbox').is(':checked');
+
+    // Check for empty values
+    if (!courseName) {
+        alert("Please select a Course Name.");
+        $('#Course_name').focus();
+        return false;
+    }
+    if (!subjectName) {
+        alert("Please select a Subject Name.");
+        $('#subject_name').focus();
+        return false;
+    }
+    if (!subjectModule) {
+        alert("Please select a Subject Module.");
+        $('#subject_module').focus();
+        return false;
+    }
+    if (!faculty) {
+        alert("Please select a Faculty.");
+        $('#faculty').focus();
+        return false;
+    }
+    if (!facultyType) {
+        alert("Please select Faculty Type.");
+        $('#faculty_type').focus();
+        return false;
+    }
+    if (!vanue) {
+        alert("Please select a Venue.");
+        $('#vanue').focus();
+        return false;
+    }
+    if (!shift) {
+        alert("Please select a Shift.");
+        $('#shift').focus();
+        return false;
+    }
+
+
+
+
+    let startDate = $('#start_datetime').val().trim();
+    let endDate = $('#end_datetime').val().trim();
+
+    if (startDate === "") {
+        alert("Start Date is required.");
+        $('#start_datetime').focus();
+        return false;
+
+    }
+
+
+    if (endDate === "") {
+        alert("End Date is required.");
+        $('#end_datetime').focus();
+        return false;
+    }
+
+
+
+    let formData = new FormData(this);
+    $('input[name="group_type_name[]"]:checked').each(function() {
+        formData.append('group_type_name[]', $(this).val());
+    });
+    $.ajax({
+        url: "{{ route('calendar.event.store') }}",
+        method: "POST",
+        data: $(this).serialize(),
+        success: function(response) {
+            alert("Event created successfully!");
+            $('#eventModal').modal('hide');
+            $('#eventForm')[0].reset();
+            toggleDateTimeFields();
+        },
+        error: function(xhr) {
+            if (xhr.status === 422) {
+                let errors = xhr.responseJSON.errors;
+                let messages = Object.values(errors).map(val => val.join('\n'))
+                    .join('\n');
+                alert("Server Validation Failed:\n\n" + messages);
+            }
+        }
+    });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
     let calendarEl = document.getElementById('calendar');
     let calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         editable: true,
         selectable: true,
-         displayEventTime: false, 
-        events: '/calendar/calendar-details', // Data fetch karna
-        select: function (info) {
+        displayEventTime: false,
+        events: '/calendar/full-calendar-details', // Data fetch karna
+        eventClick: function(info) {
+            let eventId = info.event.id;
+
+
+            $.ajax({
+                url: '/calendar/single-calendar-details?id=' + eventId, // ✅ Fix here
+                type: 'GET',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(data) {
+
+                    $('#eventTopic').text(data.topic ?? '');
+
+                    const startDate = new Date(data.start).toLocaleString();
+                    const endDate = new Date(data.end).toLocaleString();
+                    $('#eventDate').html(
+                        `<b>Start:</b> ${startDate} <br><b>End:</b> ${endDate}`);
+                        $('#eventfaculty').text(data.faculty_name ?? '');
+                            $('#eventVanue').text(data.venue_name ?? '');
+                    $('#editEventBtn').attr('data-id', data.id);
+                    $('#deleteEventBtn').attr('data-id', data.id);
+
+                    $('#editEventBtn')
+                        .off('click') // ✅ Remove any old handler
+                        .click(function() {
+                            $('#eventDetails').modal('hide');
+                            $('#eventForm')[0].reset();
+
+                            const eventId = $(this).attr(
+                                'data-id'); // or .data('id')
+
+                            $.ajax({
+                                url: '/calendar/event-edit/' + eventId,
+                                type: 'GET',
+                                success: function(event) {
+                                    // Set Course and Subject
+                                    $('#Course_name').val(event
+                                        .course_master_pk);
+                                    $('#subject_name').val(event
+                                        .subject_master_pk);
+
+                                    // Subject Module ko AJAX se reload karo
+                                    if (event.subject_master_pk) {
+                                        $.ajax({
+                                            url: "{{ route('calendar.get.subject.modules') }}",
+                                            type: 'GET',
+                                            data: {
+                                                data_id: event
+                                                    .subject_module_master_pk
+                                            },
+                                            success: function(
+                                                response) {
+                                                $('#subject_module')
+                                                    .empty()
+                                                    .append(
+                                                        '<option value="">Select Subject Module</option>'
+                                                    );
+                                                $.each(response,
+                                                    function(
+                                                        key,
+                                                        module
+                                                    ) {
+                                                        $('#subject_module')
+                                                            .append(
+                                                                '<option value="' +
+                                                                module
+                                                                .pk +
+                                                                '">' +
+                                                                module
+                                                                .module_name +
+                                                                '</option>'
+                                                            );
+                                                    });
+                                                // Yahan set karo selected module
+                                                $('#subject_module')
+                                                    .val(
+                                                        event
+                                                        .subject_module_master_pk
+                                                    );
+                                            }
+                                        });
+                                    } else {
+                                        $('#subject_module').empty()
+                                            .append(
+                                                '<option value="">Select Subject Module</option>'
+                                            );
+                                    }
+                                    $('#Course_name').val(event.course_master_pk).trigger('change');
+                                waitForGroupTypeAndSet(event.course_group_type_master, function() {
+                                    // Checkboxes set karo
+                                    let groupNames = [];
+                                    try { groupNames = JSON.parse(event.group_name || '[]'); } catch (e) {}
+                                    groupNames.forEach(function(pk) {
+                                        $('#type_' + pk).prop('checked', true);
+                                    });
+                                });
+                                  
+                                    $('#topic').val(event
+                                        .subject_topic);
+                                    $('#faculty').val(event
+                                        .faculty_master);
+                                    $('#faculty_type').val(event
+                                        .faculty_type);
+                                    $('#vanue').val(event.venue_id);
+                                    $('#shift').val(event
+                                        .class_session_master_pk);
+                                    $('#start_datetime').val(event
+                                        .mannual_starttime);
+                                    $('#end_datetime').val(event
+                                        .mannual_end_time);
+                                    $('#fullDayCheckbox').prop(
+                                        'checked', event
+                                        .fullday == 1);
+                                    $('#feedback_checkbox').prop(
+                                        'checked', event
+                                        .feedback_checkbox == 1);
+                                    $('#remarkCheckbox').prop('checked',
+                                        event
+                                        .Remark_checkbox == 1);
+                                    $('#ratingCheckbox').prop('checked',
+                                        event
+                                        .Ratting_checkbox == 1);
+                                    $('#bio_attendanceCheckbox').prop(
+                                        'checked', event
+                                        .Bio_attendance == 1);
+
+                                    $('#eventModalLabel').text(
+                                        'Edit Calendar Event');
+                                 $('.btn-update-event')
+                                    .show()
+                                    .data('id', event.pk)         // JS memory ke liye
+                                    .attr('data-id', event.pk);   // HTML attribute ke liye
+                                    $('.btn-add-event').hide();
+                                    $('#eventModal').modal('show');
+
+                                }
+                            });
+                        });
+                    $('#eventDetails').modal('show');
+                }
+            });
+
+
+        },
+        select: function(info) {
+            // $('#eventModal').modal('show');
             $('#eventModal').modal('show');
         },
+      
         eventRender: function(info) {
             // Custom rendering logic if needed, but normally FullCalendar should automatically handle color from JSON
         }
     });
     calendar.render();
+
+
+ $(document).on('click', '#deleteEventBtn', function() {
+    let eventId = $(this).attr('data-id');
+    if (!eventId) {
+       
+        alert('Event ID not found!');
+        return;
+    }
+    if (confirm('Are you sure you want to delete this event?')) {
+        $.ajax({
+            url: '/calendar/event-delete/' + eventId,
+            type: 'DELETE',
+            data: { _token: '{{ csrf_token() }}' },
+            success: function(response) {
+                alert('Event deleted successfully!');
+                $('#eventDetails').modal('hide');
+                // Calendar ko refresh karo
+                let calendarEl = document.getElementById('calendar');
+                if (calendarEl && calendarEl._fullCalendar) {
+                    calendarEl._fullCalendar.refetchEvents();
+                } else {
+                    location.reload();
+                }
+            },
+            error: function() {
+                alert('Delete failed!');
+            }
+        });
+    }
 });
 
-    </script>
-@endsection 
+});
+ $(document).on('click', '.btn-update-event', function(e) {
+        e.preventDefault();
+        let eventId = $(this).data('id');
+        if (!eventId) return alert('Event ID not found!');
+        $.ajax({
+            url: '/calendar/event-update/' + eventId,
+            method: 'POST',
+            data: $('#eventForm').serialize() + '&_method=PUT',
+            success: function() {
+                alert('Event updated successfully!');
+                $('#eventModal').modal('hide');
+                $('#eventForm')[0].reset();
+                location.reload();
+            },
+            error: function(xhr) {
+                if (xhr.status === 422) {
+                    let errors = xhr.responseJSON.errors;
+                    alert("Server Validation Failed:\n\n" + Object.values(errors).map(val => val.join('\n')).join('\n'));
+                } else {
+                    alert('Update failed!');
+                }
+            }
+        });
+    });
+function waitForGroupTypeAndSet(value, callback, retries = 20) {
+    if ($('#group_type option[value="' + value + '"]').length > 0) {
+        $('#group_type').val(value).trigger('change');
+        if (callback) callback();
+    } else if (retries > 0) {
+        setTimeout(function() {
+            waitForGroupTypeAndSet(value, callback, retries - 1);
+        }, 150);
+    }
+}
+</script>
+@endsection
