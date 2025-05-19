@@ -176,20 +176,19 @@ $selectedValues = is_array($value) ? $value : explode(',', $value ?? '');
     <input class="form-control" type="file" name="{{ $fieldName }}" id="{{ $fieldName }}"
         {{ $required ? 'required' : '' }} onchange="previewImage(event, this)" />
 
-    @if($value)
     <div class="file-preview" id="file-preview-{{ $fieldName }}">
-        @if(in_array(pathinfo($value, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif']))
-        <img src="{{ Storage::url($value) }}" alt="Uploaded Image" class="img-fluid" />
-        @elseif(pathinfo($value, PATHINFO_EXTENSION) === 'pdf')
-        <a href="{{ Storage::url($value) }}" target="_blank" class="btn btn-primary">View PDF</a>
-        @else
-        <span>{{ basename($value) }}</span>
+        @if($value)
+            @if(in_array(pathinfo($value, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif']))
+            <img src="{{ Storage::url($value) }}" alt="Uploaded Image" class="img-fluid" />
+            @elseif(pathinfo($value, PATHINFO_EXTENSION) === 'pdf')
+            <a href="{{ Storage::url($value) }}" target="_blank" class="btn btn-primary">View PDF</a>
+            @else
+            <span>{{ basename($value) }}</span>
+            @endif
         @endif
     </div>
-    @else
-    <div class="file-preview" id="file-preview-{{ $fieldName }}"></div>
-    @endif
 </div>
+
 @break
 
 @case('View/Download')
