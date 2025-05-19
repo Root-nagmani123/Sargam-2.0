@@ -152,12 +152,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/single-calendar-details', [CalendarController::class, 'SingleCalendarDetails'])->name('event.Singlecalendar-details');
 
         Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
-        Route::put('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
-        Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
+       Route::put('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
+        Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');      
 
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
     });
 
+    Route::prefix('feedback')->name('feedback.')->group(function () {
+     
+        Route::get('/', [CalendarController::class, 'feedbackList'])->name('get.feedbackList');      
+        Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');      
+        Route::post('/submit-feedback', [CalendarController::class, 'submitFeedback'])->name('submit.feedback');
+
+    });
     // Area of Expertise
     Route::prefix('expertise')->name('expertise.')->group(function () {
         Route::get('/', function () {
@@ -194,19 +201,5 @@ Route::middleware(['auth'])->group(function () {
     });
 
     //feedback route
-    Route::prefix('feedback')->name('feedback.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.feedback.index');
-        })->name('index');
-    });
-    // MDO Escrot Exemption Routes
-    Route::prefix('mdo-escrot-exemption')->name('mdo-escrot-exemption.')->controller(MDOEscrotExemptionController::class)->group(function () {
-        Route::get('/', 'index')->name('index');
-        Route::get('/create', 'create')->name('create');
-        Route::post('/store', 'store')->name('store');
-        Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::post('/update', 'update')->name('update');
-        Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
-    });
-    
+   
 });
