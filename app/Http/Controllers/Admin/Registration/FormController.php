@@ -396,7 +396,7 @@ class FormController extends Controller
 
 
 
-    //finaalll
+    //finaallll
     public function submit(Request $request, $formId)
     {
         // dd($request->all());
