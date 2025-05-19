@@ -207,4 +207,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update', 'update')->name('update');
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
+    //feedback route
+    Route::prefix('feedback')->name('feedback.')->group(function () {
+        Route::get('/', function () {
+            return view('admin.feedback.index');
+        })->name('index');
+    });
 });
