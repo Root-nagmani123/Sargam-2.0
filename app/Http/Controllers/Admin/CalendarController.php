@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\{ClassSessionMaster, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster};
+use App\Models\{ClassSessionMaster, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent};
 use Illuminate\Support\Facades\Crypt;
 
 class CalendarController extends Controller
@@ -49,6 +49,178 @@ class CalendarController extends Controller
 
     return response()->json($modules);
 }
+public function store(Request $request)
+    {
+        // print_r($request->all());die;
+        $validated = $request->validate([
+        'Course_name' => 'required|integer',
+        'subject_name' => 'required|integer',
+        'subject_module' => 'required|integer',
+        'topic' => 'nullable|string',
+        'group_type' => 'required|string',
+        'faculty' => 'required|integer',
+        'faculty_type' => 'required|integer',
+        'vanue' => 'required|integer',
+        'shift' => 'required|integer',
+        'start_datetime' => 'nullable|date',
+        'end_datetime' => 'nullable|date',
+    ]);
+
+    $event = new CalendarEvent();
+ $event->course_master_pk = $request->Course_name;
+$event->subject_master_pk = $request->subject_name;
+$event->subject_module_master_pk = $request->subject_module;
+$event->subject_topic = $request->topic;
+$event->course_group_type_master = $request->group_type;
+$event->group_name = json_encode($request->type_names ?? []);
+$event->faculty_master = $request->faculty;
+$event->faculty_type = $request->faculty_type;
+$event->venue_id = $request->vanue;
+$event->class_session_master_pk = $request->shift;
+$event->fullday = $request->has('fullDayCheckbox') ? 1 : 0;
+$event->mannual_starttime = $request->start_datetime;
+$event->mannual_end_time = $request->end_datetime;
+$event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
+$event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
+$event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
+$event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
+$event->active_inactive = $request->active_inactive ?? 1;
+
+$event->save();
+
+    return response()->json(['status' => 'success', 'message' => 'Event created successfully']);
+    }
     
+    
+
+public function fullCalendarDetails(Request $request)
+{
+    $event = new CalendarEvent();
+    
+     $events = DB::table('timetable')
+        ->whereDate('mannual_starttime', '>=', $request->start)
+        ->whereDate('mannual_end_time', '<=', $request->end)
+        ->get();
+
+    // Array of some sample colors
+    $colors = ['#FF5733', '#33B5FF', '#28B463', '#AF7AC5', '#F39C12', '#E74C3C'];
+
+    // Assign random color to each event
+    $events = $events->map(function ($event) use ($colors) {
+        return [
+            'id' => $event->pk,
+            'title' => $event->subject_topic,
+            'start' => $event->mannual_starttime,
+            'end'   => $event->mannual_end_time,
+            'backgroundColor' => $colors[array_rand($colors)],  // background color for event
+            'borderColor' => $colors[array_rand($colors)],  // border color for event
+            'textColor' => '#fff',  // Text color for event (White text on colored background)
+        ];
+    });
+
+    return response()->json($events);
+}
+function SingleCalendarDetails(Request $request)
+{
+    $eventId = $request->id;
+
+   $event = DB::table('timetable')
+        ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+        ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+        ->where('timetable.pk', $eventId)
+        ->select(
+            'timetable.pk',
+            'timetable.subject_topic',
+            'timetable.mannual_starttime',
+            'timetable.mannual_end_time',
+            'faculty_master.full_name as faculty_name',
+            'venue_master.venue_name as venue_name'
+        )
+        ->first();
+
+    if ($event) {
+         return response()->json([
+        'id' => $event->pk,
+        'topic' => $event->subject_topic ?? '', // if topic exists
+        'start' => $event->mannual_starttime,
+        'end' => $event->mannual_end_time,
+        'faculty_name' => $event->faculty_name ?? '',
+            'venue_name' => $event->venue_name ?? '',
+    ]);
+    } else {
+        return response()->json(['error' => 'Event not found'], 404);
+    }
     
 }
+public function getGroupTypes(Request $request)
+{
+    $courseName = $request->course_id; // Yahan course_id me course_name aa raha hai
+
+    $groupTypes = DB::table('group_type_master_course_master_map as gmap')
+        ->join('course_group_type_master as cgroup', 'gmap.type_name', '=', 'cgroup.pk')
+        ->where('gmap.course_name', $courseName)
+        ->where('cgroup.active_inactive', 1)
+        ->where('gmap.active_inactive', 1)
+        ->select(
+            'gmap.pk',
+            'gmap.group_name',
+            'gmap.type_name as group_type_name',
+            'cgroup.type_name',
+        )
+        ->get();
+// print_r($groupTypes);die;
+    return response()->json($groupTypes);
+}
+function event_edit($id){
+     $event = CalendarEvent::findOrFail($id);
+    return response()->json($event);
+}
+    public function update_event(Request $request, $id)
+{
+    $validated = $request->validate([
+        'Course_name' => 'required|integer',
+        'subject_name' => 'required|integer',
+        'subject_module' => 'required|integer',
+        'topic' => 'nullable|string',
+        'group_type' => 'required|string',
+        'faculty' => 'required|integer',
+        'faculty_type' => 'required|integer',
+        'vanue' => 'required|integer',
+        'shift' => 'required|integer',
+        'start_datetime' => 'nullable|date',
+        'end_datetime' => 'nullable|date',
+    ]);
+
+    $event = CalendarEvent::findOrFail($id);
+    $event->course_master_pk = $request->Course_name;
+    $event->subject_master_pk = $request->subject_name;
+    $event->subject_module_master_pk = $request->subject_module;
+    $event->subject_topic = $request->topic;
+    $event->course_group_type_master = $request->group_type;
+    $event->group_name = json_encode($request->type_names ?? []);
+    $event->faculty_master = $request->faculty;
+    $event->faculty_type = $request->faculty_type;
+    $event->venue_id = $request->vanue;
+    $event->class_session_master_pk = $request->shift;
+    $event->fullday = $request->has('fullDayCheckbox') ? 1 : 0;
+    $event->mannual_starttime = $request->start_datetime;
+    $event->mannual_end_time = $request->end_datetime;
+    $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
+    $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
+    $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
+    $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
+    $event->active_inactive = $request->active_inactive ?? 1;
+
+    $event->save();
+
+    return response()->json(['status' => 'success', 'message' => 'Event updated successfully']);
+}
+public function delete_event($id)
+{
+    $event = CalendarEvent::findOrFail($id);
+    $event->delete();
+    return response()->json(['status' => 'success']);
+}
+
+}
+
