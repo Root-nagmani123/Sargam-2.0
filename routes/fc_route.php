@@ -38,5 +38,16 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     //Add dynamic column to table
     Route::get('/add-column', [ColumnController::class, 'showForm'])->name('admin.column.form');
     Route::post('/add-column', [ColumnController::class, 'addColumn'])->name('admin.column.add');
+
+    //home page
+    Route::get('/home', [FormController::class, 'home'])->name('forms.home');
+
+    //home page user
+    Route::get('/home', [FormController::class, 'homeUser'])->name('forms.home.user');
+
+    //main page
+    Route::get('/main_page', [FormController::class, 'main_page'])->name('forms.main_page');
+    //export
+    Route::get('/forms/export/{formid}', [FormController::class, 'exportfcformList'])->name('forms.export');
   
 });

@@ -189,5 +189,6 @@ Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('student-list', 'studentList')->name('student.list');
+        Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
     });
 });

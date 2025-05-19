@@ -28,6 +28,10 @@
                                     <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
                                         class="me-1"></iconify-icon> Import Excel
                                 </button>
+                                <a href="{{ route('group.mapping.export.student.list') }}"
+                                    class="btn btn-primary d-flex align-items-center">
+                                    <iconify-icon icon="material-symbols:sim-card-download-rounded" width="24" height="24"></iconify-icon> Export Excel
+                                </a>
                             </div>
                         </div>
                         
@@ -60,6 +64,10 @@
                                             <button type="button" class="btn btn-success" id="upload_import">
                                                 <i class="mdi mdi-upload"></i> Upload & Import
                                             </button>
+                                            <a href="{{ asset('assets/sample/group_mapping_sample.xlsx') }}"
+                                                class="btn btn-info" download>
+                                                <i class="mdi mdi-download"></i> Download Sample
+                                            </a>
                                         </div>
                                     </form>
                                     <div id="importErrors" class="alert  d-none ">
@@ -122,10 +130,11 @@
                                 <thead>
                                     <!-- start row -->
                                     <tr>
-                                        <th>S.No.</th>
-                                        <th>Group Name</th>
-                                        <th>Student Count</th>
-                                        <th>Action</th>
+                                        <th class="col">S.No.</th>
+                                        <th class="col">Group Name</th>
+                                        <th class="col">Student Count</th>
+                                        <th class="col">Action</th>
+                                        <th class="col">Status</th>
                                     </tr>
                                     <!-- end row -->
                                 </thead>
@@ -136,7 +145,7 @@
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $groupType->group_name ?? 'N/A' }}</td>
                                                 <td>{{ $groupType->student_course_group_map_count ?? '-' }}</td>
-                                                <td>
+                                                <td class="d-flex justify-content-start align-items-start gap-2">
                                                     <a 
                                                         href="{{ route('group.mapping.edit', 
                                                         ['id' => encrypt($groupType->pk)]) }}"
@@ -161,6 +170,12 @@
                                                             Delete
                                                         </button>
                                                     </form> --}}
+                                                    <a href="{{ route('group.mapping.export.student.list', ['id' => encrypt($groupType->pk)]) }}"
+                                                        class="btn btn-info btn-sm">
+                                                        <i class="mdi mdi-download"></i> Download Excel
+                                                    </a>
+                                                </td>
+                                                <td>
                                                     <div class="form-check form-switch d-inline-block">
                                                         <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                             data-table="group_type_master_course_master_map" data-column="active_inactive" data-id="{{ $groupType->pk }}" {{ $groupType->active_inactive == 1 ? 'checked' : '' }}>

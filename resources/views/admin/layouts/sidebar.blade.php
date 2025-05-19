@@ -44,6 +44,16 @@
                                                     </iconify-icon>
                                                 </a>
                                             </li>
+                                             <!-- Forms -->
+                                            <!-- --------------------------------------------------------------------------------------------------------- -->
+                                            <li class="mini-nav-item" id="mini-4">
+                                                <a href="javascript:void(0)" data-bs-toggle="tooltip"
+                                                    data-bs-custom-class="custom-tooltip" data-bs-placement="right"
+                                                    data-bs-title="Forms">
+                                                    <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
+                                                    </iconify-icon>
+                                                </a>
+                                            </li>
                                         </div>
                                     </div>
                                 </div>
@@ -326,6 +336,46 @@
                                     aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
                                     <span class="hide-menu">Course Group Type</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                    <!-- Forms -->
+                    <!-- ---------------------------------- -->
+                    <nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-4" data-simplebar="">
+                        <ul class="sidebar-menu" id="sidebarnav">
+                            <!-- ---------------------------------- -->
+                            <!-- Home -->
+                            <!-- ---------------------------------- -->
+                            <li class="nav-small-cap">
+                                <span class="hide-menu">Forms</span>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('forms.home.user') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Home Page</span>
+                                </a>
+                            </li>
+                             <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('forms.main_page') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Landing Page</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.column.form') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Manage DB</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('forms.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Registartion</span>
                                 </a>
                             </li>
                         </ul>
