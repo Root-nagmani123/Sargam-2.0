@@ -54,46 +54,25 @@
                                 <!-- end row -->
                             </thead>
                             <tbody>
-                                <tr class="odd">
-                                    <td>1</td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">feedback</h6>
-                                        </div>
-                                    </td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">feedback</h6>
-                                        </div>
-                                    </td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">feedback</h6>
-                                        </div>
-                                    </td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">
-                                                {{ \Illuminate\Support\Str::words($feedback->remarks ?? 'feedback', 15, '...') }}
-                                            </h6>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex justify-content-start align-items-start gap-2">
-                                            <a href="#" class="btn btn-success text-white btn-sm view-btn"
-                                                data-bs-toggle="modal" data-bs-target="#viewModal"
-                                                data-course="B.Tech Computer Science" data-faculty="Dr. Anjali Mehta"
-                                                data-subject="Data Structures" data-topic="Stacks and Queues"
-                                                data-rating="4" data-presentation="4" data-content="5"
-                                                data-remarks="Very clear explanations and engaging session.">
-                                                View
-                                            </a>
+                                    @foreach ($events as $key => $event)
+                                        <tr>
+                                            <td>{{ $key + 1 }}</td>
+                                            <td>{{ $event->course_name }}</td>
+                                            <td>{{ $event->faculty_name }}</td>
+                                            <td>{{ $event->subject_name }}</td>
+                                            <td>{{ \Illuminate\Support\Str::words($event->subject_topic, 10, '...') }}</td>
+                                            <td>
+                                                <button class="btn btn-success btn-sm view-btn" 
+                                                        data-event="{{ $event->event_id }}"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#viewModal">
+                                                    View
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                    </tbody>
 
-
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -193,6 +172,38 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const viewButtons = document.querySelectorAll('.view-btn');
+
+        viewButtons.forEach(btn => {
+            btn.addEventListener('click', function () {
+                const eventId = this.getAttribute('data-event');
+                const tbody = document.querySelector('#viewModal tbody');
+                tbody.innerHTML = `<tr><td colspan="3">Loading...</td></tr>`;
+
+                fetch(`/feedback/event-feedback/${eventId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.length > 0) {
+                            let rows = '';
+                            data.forEach((item, index) => {
+                                rows += `<tr>
+                                    <td>${index + 1}</td>
+                                    <td>${item.rating}</td>
+                                    <td>${item.remark}</td>
+                                </tr>`;
+                            });
+                            tbody.innerHTML = rows;
+                        } else {
+                            tbody.innerHTML = `<tr><td colspan="3">No feedback found.</td></tr>`;
+                        }
+                    });
+            });
+        });
+    });
+</script>
+
 
 
 
