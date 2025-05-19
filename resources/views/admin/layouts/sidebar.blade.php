@@ -347,6 +347,13 @@
                                     <span class="hide-menu">Course Group Type</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.mdo_duty_type.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">MDO Duty Type</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                     <!-- Forms -->
