@@ -133,6 +133,7 @@
                                         <th class="col">S.No.</th>
                                         <th class="col">Group Name</th>
                                         <th class="col">Student Count</th>
+                                         <th class="col">View/Download</th>
                                         <th class="col">Action</th>
                                         <th class="col">Status</th>
                                     </tr>
@@ -145,18 +146,25 @@
                                                 <td>{{ $loop->iteration }}</td>
                                                 <td>{{ $groupType->group_name ?? 'N/A' }}</td>
                                                 <td>{{ $groupType->student_course_group_map_count ?? '-' }}</td>
+                                                <td>
+                                                    <a 
+                                                        href="javascript:void(0)"
+                                                        class="btn btn-info btn-sm view-student"
+                                                        data-id="{{ encrypt($groupType->pk) }}"
+                                                    >View Student</a>
+                                                  
+                                                    <a href="{{ route('group.mapping.export.student.list', ['id' => encrypt($groupType->pk)]) }}"
+                                                        class="btn btn-info btn-sm">
+                                                        <i class="mdi mdi-download"></i> Download Excel
+                                                    </a>
+                                                </td>
                                                 <td class="d-flex justify-content-start align-items-start gap-2">
                                                     <a 
                                                         href="{{ route('group.mapping.edit', 
                                                         ['id' => encrypt($groupType->pk)]) }}"
                                                         class="btn btn-primary btn-sm"
                                                     >Edit</a>
-                                                    <a 
-                                                        href="javascript:void(0)"
-                                                        class="btn btn-info btn-sm view-student"
-                                                        data-id="{{ encrypt($groupType->pk) }}"
-                                                    >View Student</a>
-                                                    {{-- <form 
+                                                     <form 
                                                         action="{{ route('master.faculty.expertise.delete', 
                                                         ['id' => encrypt($groupType->pk)]) }}"
                                                         method="POST" class="d-inline">
@@ -169,12 +177,9 @@
                                                             }">
                                                             Delete
                                                         </button>
-                                                    </form> --}}
-                                                    <a href="{{ route('group.mapping.export.student.list', ['id' => encrypt($groupType->pk)]) }}"
-                                                        class="btn btn-info btn-sm">
-                                                        <i class="mdi mdi-download"></i> Download Excel
-                                                    </a>
+                                                    </form> 
                                                 </td>
+                                                
                                                 <td>
                                                     <div class="form-check form-switch d-inline-block">
                                                         <input class="form-check-input status-toggle" type="checkbox" role="switch"
