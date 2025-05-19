@@ -303,56 +303,6 @@ public function submitFeedback(Request $request)
     return redirect()->back()->with('success', 'Feedback submitted successfully!');
 }
 
-}
 
-public function submitFeedback(Request $request)
-{
-     $rules = [
-        'timetable_pk' => 'required|array',
-        'faculty_pk' => 'required|array',
-        'topic_name' => 'required|array',
-        'rating' => 'required|array',
-        'presentation' => 'required|array',
-        'content' => 'required|array',
-        'remarks' => 'required|array',
-    ];
-
-    // Validate all items for each index (nested validation)
-    foreach ($request->timetable_pk as $index => $value) {
-        $rules["rating.$index"] = 'required|integer|min:1|max:5';
-        $rules["presentation.$index"] = 'required|integer|min:1|max:5';
-        $rules["content.$index"] = 'required|integer|min:1|max:5';
-        $rules["remarks.$index"] = 'required|string|max:255';
-    }
-
-    $validated = $request->validate($rules);
-
-     $studentId = Auth::user()->id; // Or however you fetch student ID
-    $now = Carbon::now();
-
-    $timetablePks = $request->input('timetable_pk');
-    $facultyPks = $request->input('faculty_pk');
-    $topicNames = $request->input('topic_name');
-    $ratings = $request->input('rating');
-    $presentations = $request->input('presentation');
-    $contents = $request->input('content');
-    $remarks = $request->input('remarks');
-
-    for ($i = 0; $i < count($timetablePks); $i++) {
-        DB::table('topic_feedback')->insert([
-            'timetable_pk'        => $timetablePks[$i],
-            'student_master_pk'   => $studentId,
-            'topic_name'          => $topicNames[$i],
-            'faculty_pk'          => $facultyPks[$i],
-            'presentation'        => $presentations[$i] ?? null,
-            'content'             => $contents[$i] ?? null,
-            'remark'              => $remarks[$i] ?? null,
-            'created_date'        => $now,
-            'modified_date'       => $now,
-        ]);
-    }
-
-    return redirect()->back()->with('success', 'Feedback submitted successfully!');
-}
 
 }
