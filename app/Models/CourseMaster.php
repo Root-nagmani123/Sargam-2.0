@@ -21,5 +21,9 @@ class CourseMaster extends Model
         return $this->hasMany(CourseCordinatorMaster::class, 'courses_master_pk', 'pk');
     }
 
+    public function studentMaster()
+    {
+        return $this->hasMany(StudentMaster::class, 'course_master_pk', 'pk');
+    }
     
 }

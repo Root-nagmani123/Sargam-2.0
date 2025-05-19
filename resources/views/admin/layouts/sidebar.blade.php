@@ -247,14 +247,15 @@
                                                         <span class="hide-menu">Group Mapping</span>
                                                     </a>
                                                 </li>
-                                                {{-- <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('section.index') }}"
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('mdo-escrot-exemption.index') }}"
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:calendar-mark-line-duotone">
                                                         </iconify-icon>
-                                                        <span class="hide-menu">Group Mapping</span>
+                                                        <span class="hide-menu">MDO Escrot Exemption</span>
                                                     </a>
-                                                </li> --}}
+                                                </li>
+                                                
                                             </ul>
                                         </div>
                                     </div>

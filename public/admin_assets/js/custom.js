@@ -453,3 +453,80 @@ $(document).on('click', '.student-list-pagination .pagination a', function (e) {
 
 // End Group Mapping Modules
 
+// MDO Escrot Exemption
+let dualListbox; // To keep reference for later reinitialization
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Initialize DualListbox on page load
+    dualListbox = new DualListbox("#select", {
+        addEvent: function (value) {
+            
+        },
+        removeEvent: function (value) {
+            
+        },
+        availableTitle: "Available Students",
+        selectedTitle: "Selected Students",
+        addButtonText: "Move Right",
+        removeButtonText: "Move Left",
+        addAllButtonText: "Move All Right",
+        removeAllButtonText: "Move All Left",
+        draggable: true
+    });
+
+    $('.course-selected').on('change', function () {
+        let selectedCourses = $(this).val();
+
+        if (selectedCourses.length > 0) {
+            $.ajax({
+                url: routes.getStudentListAccordingToGroup,
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    selectedCourses: selectedCourses
+                },
+                success: function (response) {
+                    if (response.status) {
+                        
+                        const currentSelected = $('#select').val();
+                        $('#select').empty();
+
+                        // Append new options
+                        response.students.forEach(student => {
+                            $('#select').append(
+                                $('<option>', {
+                                    value: student.pk,
+                                    text: student.display_name
+                                })
+                            );
+                        });
+
+                        // Destroy the old dual listbox wrapper (if needed)
+                        $('.dual-listbox').remove(); // depends on your plugin structure
+
+                        // Reinitialize the DualListbox
+                        dualListbox = new DualListbox("#select", {
+                            addEvent: function (value) {},
+                            removeEvent: function (value) {},
+                            availableTitle: "Available Students",
+                            selectedTitle: "Selected Students",
+                            addButtonText: "Move Right",
+                            removeButtonText: "Move Left",
+                            addAllButtonText: "Move All Right",
+                            removeAllButtonText: "Move All Left",
+                            draggable: true
+                        });
+
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function () {
+                    alert('Error fetching student list');
+                }
+            });
+        }
+    });
+});
+
+// END MDO Escrot Exemption

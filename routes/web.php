@@ -17,7 +17,8 @@ use App\Http\Controllers\Admin\{
     SubjectMasterController,
     VenueMasterController,
     GroupMappingController,
-    CalendarController
+    CalendarController,
+    MDOEscrotExemptionController
 };
 
 Route::get('clear-cache', function () {
@@ -182,5 +183,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('student-list', 'studentList')->name('student.list');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
+    });
+
+    // MDO Escrot Exemption Routes
+    Route::prefix('mdo-escrot-exemption')->name('mdo-escrot-exemption.')->controller(MDOEscrotExemptionController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update', 'update')->name('update');
+        Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
 });
