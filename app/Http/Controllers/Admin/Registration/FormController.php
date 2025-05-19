@@ -16,6 +16,8 @@ use Maatwebsite\Excel\Facades\Excel;
 use Mpdf\Mpdf;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 class FormController extends Controller
 {
@@ -344,7 +346,7 @@ class FormController extends Controller
                 ->where('formid', $formId)
                 ->where('uid', $userId)
                 ->first();
-                // dd($existingSubmission);
+            // dd($existingSubmission);
 
             // Handle dynamic fields (field_*)
             $dynamicFields = collect($request->all())
@@ -364,7 +366,7 @@ class FormController extends Controller
                 $dynamicFields['formid'] = $formId;
                 $dynamicFields['uid'] = $userId;
                 $dynamicFields['timecreated'] = $timestamp;
-            // dd($dynamicFields);
+                // dd($dynamicFields);
 
                 if ($existingSubmission) {
                     DB::table('form_submission')
@@ -642,4 +644,96 @@ class FormController extends Controller
 
         return $id; // Return original ID if no mapping found
     }
+    public function homeUser()
+    {
+        $forms = DB::table('local_form')->orderBy('sortorder')->get();
+        return view('admin.forms.home_page', compact('forms'));
+    }
+    public function main_page()
+    {
+        $forms = DB::table('local_form')->orderBy('sortorder')->get();
+        return view('admin.forms.main_page', compact('forms'));
+
+    }
+
+    //export function 
+
+    // public function exportfcformList(Request $request, $formid)
+    // {
+    //     $statusval = $request->input('statusval');
+
+    //     // Build query
+    //     $query = DB::table('form_submission')->where('formid', $formid);
+    //     if ($statusval) {
+    //         $query->where('confirm_status', $statusval);
+    //     }
+    //     $records = $query->get();
+
+    //     // Get ordered column names
+    //     $columns = DB::select(
+    //         'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
+    //         ['form_submission']
+    //     );
+    //     $allColumns = array_map(fn($col) => $col->COLUMN_NAME, $columns);
+
+    //     $excluded = ['id', 'formid', 'timecreated'];
+    //     $fields = [];
+
+    //     foreach ($allColumns as $column) {
+    //         if (!in_array($column, $excluded)) {
+    //             $fields[] = $column;
+    //         }
+    //     }
+
+    //     // Optional: move 'uid' to front
+    //     if (!in_array('uid', $fields)) {
+    //         array_unshift($fields, 'uid');
+    //     }
+
+    //     return Excel::download(new FcformListExport($records, $fields), 'course_list.xlsx');
+    // }
+
+
+    public function exportfcformList(Request $request, $formid)
+    {
+        $formName = DB::table('local_form')->where('id', $formid)->value('name'); // adjust if your table/column names differ
+        $statusval = $request->input('statusval');
+        $format = $request->input('format'); // 'xlsx', 'csv', or 'pdf'
+
+        $query = DB::table('form_submission')->where('formid', $formid);
+        if ($statusval) {
+            $query->where('confirm_status', $statusval);
+        }
+        $records = $query->get();
+
+        $columns = DB::select(
+            'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
+            ['form_submission']
+        );
+        $allColumns = array_map(fn($col) => $col->COLUMN_NAME, $columns);
+
+        $excluded = ['id', 'formid', 'timecreated'];
+        $fields = array_filter($allColumns, fn($col) => !in_array($col, $excluded));
+
+        // Ensure 'uid' is first
+        $fields = array_values($fields);
+        if (($key = array_search('uid', $fields)) !== false) {
+            unset($fields[$key]);
+        }
+        array_unshift($fields, 'uid');
+
+        if ($format === 'csv') {
+            return Excel::download(new FcformListExport($records, $fields), $formName . '.csv', \Maatwebsite\Excel\Excel::CSV);
+        } elseif ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.forms.export.fcform_pdf', [
+                'records' => $records,
+                'fields' => $fields,
+                'formName' => $formName,
+            ])->setPaper('A4', 'landscape');
+            return $pdf->download($formName .'.pdf');
+        } else { // default Excel
+            return Excel::download(new FcformListExport($records, $fields),  $formName .'.xlsx');
+        }
+    }
 }
+

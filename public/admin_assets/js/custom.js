@@ -122,24 +122,38 @@ $(document).on('change', '.status-toggle', function () {
     let id_column = $checkbox.data('id_column');
     let status = $checkbox.is(':checked') ? 1 : 0;
 
-    // SweetAlert confirmation text based on status
-    let actionText = status === 1 ? 'activate' : 'deactivate';
+    if (!confirm('Are you sure you want to change the status?')) {
+        $(this).prop('checked', !$(this).prop('checked'));
+        return false;
+    }
+    let table = $(this).data('table');
+    let column = $(this).data('column');
+    let id = $(this).data('id');
+    let id_column =  $(this).data('id_column');
+    let status = $(this).is(':checked') ? 1 : 0;
 
-    Swal.fire({
-        title: 'Are you sure?',
-        text: `Are you sure? You want to ${actionText} this item?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: `Yes, ${actionText}`,
-        cancelButtonText: 'Cancel',
-        reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Proceed with AJAX call
-            updateStatus(table, column, id, id_column, status, $checkbox);
-        } else {
-            // Revert checkbox back
-            $checkbox.prop('checked', !status);
+    $.ajax({
+        url: routes.toggleStatus, // Update with correct route
+        type: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            table: table,
+            column: column,
+            id: id,
+            id_column: id_column,
+            status: status
+        },
+        success: function (response) {
+            $('#status-msg').html(`
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    ${response.message || 'Status updated successfully'}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `);
+            location.reload();
+        },
+        error: function () {
+            alert('Error updating status');
         }
     });
 

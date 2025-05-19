@@ -43,26 +43,24 @@ body {
 }
 
 .description {
-    font-size: 18px;
-    font-weight: bold;
-    color: #333;
-    margin: 0 auto 20px auto;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    background-color: #f4f4f4;
+    font-size: 20px;
+    font-weight: 700;
+    color: #000;
+    border-radius: 8px;
+    padding: 5px;
+    margin-bottom: 20px;
     text-align: center;
 }
 
 .section-title {
-    font-size: 20px;
-    font-weight: 700;
-    color: #ffffff;
-    background-color: #294b6a;
-    border-radius: 5px;
-    padding: 10px 15px;
-    margin-bottom: 20px;
-    text-align: center;
+      font-size: 18px;
+    font-weight: bold;
+    color: #000;
+    margin: 0 auto 20px auto;
+    padding: 5px;
+    border: 1px solid #008000;
+    border-radius: 8px;
+    background-color: #008000;
 }
 
 .section-container {

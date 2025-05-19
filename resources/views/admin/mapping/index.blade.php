@@ -51,31 +51,14 @@
                             <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
-                                        colspan="1" aria-sort="ascending"
-                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">
-                                        S.No.</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Programme Name</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Major Subject</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Topic</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Faculties</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Minor Subject</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Salary: activate to sort column ascending"
-                                        style="width: 85.8906px;">Action</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Salary: activate to sort column ascending"
-                                        style="width: 85.8906px;">Status</th>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Programme Name</th>
+                                    <th class="col">Major Subject</th>
+                                    <th class="col">Topic</th>
+                                    <th class="col">Faculties</th>
+                                    <th class="col">Minor Subject</th>
+                                    <th class="col">Action</th>
+                                    <th class="col">Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
