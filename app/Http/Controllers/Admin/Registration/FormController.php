@@ -17,6 +17,7 @@ use Mpdf\Mpdf;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\UploadedFile;
 
 
 class FormController extends Controller
@@ -259,72 +260,140 @@ class FormController extends Controller
         }
     }
 
+    // public function show($formId)
+    // {
+    //     // Get form details
+    //     $form = DB::table('local_form')
+    //         ->where('id', $formId)
+    //         ->where('visible', 1)
+    //         ->first();
+
+    //     if (!$form) {
+    //         abort(404, 'Form not found');
+    //     }
+
+    //     // Get form sections
+    //     $sections = DB::table('form_sections')
+    //         ->where('formid', $formId)
+    //         ->orderBy('sort_order')
+    //         ->get();
+
+    //     // Get form fields organized by section
+    //     $fieldsBySection = [];
+    //     $gridFields = [];
+
+    //     $fields = DB::table('form_data')
+    //         ->where('formid', $formId)
+    //         ->orderBy('section_id')
+    //         ->orderBy('row_index')
+    //         ->orderBy('col_index')
+    //         ->get();
+
+    //     foreach ($fields as $field) {
+    //         if ($field->format === 'table') {
+    //             $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
+    //         } else {
+    //             $gridFields[$field->section_id][] = $field;
+    //         }
+    //     }
+
+    //     // Get headers for table sections
+    //     $headersBySection = [];
+    //     $headerFields = DB::table('form_data')
+    //         ->where('formid', $formId)
+    //         ->where('format', 'table')
+    //         ->get();
+
+    //     foreach ($headerFields as $field) {
+    //         if (!isset($headersBySection[$field->section_id][$field->col_index])) {
+    //             $headersBySection[$field->section_id][$field->col_index] = $field->header;
+    //         }
+    //     }
+
+    //     // Get user submissions
+    //     $submissions = DB::table('form_submission')
+    //         ->where('formid', $formId)
+    //         ->where('uid', Auth::id())
+    //         ->get()
+    //         ->keyBy('fieldname');
+
+    //     return view('admin.forms.show', compact(
+    //         'form',
+    //         'sections',
+    //         'fieldsBySection',
+    //         'gridFields',
+    //         'headersBySection',
+    //         'submissions'
+    //     ));
+    // }
+
+
+
     public function show($formId)
-    {
-        // Get form details
-        $form = DB::table('local_form')
-            ->where('id', $formId)
-            ->where('visible', 1)
-            ->first();
+{
+    // Get all visible forms (for sidebar)
+    $allForms = DB::table('local_form')
+        ->where('visible', 1)
+        ->get();
 
-        if (!$form) {
-            abort(404, 'Form not found');
-        }
+    // Get selected form details
+    $form = DB::table('local_form')->where('id', $formId)->first();
 
-        // Get form sections
-        $sections = DB::table('form_sections')
-            ->where('formid', $formId)
-            ->orderBy('sort_order')
-            ->get();
-
-        // Get form fields organized by section
-        $fieldsBySection = [];
-        $gridFields = [];
-
-        $fields = DB::table('form_data')
-            ->where('formid', $formId)
-            ->orderBy('section_id')
-            ->orderBy('row_index')
-            ->orderBy('col_index')
-            ->get();
-
-        foreach ($fields as $field) {
-            if ($field->format === 'table') {
-                $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
-            } else {
-                $gridFields[$field->section_id][] = $field;
-            }
-        }
-
-        // Get headers for table sections
-        $headersBySection = [];
-        $headerFields = DB::table('form_data')
-            ->where('formid', $formId)
-            ->where('format', 'table')
-            ->get();
-
-        foreach ($headerFields as $field) {
-            if (!isset($headersBySection[$field->section_id][$field->col_index])) {
-                $headersBySection[$field->section_id][$field->col_index] = $field->header;
-            }
-        }
-
-        // Get user submissions
-        $submissions = DB::table('form_submission')
-            ->where('formid', $formId)
-            ->where('uid', Auth::id())
-            ->get()
-            ->keyBy('fieldname');
-
-        return view('admin.forms.show', compact(
-            'form',
-            'sections',
-            'fieldsBySection',
-            'gridFields',
-            'headersBySection',
-            'submissions'
-        ));
+    if (!$form) {
+        abort(404, 'Form not found');
     }
+
+    // Fetch sections for the selected form
+    $sections = DB::table('form_sections')
+        ->where('formid', $formId)
+        ->orderBy('sort_order')
+        ->get();
+
+    // Fetch fields
+    $fields = DB::table('form_data')
+        ->where('formid', $formId)
+        ->orderBy('section_id')
+        ->orderBy('row_index')
+        ->orderBy('col_index')
+        ->get();
+
+    $fieldsBySection = [];
+    $gridFields = [];
+
+    foreach ($fields as $field) {
+        if ($field->format === 'table') {
+            $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
+        } else {
+            $gridFields[$field->section_id][] = $field;
+        }
+    }
+
+    // Get headers
+    $headersBySection = [];
+    foreach ($fields as $field) {
+        if ($field->format === 'table') {
+            $headersBySection[$field->section_id][$field->col_index] = $field->header;
+        }
+    }
+
+    // Get user submissions
+    $submissions = DB::table('form_submission')
+        ->where('formid', $formId)
+        ->where('uid', Auth::id())
+        ->get()
+        ->keyBy('fieldname');
+
+    return view('admin.forms.show', compact(
+        'form',
+        'allForms',
+        'sections',
+        'fieldsBySection',
+        'gridFields',
+        'headersBySection',
+        'submissions'
+    ));
+}
+
 
 
     //finaalll
@@ -332,41 +401,43 @@ class FormController extends Controller
     {
         // dd($request->all());
         try {
+
+
             $userId = Auth::id();
             $timestamp = now()->timestamp;
-
-            // Delete previous submission
-            // DB::table('form_submission')
-            //     ->where('formid', $formId)
-            //     ->where('uid', $userId)
-            //     ->delete();
 
             // Check if a submission already exists
             $existingSubmission = DB::table('form_submission')
                 ->where('formid', $formId)
                 ->where('uid', $userId)
                 ->first();
-            // dd($existingSubmission);
 
             // Handle dynamic fields (field_*)
-            $dynamicFields = collect($request->all())
-                ->filter(fn($value, $key) => str_starts_with($key, 'field_'))
-                ->mapWithKeys(fn($value, $key) => [Str::replaceFirst('field_', '', $key) => $value])
-                ->toArray();
+            $dynamicFields = [];
 
-            // File handling (example for field_profile)
-            if ($request->hasFile('field_profile')) {
-                $dynamicFields['profile'] = $request->file('field_profile')
-                    ->store("form-uploads/{$formId}/{$userId}", 'public');
+            foreach ($request->all() as $key => $value) {
+                if (Str::startsWith($key, 'field_')) {
+                    if ($value instanceof UploadedFile) {
+                        // Optional validation
+                        $request->validate([
+                            $key => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx|max:5120', // 5MB
+                        ]);
+
+                        $filename = time() . '_' . $value->getClientOriginalName();
+                        $path = $value->storeAs('form-uploads', $filename, 'public');
+
+                        $dynamicFields[Str::replaceFirst('field_', '', $key)] = $path;
+                    } else {
+                        $dynamicFields[Str::replaceFirst('field_', '', $key)] = $value;
+                    }
+                }
             }
 
-            // Insert into main submission table if fields exist
             // Insert or Update form_submission
             if (!empty($dynamicFields)) {
                 $dynamicFields['formid'] = $formId;
                 $dynamicFields['uid'] = $userId;
                 $dynamicFields['timecreated'] = $timestamp;
-                // dd($dynamicFields);
 
                 if ($existingSubmission) {
                     DB::table('form_submission')
@@ -377,6 +448,53 @@ class FormController extends Controller
                     DB::table('form_submission')->insert($dynamicFields);
                 }
             }
+
+
+            // $userId = Auth::id();
+            // $timestamp = now()->timestamp;
+
+            // // Delete previous submission
+            // // DB::table('form_submission')
+            // //     ->where('formid', $formId)
+            // //     ->where('uid', $userId)
+            // //     ->delete();
+
+            // // Check if a submission already exists
+            // $existingSubmission = DB::table('form_submission')
+            //     ->where('formid', $formId)
+            //     ->where('uid', $userId)
+            //     ->first();
+            // // dd($existingSubmission);
+
+            // // Handle dynamic fields (field_*)
+            // $dynamicFields = collect($request->all())
+            //     ->filter(fn($value, $key) => str_starts_with($key, 'field_'))
+            //     ->mapWithKeys(fn($value, $key) => [Str::replaceFirst('field_', '', $key) => $value])
+            //     ->toArray();
+
+            // // File handling (example for field_profile)
+            // if ($request->hasFile('field_profile')) {
+            //     $dynamicFields['profile'] = $request->file('field_profile')
+            //         ->store("form-uploads", 'public');
+            // }
+
+            // // Insert into main submission table if fields exist
+            // // Insert or Update form_submission
+            // if (!empty($dynamicFields)) {
+            //     $dynamicFields['formid'] = $formId;
+            //     $dynamicFields['uid'] = $userId;
+            //     $dynamicFields['timecreated'] = $timestamp;
+            //     // dd($dynamicFields);
+
+            //     if ($existingSubmission) {
+            //         DB::table('form_submission')
+            //             ->where('formid', $formId)
+            //             ->where('uid', $userId)
+            //             ->update($dynamicFields);
+            //     } else {
+            //         DB::table('form_submission')->insert($dynamicFields);
+            //     }
+            // }
             // Handle dynamic table data if present
             $tableDataInserted = false;
 
@@ -415,7 +533,10 @@ class FormController extends Controller
 
                         // File upload detection
                         if ($request->hasFile($valueKey)) {
-                            $filePath = $request->file($valueKey)->store("form-uploads/{$formId}/{$userId}/tables", 'public');
+                            $filePath = $request->file($valueKey)->store("form-uploads" . $formId . $userId, 'public');
+                            dd($filePath);
+                            // $filePath = $request->file($valueKey)->store("form-uploads", 'public');
+
                             $fieldType = 'file';
                             $columnValue = null;
                         } elseif (is_array($columnValue)) {
@@ -653,7 +774,6 @@ class FormController extends Controller
     {
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
         return view('admin.forms.main_page', compact('forms'));
-
     }
      public function logo_page()
     {
@@ -736,10 +856,9 @@ class FormController extends Controller
                 'fields' => $fields,
                 'formName' => $formName,
             ])->setPaper('A4', 'landscape');
-            return $pdf->download($formName .'.pdf');
+            return $pdf->download($formName . '.pdf');
         } else { // default Excel
-            return Excel::download(new FcformListExport($records, $fields),  $formName .'.xlsx');
+            return Excel::download(new FcformListExport($records, $fields),  $formName . '.xlsx');
         }
     }
 }
-
