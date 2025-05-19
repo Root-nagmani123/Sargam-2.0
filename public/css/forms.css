@@ -45,8 +45,7 @@ body {
 .description {
     font-size: 20px;
     font-weight: 700;
-    color: #ffffff;
-    background-color: #af2910;
+    color: #000;
     border-radius: 8px;
     padding: 5px;
     margin-bottom: 20px;
@@ -56,13 +55,12 @@ body {
 .section-title {
       font-size: 18px;
     font-weight: bold;
-    color: #af2910;
+    color: #000;
     margin: 0 auto 20px auto;
     padding: 5px;
-    border: 1px solid #f4f4f4;
+    border: 1px solid #008000;
     border-radius: 8px;
-    background-color: #f4f4f4;
-    text-align: center;
+    background-color: #008000;
 }
 
 .section-container {
