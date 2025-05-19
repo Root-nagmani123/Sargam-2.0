@@ -17,7 +17,8 @@ use App\Http\Controllers\Admin\{
     SubjectMasterController,
     VenueMasterController,
     GroupMappingController,
-    CalendarController
+    CalendarController,
+    MDOEscrotExemptionController
 };
 
 Route::get('clear-cache', function () {
@@ -197,5 +198,13 @@ Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])
         Route::get('/', function () {
             return view('admin.feedback.index');
         })->name('index');
+    // MDO Escrot Exemption Routes
+    Route::prefix('mdo-escrot-exemption')->name('mdo-escrot-exemption.')->controller(MDOEscrotExemptionController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update', 'update')->name('update');
+        Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
 });

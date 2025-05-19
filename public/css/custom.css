@@ -5,3 +5,17 @@ body .select2-container {
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
+body .select2-container{
+    width: 100% !important;
+    /* overflow-x: hidden; */
+}
+
+.dual-listbox .dual-listbox__title,
+.dual-listbox .dual-listbox__item {
+    color: #29343d;
+}
+.dual-listbox .dual-listbox__button {
+    background-color: #29343d !important;
+    color: #fff;
+    font-weight: 600;
+}
