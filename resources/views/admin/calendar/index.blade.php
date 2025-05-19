@@ -181,60 +181,62 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="feedback_checkbox" id="feedback_checkbox" checked>
-                                            <label class="form-check-label" for="feedback_checkbox">
-                                                Feedback
-                                            </label>
-                                        </div>
-                                    </label>
+                            <div class="row py-3">
+                                <div class="col-md-3 mb-3">
+                                    <div>
+                                        <label class="form-label">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="1"
+                                                    name="feedback_checkbox" id="feedback_checkbox" checked>
+                                                <label class="form-check-label" for="feedback_checkbox">
+                                                    Feedback
+                                                </label>
+                                            </div>
+                                        </label>
 
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="remarkCheckbox" id="remarkCheckbox">
-                                            <label class="form-check-label" for="remarkCheckbox">
-                                                Remark
-                                            </label>
-                                        </div>
-                                    </label>
+                                <div class="col-md-3 mb-3">
+                                    <div>
+                                        <label class="form-label">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="1"
+                                                    name="remarkCheckbox" id="remarkCheckbox">
+                                                <label class="form-check-label" for="remarkCheckbox">
+                                                    Remark
+                                                </label>
+                                            </div>
+                                        </label>
 
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="ratingCheckbox" id="ratingCheckbox">
-                                            <label class="form-check-label" for="ratingCheckbox">
-                                                Ratting
-                                            </label>
-                                        </div>
-                                    </label>
+                                <div class="col-md-3 mb-3">
+                                    <div>
+                                        <label class="form-label">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="1"
+                                                    name="ratingCheckbox" id="ratingCheckbox">
+                                                <label class="form-check-label" for="ratingCheckbox">
+                                                    Ratting
+                                                </label>
+                                            </div>
+                                        </label>
 
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                            <label class="form-check-label" for="bio_attendanceCheckbox">
-                                                Bio Attendance
-                                            </label>
-                                        </div>
-                                    </label>
+                                <div class="col-md-3 mb-3">
+                                    <div>
+                                        <label class="form-label">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" value="1"
+                                                    name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
+                                                <label class="form-check-label" for="bio_attendanceCheckbox">
+                                                    Bio Attendance
+                                                </label>
+                                            </div>
+                                        </label>
 
+                                    </div>
                                 </div>
                             </div>
 
@@ -269,7 +271,7 @@
                             <span id="eventTitle">Event Title</span>:<span id="eventTopic"></span>
                         </h5>
                         <small class="text-muted" id="eventDate">Event Date</small><br>
-                       </div>
+                    </div>
                     <div>
                         <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="editEventBtn">
                             <i class="bi bi-pencil"></i>
@@ -282,16 +284,16 @@
                 </div>
 
                 <div class="modal-body">
-                <div class="mb-2">
-                    <i class="bi bi-person-fill me-2"></i>Faculty: <b><span id="eventfaculty"></span></b>
-                </div>
-                <div class="mb-2">
-                    <i class="bi bi-geo-alt-fill me-2"></i>Venue: <b><span id="eventVanue"></span></b>
-                </div>
-                <!-- <div class="mb-2">
+                    <div class="mb-2">
+                        <i class="bi bi-person-fill me-2"></i>Faculty: <b><span id="eventfaculty"></span></b>
+                    </div>
+                    <div class="mb-2">
+                        <i class="bi bi-geo-alt-fill me-2"></i>Venue: <b><span id="eventVanue"></span></b>
+                    </div>
+                    <!-- <div class="mb-2">
                     <i class="bi bi-globe me-2"></i> <span id="eventAudience">Public</span>
                 </div> -->
-            </div>
+                </div>
             </div>
         </div>
     </div>
@@ -578,8 +580,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     const endDate = new Date(data.end).toLocaleString();
                     $('#eventDate').html(
                         `<b>Start:</b> ${startDate} <br><b>End:</b> ${endDate}`);
-                        $('#eventfaculty').text(data.faculty_name ?? '');
-                            $('#eventVanue').text(data.venue_name ?? '');
+                    $('#eventfaculty').text(data.faculty_name ?? '');
+                    $('#eventVanue').text(data.venue_name ?? '');
                     $('#editEventBtn').attr('data-id', data.id);
                     $('#deleteEventBtn').attr('data-id', data.id);
 
@@ -648,16 +650,31 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 '<option value="">Select Subject Module</option>'
                                             );
                                     }
-                                    $('#Course_name').val(event.course_master_pk).trigger('change');
-                                waitForGroupTypeAndSet(event.course_group_type_master, function() {
-                                    // Checkboxes set karo
-                                    let groupNames = [];
-                                    try { groupNames = JSON.parse(event.group_name || '[]'); } catch (e) {}
-                                    groupNames.forEach(function(pk) {
-                                        $('#type_' + pk).prop('checked', true);
-                                    });
-                                });
-                                  
+                                    $('#Course_name').val(event
+                                        .course_master_pk).trigger(
+                                        'change');
+                                    waitForGroupTypeAndSet(event
+                                        .course_group_type_master,
+                                        function() {
+                                            // Checkboxes set karo
+                                            let groupNames = [];
+                                            try {
+                                                groupNames = JSON
+                                                    .parse(event
+                                                        .group_name ||
+                                                        '[]');
+                                            } catch (e) {}
+                                            groupNames.forEach(
+                                                function(pk) {
+                                                    $('#type_' +
+                                                            pk)
+                                                        .prop(
+                                                            'checked',
+                                                            true
+                                                        );
+                                                });
+                                        });
+
                                     $('#topic').val(event
                                         .subject_topic);
                                     $('#faculty').val(event
@@ -689,10 +706,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                     $('#eventModalLabel').text(
                                         'Edit Calendar Event');
-                                 $('.btn-update-event')
-                                    .show()
-                                    .data('id', event.pk)         // JS memory ke liye
-                                    .attr('data-id', event.pk);   // HTML attribute ke liye
+                                    $('.btn-update-event')
+                                        .show()
+                                        .data('id', event
+                                            .pk) // JS memory ke liye
+                                        .attr('data-id', event
+                                            .pk
+                                            ); // HTML attribute ke liye
                                     $('.btn-add-event').hide();
                                     $('#eventModal').modal('show');
 
@@ -709,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // $('#eventModal').modal('show');
             $('#eventModal').modal('show');
         },
-      
+
         eventRender: function(info) {
             // Custom rendering logic if needed, but normally FullCalendar should automatically handle color from JSON
         }
@@ -717,61 +737,65 @@ document.addEventListener('DOMContentLoaded', function() {
     calendar.render();
 
 
- $(document).on('click', '#deleteEventBtn', function() {
-    let eventId = $(this).attr('data-id');
-    if (!eventId) {
-       
-        alert('Event ID not found!');
-        return;
-    }
-    if (confirm('Are you sure you want to delete this event?')) {
-        $.ajax({
-            url: '/calendar/event-delete/' + eventId,
-            type: 'DELETE',
-            data: { _token: '{{ csrf_token() }}' },
-            success: function(response) {
-                alert('Event deleted successfully!');
-                $('#eventDetails').modal('hide');
-                // Calendar ko refresh karo
-                let calendarEl = document.getElementById('calendar');
-                if (calendarEl && calendarEl._fullCalendar) {
-                    calendarEl._fullCalendar.refetchEvents();
-                } else {
-                    location.reload();
+    $(document).on('click', '#deleteEventBtn', function() {
+        let eventId = $(this).attr('data-id');
+        if (!eventId) {
+
+            alert('Event ID not found!');
+            return;
+        }
+        if (confirm('Are you sure you want to delete this event?')) {
+            $.ajax({
+                url: '/calendar/event-delete/' + eventId,
+                type: 'DELETE',
+                data: {
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    alert('Event deleted successfully!');
+                    $('#eventDetails').modal('hide');
+                    // Calendar ko refresh karo
+                    let calendarEl = document.getElementById('calendar');
+                    if (calendarEl && calendarEl._fullCalendar) {
+                        calendarEl._fullCalendar.refetchEvents();
+                    } else {
+                        location.reload();
+                    }
+                },
+                error: function() {
+                    alert('Delete failed!');
                 }
-            },
-            error: function() {
-                alert('Delete failed!');
-            }
-        });
-    }
-});
+            });
+        }
+    });
 
 });
- $(document).on('click', '.btn-update-event', function(e) {
-        e.preventDefault();
-        let eventId = $(this).data('id');
-        if (!eventId) return alert('Event ID not found!');
-        $.ajax({
-            url: '/calendar/event-update/' + eventId,
-            method: 'POST',
-            data: $('#eventForm').serialize() + '&_method=PUT',
-            success: function() {
-                alert('Event updated successfully!');
-                $('#eventModal').modal('hide');
-                $('#eventForm')[0].reset();
-                location.reload();
-            },
-            error: function(xhr) {
-                if (xhr.status === 422) {
-                    let errors = xhr.responseJSON.errors;
-                    alert("Server Validation Failed:\n\n" + Object.values(errors).map(val => val.join('\n')).join('\n'));
-                } else {
-                    alert('Update failed!');
-                }
+$(document).on('click', '.btn-update-event', function(e) {
+    e.preventDefault();
+    let eventId = $(this).data('id');
+    if (!eventId) return alert('Event ID not found!');
+    $.ajax({
+        url: '/calendar/event-update/' + eventId,
+        method: 'POST',
+        data: $('#eventForm').serialize() + '&_method=PUT',
+        success: function() {
+            alert('Event updated successfully!');
+            $('#eventModal').modal('hide');
+            $('#eventForm')[0].reset();
+            location.reload();
+        },
+        error: function(xhr) {
+            if (xhr.status === 422) {
+                let errors = xhr.responseJSON.errors;
+                alert("Server Validation Failed:\n\n" + Object.values(errors).map(val => val.join(
+                    '\n')).join('\n'));
+            } else {
+                alert('Update failed!');
             }
-        });
+        }
     });
+});
+
 function waitForGroupTypeAndSet(value, callback, retries = 20) {
     if ($('#group_type option[value="' + value + '"]').length > 0) {
         $('#group_type').val(value).trigger('change');
