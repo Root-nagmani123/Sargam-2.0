@@ -50,4 +50,6 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     //export
     Route::get('/forms/export/{formid}', [FormController::class, 'exportfcformList'])->name('forms.export');
   
+    //registration
+    Route::get('/logo_page', [FormController::class, 'logo_page'])->name('forms.logo_page');
 });
