@@ -198,6 +198,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', function () {
             return view('admin.feedback.index');
         })->name('index');
+    });
     // MDO Escrot Exemption Routes
     Route::prefix('mdo-escrot-exemption')->name('mdo-escrot-exemption.')->controller(MDOEscrotExemptionController::class)->group(function () {
         Route::get('/', 'index')->name('index');
