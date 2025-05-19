@@ -56,6 +56,7 @@
                             <th class="col">To</th>
                             <th class="col">Submissions List</th>
                             <th class="col">Pending Submissions</th>
+                            <th class="col">Edit Form Fields</th>
                             <th class="col">Actions</th>
                             <th class="col">Status</th>
                             <th class="col">Position</th>
@@ -78,6 +79,11 @@
                             <td>
                                 <a href="{{ route('forms.show', $form->id) }}" class="btn btn-sm btn-info">
                                     Preview
+                                </a>
+                            </td>
+                              <td>
+                                <a href="{{ route('forms.fc_edit', $form->id) }}" class="btn btn-sm btn-warning">
+                                    Edit Fields
                                 </a>
                             </td>
 

@@ -22,6 +22,8 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     Route::post('/forms/save/{formid}', [FormController::class, 'saveform'])->name('forms.save');
 
     Route::get('/forms/{formId}', [FormController::class, 'show'])->name('forms.show');
+    // Route::get('/forms/show/{formId?}', [FormController::class, 'show'])->name('forms.show');
+
     Route::post('/forms/{formId}/submit', [FormController::class, 'submit'])->name('forms.submit');
 
     // Route::get('/forms/{id}/courselist', [FormController::class, 'courseList'])->name('forms.courseList');
@@ -49,6 +51,11 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     Route::get('/main_page', [FormController::class, 'main_page'])->name('forms.main_page');
     //export
     Route::get('/forms/export/{formid}', [FormController::class, 'exportfcformList'])->name('forms.export');
+
+     //Fc_form edit function
+
+    Route::get('/forms/{form_id}/fc-form_edit', [FormEditController::class, 'fc_edit'])->name('forms.fc_edit');
+    Route::post('/forms/fc-update', [FormEditController::class, 'fc_update'])->name('forms.fc_update');
   
     //registration
     Route::get('/logo_page', [FormController::class, 'logo_page'])->name('forms.logo_page');

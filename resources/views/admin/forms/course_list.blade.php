@@ -54,6 +54,7 @@
             </thead>
             <tbody>
                 @foreach ($records as $record)
+                    
                     @php $uid = $record->uid; @endphp
                     @if (isset($users[$uid]))
                     <tr>
@@ -67,17 +68,16 @@
                             @endphp
 
                             @if (in_array(strtolower($extension), ['jpg', 'jpeg', 'png', 'gif']))
-                            <img src="{{ asset('uploads/' . $value) }}" width="100" alt="Image">
+                            <img src="{{ asset('storage/' . $value) }}" width="100" alt="Image">
                             @elseif (strtolower($extension) === 'pdf')
-                            <a href="{{ asset('uploads/' . $value) }}" target="_blank">View PDF</a>
-                            @else
+                            <a href="{{ asset('storage/' . $value) }}" target="_blank "  style="color: #007bff; text-decoration: underline;">View PDF</a>                            @else
                             {{ $value }}
                             @endif
                         </td>
                         @endforeach
                         <td>
                             <a
-                                href="{{ route('forms.downloadpdf', ['formid' => $formid, 'uid' => $uid]) }}">Download</a>
+                                href="{{ route('forms.downloadpdf', ['formid' => $formid, 'uid' => $uid])  }}" style="color: #007bff; text-decoration: underline;">Download</a>
                         </td>
                         {{-- <td>{{ $record->confirm_status }}</td> --}}
                     </tr>

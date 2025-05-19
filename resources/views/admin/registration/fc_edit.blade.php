@@ -102,7 +102,8 @@
                                                         @foreach ($columns as $column)
                                                             <option value="{{ $column }}"
                                                                 {{ $field->formname == $column ? 'selected' : '' }}>
-                                                                {{ ucfirst(str_replace('_', ' ', $column)) }}
+                                                                {{-- {{ ucfirst(str_replace('_', ' ', $column)) }} --}}
+                                                                {{ $column }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -113,7 +114,7 @@
                                                 <div class="col-md-6">
                                                     <label>Type:</label>
                                                     <select name="field_type[]" class="form-control">
-                                                        @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file'] as $type)
+                                                        @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file','textarea','email','number','time'] as $type)
                                                             <option value="{{ $type }}"
                                                                 {{ $field->formtype === $type ? 'selected' : '' }}>
                                                                 {{ ucfirst($type) }}
@@ -164,14 +165,14 @@
                             Remove Section
                         </button>
                         <div class="btn-group">
-                            <button type="button" class="btn btn-secondary btn-move-up me-2"
+                            {{-- <button type="button" class="btn btn-secondary btn-move-up me-2"
                                 onclick="moveSection({{ $index }}, -1)">
                                 Move Up
-                            </button>
-                            <button type="button" class="btn btn-secondary btn-move-down"
+                            </button> --}}
+                            {{-- <button type="button" class="btn btn-secondary btn-move-down"
                                 onclick="moveSection({{ $index }}, 1)">
                                 Move Down
-                            </button>
+                            </button> --}}
                         </div>
 
                     </div>
@@ -254,7 +255,7 @@
         <div class="col-md-6">
             <label>Type:</label>
             <select name="field_type[]" class="form-control">
-                @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file'] as $type)
+                @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file','textarea','email','number','time'] as $type)
                     <option value="{{ $type }}">{{ ucfirst($type) }}</option>
                 @endforeach
             </select>
@@ -317,7 +318,7 @@
                         onclick="removeSection(this)">
                     Remove Section
                 </button>
-                <div class="btn-group">
+           <!--      <div class="btn-group">
                     <button type="button" class="btn btn-secondary btn-move-up" 
                             onclick="moveSection(${newSectionIndex}, -1)">
                         Move Up
@@ -326,7 +327,7 @@
                             onclick="moveSection(${newSectionIndex}, 1)">
                         Move Down
                     </button>
-                </div>
+                </div>-->
             </div>
         `;
 
@@ -400,6 +401,15 @@
         table td {
             padding: 0.75rem;
             vertical-align: top;
+        }
+
+        .form-check .form-check-input {
+            width: 1%;
+            height: 1.5em;
+            margin-top: 0.3em;
+            margin-right: 0.5em;
+            float: left;
+            margin-left: -1.813em;
         }
     </style>
 @endsection
