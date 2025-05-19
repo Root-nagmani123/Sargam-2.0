@@ -555,7 +555,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 success: function (response) {
                     if (response.status) {
-                        
+                        if(response.students.length === 0) {
+                            alert('No students found for the selected courses.');
+                            return;
+                        }
+
                         const currentSelected = $('#select').val();
                         $('#select').empty();
 
