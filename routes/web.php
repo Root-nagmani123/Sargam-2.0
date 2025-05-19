@@ -146,8 +146,15 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
         Route::get('/get-subject-modules', [CalendarController::class, 'getSubjectModules'])->name('get.subject.modules');
-            Route::post('/events', [CalendarController::class, 'store'])->name('event.store');
-            Route::get('/calendar-details', [CalendarController::class, 'calendarDetails'])->name('event.calendar-details');
+        Route::post('/events', [CalendarController::class, 'store'])->name('event.store');
+        Route::get('/full-calendar-details', [CalendarController::class, 'fullCalendarDetails'])->name('event.calendar-details');
+        Route::get('/single-calendar-details', [CalendarController::class, 'SingleCalendarDetails'])->name('event.Singlecalendar-details');
+
+        Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
+       Route::put('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
+        Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');      
+
+Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
     });
 
     // Area of Expertise

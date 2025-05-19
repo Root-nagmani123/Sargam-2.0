@@ -8,8 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class CalendarEvent extends Model
 {
     protected $table = 'timetable';
-public $timestamps = false; 
-protected $fillable = [
+
+
+    protected $primaryKey = 'pk'; // yahan apni actual primary key lagayein
+
+    public $timestamps = false; 
+    protected $fillable = [
     'course_master_pk',
     'subject_master_pk',
     'subject_module_master_pk',
