@@ -29,7 +29,7 @@ class FacultyRequest extends FormRequest
 
             "facultyType" => "",
             "firstName"=> "required|string|max:255",
-            "middlename"=> "required|string|max:255",
+            "middlename"=> "nullable|string|max:255",
             "lastname"=> "required|string|max:255",
             "fullname"=> "required|string|max:255",
             "gender"=>"required|string|in:male,female,other",
@@ -39,9 +39,11 @@ class FacultyRequest extends FormRequest
             "state"=> "required|string",
             "city"=> "required|string",
             "email"=> "required|email|max:255",
-            "alternativeEmail" => "required|email|max:255",
+            "alternativeEmail" => "nullable|email|max:255",
             "photo" => "required|mimes:jpg,jpeg,png|max:2048",
             "document" => "required|mimes:pdf,jpg,jpeg,png|max:2048",
+            "residence_address" => "nullable|string|max:255",
+            "permanent_address" => "nullable|string|max:255",
 
             // Qualification Details (array fields)
             'degree.*' => 'required|string|max:255',
@@ -66,9 +68,9 @@ class FacultyRequest extends FormRequest
             
 
             // Other information
-            'researchpublications' => 'required|mimes:pdf,jpg,jpeg|max:255',
-            'professionalmemberships' => 'required|mimes:pdf,jpg,jpeg|max:255',
-            'recommendationdetails' => 'required|mimes:pdf,jpg,jpeg|max:255',
+            'researchpublications' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
+            'professionalmemberships' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
+            'recommendationdetails' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
             'joiningdate'=> 'required|date',
             
             // Radio button
@@ -96,6 +98,8 @@ class FacultyRequest extends FormRequest
             'alternativeEmail.required' => 'Alternative email is required',
             'photo.required' => 'Photo is required',
             'document.required' => 'Document is required',
+            'residence_address.required' => 'Residence address is required',
+            'permanent_address.required' => 'Permanent address is required',
 
             // Qualification Details
             'degree.*.required' => 'Degree is required',

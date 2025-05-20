@@ -10,44 +10,44 @@ function hideLoader() {
 // Step 4 : Contact Information
 
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const deleteForms = document.querySelectorAll('.delete-form');
+document.addEventListener('DOMContentLoaded', function () {
+    const deleteForms = document.querySelectorAll('.delete-form');
 
-        deleteForms.forEach(form => {
-            form.addEventListener('submit', function (e) {
-                const status = form.getAttribute('data-status');
+    deleteForms.forEach(form => {
+        form.addEventListener('submit', function (e) {
+            const status = form.getAttribute('data-status');
 
-                if (status == "1") {
-                    e.preventDefault(); // Stop form submission
+            if (status == "1") {
+                e.preventDefault(); // Stop form submission
 
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Not Allowed',
-                        text: 'Active List cannt be delete.',
-                        confirmButtonColor: '#3085d6',
-                    });
-                } else {
-                    // For inactive venues, confirm deletion
-                    e.preventDefault(); // Stop default first
-                    Swal.fire({
-                        title: 'Are you sure?',
-                        text: "Do you really want to delete this?",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Yes, delete it!'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            form.submit(); // Submit manually
-                        }
-                    });
-                }
-            });
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Not Allowed',
+                    text: 'Active List cannt be delete.',
+                    confirmButtonColor: '#3085d6',
+                });
+            } else {
+                // For inactive venues, confirm deletion
+                e.preventDefault(); // Stop default first
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "Do you really want to delete this?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, delete it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit(); // Submit manually
+                    }
+                });
+            }
         });
     });
+});
 
-$(document).on('change', 'input[name="styled_max_checkbox"]', function() {
+$(document).on('change', 'input[name="styled_max_checkbox"]', function () {
     let address;
     let country;
     let state;
@@ -94,11 +94,11 @@ $(document).on('change', '.status-toggle', function () {
         $(this).prop('checked', !$(this).prop('checked'));
         return false;
     }
-     table = $(this).data('table');
-     column = $(this).data('column');
-     id = $(this).data('id');
-     id_column =  $(this).data('id_column');
-     status = $(this).is(':checked') ? 1 : 0;
+    table = $(this).data('table');
+    column = $(this).data('column');
+    id = $(this).data('id');
+    id_column = $(this).data('id_column');
+    status = $(this).is(':checked') ? 1 : 0;
     // SweetAlert confirmation text based on status
     let actionText = status === 1 ? 'activate' : 'deactivate';
 
@@ -151,15 +151,15 @@ $(document).on('change', '.status-toggle', function () {
 
 // Faculty Form Creation
 
-document.addEventListener('DOMContentLoaded', function() {
-        
+document.addEventListener('DOMContentLoaded', function () {
+
     $('#saveFacultyForm').click(function (e) {
-        
+
         const formData = new FormData();
         // remove all error class
         $('input').removeClass('is-invalid');
         $('span.text-danger').remove();
-        
+
         let facultyType = $('select[name="facultytype"]').val();
         let firstName = $('input[name="firstName"]').val();
         let middleName = $('input[name="middlename"]').val();
@@ -176,6 +176,8 @@ document.addEventListener('DOMContentLoaded', function() {
         let alternativeEmail = $('input[name="alternativeEmail"]').val();
         let photo = $('input[name="photo"]').val();
         let document = $('input[name="document"]').val();
+        let residence_address = $('input[name="residence_address"]').val();
+        let permanent_address = $('input[name="permanent_address"]').val();
 
         formData.append('facultyType', facultyType);
         formData.append('firstName', firstName);
@@ -191,6 +193,8 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('city', city);
         formData.append('email', email);
         formData.append('alternativeEmail', alternativeEmail);
+        formData.append('residence_address', residence_address);
+        formData.append('permanent_address', permanent_address);
 
         // photo is file
         if ($('input[name="photo"]')[0].files.length > 0) {
@@ -211,12 +215,12 @@ document.addEventListener('DOMContentLoaded', function() {
         let certFiles = [];
 
         // Collect all education fields
-        $('input[name="degree[]"]').each(function(index) {
+        $('input[name="degree[]"]').each(function (index) {
             degrees.push($(this).val());
             universities.push($('input[name="university_institution_name[]"]').eq(index).val());
             years.push($('input[name="year_of_passing[]"]').eq(index).val());
             percentages.push($('input[name="percentage_CGPA[]"]').eq(index).val());
-            
+
             // Handle certificate files
             let certInput = $('input[name="certificate[]"]')[index];
             if (certInput.files.length > 0) {
@@ -232,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('university_institution_name[]', universities[index]);
             formData.append('year_of_passing[]', years[index]);
             formData.append('percentage_CGPA[]', percentages[index]);
-            
+
             if (certFiles[index]) {
                 formData.append('certificate[]', certFiles[index]);
             } else {
@@ -249,7 +253,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let work = [];
 
         // Collect all experience fields
-        $('input[name="experience[]"]').each(function(index) {
+        $('input[name="experience[]"]').each(function (index) {
             experience.push($(this).val());
             specialization.push($('input[name="specialization[]"]').eq(index).val());
             institution.push($('input[name="institution[]"]').eq(index).val());
@@ -282,9 +286,9 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('ifsccode', ifscCode);
         formData.append('pannumber', panNumber);
 
-        if( facultyId != '' && facultyId != null && facultyId != undefined) {  
+        if (facultyId != '' && facultyId != null && facultyId != undefined) {
             formData.append('faculty_id', facultyId);
-        }  
+        }
 
         // Other information
         let researchPublications = $('input[name="researchpublications"]').val();
@@ -312,7 +316,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // faculties
         let faculties = [];
-        $('input[name="faculties[]"]:checked').each(function() {
+        $('input[name="faculties[]"]:checked').each(function () {
             faculties.push($(this).val());
         });
         faculties.forEach((faculty) => {
@@ -322,11 +326,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // current_sector
         let currentSector = $('input[name="current_sector"]:checked').val();
         formData.append('current_sector', currentSector);
-        
+
         // append csrf token
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
         formData.append('joiningdate', joiningDate);
-        
+
         let storeUrl = $('#facultyForm').data('store-url');
         let indexUrl = $('#facultyForm').data('index-url');
 
@@ -340,10 +344,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 showLoader();
             },
             success: function (response) {
-                
+
                 // Handle success response
                 if (response.status) {
-                    window.location.href = indexUrl;
+                    toastr.options = {
+                        timeOut: 50, // 1.5 seconds
+                        onHidden: function () {
+                            window.location.href = indexUrl;
+                        }
+                    };
+
+                    toastr.success(response.message);
+
                 } else {
                     toastr.error(response.message);
                 }
@@ -352,18 +364,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Error:', error);
                 if (error.status == 422) {
                     let errors = error.responseJSON.errors;
-                    
+
                     for (let key in errors) {
                         // Handle array fields (e.g., degree.0, university_institution_name.1)
                         if (key.includes('.')) {
                             const [fieldName, index] = key.split('.');
                             const inputField = $(`[name="${fieldName}[]"]`).eq(index);
-                            
+
                             if (inputField.length > 0) {
                                 const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
                                 inputField.addClass('is-invalid').after(errorDiv);
                             }
-                        } 
+                        }
                         // Handle regular fields
                         else {
                             const inputField = $(`[name="${key}"], select[name="${key}"]`);
@@ -435,7 +447,7 @@ $(document).ready(function () {
                 $('#upload_import').prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Uploading...');
             },
             success: function (response) {
-                return false;   
+                return false;
                 alert('File imported successfully!');
                 $('#importModal').modal('hide');
                 resetImportModal();
@@ -528,10 +540,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize DualListbox on page load
     dualListbox = new DualListbox("#select", {
         addEvent: function (value) {
-            
+
         },
         removeEvent: function (value) {
-            
+
         },
         availableTitle: "Available Students",
         selectedTitle: "Selected Students",
@@ -555,7 +567,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 success: function (response) {
                     if (response.status) {
-                        if(response.students.length === 0) {
+                        if (response.students.length === 0) {
                             alert('No students found for the selected courses.');
                             return;
                         }
@@ -578,8 +590,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         // Reinitialize the DualListbox
                         dualListbox = new DualListbox("#select", {
-                            addEvent: function (value) {},
-                            removeEvent: function (value) {},
+                            addEvent: function (value) { },
+                            removeEvent: function (value) { },
                             availableTitle: "Available Students",
                             selectedTitle: "Selected Students",
                             addButtonText: "Move Right",

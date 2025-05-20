@@ -187,6 +187,28 @@
                         </div>
                     </div>
                     <div class="col-md-6">
+                        <div class="mb-3">
+                        <x-input
+                            name="residence_address"
+                            label="Residence Address :"
+                            placeholder="Residence Address :"
+                            formLabelClass="form-label"
+                            />
+                        </div>
+                        
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                        <x-input
+                            name="permanent_address"
+                            label="Permanent Address :"
+                            placeholder="Permanent Address :"
+                            formLabelClass="form-label"
+                            />
+                        </div>
+                        
+                    </div>
+                    <div class="col-md-6">
 
                         <x-input
                             name="email"
