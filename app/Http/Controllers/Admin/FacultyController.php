@@ -17,7 +17,7 @@ class FacultyController extends Controller
 {
     public function index()
     {
-        $faculties = FacultyMaster::all();
+        $faculties = FacultyMaster::orderBy('pk', 'desc')->get();
         return view("admin.faculty.index", compact('faculties'));
     }
 
@@ -58,6 +58,8 @@ class FacultyController extends Controller
                 'city_master_pk' => $request->city,
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
+                'residence_address' => $request->residence_address,
+                'permanent_address' => $request->permanent_address,
 
                 // Store Bank Details
                 'bank_name' => $request->bankname,
@@ -97,6 +99,8 @@ class FacultyController extends Controller
             $facultyDetails['active_inactive'] = 1;
 
             $faculty = FacultyMaster::create($facultyDetails);
+
+            $this->generateFacultyCode($faculty, $request->facultyType);
 
             if ($faculty) {
 
@@ -218,6 +222,8 @@ class FacultyController extends Controller
                 'city_master_pk' => $request->city,
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
+                'residence_address' => $request->residence_address,
+                'permanent_address' => $request->permanent_address,
 
                 // Store Bank Details
                 'bank_name' => $request->bankname,
@@ -262,6 +268,8 @@ class FacultyController extends Controller
             }
             $faculty->update($facultyDetails);
 
+            $this->generateFacultyCode($faculty, $request->facultyType);
+
             if ($faculty) {
 
                 # Step : 2
@@ -285,7 +293,7 @@ class FacultyController extends Controller
                     }
 
                     $faculty->facultyQualificationMap()->delete();
-                    
+
                     foreach ($request->degree as $key => $degree) {
 
                         $degreeDetails[] = [
@@ -369,4 +377,33 @@ class FacultyController extends Controller
 
 
     }
+    function generateFacultyCode($faculty, $facultyType)
+    {
+        // Define prefix based on type
+        $prefixMap = [
+            1 => 'INT',
+            2 => 'GUE',
+            3 => 'RES',
+        ];
+
+        $prefix = $prefixMap[$facultyType] ?? '';
+
+        // Fetch latest code with this prefix
+        $latestFaculty = FacultyMaster::where('faculty_type', $facultyType)
+            ->where('faculty_code', 'like', $prefix . '-%')
+            ->orderByDesc('faculty_code')
+            ->first();
+
+        if ($latestFaculty && preg_match('/\d+$/', $latestFaculty->faculty_code, $matches)) {
+            $nextNumber = (int) $matches[0] + 1;
+        } else {
+            $nextNumber = 1;
+        }
+        
+        $facultyCode = $prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+        
+        $faculty->faculty_code = $facultyCode;
+        $faculty->save(); // or update() if you prefer
+    }
+
 }
