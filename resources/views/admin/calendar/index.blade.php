@@ -3,7 +3,25 @@
 @section('title', 'Calendar - Sargam | Lal Bahadur')
 
 @section('content')
+/* Add this inside <style> tag ya apne page ke head me */
 
+<style>
+    /* Month ke har din ke box ki height/padding badhao */
+    .fc .fc-daygrid-day-frame {
+        min-height: 110px !important;   /* Height badhao (adjust as needed) */
+        padding: 8px 4px !important;
+    }
+    .fc .fc-daygrid-day {
+        min-height: 110px !important;
+    }
+    /* Responsive ke liye thoda adjust */
+    @media (max-width: 600px) {
+        .fc .fc-daygrid-day-frame,
+        .fc .fc-daygrid-day {
+            min-height: 70px !important;
+        }
+    }
+</style>
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js'></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -301,6 +319,37 @@
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const fullDayCheckbox = document.getElementById('fullDayCheckbox');
+    const startInput = document.getElementById('start_datetime');
+    const endInput = document.getElementById('end_datetime');
+
+    fullDayCheckbox.addEventListener('change', function () {
+        if (this.checked) {
+            const today = new Date();
+
+            // Format for input[type="datetime-local"] => YYYY-MM-DDTHH:MM
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+
+            const startTime = '09:30';
+            const endTime = '17:30';
+
+            const datePrefix = `${yyyy}-${mm}-${dd}`;
+
+            startInput.value = `${datePrefix}T${startTime}`;
+            endInput.value = `${datePrefix}T${endTime}`;
+        } else {
+            // Clear the values if checkbox is unchecked (optional)
+            startInput.value = '';
+            endInput.value = '';
+        }
+    });
+});
+</script>
+
+<script>
 $(document).ready(function() {
 
     $('#subject_name').on('change', function() {
@@ -525,7 +574,23 @@ $('#eventForm').on('submit', function(e) {
         $('#end_datetime').focus();
         return false;
     }
+let now = new Date();
+let start = new Date(startDate);
+let end = new Date(endDate);
 
+// Check if start date is in the past
+if (start < now) {
+    alert("Start Date & Time cannot be in the past.");
+    $('#start_datetime').focus();
+    return false;
+}
+
+// Check if end date is before start date
+if (end <= start) {
+    alert("End Date & Time must be after Start Date & Time.");
+    $('#end_datetime').focus();
+    return false;
+}
 
 
     let formData = new FormData(this);
@@ -541,6 +606,7 @@ $('#eventForm').on('submit', function(e) {
             $('#eventModal').modal('hide');
             $('#eventForm')[0].reset();
             toggleDateTimeFields();
+            window.location.reload();
         },
         error: function(xhr) {
             if (xhr.status === 422) {
@@ -562,6 +628,24 @@ document.addEventListener('DOMContentLoaded', function() {
         selectable: true,
         displayEventTime: false,
         events: '/calendar/full-calendar-details', // Data fetch karna
+       eventContent: function(arg) {
+    // Get custom fields
+    const topic = arg.event.title || '';
+    const venue = arg.event.extendedProps.vanue || '';
+    const start = arg.event.start ? new Date(arg.event.start).toLocaleString() : '';
+    const end = arg.event.end ? new Date(arg.event.end).toLocaleString() : '';
+
+    // Design: topic (bold), venue (italic), start, end (each on new line)
+    let html = `
+        <div style="line-height:1.3">
+            <b>${topic}</b><br>
+            <span style="font-size:0.95em;color:#444;"><i>${venue}</i></span><br>
+            <span style="font-size:0.9em;">Start: ${start}</span><br>
+            <span style="font-size:0.9em;">End: ${end}</span>
+        </div>
+    `;
+    return { html: html };
+},
         eventClick: function(info) {
             let eventId = info.event.id;
 

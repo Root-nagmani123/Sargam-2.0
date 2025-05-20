@@ -244,6 +244,14 @@
                                                         <span class="hide-menu">Feedback</span>
                                                     </a>
                                                 </li>
+                                                 <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('feedback.get.studentFeedback') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:feed-bold-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Student Feedback</span>
+                                                    </a>
+                                                </li>
                                                 <li>
                                                     <span class="sidebar-divider"></span>
                                                 </li>
