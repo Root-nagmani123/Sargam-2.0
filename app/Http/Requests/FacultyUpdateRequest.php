@@ -106,6 +106,7 @@ class FacultyUpdateRequest extends FormRequest
             'year_of_passing.*.required' => 'Year of passing is required',
             'percentage_CGPA.*.required' => 'Percentage/CGPA is required',
             'certificate.*.required' => 'Certificates are required',
+            'certificate.*.mimes' => 'Certificates must be a file of type: pdf, jpg, jpeg, png.',
 
             // Experience Details
             'experience.*.required' => 'Experience is required',
