@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class FormEditController extends Controller
 {
@@ -100,7 +101,7 @@ class FormEditController extends Controller
                     : $temp_section_id;
 
                 // Determine if this is a table format field
-                $is_table_format = in_array($request->field_type[$index], ['Label', 'View/Download', 'Radio Button','Textarea', 'Checkbox', 'Select Box']);
+                $is_table_format = in_array($request->field_type[$index], ['Label', 'View/Download', 'Radio Button', 'Textarea', 'Checkbox', 'Select Box']);
 
                 if ($field_id === 'new') {
                     // Insert new field
@@ -196,6 +197,107 @@ class FormEditController extends Controller
             DB::rollBack();
 
             return back()->with('error', 'Error updating form: ' . $e->getMessage());
+        }
+    }
+
+
+    //registration logo page method
+
+    public function LogoCreate()
+    {
+        $data = DB::table('registration_logo')->first(); 
+        return view('admin.forms.logo_page', compact('data'));
+    }
+
+    public function LogoUpdate(Request $request)
+    {
+        //     $request->validate([
+        //         'logo1' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        //         'logo2' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        //         'logo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        //         'logo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        //         'heading' => 'required|string|max:255',
+        //         'sub_heading' => 'required|string|max:255',
+        //     ]);
+
+        //     $data = DB::table('registration_logo')->first();
+
+        //     // Handle uploads
+        //     $logo1 = $request->file('logo1') ? $request->file('logo1')->store('logos', 'public') : ($data->logo1 ?? null);
+        //     $logo2 = $request->file('logo2') ? $request->file('logo2')->store('logos', 'public') : ($data->logo2 ?? null);
+        //     $logo3 = $request->file('logo3') ? $request->file('logo3')->store('logos', 'public') : ($data->logo3 ?? null);
+        //     $logo4 = $request->file('logo4') ? $request->file('logo4')->store('logos', 'public') : ($data->logo4 ?? null);
+
+        //     $formData = [
+        //         'logo1' => $logo1,
+        //         'logo2' => $logo2,
+        //         'logo3' => $logo3,
+        //         'logo4' => $logo4,
+        //         'heading' => $request->heading,
+        //         'sub_heading' => $request->sub_heading,
+        //         'updated_at' => now(),
+        //     ];
+
+        //     if ($data) {
+        //         DB::table('registration_logo')->where('id', $data->id)->update($formData);
+        //         return redirect()->back()->with('success', 'Registration Page updated successfully!');
+        //     } else {
+        //         $formData['created_at'] = now();
+        //         DB::table('registration_logo')->insert($formData);
+        //         return redirect()->back()->with('success', 'Registration Page created successfully!');
+        //     }
+        // }
+
+        $request->validate([
+            'logo1' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'logo2' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'logo3' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'logo4' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'heading' => 'required|string|max:255',
+            'sub_heading' => 'required|string|max:255',
+        ]);
+
+        $data = DB::table('registration_logo')->first();
+
+        $formData = [
+            'heading' => $request->heading,
+            'sub_heading' => $request->sub_heading,
+            'updated_at' => now(),
+        ];
+
+        for ($i = 1; $i <= 4; $i++) {
+            $logoField = "logo$i";
+            $removeField = "remove_logo$i";
+
+            if ($request->has($removeField)) {
+                // Remove image from storage
+                if (!empty($data->$logoField)) {
+                    Storage::disk('public')->delete($data->$logoField);
+                }
+                $formData[$logoField] = null;
+            } elseif ($request->file($logoField)) {
+                // Upload new image
+                $path = $request->file($logoField)->store('logos', 'public');
+
+                // Delete old one if exists
+                if (!empty($data->$logoField)) {
+                    Storage::disk('public')->delete($data->$logoField);
+                }
+
+                $formData[$logoField] = $path;
+            } else {
+                // Keep existing
+                $formData[$logoField] = $data->$logoField ?? null;
+            }
+        }
+
+        if ($data) {
+            DB::table('registration_logo')->where('id', $data->id)->update($formData);
+            return redirect()->back()->with('success', 'Registration Page updated successfully!');
+        } else {
+            $formData['created_at'] = now();
+            DB::table('registration_logo')->insert($formData);
+            return redirect()->back()->with('success', 'Registration Page created successfully!');
         }
     }
 }

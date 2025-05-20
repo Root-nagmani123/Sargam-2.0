@@ -389,10 +389,10 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('forms.logo_page') }}">
+                                <a class="sidebar-link" href="{{ route('registration-page.create') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
-                                    <span class="hide-menu">Registration Page</span>
+                                    <span class="hide-menu"> Manage Logo</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
