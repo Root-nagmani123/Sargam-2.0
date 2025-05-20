@@ -52,11 +52,15 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     //export
     Route::get('/forms/export/{formid}', [FormController::class, 'exportfcformList'])->name('forms.export');
 
-     //Fc_form edit function
+    //Fc_form edit function
 
     Route::get('/forms/{form_id}/fc-form_edit', [FormEditController::class, 'fc_edit'])->name('forms.fc_edit');
     Route::post('/forms/fc-update', [FormEditController::class, 'fc_update'])->name('forms.fc_update');
-  
-    //registration
-    Route::get('/logo_page', [FormController::class, 'logo_page'])->name('forms.logo_page');
+
+
+    //logo registration
+
+    Route::get('/admin/registration-page/create', [FormEditController::class, 'LogoCreate'])->name('registration-page.create');
+    Route::post('/admin/registration-page/store', [FormEditController::class, 'LogoUpdate'])->name('registration-page.store');
+    
 });
