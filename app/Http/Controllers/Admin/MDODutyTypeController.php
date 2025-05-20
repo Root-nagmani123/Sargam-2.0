@@ -31,9 +31,15 @@ class MDODutyTypeController extends Controller
             $request->validate([
                 'mdo_duty_type_name' => 'required|string|max:255'
             ]);
-            MDODutyTypeMaster::create([
-                'mdo_duty_type_name' => $request->mdo_duty_type_name
-            ]);
+
+            if( $request->id ) {
+                $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($request->id));
+                $mdoDutyType->update([
+                    'mdo_duty_type_name' => $request->mdo_duty_type_name
+                ]);
+                return redirect()->route('master.mdo_duty_type.index')->with('success', 'MDO Duty Type updated successfully');
+            }
+            MDODutyTypeMaster::create(['mdo_duty_type_name' => $request->mdo_duty_type_name]);
             return redirect()->route('master.mdo_duty_type.index')->with('success', 'MDO Duty Type created successfully');
         } catch (\Exception $e) {
             return redirect()->back()->withErrors($e->getMessage());

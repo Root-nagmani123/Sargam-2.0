@@ -37,7 +37,7 @@
                 <div class="mb-3">
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit" id="saveFacultyForm">
                         <i class="material-icons menu-icon">save</i>
-                        Save
+                        {{ !empty($mdoDutyType) ? 'Update' : 'Save' }}
                     </button>
                     <a href="{{ route('master.mdo_duty_type.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
                         <i class="material-icons menu-icon">arrow_back</i>
