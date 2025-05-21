@@ -5,9 +5,8 @@ use App\Http\Controllers\Admin\{
     LocationController, 
     ClassSessionMasterController, 
     CourseGroupTypeController, 
-    MDODutyTypeController
 };
-use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
+use App\Http\Controllers\Admin\Master\{FacultyTypeMasterController, MDODutyTypeController};
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
 
