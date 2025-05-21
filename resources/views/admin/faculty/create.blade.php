@@ -16,13 +16,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            @php 
-                                $facultyTypeList = [
-                                    '1' => 'Internal',
-                                    '2' => 'Guest',
-                                    '3' => 'Research',
-                                ];
-                            @endphp
+                            
                             <x-select 
                                 name="facultytype" 
                                 label="Faculty Type :" 

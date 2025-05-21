@@ -2,17 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Http\Requests\FacultyUpdateRequest;
-use App\Models\{Country, State, City};
-use App\Models\District;
+use Auth;
+use Storage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use App\Http\Requests\FacultyRequest;
-use App\Models\{FacultyMaster, FacultyQualificationMap, FacultyExperienceMap, FacultyExpertiseMaster, FacultyExpertiseMap};
-use Storage;
 use Illuminate\Support\Facades\DB;
-use Auth;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\FacultyRequest;
+use App\Http\Requests\FacultyUpdateRequest;
+use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificationMap, FacultyExperienceMap, FacultyExpertiseMaster, FacultyExpertiseMap, FacultyTypeMaster};
 class FacultyController extends Controller
 {
     public function index()
@@ -23,13 +21,14 @@ class FacultyController extends Controller
 
     public function create()
     {
-        $faculties = FacultyExpertiseMaster::where('active_inactive', 1)->pluck('expertise_name', 'pk')->toArray();
-        $country = Country::pluck('country_name', 'pk')->toArray();
-        $state = State::pluck('state_name', 'pk')->toArray();
-        $district = District::pluck('district_name', 'pk')->toArray();
-        $city = City::pluck('city_name', 'pk')->toArray();
+        $facultyTypeList    = FacultyTypeMaster::pluck('faculty_type_name', 'pk')->toArray();
+        $faculties          = FacultyExpertiseMaster::where('active_inactive', 1)->pluck('expertise_name', 'pk')->toArray();
+        $country            = Country::pluck('country_name', 'pk')->toArray();
+        $state              = State::pluck('state_name', 'pk')->toArray();
+        $district           = District::pluck('district_name', 'pk')->toArray();
+        $city               = City::pluck('city_name', 'pk')->toArray();
 
-        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district'));
+        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList'));
     }
 
     public function store(FacultyRequest $request)
@@ -189,11 +188,11 @@ class FacultyController extends Controller
         if (!$faculty) {
             return redirect()->route('faculty.index')->with('error', 'Faculty not found');
         }
-        $faculties = FacultyExpertiseMaster::where('active_inactive', 1)->pluck('expertise_name', 'pk')->toArray();
-        $country = Country::pluck('country_name', 'pk')->toArray();
-        $state = State::pluck('state_name', 'pk')->toArray();
-        $district = District::pluck('district_name', 'pk')->toArray();
-        $city = City::pluck('city_name', 'pk')->toArray();
+        $faculties  = FacultyExpertiseMaster::where('active_inactive', 1)->pluck('expertise_name', 'pk')->toArray();
+        $country    = Country::pluck('country_name', 'pk')->toArray();
+        $state      = State::pluck('state_name', 'pk')->toArray();
+        $district   = District::pluck('district_name', 'pk')->toArray();
+        $city       = City::pluck('city_name', 'pk')->toArray();
 
         $facultExpertise = $faculty->facultyExpertiseMap->isNotEmpty() ? $faculty->facultyExpertiseMap->pluck('faculty_expertise_pk')->toArray() : [];
         return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise'));
@@ -208,28 +207,28 @@ class FacultyController extends Controller
             // Store Faculty Details
 
             $facultyDetails = [
-                'faculty_type' => $request->facultyType,
-                'first_name' => $request->firstName,
-                'middle_name' => $request->middlename,
-                'last_name' => $request->lastname,
-                'full_name' => $request->fullname,
-                'gender' => $request->gender,
-                'landline_no' => $request->landline,
-                'mobile_no' => $request->mobile,
+                'faculty_type'  => $request->facultyType,
+                'first_name'    => $request->firstName,
+                'middle_name'   => $request->middlename,
+                'last_name'     => $request->lastname,
+                'full_name'     => $request->fullname,
+                'gender'        => $request->gender,
+                'landline_no'   => $request->landline,
+                'mobile_no'        => $request->mobile,
                 'country_master_pk' => $request->country,
-                'state_master_pk' => $request->state,
+                'state_master_pk'   => $request->state,
                 'state_district_mapping_pk' => $request->district,
-                'city_master_pk' => $request->city,
-                'email_id' => $request->email,
-                'alternate_email_id' => $request->alternativeEmail,
-                'residence_address' => $request->residence_address,
-                'permanent_address' => $request->permanent_address,
+                'city_master_pk'        => $request->city,
+                'email_id'              => $request->email,
+                'alternate_email_id'    => $request->alternativeEmail,
+                'residence_address'     => $request->residence_address,
+                'permanent_address'     => $request->permanent_address,
 
                 // Store Bank Details
-                'bank_name' => $request->bankname,
-                'Account_No' => $request->accountnumber,
-                'IFSC_Code' => $request->ifsccode,
-                'PAN_No' => $request->pannumber,
+                'bank_name'             => $request->bankname,
+                'Account_No'            => $request->accountnumber,
+                'IFSC_Code'             => $request->ifsccode,
+                'PAN_No'                => $request->pannumber,
             ];
 
 
@@ -255,11 +254,10 @@ class FacultyController extends Controller
 
             // Joining Date
             $facultyDetails['joining_date'] = Carbon::parse($request->joiningdate);
-
-            $facultyDetails['created_by'] = Auth::id();
+            $facultyDetails['created_by']   = Auth::id();
             $facultyDetails['faculty_sector'] = $request->current_sector;
 
-            $facultyDetails['last_update'] = now();
+            $facultyDetails['last_update']   = now();
             $facultyDetails['active_inactive'] = 1;
 
             $faculty = FacultyMaster::find($request->faculty_id);
@@ -379,18 +377,10 @@ class FacultyController extends Controller
     }
     function generateFacultyCode($faculty, $facultyType)
     {
-        // Define prefix based on type
-        $prefixMap = [
-            1 => 'INT',
-            2 => 'GUE',
-            3 => 'RES',
-        ];
-
-        $prefix = $prefixMap[$facultyType] ?? '';
+        $prefix = FacultyTypeMaster::where('pk', $facultyType)->pluck('shot_faculty_type_name')->first();
 
         // Fetch latest code with this prefix
-        $latestFaculty = FacultyMaster::where('faculty_type', $facultyType)
-            ->where('faculty_code', 'like', $prefix . '-%')
+        $latestFaculty = FacultyMaster::where('faculty_code', 'like', $prefix . '-%')
             ->orderByDesc('faculty_code')
             ->first();
 
@@ -399,9 +389,9 @@ class FacultyController extends Controller
         } else {
             $nextNumber = 1;
         }
-        
+
         $facultyCode = $prefix . '-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
-        
+
         $faculty->faculty_code = $facultyCode;
         $faculty->save(); // or update() if you prefer
     }
