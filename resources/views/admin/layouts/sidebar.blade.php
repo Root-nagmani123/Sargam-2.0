@@ -362,6 +362,13 @@
                                     <span class="hide-menu">MDO Duty Type</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.faculty.type.master.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">Faculty Type</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                     <!-- Forms -->
