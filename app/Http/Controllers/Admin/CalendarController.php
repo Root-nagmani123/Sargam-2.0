@@ -291,18 +291,18 @@ public function submitFeedback(Request $request)
         'timetable_pk' => 'required|array',
         'faculty_pk' => 'required|array',
         'topic_name' => 'required|array',
-        'rating' => 'required|array',
+        'rating' => 'nullable|array',
         'presentation' => 'required|array',
         'content' => 'required|array',
-        'remarks' => 'required|array',
+        'remarks' => 'nullable|array',
     ];
 
     // Validate all items for each index (nested validation)
     foreach ($request->timetable_pk as $index => $value) {
-        $rules["rating.$index"] = 'required|integer|min:1|max:5';
+        $rules["rating.$index"] = 'nullable|integer|min:1|max:5';
         $rules["presentation.$index"] = 'required|integer|min:1|max:5';
         $rules["content.$index"] = 'required|integer|min:1|max:5';
-        $rules["remarks.$index"] = 'required|string|max:255';
+        $rules["remarks.$index"] = 'nullable|string|max:255';
     }
 
     $validated = $request->validate($rules);
@@ -322,12 +322,12 @@ public function submitFeedback(Request $request)
         DB::table('topic_feedback')->insert([
             'timetable_pk'        => $timetablePks[$i],
             'student_master_pk'   => $studentId,
-            'topic_name'          => $topicNames[$i],
+            'topic_name'          => $topicNames[$i] ?? '0',
             'faculty_pk'          => $facultyPks[$i],
             'presentation'        => $presentations[$i] ?? null,
             'content'             => $contents[$i] ?? null,
-            'remark'              => $remarks[$i] ?? null,
-            'rating'              => $ratings[$i] ?? null,
+            'remark'              => $remarks[$i] ?? 0,
+            'rating'              => $ratings[$i] ?? 0,
             'created_date'        => $now,
             'modified_date'       => $now,
         ]);
