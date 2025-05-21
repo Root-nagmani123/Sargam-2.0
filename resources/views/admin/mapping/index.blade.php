@@ -113,24 +113,9 @@
                                         </div>
                                     </td>
                                 </tr>
+                                
                             </tbody>
                         </table>
-                        <div class="dataTables_info" id="zero_config_info" role="status" aria-live="polite">Showing 1 to
-                            10 of 57 entries</div>
-                        <div class="dataTables_paginate paging_simple_numbers" id="zero_config_paginate"><a
-                                class="paginate_button previous disabled" aria-controls="zero_config"
-                                aria-disabled="true" role="link" data-dt-idx="previous" tabindex="-1"
-                                id="zero_config_previous">Previous</a><span><a class="paginate_button current"
-                                    aria-controls="zero_config" role="link" aria-current="page" data-dt-idx="0"
-                                    tabindex="0">1</a><a class="paginate_button " aria-controls="zero_config"
-                                    role="link" data-dt-idx="1" tabindex="0">2</a><a class="paginate_button "
-                                    aria-controls="zero_config" role="link" data-dt-idx="2" tabindex="0">3</a><a
-                                    class="paginate_button " aria-controls="zero_config" role="link" data-dt-idx="3"
-                                    tabindex="0">4</a><a class="paginate_button " aria-controls="zero_config"
-                                    role="link" data-dt-idx="4" tabindex="0">5</a><a class="paginate_button "
-                                    aria-controls="zero_config" role="link" data-dt-idx="5" tabindex="0">6</a></span><a
-                                class="paginate_button next" aria-controls="zero_config" role="link" data-dt-idx="next"
-                                tabindex="0" id="zero_config_next">Next</a></div>
                     </div>
                 </div>
             </div>

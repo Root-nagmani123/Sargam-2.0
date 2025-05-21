@@ -59,10 +59,9 @@
     </div>
 
     <hr>
-    <div class="mb-3">
-        <button class="btn btn-primary float-end" type="submit">
-            <i class="material-icons menu-icon">send</i> Submit
-        </button>
+    <div class="mb-3 text-end">
+        <button class="btn btn-primary" type="submit">Submit</button>
+        <a href="{{ route('subject-module.index') }}" class="btn btn-secondary">Back</a>
     </div>
 </form>
 

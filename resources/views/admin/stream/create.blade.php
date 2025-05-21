@@ -40,13 +40,13 @@
                 @if(old('stream_name'))
                     @foreach(old('stream_name') as $key => $value)
                         <div class="row my-2">
-                            <div class="col-sm-10">
+                            <div class="col-11">
                                 <input type="text" name="stream_name[]" class="form-control @error('stream_name.' . $key) is-invalid @enderror" value="{{ $value }}" placeholder="Stream" required>
                                 @error('stream_name.' . $key)
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="col-sm-2 d-flex align-items-end">
+                            <div class="col-1 d-flex align-items-end">
                                 <button type="button" class="btn btn-danger" onclick="removeField(this)">
                                     <i class="material-icons menu-icon">delete</i>
                                 </button>
@@ -55,10 +55,10 @@
                     @endforeach
                 @else
                     <div class="row my-2">
-                        <div class="col-sm-10">
+                        <div class="col-11">
                             <input type="text" name="stream_name[]" class="form-control" placeholder="Stream" required>
                         </div>
-                        <div class="col-sm-2 d-flex align-items-end">
+                        <div class="col-1 d-flex align-items-end">
                             <button onclick="addStreamField()" class="btn btn-success" type="button">
                                 <i class="material-icons menu-icon">add</i>
                             </button>
@@ -68,10 +68,11 @@
             </div>
 
             <hr>
-            <div class="mb-3">
-                <button class="btn btn-primary float-end" type="submit">
-                    <i class="material-icons menu-icon">send</i> Submit
-                </button>
+            <div class="mb-3 text-end gap-2">
+                <button class="btn btn-primary" type="submit">Submit</button>
+                <a href="{{ route('stream.index') }}" class="btn btn-secondary">
+                        Back
+                    </a>
             </div>
         </form>
     </div>
@@ -85,10 +86,10 @@
     function addStreamField() {
         const field = `
             <div class="row my-2">
-                <div class="col-sm-10">
+                <div class="col-11">
                     <input type="text" name="stream_name[]" class="form-control" placeholder="Stream" required>
                 </div>
-                <div class="col-sm-2 d-flex align-items-end">
+                <div class="col-1 d-flex align-items-end">
                     <button type="button" class="btn btn-danger" onclick="removeField(this)">
                         <i class="material-icons menu-icon">delete</i>
                     </button>
