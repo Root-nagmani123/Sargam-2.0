@@ -100,8 +100,13 @@ public function fullCalendarDetails(Request $request)
     $event = new CalendarEvent();
     
      $events = DB::table('timetable')
+      ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
         ->whereDate('mannual_starttime', '>=', $request->start)
         ->whereDate('mannual_end_time', '<=', $request->end)
+         ->select(
+            'timetable.*',
+            'venue_master.venue_name as venue_name'
+        )
         ->get();
 
     // Array of some sample colors
@@ -114,6 +119,7 @@ public function fullCalendarDetails(Request $request)
             'title' => $event->subject_topic,
             'start' => $event->mannual_starttime,
             'end'   => $event->mannual_end_time,
+            'vanue'   => $event->venue_name,
             'backgroundColor' => $colors[array_rand($colors)],  // background color for event
             'borderColor' => $colors[array_rand($colors)],  // border color for event
             'textColor' => '#fff',  // Text color for event (White text on colored background)
@@ -228,7 +234,8 @@ function feedbackList(){
 $events = DB::table('timetable')
     ->join('course_master', 'timetable.course_master_pk', '=', 'course_master.pk')
     ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-    ->join('subject_master', 'timetable.subject_master_pk', '=', 'subject_master.pk') // subject join
+    ->join('subject_master', 'timetable.subject_master_pk', '=', 'subject_master.pk')
+    ->join('topic_feedback', 'topic_feedback.timetable_pk', '=', 'timetable.pk') // Only include those with feedback
     ->select(
         'timetable.pk as event_id',
         'course_master.course_name',
@@ -236,7 +243,10 @@ $events = DB::table('timetable')
         'subject_master.subject_name',
         'timetable.subject_topic'
     )
+     ->orderBy('timetable.pk', 'desc')
+    ->distinct() // prevent duplicates if multiple feedbacks
     ->get();
+
 
      return view('admin.feedback.index', compact('events'));
 }
@@ -281,18 +291,18 @@ public function submitFeedback(Request $request)
         'timetable_pk' => 'required|array',
         'faculty_pk' => 'required|array',
         'topic_name' => 'required|array',
-        'rating' => 'required|array',
+        'rating' => 'nullable|array',
         'presentation' => 'required|array',
         'content' => 'required|array',
-        'remarks' => 'required|array',
+        'remarks' => 'nullable|array',
     ];
 
     // Validate all items for each index (nested validation)
     foreach ($request->timetable_pk as $index => $value) {
-        $rules["rating.$index"] = 'required|integer|min:1|max:5';
+        $rules["rating.$index"] = 'nullable|integer|min:1|max:5';
         $rules["presentation.$index"] = 'required|integer|min:1|max:5';
         $rules["content.$index"] = 'required|integer|min:1|max:5';
-        $rules["remarks.$index"] = 'required|string|max:255';
+        $rules["remarks.$index"] = 'nullable|string|max:255';
     }
 
     $validated = $request->validate($rules);
@@ -312,11 +322,12 @@ public function submitFeedback(Request $request)
         DB::table('topic_feedback')->insert([
             'timetable_pk'        => $timetablePks[$i],
             'student_master_pk'   => $studentId,
-            'topic_name'          => $topicNames[$i],
+            'topic_name'          => $topicNames[$i] ?? '0',
             'faculty_pk'          => $facultyPks[$i],
             'presentation'        => $presentations[$i] ?? null,
             'content'             => $contents[$i] ?? null,
-            'remark'              => $remarks[$i] ?? null,
+            'remark'              => $remarks[$i] ?? 0,
+            'rating'              => $ratings[$i] ?? 0,
             'created_date'        => $now,
             'modified_date'       => $now,
         ]);

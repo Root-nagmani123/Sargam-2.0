@@ -7,7 +7,7 @@ use App\Models\CoursesMaster;
 use App\Models\CourseTeamMaster;
 use Illuminate\Http\Request;
 use App\Http\Requests\ProgrammeRequest;
-use App\Models\{EmployeeMaster, CourseMaster};
+use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 
@@ -23,17 +23,19 @@ class CourseController extends Controller
 
     public function create()
     {
-        $deputationEmployeeList = EmployeeMaster::getDeputationEmployeeListNameAndPK();
+        // $deputationEmployeeList = EmployeeMaster::getDeputationEmployeeListNameAndPK();
+        $facultyList = FacultyMaster::pluck('full_name', 'pk')->toArray();
 
-        return view('admin.programme.create', compact('deputationEmployeeList'));
+        return view('admin.programme.create', compact('facultyList'));
     }
 
     public function edit(string $id)
     {
         try {
             $courseMasterObj = CourseMaster::findOrFail(decrypt($id));
-            $deputationEmployeeList = EmployeeMaster::getDeputationEmployeeListNameAndPK();
-            
+            // $deputationEmployeeList = EmployeeMaster::getDeputationEmployeeListNameAndPK();
+            $facultyList = FacultyMaster::pluck('full_name', 'pk')->toArray();
+
             $courseCordinatorMaterData = $courseMasterObj->courseCordinatorMater->map(function($item){
                 $item['Coordinator_name'] = $item['Coordinator_name'];
                 $item['Assistant_Coordinator_name'] = $item['Assistant_Coordinator_name'];
@@ -44,7 +46,7 @@ class CourseController extends Controller
             $assistant_coordinator_name = array_column($courseCordinatorMaterData, 'Assistant_Coordinator_name');
             $coordinator_name = $coordinator_name[0] ?? '';
             
-            return view('admin.programme.create', compact('courseMasterObj', 'deputationEmployeeList', 'coordinator_name', 'assistant_coordinator_name'));
+            return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Invalid course ID');
         }

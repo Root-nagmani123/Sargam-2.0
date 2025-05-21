@@ -4,6 +4,23 @@
 
 @section('content')
 
+<style>
+    /* Month ke har din ke box ki height/padding badhao */
+    .fc .fc-daygrid-day-frame {
+        min-height: 110px !important;   /* Height badhao (adjust as needed) */
+        padding: 8px 4px !important;
+    }
+    .fc .fc-daygrid-day {
+        min-height: 110px !important;
+    }
+    /* Responsive ke liye thoda adjust */
+    @media (max-width: 600px) {
+        .fc .fc-daygrid-day-frame,
+        .fc .fc-daygrid-day {
+            min-height: 70px !important;
+        }
+    }
+</style>
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js'></script>
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
@@ -32,7 +49,8 @@
             </div>
         </div>
     </div>
-
+<button type="button" class="btn btn-primary" id="createEventupperButton">
+        <i class="bi bi-plus"></i> Add Event</button>
     <div class="card">
         <div class="card-body calender-sidebar app-calendar">
             <div id='calendar'></div>
@@ -55,7 +73,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Course name</label>
+                                    <label class="form-label">Course name <span class="text-danger">*</span></label>
                                     <select name="Course_name" id="Course_name" class="form-control">
                                         <option value="">Select Course</option>
                                         @foreach($courseMaster as $course)
@@ -64,9 +82,25 @@
                                     </select>
                                 </div>
                             </div>
+                             <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Group Type <span class="text-danger">*</span></label>
+                                    <select name="group_type" id="group_type" class="form-control">
+                                        <option value="">Select Group Type</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <div>
+                                    <label class="form-label">Group Type Name </label>
+                                </div>
+                                <div id="type_name_container" class="mt-3">
+                                    <!-- Checkboxes will be appended here -->
+                                </div>
+                            </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Subject Name</label>
+                                    <label class="form-label">Subject Name <span class="text-danger">*</span></label>
                                     <select name="subject_name" id="subject_name" class="form-control">
                                         <option value="">Select Subject Name</option>
                                         @foreach($subjects as $subject)
@@ -80,38 +114,23 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Subject Module</label>
+                                    <label class="form-label">Subject Module <span class="text-danger">*</span></label>
                                     <select name="subject_module" id="subject_module" class="form-control">
                                         <option value="">Select subject Module</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-3">
-                                    <label class="form-label">Topic</label>
+                                    <label class="form-label">Topic <span class="text-danger">*</span></label>
                                     <textarea name="topic" id="topic" class="form-control" row="5"></textarea>
 
                                 </div>
                             </div>
+                           
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Group Type</label>
-                                    <select name="group_type" id="group_type" class="form-control">
-                                        <option value="">Select Group Type</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-12 mb-3">
-                                <div>
-                                    <label class="form-label">Group Type Name</label>
-                                </div>
-                                <div id="type_name_container" class="mt-3">
-                                    <!-- Checkboxes will be appended here -->
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="mb-3">
-                                    <label class="form-label">Faculty</label>
+                                    <label class="form-label">Faculty <span class="text-danger">*</span></label>
                                     <select name="faculty" id="faculty" class="form-control">
                                         <option value="">Select Faculty</option>
                                         @foreach($facultyMaster as $faculty)
@@ -123,9 +142,9 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-12">
+                            <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Faculty Type</label>
+                                    <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
                                     <select name="faculty_type" id="faculty_type" class="form-control">
                                         <option value="">Select Faculty Type</option>
                                         <option value="1">Internal</option>
@@ -136,7 +155,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Location</label>
+                                    <label class="form-label">Location <span class="text-danger">*</span></label>
                                     <select name="vanue" id="vanue" class="form-control">
                                         <option value="">Select Location</option>
                                         @foreach($venueMaster as $loc)
@@ -148,7 +167,7 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Shift</label>
+                                    <label class="form-label">Shift <span class="text-danger">*</span></label>
                                     <select name="shift" id="shift" class="form-control">
                                         <option value="">Select Shift</option>
                                         @foreach($classSessionMaster as $shift)
@@ -168,12 +187,12 @@
                                 <div id="dateTimeFields">
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label for="start_datetime" class="form-label">Start</label>
+                                            <label for="start_datetime" class="form-label">Start <span class="text-danger">*</span></label>
                                             <input type="datetime-local" name="start_datetime" id="start_datetime"
                                                 class="form-control">
                                         </div>
                                         <div class="col-md-6">
-                                            <label for="end_datetime" class="form-label">End</label>
+                                            <label for="end_datetime" class="form-label">End <span class="text-danger">*</span></label>
                                             <input type="datetime-local" name="end_datetime" id="end_datetime"
                                                 class="form-control">
                                         </div>
@@ -300,8 +319,27 @@
 
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script>
 $(document).ready(function() {
+        function toggleRemarkRating() {
+            if ($('#feedback_checkbox').is(':checked')) {
+                $('#remarkCheckbox').prop('disabled', false);
+                $('#ratingCheckbox').prop('disabled', false);
+            } else {
+                $('#remarkCheckbox').prop('disabled', true).prop('checked', false);
+                $('#ratingCheckbox').prop('disabled', true).prop('checked', false);
+            }
+        }
+
+        // Initial call
+        toggleRemarkRating();
+
+        // On change of Feedback checkbox
+        $('#feedback_checkbox').on('change', function () {
+            toggleRemarkRating();
+        });
+    });
 
     $('#subject_name').on('change', function() {
         // Get data-id from selected option
@@ -412,33 +450,37 @@ $(document).ready(function() {
                             );
                         }
                     }
-
-
-                    // Step 3: On change of group_type, show checkboxes
                     $('#group_type').off('change').on('change', function() {
-                        const selectedType = $(this).val();
-                        let html = '';
+                            const selectedType = $(this).val();
+                            let html = '';
+                            let groupNames = window.selectedGroupNames;
 
-                        if (groupedData[selectedType]) {
-                            groupedData[selectedType].forEach(
-                                group => {
+                            if (groupedData[selectedType]) {
+                                // Agar create ke time hai, toh sab checked
+                                let allChecked = groupNames === 'ALL';
+                                groupedData[selectedType].forEach(group => {
+                                    let checked = '';
+                                    if (allChecked) {
+                                        checked = 'checked';
+                                    } else if (Array.isArray(groupNames) && groupNames.includes(group.pk)) {
+                                        checked = 'checked';
+                                    }
                                     html += `
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" 
-                                        name="type_names[]" 
-                                        value="${group.pk}" 
-                                        id="type_${group.pk}" checked>
-                                    <label class="form-check-label" for="type_${group.pk}">
-                                        ${group.group_name} (${group.type_name})
-                                    </label>
-                                </div>
-                            `;
-
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" 
+                                                name="type_names[]" 
+                                                value="${group.pk}" 
+                                                id="type_${group.pk}" ${checked}>
+                                            <label class="form-check-label" for="type_${group.pk}">
+                                                ${group.group_name} (${group.type_name})
+                                            </label>
+                                        </div>
+                                    `;
                                 });
-                        }
+                            }
 
-                        $('#type_name_container').html(html);
-                    });
+                            $('#type_name_container').html(html);
+                        });
                 }
             });
         } else {
@@ -448,18 +490,10 @@ $(document).ready(function() {
         }
     });
 
-});
-</script>
-<script>
-// $('.btn-update-event').on('click', function() {
-//     $('#eventForm').submit();
-// });
 $('#eventForm').on('submit', function(e) {
     e.preventDefault();
-
     let isValid = true;
     let errorMsg = "";
-
     const courseName = $('#Course_name').val();
     const subjectName = $('#subject_name').val();
     const subjectModule = $('#subject_module').val();
@@ -467,9 +501,7 @@ $('#eventForm').on('submit', function(e) {
     const facultyType = $('#faculty_type').val();
     const vanue = $('#vanue').val();
     const shift = $('#shift').val();
-    //  let fullDay = $('#fullDayCheckbox').is(':checked');
-
-    // Check for empty values
+    const topic = $('#topic').val();
     if (!courseName) {
         alert("Please select a Course Name.");
         $('#Course_name').focus();
@@ -483,6 +515,11 @@ $('#eventForm').on('submit', function(e) {
     if (!subjectModule) {
         alert("Please select a Subject Module.");
         $('#subject_module').focus();
+        return false;
+    }
+     if (!topic) {
+        alert("Please Enter topic.");
+        $('#topic').focus();
         return false;
     }
     if (!faculty) {
@@ -505,29 +542,33 @@ $('#eventForm').on('submit', function(e) {
         $('#shift').focus();
         return false;
     }
-
-
-
-
     let startDate = $('#start_datetime').val().trim();
     let endDate = $('#end_datetime').val().trim();
-
     if (startDate === "") {
         alert("Start Date is required.");
         $('#start_datetime').focus();
         return false;
-
     }
-
-
     if (endDate === "") {
         alert("End Date is required.");
         $('#end_datetime').focus();
         return false;
     }
-
-
-
+        let now = new Date();
+        let start = new Date(startDate);
+        let end = new Date(endDate);
+        // Check if start date is in the past
+        if (start < now) {
+            alert("Start Date & Time cannot be in the past.");
+            $('#start_datetime').focus();
+            return false;
+        }
+        // Check if end date is before start date
+        if (end <= start) {
+            alert("End Date & Time must be after Start Date & Time.");
+            $('#end_datetime').focus();
+            return false;
+        }
     let formData = new FormData(this);
     $('input[name="group_type_name[]"]:checked').each(function() {
         formData.append('group_type_name[]', $(this).val());
@@ -536,12 +577,13 @@ $('#eventForm').on('submit', function(e) {
         url: "{{ route('calendar.event.store') }}",
         method: "POST",
         data: $(this).serialize(),
-        success: function(response) {
-            alert("Event created successfully!");
-            $('#eventModal').modal('hide');
-            $('#eventForm')[0].reset();
-            toggleDateTimeFields();
-        },
+       success: function (response) {
+        alert("Event created successfully!");
+        $('#eventModal').modal('hide');
+        $('#eventForm')[0].reset();
+       
+        window.location.reload(); // now this will work
+    },
         error: function(xhr) {
             if (xhr.status === 422) {
                 let errors = xhr.responseJSON.errors;
@@ -555,13 +597,42 @@ $('#eventForm').on('submit', function(e) {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    
     let calendarEl = document.getElementById('calendar');
     let calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         editable: true,
         selectable: true,
         displayEventTime: false,
+     selectAllow: function(selectInfo) {
+        let today = new Date();
+        today.setHours(0, 0, 0, 0); // remove time for accuracy
+
+        let selectedDate = new Date(selectInfo.start);
+        selectedDate.setHours(0, 0, 0, 0);
+
+        return selectedDate >= today;
+    },
+
         events: '/calendar/full-calendar-details', // Data fetch karna
+       eventContent: function(arg) {
+    // Get custom fields
+    const topic = arg.event.title || '';
+    const venue = arg.event.extendedProps.vanue || '';
+    const start = arg.event.start ? new Date(arg.event.start).toLocaleString() : '';
+    const end = arg.event.end ? new Date(arg.event.end).toLocaleString() : '';
+
+    // Design: topic (bold), venue (italic), start, end (each on new line)
+    let html = `
+        <div style="line-height:1.3">
+            <b>${topic}</b><br>
+            <span style="font-size:0.95em;color:#444;"><i>${venue}</i></span><br>
+            <span style="font-size:0.9em;">Start: ${start}</span><br>
+            <span style="font-size:0.9em;">End: ${end}</span>
+        </div>
+    `;
+    return { html: html };
+},
         eventClick: function(info) {
             let eventId = info.event.id;
 
@@ -725,10 +796,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         },
-        select: function(info) {
-            // $('#eventModal').modal('show');
-            $('#eventModal').modal('show');
-        },
+      select: function(info) {
+    // Reset form
+    $('#eventForm')[0].reset();
+    $('.btn-update-event').hide().removeAttr('data-id');
+    $('#group_type').empty().append('<option value="">Select Group Type</option>');
+    $('#type_name_container').html('');
+    $('.btn-add-event').show();
+  window.selectedGroupNames = 'ALL';
+    // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
+    let selectedDate = new Date(info.start);
+    let year = selectedDate.getFullYear();
+    let month = ("0" + (selectedDate.getMonth() + 1)).slice(-2);
+    let day = ("0" + selectedDate.getDate()).slice(-2);
+    let formattedDate = `${year}-${month}-${day}`;
+
+    // Combine with fixed times
+    let startDateTime = `${formattedDate}T09:30`;
+    // let endDateTime = `${formattedDate}T17:30`;
+
+    // Set values
+    $('#start_datetime').val(startDateTime);
+    // $('#end_datetime').val(endDateTime);
+
+    // Show modal
+    $('#eventModal').modal('show');
+    let clickedDate = info.startStr.split("T")[0]; // only date part (e.g., "2025-05-21")
+
+    // Set default start and end time (for full day)
+    $('#fullDayCheckbox').off('change').on('change', function () {
+        if ($(this).is(':checked')) {
+            $('#start_datetime').val(clickedDate + 'T09:30');
+            $('#end_datetime').val(clickedDate + 'T17:30');
+        } else {
+            $('#start_datetime').val('');
+            $('#end_datetime').val('');
+        }
+    });
+},
 
         eventRender: function(info) {
             // Custom rendering logic if needed, but normally FullCalendar should automatically handle color from JSON
@@ -768,12 +873,103 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+     $(document).on('click', '#createEventupperButton', function() {
+        $('#eventForm')[0].reset();
+            $('.btn-update-event').hide().removeAttr('data-id');
+            $('#group_type').empty().append('<option value="">Select Group Type</option>');
+            $('#type_name_container').html('');
+            $('.btn-add-event').show();
+            window.selectedGroupNames = 'ALL';
+            // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
+            $('#eventModal').modal('show');
+        });
 
 });
 $(document).on('click', '.btn-update-event', function(e) {
     e.preventDefault();
     let eventId = $(this).data('id');
     if (!eventId) return alert('Event ID not found!');
+
+
+      e.preventDefault();
+    let isValid = true;
+    let errorMsg = "";
+    const courseName = $('#Course_name').val();
+    const subjectName = $('#subject_name').val();
+    const subjectModule = $('#subject_module').val();
+    const faculty = $('#faculty').val();
+    const facultyType = $('#faculty_type').val();
+    const vanue = $('#vanue').val();
+    const shift = $('#shift').val();
+    const topic = $('#topic').val();
+    if (!topic) {
+        alert("Please Enter topic.");
+        $('#topic').focus();
+        return false;
+    }
+    if (!courseName) {
+        alert("Please select a Course Name.");
+        $('#Course_name').focus();
+        return false;
+    }
+    if (!subjectName) {
+        alert("Please select a Subject Name.");
+        $('#subject_name').focus();
+        return false;
+    }
+    if (!subjectModule) {
+        alert("Please select a Subject Module.");
+        $('#subject_module').focus();
+        return false;
+    }
+    if (!faculty) {
+        alert("Please select a Faculty.");
+        $('#faculty').focus();
+        return false;
+    }
+    if (!facultyType) {
+        alert("Please select Faculty Type.");
+        $('#faculty_type').focus();
+        return false;
+    }
+    if (!vanue) {
+        alert("Please select a Venue.");
+        $('#vanue').focus();
+        return false;
+    }
+    if (!shift) {
+        alert("Please select a Shift.");
+        $('#shift').focus();
+        return false;
+    }
+    let startDate = $('#start_datetime').val().trim();
+    let endDate = $('#end_datetime').val().trim();
+    if (startDate === "") {
+        alert("Start Date is required.");
+        $('#start_datetime').focus();
+        return false;
+    }
+    if (endDate === "") {
+        alert("End Date is required.");
+        $('#end_datetime').focus();
+        return false;
+    }
+let now = new Date();
+let start = new Date(startDate);
+let end = new Date(endDate);
+// Check if start date is in the past
+if (start < now) {
+    alert("Start Date & Time cannot be in the past.");
+    $('#start_datetime').focus();
+    return false;
+}
+// Check if end date is before start date
+if (end <= start) {
+    alert("End Date & Time must be after Start Date & Time.");
+    $('#end_datetime').focus();
+    return false;
+}
+
     $.ajax({
         url: '/calendar/event-update/' + eventId,
         method: 'POST',
