@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -11,11 +11,11 @@ class CourseGroupTypeController extends Controller
     function index()
     {
         $courseGroupTypeMaster = CourseGroupTypeMaster::all();
-        return view('admin.course_group_type_master.index', compact('courseGroupTypeMaster'));
+        return view('admin.master.course_group_type_master.index', compact('courseGroupTypeMaster'));
     }
     function create()
     {
-        return view('admin.course_group_type_master.create');
+        return view('admin.master.course_group_type_master.create');
     }
     function store(Request $request)
     {
@@ -47,7 +47,7 @@ class CourseGroupTypeController extends Controller
             if (!$courseGroupTypeMaster) {
                 return redirect()->route('master.course.group.type.index')->with('error', 'Course group type not found.');
             }
-            return view('admin.course_group_type_master.create', compact('courseGroupTypeMaster'));
+            return view('admin.master.course_group_type_master.create', compact('courseGroupTypeMaster'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error',$e->getMessage())->withInput();
         }
