@@ -1,14 +1,14 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\{
-    FacultyExpertiseMasterController, 
     LocationController
 };
 use App\Http\Controllers\Admin\Master\{
     FacultyTypeMasterController, 
     MDODutyTypeController, 
     CourseGroupTypeController,
-    ClassSessionMasterController
+    ClassSessionMasterController,
+    FacultyExpertiseMasterController
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
