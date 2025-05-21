@@ -84,7 +84,7 @@
                                 placeholder="Course Coordinator" 
                                 formLabelClass="form-label" 
                                 value="{{ $coordinator_name ?? '' }}"
-                                :options="$deputationEmployeeList" />
+                                :options="$facultyList" />
 
                         </div>
                         <div class="col-md-12 mt-4">
@@ -94,7 +94,7 @@
                                 label="Assistant Course Coordinator" 
                                 placeholder="Assistant Course Coordinator" 
                                 formLabelClass="form-label" 
-                                :options="$deputationEmployeeList" 
+                                :options="$facultyList" 
                                 :value="$assistant_coordinator_name ?? []"
                                 multiple="true" />
                             

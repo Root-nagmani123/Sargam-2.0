@@ -27,7 +27,7 @@ class FacultyUpdateRequest extends FormRequest
             // non mandatory photo and documents in update
             "facultyType" => "",
             "firstName"=> "required|string|max:255",
-            "middlename"=> "required|string|max:255",
+            "middlename"=> "nullable|string|max:255",
             "lastname"=> "required|string|max:255",
             "fullname"=> "required|string|max:255",
             "gender"=>"required|string|in:male,female,other",
@@ -37,12 +37,14 @@ class FacultyUpdateRequest extends FormRequest
             "state"=> "required|string",
             "city"=> "required|string",
             "email"=> "required|email|max:255",
-            "alternativeEmail" => "required|email|max:255",
+            "alternativeEmail" => "nullable|email|max:255",
             "photo" => "nullable|mimes:jpg,jpeg,png|max:2048",
             "document" => "nullable|mimes:pdf,jpg,jpeg,png|max:2048",
+            "residence_address" => "nullable|string|max:255",
+            "permanent_address" => "nullable|string|max:255",
 
             // Qualification Details (array fields)
-            
+
             'degree.*' => 'required|string|max:255',
             'university_institution_name.*' => 'required|string|max:255',
             'year_of_passing.*' => 'required|date_format:Y',
@@ -65,9 +67,9 @@ class FacultyUpdateRequest extends FormRequest
             
 
             // Other information
-            'researchpublications' => 'nullable|mimes:pdf,jpg,jpeg|max:255',
-            'professionalmemberships' => 'nullable|mimes:pdf,jpg,jpeg|max:255',
-            'recommendationdetails' => 'nullable|mimes:pdf,jpg,jpeg|max:255',
+            'researchpublications' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
+            'professionalmemberships' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
+            'recommendationdetails' => 'nullable|mimes:pdf,jpg,jpeg|max:2048',
             'joiningdate'=> 'required|date',
             
             // Radio button
@@ -95,6 +97,8 @@ class FacultyUpdateRequest extends FormRequest
             'alternativeEmail.required' => 'Alternative email is required',
             'photo.required' => 'Photo is required',
             'document.required' => 'Document is required',
+            'residence_address.required' => 'Residence address is required',
+            'permanent_address.required' => 'Permanent address is required',
 
             // Qualification Details
             'degree.*.required' => 'Degree is required',
@@ -102,6 +106,7 @@ class FacultyUpdateRequest extends FormRequest
             'year_of_passing.*.required' => 'Year of passing is required',
             'percentage_CGPA.*.required' => 'Percentage/CGPA is required',
             'certificate.*.required' => 'Certificates are required',
+            'certificate.*.mimes' => 'Certificates must be a file of type: pdf, jpg, jpeg, png.',
 
             // Experience Details
             'experience.*.required' => 'Experience is required',

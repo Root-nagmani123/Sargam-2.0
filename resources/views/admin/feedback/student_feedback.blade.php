@@ -42,7 +42,7 @@
                 <li>{{ $error }}</li>
             @endforeach
         </ul>
-    </div>
+    </div> 
 @endif
 
 <body>
@@ -54,8 +54,9 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('feedback.submit.feedback') }}">
                     @csrf
-
+ 
                     @foreach ($data as $index => $feedback)
+                    @if($feedback->feedback_checkbox == 1)
                     <div class="row g-3 border p-3 mb-4 shadow rounded">
                         {{-- Hidden Inputs --}}
                         <input type="hidden" name="timetable_pk[]" value="{{ $feedback->pk }}">
@@ -72,11 +73,11 @@
                             <input type="text" class="form-control" value="{{ $feedback->faculty_name }}" readonly>
                         </div>
 
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-12">
                             <label class="form-label">Topic</label>
                             <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
                         </div>
-
+                        @if($feedback->Ratting_checkbox == 1)
                         <div class="col-12 col-md-4">
                             <label class="form-label">Rating</label>
                             <select class="form-select" name="rating[]" >
@@ -85,6 +86,7 @@
                                     @endfor
                             </select>
                         </div>
+                        @endif
 
                         <div class="col-12 col-md-4">
                             <label class="form-label">Presentation</label><br>
@@ -109,13 +111,15 @@
                         </div>
 
 
-
+                    @if($feedback->Remark_checkbox == 1)
                         <div class="col-12">
                             <label class="form-label">Remarks</label>
                             <textarea class="form-control" name="remarks[]" rows="3"
                                 placeholder="Enter your remarks here..." ></textarea>
                         </div>
+                        @endif
                     </div>
+                    @endif
                     @endforeach
                 @if($data->isEmpty())
                     <div class="alert alert-info text-center">

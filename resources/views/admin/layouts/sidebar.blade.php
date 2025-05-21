@@ -244,6 +244,14 @@
                                                         <span class="hide-menu">Feedback</span>
                                                     </a>
                                                 </li>
+                                                 <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('feedback.get.studentFeedback') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:feed-bold-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Student Feedback</span>
+                                                    </a>
+                                                </li>
                                                 <li>
                                                     <span class="sidebar-divider"></span>
                                                 </li>
@@ -354,6 +362,13 @@
                                     <span class="hide-menu">MDO Duty Type</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.faculty.type.master.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">Faculty Type</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                     <!-- Forms -->
@@ -381,10 +396,10 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('forms.logo_page') }}">
+                                <a class="sidebar-link" href="{{ route('registration-page.create') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
-                                    <span class="hide-menu">Registration Page</span>
+                                    <span class="hide-menu"> Manage Logo</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">

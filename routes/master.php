@@ -1,14 +1,17 @@
 <?php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\{
-    FacultyExpertiseMasterController, 
-    LocationController, 
-    ClassSessionMasterController, 
-    CourseGroupTypeController, 
-    MDODutyTypeController
+    LocationController
+};
+use App\Http\Controllers\Admin\Master\{
+    FacultyTypeMasterController, 
+    MDODutyTypeController, 
+    CourseGroupTypeController,
+    ClassSessionMasterController,
+    FacultyExpertiseMasterController
 };
 
-Route::prefix('master')->name('master.')->group(function () {
+Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
 
     // country route
     Route::prefix('country')->name('country.')->controller(LocationController::class)->group(function () {
@@ -81,6 +84,15 @@ Route::prefix('master')->name('master.')->group(function () {
     });
 
     Route::prefix('mdo')->name('mdo_duty_type.')->controller(MDODutyTypeController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Faculty Type Master Routes
+    Route::prefix('faculty-type-master')->name('faculty.type.master.')->controller(FacultyTypeMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');

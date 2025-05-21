@@ -330,69 +330,76 @@ class FormController extends Controller
 
 
     public function show($formId)
-{
-    // Get all visible forms (for sidebar)
-    $allForms = DB::table('local_form')
-        ->where('visible', 1)
-        ->get();
+    {
+        // Get all visible forms (for sidebar)
+        $allForms = DB::table('local_form')
+            ->where('visible', 1)
+            ->get();
 
-    // Get selected form details
-    $form = DB::table('local_form')->where('id', $formId)->first();
+        //dynamic logo  
 
-    if (!$form) {
-        abort(404, 'Form not found');
-    }
+        $data = DB::table('registration_logo')->first(); // Assumes single row
+        // return view('your_view_name', compact('form', 'allForms', 'data'));
 
-    // Fetch sections for the selected form
-    $sections = DB::table('form_sections')
-        ->where('formid', $formId)
-        ->orderBy('sort_order')
-        ->get();
 
-    // Fetch fields
-    $fields = DB::table('form_data')
-        ->where('formid', $formId)
-        ->orderBy('section_id')
-        ->orderBy('row_index')
-        ->orderBy('col_index')
-        ->get();
+        // Get selected form details
+        $form = DB::table('local_form')->where('id', $formId)->first();
 
-    $fieldsBySection = [];
-    $gridFields = [];
-
-    foreach ($fields as $field) {
-        if ($field->format === 'table') {
-            $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
-        } else {
-            $gridFields[$field->section_id][] = $field;
+        if (!$form) {
+            abort(404, 'Form not found');
         }
-    }
 
-    // Get headers
-    $headersBySection = [];
-    foreach ($fields as $field) {
-        if ($field->format === 'table') {
-            $headersBySection[$field->section_id][$field->col_index] = $field->header;
+        // Fetch sections for the selected form
+        $sections = DB::table('form_sections')
+            ->where('formid', $formId)
+            ->orderBy('sort_order')
+            ->get();
+
+        // Fetch fields
+        $fields = DB::table('form_data')
+            ->where('formid', $formId)
+            ->orderBy('section_id')
+            ->orderBy('row_index')
+            ->orderBy('col_index')
+            ->get();
+
+        $fieldsBySection = [];
+        $gridFields = [];
+
+        foreach ($fields as $field) {
+            if ($field->format === 'table') {
+                $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
+            } else {
+                $gridFields[$field->section_id][] = $field;
+            }
         }
+
+        // Get headers
+        $headersBySection = [];
+        foreach ($fields as $field) {
+            if ($field->format === 'table') {
+                $headersBySection[$field->section_id][$field->col_index] = $field->header;
+            }
+        }
+
+        // Get user submissions
+        $submissions = DB::table('form_submission')
+            ->where('formid', $formId)
+            ->where('uid', Auth::id())
+            ->get()
+            ->keyBy('fieldname');
+// dd($data);
+        return view('admin.forms.show', compact(
+            'form',
+            'data',
+            'allForms',
+            'sections',
+            'fieldsBySection',
+            'gridFields',
+            'headersBySection',
+            'submissions'
+        ));
     }
-
-    // Get user submissions
-    $submissions = DB::table('form_submission')
-        ->where('formid', $formId)
-        ->where('uid', Auth::id())
-        ->get()
-        ->keyBy('fieldname');
-
-    return view('admin.forms.show', compact(
-        'form',
-        'allForms',
-        'sections',
-        'fieldsBySection',
-        'gridFields',
-        'headersBySection',
-        'submissions'
-    ));
-}
 
 
 
@@ -775,11 +782,10 @@ class FormController extends Controller
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
         return view('admin.forms.main_page', compact('forms'));
     }
-     public function logo_page()
+    public function logo_page()
     {
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
         return view('admin.forms.logo_page', compact('forms'));
-
     }
 
     //export function 

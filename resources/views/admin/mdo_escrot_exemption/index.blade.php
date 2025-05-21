@@ -55,10 +55,6 @@
                                             
                                         </tr>
                                     @endforeach
-                                @else
-                                    <tr>
-                                        <td colspan="5" class="text-center">No records found.</td>
-                                    </tr>
                                 @endif
 
                             </tbody>
