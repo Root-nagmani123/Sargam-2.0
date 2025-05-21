@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -12,10 +12,10 @@ class ClassSessionMasterController extends Controller
     function index() {
 
         $classSessionMaster = ClassSessionMaster::all();
-        return view('admin.class_session_master.index', compact('classSessionMaster'));
+        return view('admin.master.class_session_master.index', compact('classSessionMaster'));
     }
     function create() {
-        return view('admin.class_session_master.create');
+        return view('admin.master.class_session_master.create');
     }
     function store(ClassSessionMasterRequest $request) {
         
@@ -49,7 +49,7 @@ class ClassSessionMasterController extends Controller
             if (!$classSessionMaster) {
                 return redirect()->route('master.class.session.index')->with('error', 'Class session not found.');
             }
-            return view('admin.class_session_master.create', compact('classSessionMaster'));
+            return view('admin.master.class_session_master.create', compact('classSessionMaster'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error',$e->getMessage())->withInput();
         }
