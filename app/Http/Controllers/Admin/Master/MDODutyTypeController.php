@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -11,18 +11,18 @@ class MDODutyTypeController extends Controller
     public function index()
     {
         $mdoDutyTypes = MDODutyTypeMaster::latest('pk')->get();
-        return view('admin.mdo_duty_type.index', compact('mdoDutyTypes'));
+        return view('admin.master.mdo_duty_type.index', compact('mdoDutyTypes'));
     }
 
     public function create()
     {
-        return view('admin.mdo_duty_type.create');
+        return view('admin.master.mdo_duty_type.create');
     }
 
     public function edit($id)
     {
         $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($id));
-        return view('admin.mdo_duty_type.create', compact('mdoDutyType'));
+        return view('admin.master.mdo_duty_type.create', compact('mdoDutyType'));
     }
 
     public function store(Request $request)
