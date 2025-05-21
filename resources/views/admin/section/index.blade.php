@@ -28,15 +28,16 @@
         </div>
     </div>
     <div class="widget-content searchable-container list">
-        <div class="card card-body">
-            <div class="row">
+        <div class="datatables">
+            
+            <!-- start Zero Configuration -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
                 <div class="col-md-4 col-xl-3">
-                    <form class="position-relative">
-                        <input type="text" class="form-control product-search ps-5" id="input-search"
-                            placeholder="Search Contacts...">
-                        <i
-                            class="ti ti-search position-absolute top-50 start-0 translate-middle-y fs-6 text-dark ms-3"></i>
-                    </form>
+                    <div class="d-flex align-items-center gap-2">
+                        <h4 class="mb-0 card-title">Section master</h4>
+                    </div>
                 </div>
                 <div
                     class="col-md-8 col-xl-9 text-end d-flex justify-content-md-end justify-content-center mt-3 mt-md-0 gap-3">
@@ -47,11 +48,6 @@
                     </a>
                 </div>
             </div>
-        </div>
-        <div class="datatables">
-            <!-- start Zero Configuration -->
-            <div class="card">
-                <div class="card-body">
                     <div class="table-responsive">
                         <!-- Vertically centered modal -->
                         <div class="modal fade" id="vertical-center-scroll-modal" tabindex="-1"
@@ -89,15 +85,6 @@
                         </div>
                         <hr>
                         <div id="zero_config_wrapper" class="dataTables_wrapper">
-                            <div class="dataTables_length" id="zero_config_length"><label>Show <select
-                                        name="zero_config_length" aria-controls="zero_config" class="">
-                                        <option value="10">10</option>
-                                        <option value="25">25</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select> entries</label></div>
-                            <div id="zero_config_filter" class="dataTables_filter"><label>Search:<input type="search"
-                                        class="" placeholder="" aria-controls="zero_config"></label></div>
                             <table id="zero_config"
                                 class="table table-striped table-bordered text-nowrap align-middle dataTable"
                                 aria-describedby="zero_config_info">
@@ -151,24 +138,6 @@
                                     </tr>
                                 </tbody>
                             </table>
-                            <div class="dataTables_info" id="zero_config_info" role="status" aria-live="polite">Showing
-                                1 to
-                                10 of 57 entries</div>
-                            <div class="dataTables_paginate paging_simple_numbers" id="zero_config_paginate"><a
-                                    class="paginate_button previous disabled" aria-controls="zero_config"
-                                    aria-disabled="true" role="link" data-dt-idx="previous" tabindex="-1"
-                                    id="zero_config_previous">Previous</a><span><a class="paginate_button current"
-                                        aria-controls="zero_config" role="link" aria-current="page" data-dt-idx="0"
-                                        tabindex="0">1</a><a class="paginate_button " aria-controls="zero_config"
-                                        role="link" data-dt-idx="1" tabindex="0">2</a><a class="paginate_button "
-                                        aria-controls="zero_config" role="link" data-dt-idx="2" tabindex="0">3</a><a
-                                        class="paginate_button " aria-controls="zero_config" role="link" data-dt-idx="3"
-                                        tabindex="0">4</a><a class="paginate_button " aria-controls="zero_config"
-                                        role="link" data-dt-idx="4" tabindex="0">5</a><a class="paginate_button "
-                                        aria-controls="zero_config" role="link" data-dt-idx="5"
-                                        tabindex="0">6</a></span><a class="paginate_button next"
-                                    aria-controls="zero_config" role="link" data-dt-idx="next" tabindex="0"
-                                    id="zero_config_next">Next</a></div>
                         </div>
                     </div>
                 </div>

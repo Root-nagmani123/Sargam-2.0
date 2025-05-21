@@ -33,47 +33,44 @@
             <!-- start Person Info -->
             <div class="card">
                 <form action="#">
-                    <div>
-                        <div class="card-body">
+                    <div class="card-body">
                             <!--/row-->
                             <h4 class="card-title mb-4">Add Course Curriculum</h4>
                             <hr>
                             <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Course Name</label>
-                                    <select class="form-select">
-                                        <option>--Select Course Name--</option>
-                                    </select>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Course Name</label>
+                                        <select class="form-select">
+                                            <option>--Select Course Name--</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Major Subject Name</label>
+                                        <select class="form-select">
+                                            <option>--Select Major Subject Name--</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label class="form-label">Minor Subject Name</label>
+                                        <input type="text" name="" id="" class="form-control"
+                                            placeholder="Minor Subject Name">
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Major Subject Name</label>
-                                    <select class="form-select">
-                                        <option>--Select Major Subject Name--</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-12">
-                                <div class="mb-3">
-                                    <label class="form-label">Minor Subject Name</label>
-                                    <input type="text" name="" id="" class="form-control" placeholder="Minor Subject Name">
-                                </div>
-                            </div>
-                            </div>
+                            <hr>
+                            <div class="mb-3 text-end gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                Submit
+                            </button>
+                            <a href="{{ route('curriculum.index') }}" class="btn btn-secondary">Back</a>
                         </div>
-                        <div class="form-actions">
-                            <div class="card-body border-top">
-                                <button type="submit" class="btn btn-primary">
-                                    Submit
-                                </button>
-                                <button type="button" class="btn bg-danger-subtle text-danger ms-6">
-                                    Cancel
-                                </button>
-                            </div>
                         </div>
-                    </div>
+                        
                 </form>
             </div>
             <!-- end Person Info -->

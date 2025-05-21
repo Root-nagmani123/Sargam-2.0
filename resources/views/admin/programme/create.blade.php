@@ -87,7 +87,7 @@
                                 :options="$deputationEmployeeList" />
 
                         </div>
-                        <div class="col-md-6 mt-4">
+                        <div class="col-md-12 mt-4">
 
                             <x-select 
                                 name="assistantcoursecoordinator[]" 
@@ -103,13 +103,11 @@
                     </div>
                 </div>
                 <hr>
-                <div class="mb-3 mt-4">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                    <i class="material-icons menu-icon">send</i>
+                <div class="mb-3 mt-4 text-end gap-2">
+                    <button class="btn btn-primary" type="submit">
                         Submit
                     </button>
-                    <a href="{{ route('programme.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
-                        <i class="material-icons menu-icon">arrow_back</i>
+                    <a href="{{ route('programme.index') }}" class="btn btn-secondary">
                         Back
                     </a>
                 </div>

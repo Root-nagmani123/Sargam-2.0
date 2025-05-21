@@ -33,13 +33,12 @@
             <!-- start Person Info -->
             <div class="card">
                 <form action="#">
-                    <div>
-                        <div class="card-body">
-                            <!--/row-->
-                            <h4 class="card-title">Define Faculty Topic Mapping</h4>
-                            <small class="form-control-feedback">Please add topic wise faculty details.</small>
-                            <hr>
-                            <div class="row">
+                    <div class="card-body">
+                        <!--/row-->
+                        <h4 class="card-title">Define Faculty Topic Mapping</h4>
+                        <small class="form-control-feedback">Please add topic wise faculty details.</small>
+                        <hr>
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Programme Name</label>
@@ -75,20 +74,17 @@
                             <div class="col-md-12">
                                 <div class="mb-3">
                                     <label class="form-label">Faculty</label>
-                                    <input type="text" name="" id="" class="form-control" placeholder="Minor Subject Name">
+                                    <input type="text" name="" id="" class="form-control"
+                                        placeholder="Minor Subject Name">
                                 </div>
                             </div>
-                            </div>
                         </div>
-                        <div class="form-actions">
-                            <div class="card-body border-top">
-                                <button type="submit" class="btn btn-primary">
-                                    Submit
-                                </button>
-                                <button type="button" class="btn bg-danger-subtle text-danger ms-6">
-                                    Cancel
-                                </button>
-                            </div>
+                        <hr>
+                        <div class="mb-3 text-end gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                Submit
+                            </button>
+                            <a href="{{ route('mapping.index') }}" class="btn btn-secondary">Back</a>
                         </div>
                     </div>
                 </form>

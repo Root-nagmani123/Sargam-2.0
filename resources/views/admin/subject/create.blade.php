@@ -37,55 +37,69 @@
                 @csrf
 
                 <!-- Major Subject Name -->
-                <div class="mb-3">
-                    <label for="major_subject_name" class="form-label">Major Subject Name</label>
-                    <input type="text" name="major_subject_name" id="major_subject_name" class="form-control" >
-                    @error('major_subject_name')
-                    <div class="text-danger">{{ $message }}</div>
-                    @enderror
+                <div class="row">
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label for="major_subject_name" class="form-label">Major Subject Name</label>
+                            <input type="text" name="major_subject_name" id="major_subject_name" class="form-control">
+                            @error('major_subject_name')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <!-- Short Name -->
+                        <div class="mb-3">
+                            <label for="short_name" class="form-label">Short Name</label>
+                            <input type="text" name="short_name" id="short_name" class="form-control">
+                            @error('short_name')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <!-- Topic Name -->
+                        <div class="mb-3">
+                            <label for="topic_name" class="form-label">Topic Name</label>
+                            <input type="text" name="topic_name" id="topic_name" class="form-control">
+                            @error('topic_name')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <!-- Subject Module -->
+                        <div class="mb-3">
+                            <label for="subject_module" class="form-label">Subject Module</label>
+                            <select name="subject_module" id="subject_module" class="form-select">
+                                <option value="">-- Select Subject Module --</option>
+                                @foreach($subjects as $module)
+                                <option value="{{ $module->pk }}">{{ $module->module_name }}</option>
+                                @endforeach
+                            </select>
+                            @error('subject_module')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <!-- Status -->
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select name="status" id="status" class="form-select">
+                                <option value="">-- Select Status --</option>
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
-
-                <!-- Short Name -->
-                <div class="mb-3">
-                    <label for="short_name" class="form-label">Short Name</label>
-                    <input type="text" name="short_name" id="short_name" class="form-control" >
-                    @error('short_name')
-                    <div class="text-danger">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <!-- Topic Name -->
-                <div class="mb-3">
-                    <label for="topic_name" class="form-label">Topic Name</label>
-                    <input type="text" name="topic_name" id="topic_name" class="form-control">
-                    @error('topic_name')
-                    <div class="text-danger">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <!-- Subject Module -->
-                <div class="mb-3">
-                    <label for="subject_module" class="form-label">Subject Module</label>
-                    <select name="subject_module" id="subject_module" class="form-select" >
-                        <option value="">-- Select Subject Module --</option>
-                        @foreach($subjects as $module)
-                        <option value="{{ $module->pk }}">{{ $module->module_name }}</option>
-                        @endforeach
-                    </select>
-                    @error('subject_module')
-                    <div class="text-danger">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <!-- Status -->
-                <div class="mb-3 form-check form-switch">
-                    <input type="checkbox" name="status" id="status" class="form-check-input" checked>
-                    <label for="status" class="form-check-label">Active</label>
-                </div>
-
+                <hr>
                 <!-- Submit & Cancel Buttons -->
-                <button type="submit" class="btn btn-success">Save</button>
-                <a href="{{ route('subject.index') }}" class="btn btn-secondary">Cancel</a>
+                <div class="mb-3 text-end gap-3">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a href="{{ route('subject.index') }}" class="btn btn-secondary">Back</a>
+                </div>
             </form>
 
         </div>
