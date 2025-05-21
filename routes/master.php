@@ -8,7 +8,7 @@ use App\Http\Controllers\Admin\{
     MDODutyTypeController
 };
 
-Route::prefix('master')->name('master.')->group(function () {
+Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
 
     // country route
     Route::prefix('country')->name('country.')->controller(LocationController::class)->group(function () {
