@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Admin;
+namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -11,11 +11,11 @@ class FacultyExpertiseMasterController extends Controller
 {
     public function index() {
         $faculties = FacultyExpertiseMaster::latest('pk')->get();
-        return view("admin.faculty_expertise_master.index", compact('faculties'));
+        return view("admin.master.faculty_expertise_master.index", compact('faculties'));
     }
 
     public function create() {
-        return view("admin.faculty_expertise_master.create");
+        return view("admin.master.faculty_expertise_master.create");
     }
 
     public function store(Request $request) {
@@ -49,8 +49,8 @@ class FacultyExpertiseMasterController extends Controller
         if( !$expertise ) {
             return redirect()->route('master.faculty.expertise.index')->with('error', 'Expertise not found.');
         }
-        
-        return view("admin.faculty_expertise_master.create", compact('expertise'));
+
+        return view("admin.master.faculty_expertise_master.create", compact('expertise'));
     }
 
     public function delete(String $id) {
