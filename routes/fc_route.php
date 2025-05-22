@@ -59,8 +59,11 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
 
 
     //logo registration
-
     Route::get('/admin/registration-page/create', [FormEditController::class, 'LogoCreate'])->name('registration-page.create');
     Route::post('/admin/registration-page/store', [FormEditController::class, 'LogoUpdate'])->name('registration-page.store');
+
+    //generate pdf 
+    Route::get('/forms/{form_id}/pdf/{user_id}', [FormController::class, 'generatePdf'])
+    ->name('forms.pdf');
     
 });
