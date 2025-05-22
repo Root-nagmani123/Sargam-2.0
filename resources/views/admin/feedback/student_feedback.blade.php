@@ -64,6 +64,7 @@
                         <input type="hidden" name="topic_name[]" value="{{ $feedback->subject_topic }}">
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
                         <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
@@ -73,12 +74,34 @@
                             <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
                         </div>
                         <div class="col-md-6">
+=======
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 1f00172 (timetable bug solve)
+=======
+=======
+>>>>>>> 38d0958 (timetable bug solve)
+>>>>>>> 3fa31b5 (timetable bug solve)
 <<<<<<< HEAD
 
 =======
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> d707d11 (timetable bug solve)
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> d707d11 (timetable bug solve)
+=======
+>>>>>>> cb8cad4 (timetable bug solve)
+>>>>>>> 1f00172 (timetable bug solve)
+=======
+>>>>>>> cb8cad4 (timetable bug solve)
+>>>>>>> 38d0958 (timetable bug solve)
+>>>>>>> 3fa31b5 (timetable bug solve)
                        <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
                     <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
                         <div class="col-12 col-md-12">
@@ -87,10 +110,24 @@
                         </div>
                         <div class="col-md-4">
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> 3fa31b5 (timetable bug solve)
 >>>>>>> d707d11 (timetable bug solve)
 =======
 >>>>>>> d707d11 (timetable bug solve)
 >>>>>>> cb8cad4 (timetable bug solve)
+<<<<<<< HEAD
+=======
+>>>>>>> 1f00172 (timetable bug solve)
+=======
+=======
+>>>>>>> d707d11 (timetable bug solve)
+>>>>>>> cb8cad4 (timetable bug solve)
+>>>>>>> 38d0958 (timetable bug solve)
+>>>>>>> 3fa31b5 (timetable bug solve)
                             <label>Course</label>
                             <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
                         </div>
