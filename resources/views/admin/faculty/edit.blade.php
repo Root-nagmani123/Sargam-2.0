@@ -8,7 +8,8 @@
     <x-breadcrum title="Faculty" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    <div class="card" id="facultyForm" data-store-url="{{ route('faculty.update') }}" data-index-url="{{ route('faculty.index') }}">
+    <div class="card" id="facultyForm" data-store-url="{{ route('faculty.update') }}"
+        data-index-url="{{ route('faculty.index') }}">
         <div class="card-body">
             <h4 class="card-title mb-3">Edit Faculty</h4>
             <hr>
@@ -41,17 +42,24 @@
                         <label for="expertise" class="form-label">Area of Expertise :</label>
                         <div class="mb-3">
                             @if(!empty($faculties))
-                                <fieldset>
+                            <fieldset>
+                                <div class="row">
                                     @foreach ($faculties as $key => $option)
-                                    <div class="form-check py-2">
-                                        <input type="checkbox" name="faculties[]" value="{{ $key }}" class="form-check-input" id="{{ $loop->index }}" {{ in_array($key, $facultExpertise) ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="{{ $loop->index }}">{{ $option }}</label>
+                                    <div class="col-3">
+                                        <div class="form-check py-2">
+                                            <input type="checkbox" name="faculties[]" value="{{ $key }}"
+                                                class="form-check-input" id="{{ $loop->index }}"
+                                                {{ in_array($key, $facultExpertise) ? 'checked' : '' }}>
+                                            <label class="form-check-label"
+                                                for="{{ $loop->index }}">{{ $option }}</label>
+                                        </div>
                                     </div>
                                     @endforeach
                                     @error('faculties[]')
-                                        <span class="text-danger">{{ $message }}</span>
+                                    <span class="text-danger">{{ $message }}</span>
                                     @enderror
-                                </fieldset>
+                                </div>
+                            </fieldset>
                             @endif
                         </div>
                     </div>
@@ -78,7 +86,7 @@
 
 @section('scripts')
 <script>
-    
-    
+
+
 </script>
 @endsection
