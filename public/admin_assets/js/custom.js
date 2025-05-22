@@ -512,7 +512,7 @@ $(document).on('click', '.view-student', function (e) {
 $(document).on('click', '.student-list-pagination .pagination a', function (e) {
     e.preventDefault();
     let pageUrl = $(this).attr('href');
-    let groupMappingID = $('.view-student').data('id'); // Adjust if needed
+    let groupMappingID = $('.view-student').data('id');
     let token = $('meta[name="csrf-token"]').attr('content');
 
     $.ajax({

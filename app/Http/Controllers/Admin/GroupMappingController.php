@@ -129,14 +129,13 @@ class GroupMappingController extends Controller
         try {
             $groupMappingID = decrypt($request->groupMappingID);
             $groupMapping = GroupTypeMasterCourseMasterMap::findOrFail($groupMappingID);
-
             // Apply pagination
-            $students = StudentCourseGroupMap::with('studentsMaster')
+            $students = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
                 ->paginate(10, ['*'], 'page', $request->page);
-
             // Render the HTML partial
-            $html = view('admin.group_mapping.student_list_ajax', compact('students'))->render();
+            $groupMappingPk = $groupMapping->pk;
+            $html = view('admin.group_mapping.student_list_ajax', compact('students', 'groupMappingPk'))->render();
 
             return response()->json([
                 'status' => 'success',
