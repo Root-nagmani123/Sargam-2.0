@@ -18,7 +18,8 @@ use App\Http\Controllers\Admin\{
     VenueMasterController,
     GroupMappingController,
     CalendarController,
-    MDOEscrotExemptionController
+    MDOEscrotExemptionController,
+    AttendanceController
 };
 
 Route::get('clear-cache', function () {
@@ -209,4 +210,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update', 'update')->name('update');
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
+
+    // Attendance Routes
+    Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/get-attendance-list', 'getAttendanceList')->name('get.attendance.list');
+        Route::get('/create', 'create')->name('create');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+    });
+
 });
