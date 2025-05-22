@@ -20,14 +20,14 @@
                 <input type="hidden" name="id" value="{{ encrypt($groupMapping->pk) }}">
                 @endif
                 <div class="row">
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="mb-3">
                             <x-select name="course_id" label="Course name :" placeholder="Course name"
                                 formLabelClass="form-label" formSelectClass="select2" required="true"
                                 :options="$courses" :value="old('course_id', $groupMapping->course_name ?? '')" />
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="mb-3">
                             <x-select name="type_id" label="Group Type :" placeholder="Group Type"
                                 formLabelClass="form-label" formSelectClass="select2" required="true"
@@ -35,7 +35,7 @@
                                 :value="old('type_name', $groupMapping->type_name ?? '')" />
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="mb-3">
                             <x-input name="group_name" label="Group Name :" placeholder="Group Name"
                                 formLabelClass="form-label" required="true"
