@@ -73,7 +73,7 @@
                             <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label>Faculty</label>
                             <input type="text" class="form-control" value="{{ $feedback->faculty_name }}" readonly>
                         </div>
