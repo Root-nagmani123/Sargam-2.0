@@ -66,6 +66,28 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+=======
+=======
+>>>>>>> 1f00172 (timetable bug solve)
+=======
+=======
+>>>>>>> 38d0958 (timetable bug solve)
+=======
+=======
+=======
+<<<<<<< HEAD
+>>>>>>> 6332f2d (timetable bug solve)
+<<<<<<< HEAD
+>>>>>>> 763230b (timetable bug solve)
+=======
+=======
+>>>>>>> 1f00172 (timetable bug solve)
+>>>>>>> c76a51b (timetable bug solve)
+>>>>>>> 5cffec2 (timetable bug solve)
+<<<<<<< HEAD
+>>>>>>> 81eaa8b (timetable bug solve)
 
 
                         <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
@@ -105,6 +127,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> d707d11 (timetable bug solve)
 =======
@@ -117,13 +140,28 @@
 >>>>>>> 3fa31b5 (timetable bug solve)
 =======
 =======
+=======
+>>>>>>> 5cffec2 (timetable bug solve)
 >>>>>>> cb8cad4 (timetable bug solve)
 =======
 =======
 >>>>>>> d707d11 (timetable bug solve)
 >>>>>>> 6332f2d (timetable bug solve)
+<<<<<<< HEAD
 >>>>>>> 763230b (timetable bug solve)
+<<<<<<< HEAD
 >>>>>>> e955f27 (timetable bug solve)
+=======
+=======
+=======
+=======
+>>>>>>> d707d11 (timetable bug solve)
+=======
+>>>>>>> cb8cad4 (timetable bug solve)
+>>>>>>> 1f00172 (timetable bug solve)
+>>>>>>> c76a51b (timetable bug solve)
+>>>>>>> 5cffec2 (timetable bug solve)
+>>>>>>> 81eaa8b (timetable bug solve)
                        <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
                     <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
                         <div class="col-12 col-md-12">
@@ -137,16 +175,21 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 3fa31b5 (timetable bug solve)
 >>>>>>> d707d11 (timetable bug solve)
 =======
 >>>>>>> d707d11 (timetable bug solve)
 =======
+=======
+>>>>>>> 81eaa8b (timetable bug solve)
 >>>>>>> d707d11 (timetable bug solve)
 =======
 >>>>>>> d707d11 (timetable bug solve)
 =======
 =======
+=======
+>>>>>>> 5cffec2 (timetable bug solve)
 =======
 >>>>>>> d707d11 (timetable bug solve)
 >>>>>>> 6332f2d (timetable bug solve)
@@ -156,14 +199,31 @@
 >>>>>>> e955f27 (timetable bug solve)
 >>>>>>> cb8cad4 (timetable bug solve)
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 81eaa8b (timetable bug solve)
 >>>>>>> 1f00172 (timetable bug solve)
 =======
 =======
 >>>>>>> d707d11 (timetable bug solve)
+=======
+>>>>>>> d707d11 (timetable bug solve)
+>>>>>>> 5cffec2 (timetable bug solve)
+=======
+=======
+>>>>>>> d707d11 (timetable bug solve)
 >>>>>>> cb8cad4 (timetable bug solve)
+<<<<<<< HEAD
 >>>>>>> 38d0958 (timetable bug solve)
+<<<<<<< HEAD
 >>>>>>> 3fa31b5 (timetable bug solve)
+=======
+=======
+>>>>>>> 1f00172 (timetable bug solve)
+>>>>>>> c76a51b (timetable bug solve)
+>>>>>>> 5cffec2 (timetable bug solve)
+>>>>>>> 81eaa8b (timetable bug solve)
                             <label>Course</label>
                             <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
                         </div>
