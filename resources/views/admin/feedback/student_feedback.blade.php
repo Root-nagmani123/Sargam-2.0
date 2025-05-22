@@ -33,20 +33,20 @@
     }
     </style>
 </head>
- <x-session_message />
- @if ($errors->any())
-    <div class="alert alert-danger">
-        <strong>There were some errors:</strong>
-        <ul class="mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div> 
+<x-session_message />
+@if ($errors->any())
+<div class="alert alert-danger">
+    <strong>There were some errors:</strong>
+    <ul class="mb-0">
+        @foreach ($errors->all() as $error)
+        <li>{{ $error }}</li>
+        @endforeach
+    </ul>
+</div>
 @endif
 
 <body>
-    <div class="container my-5"> 
+    <div class="container my-5">
         <div class="card shadow rounded-4">
             <div class="card-header bg-danger text-white text-center rounded-top-4">
                 <h4 class="mb-0">Topic Feedback Form</h4>
@@ -54,7 +54,7 @@
             <div class="card-body">
                 <form method="POST" action="{{ route('feedback.submit.feedback') }}">
                     @csrf
- 
+
                     @foreach ($data as $index => $feedback)
                     @if($feedback->feedback_checkbox == 1)
                     <div class="row g-3 border p-3 mb-4 shadow rounded">
@@ -62,84 +62,37 @@
                         <input type="hidden" name="timetable_pk[]" value="{{ $feedback->pk }}">
                         <input type="hidden" name="faculty_pk[]" value="{{ $feedback->faculty_master }}">
                         <input type="hidden" name="topic_name[]" value="{{ $feedback->subject_topic }}">
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
-<<<<<<< HEAD
->>>>>>> 6332f2d (timetable bug solve)
-=======
->>>>>>> 1f00172 (timetable bug solve)
->>>>>>> c76a51b (timetable bug solve)
-<<<<<<< HEAD
 
-                        <div class="col-md-6">
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> cb8cad4 (timetable bug solve)
-=======
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> 6332f2d (timetable bug solve)
-=======
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
->>>>>>> cb8cad4 (timetable bug solve)
->>>>>>> 1f00172 (timetable bug solve)
->>>>>>> c76a51b (timetable bug solve)
-                       <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
-                    <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
+
+                        <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
+                        <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
                         <div class="col-12 col-md-12">
                             <label class="form-label">Topic</label>
                             <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
                         </div>
-                        <div class="col-md-4">
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> 6332f2d (timetable bug solve)
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> cb8cad4 (timetable bug solve)
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> cb8cad4 (timetable bug solve)
->>>>>>> 1f00172 (timetable bug solve)
->>>>>>> c76a51b (timetable bug solve)
+                        <div class="col-md-6">
+
                             <label>Course</label>
                             <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
                         </div>
 
-<<<<<<< HEAD
                         <div class="col-md-6">
-=======
-                        <div class="col-md-4">
->>>>>>> d707d11 (timetable bug solve)
                             <label>Faculty</label>
                             <input type="text" class="form-control" value="{{ $feedback->faculty_name }}" readonly>
                         </div>
 
-                        
-                       @if($feedback->Ratting_checkbox == 1)
+
+                        @if($feedback->Ratting_checkbox == 1)
                         <div class="col-12 col-md-4">
                             <label class="form-label">Rating <span class="text-danger">*</span></label>
                             <select class="form-select" name="rating[]" required>
                                 <option disabled {{ old('rating.'.$index) ? '' : 'selected' }}>Choose rating</option>
-                                @for ($i = 1; $i <= 5; $i++)
-                                    <option value="{{ $i }}" {{ old('rating.'.$index) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                @endfor
+                                @for ($i = 1; $i <= 5; $i++) <option value="{{ $i }}"
+                                    {{ old('rating.'.$index) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                    @endfor
                             </select>
                             @error('rating.'.$index)
-                                <div class="text-danger small">{{ $message }}</div>
+                            <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
                         @endif
@@ -148,14 +101,14 @@
                             <label class="form-label">Presentation <span class="text-danger">*</span></label><br>
                             <div class="star-rating">
                                 @for ($i = 5; $i >= 1; $i--)
-                                    <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
-                                        name="presentation[{{ $index }}]" value="{{ $i }}"
-                                        {{ old('presentation.'.$index) == $i ? 'checked' : '' }} required>
-                                    <label for="presentation-{{ $i }}-{{ $index }}">&#9733;</label>
+                                <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
+                                    name="presentation[{{ $index }}]" value="{{ $i }}"
+                                    {{ old('presentation.'.$index) == $i ? 'checked' : '' }} required>
+                                <label for="presentation-{{ $i }}-{{ $index }}">&#9733;</label>
                                 @endfor
                             </div>
                             @error('presentation.'.$index)
-                                <div class="text-danger small">{{ $message }}</div>
+                            <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -163,32 +116,32 @@
                             <label class="form-label">Content <span class="text-danger">*</span></label><br>
                             <div class="star-rating">
                                 @for ($i = 5; $i >= 1; $i--)
-                                    <input type="radio" id="content-{{ $i }}-{{ $index }}"
-                                        name="content[{{ $index }}]" value="{{ $i }}"
-                                        {{ old('content.'.$index) == $i ? 'checked' : '' }} required>
-                                    <label for="content-{{ $i }}-{{ $index }}">&#9733;</label>
+                                <input type="radio" id="content-{{ $i }}-{{ $index }}" name="content[{{ $index }}]"
+                                    value="{{ $i }}" {{ old('content.'.$index) == $i ? 'checked' : '' }} required>
+                                <label for="content-{{ $i }}-{{ $index }}">&#9733;</label>
                                 @endfor
                             </div>
                             @error('content.'.$index)
-                                <div class="text-danger small">{{ $message }}</div>
+                            <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
 
 
-                    @if($feedback->Remark_checkbox == 1)
-                            <div class="col-12">
-                                <label class="form-label">Remarks <span class="text-danger">*</span></label>
-                                <textarea class="form-control" name="remarks[]" rows="3"
-                                    placeholder="Enter your remarks here..." required>{{ old('remarks.'.$index) }}</textarea>
-                                @error('remarks.'.$index)
-                                    <div class="text-danger small">{{ $message }}</div>
-                                @enderror
-                            </div>
+                        @if($feedback->Remark_checkbox == 1)
+                        <div class="col-12">
+                            <label class="form-label">Remarks <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="remarks[]" rows="3"
+                                placeholder="Enter your remarks here..."
+                                required>{{ old('remarks.'.$index) }}</textarea>
+                            @error('remarks.'.$index)
+                            <div class="text-danger small">{{ $message }}</div>
+                            @enderror
+                        </div>
                         @endif
                     </div>
                     @endif
                     @endforeach
-                @if($data->isEmpty())
+                    @if($data->isEmpty())
                     <div class="alert alert-info text-center">
                         No feedback data available.
                     </div>
@@ -208,26 +161,26 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-document.querySelector("form").addEventListener("submit", function (e) {
-    const radiosPresentation = document.querySelectorAll('input[name^="presentation"]');
-    const radiosContent = document.querySelectorAll('input[name^="content"]');
+        document.querySelector("form").addEventListener("submit", function(e) {
+            const radiosPresentation = document.querySelectorAll('input[name^="presentation"]');
+            const radiosContent = document.querySelectorAll('input[name^="content"]');
 
-    let allPresentationChecked = [...radiosPresentation].every((el, i, arr) => {
-        const name = el.name;
-        return document.querySelector(`input[name="${name}"]:checked`);
-    });
+            let allPresentationChecked = [...radiosPresentation].every((el, i, arr) => {
+                const name = el.name;
+                return document.querySelector(`input[name="${name}"]:checked`);
+            });
 
-    let allContentChecked = [...radiosContent].every((el, i, arr) => {
-        const name = el.name;
-        return document.querySelector(`input[name="${name}"]:checked`);
-    });
+            let allContentChecked = [...radiosContent].every((el, i, arr) => {
+                const name = el.name;
+                return document.querySelector(`input[name="${name}"]:checked`);
+            });
 
-    if (!allPresentationChecked || !allContentChecked) {
-        e.preventDefault();
-        alert("Please give ratings for all 'Presentation' and 'Content' fields.");
-    }
-});
-</script>
+            if (!allPresentationChecked || !allContentChecked) {
+                e.preventDefault();
+                alert("Please give ratings for all 'Presentation' and 'Content' fields.");
+            }
+        });
+        </script>
 
 </body>
 

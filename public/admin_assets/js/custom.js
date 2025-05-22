@@ -90,10 +90,7 @@ $(document).on('change', '.status-toggle', function () {
     let id_column = $checkbox.data('id_column');
     let status = $checkbox.is(':checked') ? 1 : 0;
 
-    if (!confirm('Are you sure you want to change the status?')) {
-        $(this).prop('checked', !$(this).prop('checked'));
-        return false;
-    }
+   
     table = $(this).data('table');
     column = $(this).data('column');
     id = $(this).data('id');
@@ -139,6 +136,9 @@ $(document).on('change', '.status-toggle', function () {
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 `);
+                 setTimeout(function() {
+        location.reload();
+    }, 1000);
             },
             error: function () {
                 Swal.fire('Error', 'Status update failed', 'error');

@@ -38,7 +38,7 @@
 
     <div class="row my-2">
         <div class="col-sm-6">
-            <label for="module_name" class="form-label">Module Name</label>
+            <label for="module_name" class="form-label">Module Name <span class="text-danger">*</span></label>
             <input type="text" name="module_name" class="form-control @error('module_name') is-invalid @enderror" placeholder="Enter module name" value="{{ old('module_name') }}" required>
             @error('module_name')
                 <div class="invalid-feedback">{{ $message }}</div>
@@ -46,7 +46,7 @@
         </div>
 
         <div class="col-sm-6">
-            <label for="active_inactive" class="form-label">Status</label>
+            <label for="active_inactive" class="form-label">Status <span class="text-danger">*</span></label>
             <select name="active_inactive" class="form-control @error('active_inactive') is-invalid @enderror" required>
                 <option value="">-- Select Status --</option>
                 <option value="1" {{ old('active_inactive') == '1' ? 'selected' : '' }}>Active</option>

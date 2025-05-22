@@ -40,7 +40,7 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="mb-3">
-                            <label for="major_subject_name" class="form-label">Major Subject Name</label>
+                            <label for="major_subject_name" class="form-label">Major Subject Name <span class="text-danger">*</span></label>
                             <input type="text" name="major_subject_name" id="major_subject_name" class="form-control">
                             @error('major_subject_name')
                             <div class="text-danger">{{ $message }}</div>
@@ -50,7 +50,7 @@
                     <div class="col-6">
                         <!-- Short Name -->
                         <div class="mb-3">
-                            <label for="short_name" class="form-label">Short Name</label>
+                            <label for="short_name" class="form-label">Short Name <span class="text-danger">*</span></label>
                             <input type="text" name="short_name" id="short_name" class="form-control">
                             @error('short_name')
                             <div class="text-danger">{{ $message }}</div>
@@ -60,7 +60,7 @@
                     <div class="col-6">
                         <!-- Topic Name -->
                         <div class="mb-3">
-                            <label for="topic_name" class="form-label">Topic Name</label>
+                            <label for="topic_name" class="form-label">Topic Name </label>
                             <input type="text" name="topic_name" id="topic_name" class="form-control">
                             @error('topic_name')
                             <div class="text-danger">{{ $message }}</div>
@@ -70,7 +70,7 @@
                     <div class="col-6">
                         <!-- Subject Module -->
                         <div class="mb-3">
-                            <label for="subject_module" class="form-label">Subject Module</label>
+                            <label for="subject_module" class="form-label">Subject Module <span class="text-danger">*</span></label>
                             <select name="subject_module" id="subject_module" class="form-select">
                                 <option value="">-- Select Subject Module --</option>
                                 @foreach($subjects as $module)
@@ -85,7 +85,7 @@
                     <div class="col-6">
                         <!-- Status -->
                         <div class="mb-3">
-                            <label for="status" class="form-label">Status</label>
+                            <label for="status" class="form-label">Status </label>
                             <select name="status" id="status" class="form-select">
                                 <option value="">-- Select Status --</option>
                                 <option value="1">Active</option>

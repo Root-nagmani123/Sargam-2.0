@@ -39,7 +39,7 @@
 
         <!-- Major Subject Name -->
         <div class="mb-3">
-            <label for="major_subject_name" class="form-label">Major Subject Name</label>
+            <label for="major_subject_name" class="form-label">Major Subject Name <span class="text-danger">*</span></label>
             <input type="text" name="major_subject_name" id="major_subject_name" class="form-control" value="{{ old('major_subject_name', $subject->subject_name) }}" required>
             @error('major_subject_name')
                 <div class="text-danger">{{ $message }}</div>
@@ -48,7 +48,7 @@
 
         <!-- Short Name -->
         <div class="mb-3">
-            <label for="short_name" class="form-label">Short Name</label>
+            <label for="short_name" class="form-label">Short Name <span class="text-danger">*</span></label>
             <input type="text" name="short_name" id="short_name" class="form-control" value="{{ old('short_name', $subject->sub_short_name) }}" required>
             @error('short_name')
                 <div class="text-danger">{{ $message }}</div>
@@ -66,7 +66,7 @@
 
         <!-- Subject Module -->
         <div class="mb-3">
-            <label for="subject_module" class="form-label">Subject Module</label>
+            <label for="subject_module" class="form-label">Subject Module <span class="text-danger">*</span></label>
             <select name="subject_module" id="subject_module" class="form-select" required>
                 <option value="">-- Select Subject Module --</option>
                 @foreach($subjects as $module)
