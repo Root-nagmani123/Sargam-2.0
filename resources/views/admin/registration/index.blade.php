@@ -81,7 +81,7 @@
                                     Preview
                                 </a>
                             </td>
-                              <td>
+                            <td>
                                 <a href="{{ route('forms.fc_edit', $form->id) }}" class="btn btn-sm btn-warning">
                                     Edit Fields
                                 </a>
@@ -98,7 +98,8 @@
                                 </div>
                             </td>
                             <td>
-                                <!-- Move Up -->
+                                <div class="form-check d-flex gap-2">
+                                    <!-- Move Up -->
                                 @if ($index > 0)
                                 <form action="{{ route('forms.moveup', $form->id) }}" method="POST">
                                     @csrf
@@ -117,6 +118,7 @@
                                     </button>
                                     </form>
                                     @endif
+                                </div>
                             </td>
                         </tr>
                         @endforeach
