@@ -127,17 +127,15 @@ class GroupMappingController extends Controller
     function studentList(Request $request)
     {
         try {
-            $request->validate([
-                'groupMappingID' => 'required|string|max:255',
-            ]);
-
             $groupMappingID = decrypt($request->groupMappingID);
             $groupMapping = GroupTypeMasterCourseMasterMap::findOrFail($groupMappingID);
 
+            // Apply pagination
             $students = StudentCourseGroupMap::with('studentsMaster')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
-                ->paginate(10); // Set items per page
+                ->paginate(10, ['*'], 'page', $request->page);
 
+            // Render the HTML partial
             $html = view('admin.group_mapping.student_list_ajax', compact('students'))->render();
 
             return response()->json([
@@ -152,6 +150,7 @@ class GroupMappingController extends Controller
         }
     }
 
+
     /**
      * Export the student list for group mappings to an Excel file.
      *
@@ -162,19 +161,19 @@ class GroupMappingController extends Controller
     {
         try {
 
-            if(!$id) {
+            if (!$id) {
                 return redirect()->back()->with('error', 'Group Mapping ID is required.');
             }
 
             $fileName = 'group-mapping-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
 
             decrypt($id);
-            if( $id ) {
+            if ($id) {
                 return Excel::download(new GroupMappingExport($id), $fileName);
             } else {
                 return Excel::download(new GroupMappingExport, $fileName);
             }
-            
+
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
