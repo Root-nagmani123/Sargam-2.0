@@ -614,3 +614,33 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // END MDO Escrot Exemption
+
+// Attendance
+$(document).on('click', '#searchAttendance', function (e) {
+    e.preventDefault();
+    let programme = $('#programme').val();
+    let from_date = $('#from_date').val();
+    let to_date = $('#to_date').val();
+    let view_type = $('#view_type').val();
+    let token = $('meta[name="csrf-token"]').attr('content');
+
+    $.ajax({
+        url: routes.getAttendanceList,
+        type: 'POST',
+        data: {
+            _token: token,
+            programme: programme,
+            from_date: from_date,
+            to_date: to_date,
+            view_type: view_type
+        },
+        success: function (response) {
+            
+            $('#attendanceTableBody').html(response.html);
+        },
+        error: function () {
+            alert('Error fetching attendance data');
+        }
+    });
+});
+// End Attendance
