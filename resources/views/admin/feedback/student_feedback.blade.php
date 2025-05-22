@@ -65,6 +65,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 
                         <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
@@ -75,6 +76,8 @@
                         </div>
                         <div class="col-md-6">
 =======
+=======
+>>>>>>> e955f27 (timetable bug solve)
 <<<<<<< HEAD
 =======
 =======
@@ -82,7 +85,15 @@
 =======
 =======
 >>>>>>> 38d0958 (timetable bug solve)
+<<<<<<< HEAD
 >>>>>>> 3fa31b5 (timetable bug solve)
+=======
+=======
+=======
+=======
+>>>>>>> 6332f2d (timetable bug solve)
+>>>>>>> 763230b (timetable bug solve)
+>>>>>>> e955f27 (timetable bug solve)
 <<<<<<< HEAD
 
 =======
@@ -93,6 +104,7 @@
 =======
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> d707d11 (timetable bug solve)
 =======
@@ -101,7 +113,17 @@
 =======
 >>>>>>> cb8cad4 (timetable bug solve)
 >>>>>>> 38d0958 (timetable bug solve)
+<<<<<<< HEAD
 >>>>>>> 3fa31b5 (timetable bug solve)
+=======
+=======
+>>>>>>> cb8cad4 (timetable bug solve)
+=======
+=======
+>>>>>>> d707d11 (timetable bug solve)
+>>>>>>> 6332f2d (timetable bug solve)
+>>>>>>> 763230b (timetable bug solve)
+>>>>>>> e955f27 (timetable bug solve)
                        <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
                     <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
                         <div class="col-12 col-md-12">
@@ -114,10 +136,24 @@
 =======
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 3fa31b5 (timetable bug solve)
 >>>>>>> d707d11 (timetable bug solve)
 =======
 >>>>>>> d707d11 (timetable bug solve)
+=======
+>>>>>>> d707d11 (timetable bug solve)
+=======
+>>>>>>> d707d11 (timetable bug solve)
+=======
+=======
+=======
+>>>>>>> d707d11 (timetable bug solve)
+>>>>>>> 6332f2d (timetable bug solve)
+>>>>>>> 763230b (timetable bug solve)
+=======
+>>>>>>> d707d11 (timetable bug solve)
+>>>>>>> e955f27 (timetable bug solve)
 >>>>>>> cb8cad4 (timetable bug solve)
 <<<<<<< HEAD
 =======
