@@ -123,6 +123,7 @@ public function fullCalendarDetails(Request $request)
             'backgroundColor' => $colors[array_rand($colors)],  // background color for event
             'borderColor' => $colors[array_rand($colors)],  // border color for event
             'textColor' => '#fff',  // Text color for event (White text on colored background)
+       'display' => 'block',
         ];
     });
 
@@ -294,16 +295,29 @@ public function submitFeedback(Request $request)
         'rating' => 'nullable|array',
         'presentation' => 'required|array',
         'content' => 'required|array',
-        'remarks' => 'nullable|array',
+          'remarks.*' => 'required_if:Remark_checkbox,1',
     ];
 
     // Validate all items for each index (nested validation)
-    foreach ($request->timetable_pk as $index => $value) {
-        $rules["rating.$index"] = 'nullable|integer|min:1|max:5';
-        $rules["presentation.$index"] = 'required|integer|min:1|max:5';
-        $rules["content.$index"] = 'required|integer|min:1|max:5';
+  foreach ($request->timetable_pk as $index => $value) {
+    $rules["rating.$index"] = 'nullable|integer|min:1|max:5';
+    $rules["presentation.$index"] = 'required|integer|min:1|max:5';
+    $rules["content.$index"] = 'required|integer|min:1|max:5';
+
+    // Remarks required only if Remark_checkbox is 1 for this row
+    if (!empty($request->Remark_checkbox[$index]) && $request->Remark_checkbox[$index] == 1) {
+        $rules["remarks.$index"] = 'required|string|max:255';
+    } else {
         $rules["remarks.$index"] = 'nullable|string|max:255';
     }
+
+    // Rating required only if Ratting_checkbox is 1 for this row
+    if (!empty($request->Ratting_checkbox[$index]) && $request->Ratting_checkbox[$index] == 1) {
+        $rules["rating.$index"] = 'required|integer|min:1|max:5';
+    } else {
+        $rules["rating.$index"] = 'nullable|integer|min:1|max:5';
+    }
+}
 
     $validated = $request->validate($rules);
 

@@ -4,12 +4,14 @@
 
 @section('content')
 
+
 <style>
     /* Month ke har din ke box ki height/padding badhao */
     .fc .fc-daygrid-day-frame {
         min-height: 110px !important;   /* Height badhao (adjust as needed) */
         padding: 8px 4px !important;
     }
+    
     .fc .fc-daygrid-day {
         min-height: 110px !important;
     }
@@ -128,7 +130,7 @@
                                 </div>
                             </div>
                            
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-3">
                                     <label class="form-label">Faculty <span class="text-danger">*</span></label>
                                     <select name="faculty" id="faculty" class="form-control">
@@ -142,7 +144,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="mb-3">
                                     <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
                                     <select name="faculty_type" id="faculty_type" class="form-control">
@@ -322,24 +324,25 @@
 
 <script>
 $(document).ready(function() {
-        function toggleRemarkRating() {
-            if ($('#feedback_checkbox').is(':checked')) {
-                $('#remarkCheckbox').prop('disabled', false);
-                $('#ratingCheckbox').prop('disabled', false);
-            } else {
-                $('#remarkCheckbox').prop('disabled', true).prop('checked', false);
-                $('#ratingCheckbox').prop('disabled', true).prop('checked', false);
-            }
+$(document).ready(function () {
+    function toggleRemarkRating() {
+        if ($('#feedback_checkbox').is(':checked')) {
+            $('#remarkCheckbox').prop('disabled', false);
+            $('#ratingCheckbox').prop('disabled', false);
+        } else {
+            $('#remarkCheckbox').prop('disabled', true).prop('checked', false);
+            $('#ratingCheckbox').prop('disabled', true).prop('checked', false);
         }
+    }
 
-        // Initial call
+    // Initial call
+    toggleRemarkRating();
+
+    // On change of Feedback checkbox
+    $('#feedback_checkbox').on('change', function () {
         toggleRemarkRating();
-
-        // On change of Feedback checkbox
-        $('#feedback_checkbox').on('change', function () {
-            toggleRemarkRating();
-        });
     });
+});
 
     $('#subject_name').on('change', function() {
         // Get data-id from selected option
@@ -450,37 +453,38 @@ $(document).ready(function() {
                             );
                         }
                     }
+
                     $('#group_type').off('change').on('change', function() {
-                            const selectedType = $(this).val();
-                            let html = '';
-                            let groupNames = window.selectedGroupNames;
+        const selectedType = $(this).val();
+        let html = '';
+        let groupNames = window.selectedGroupNames;
 
-                            if (groupedData[selectedType]) {
-                                // Agar create ke time hai, toh sab checked
-                                let allChecked = groupNames === 'ALL';
-                                groupedData[selectedType].forEach(group => {
-                                    let checked = '';
-                                    if (allChecked) {
-                                        checked = 'checked';
-                                    } else if (Array.isArray(groupNames) && groupNames.includes(group.pk)) {
-                                        checked = 'checked';
-                                    }
-                                    html += `
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" 
-                                                name="type_names[]" 
-                                                value="${group.pk}" 
-                                                id="type_${group.pk}" ${checked}>
-                                            <label class="form-check-label" for="type_${group.pk}">
-                                                ${group.group_name} (${group.type_name})
-                                            </label>
-                                        </div>
-                                    `;
-                                });
-                            }
+        if (groupedData[selectedType]) {
+            // Agar create ke time hai, toh sab checked
+            let allChecked = groupNames === 'ALL';
+            groupedData[selectedType].forEach(group => {
+                let checked = '';
+                if (allChecked) {
+                    checked = 'checked';
+                } else if (Array.isArray(groupNames) && groupNames.includes(group.pk)) {
+                    checked = 'checked';
+                }
+                html += `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                            name="type_names[]" 
+                            value="${group.pk}" 
+                            id="type_${group.pk}" ${checked}>
+                        <label class="form-check-label" for="type_${group.pk}">
+                            ${group.group_name} (${group.type_name})
+                        </label>
+                    </div>
+                `;
+            });
+        }
 
-                            $('#type_name_container').html(html);
-                        });
+        $('#type_name_container').html(html);
+    });
                 }
             });
         } else {
@@ -490,6 +494,21 @@ $(document).ready(function() {
         }
     });
 
+});
+waitForGroupTypeAndSet(event.course_group_type_master, function() {
+    let groupNames = [];
+    try {
+        groupNames = JSON.parse(event.group_name || '[]');
+    } catch (e) {}
+    window.selectedGroupNames = groupNames; // <-- Set here for edit
+    $('#group_type').trigger('change');
+});
+
+</script>
+<script>
+// $('.btn-update-event').on('click', function() {
+//     $('#eventForm').submit();
+// });
 $('#eventForm').on('submit', function(e) {
     e.preventDefault();
     let isValid = true;
@@ -569,6 +588,8 @@ $('#eventForm').on('submit', function(e) {
             $('#end_datetime').focus();
             return false;
         }
+
+
     let formData = new FormData(this);
     $('input[name="group_type_name[]"]:checked').each(function() {
         formData.append('group_type_name[]', $(this).val());
@@ -873,17 +894,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
-     $(document).on('click', '#createEventupperButton', function() {
-        $('#eventForm')[0].reset();
-            $('.btn-update-event').hide().removeAttr('data-id');
-            $('#group_type').empty().append('<option value="">Select Group Type</option>');
-            $('#type_name_container').html('');
-            $('.btn-add-event').show();
-            window.selectedGroupNames = 'ALL';
-            // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
-            $('#eventModal').modal('show');
-        });
-
+   
 });
 $(document).on('click', '.btn-update-event', function(e) {
     e.preventDefault();
@@ -1002,6 +1013,16 @@ function waitForGroupTypeAndSet(value, callback, retries = 20) {
         }, 150);
     }
 }
+ $(document).on('click', '#createEventupperButton', function() {
+        $('#eventForm')[0].reset();
+            $('.btn-update-event').hide().removeAttr('data-id');
+            $('#group_type').empty().append('<option value="">Select Group Type</option>');
+            $('#type_name_container').html('');
+            $('.btn-add-event').show();
+            window.selectedGroupNames = 'ALL';
+            // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
+            $('#eventModal').modal('show');
+        });
 </script>
 
 @endsection
