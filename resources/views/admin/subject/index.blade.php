@@ -25,18 +25,32 @@
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
 
-                        <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                       <table id="zero_config"
+                            class="tabletable-bordered text-nowrap align-middle dataTable"
                             aria-describedby="zero_config_info">
                             <thead>
                                 <tr>
-                                    <th class="col">S.No.</th>
-                                    <th class="col">Major Subject Name</th>
-                                    <th class="col">Short Name</th>
-                                    <th class="col">Topic Name</th>
-                                    <th class="col">Subject Module</th>
-                                    <th class="col">Action</th>
-                                    <th class="col">Status</th>
+                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
+                                        colspan="1" aria-sort="ascending"
+                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">S.No.</th>
+                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
+                                        colspan="1" aria-sort="ascending"
+                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">Major Subject Name</th>
+                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
+                                        colspan="1" aria-sort="ascending"
+                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">Short Name</th>
+                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
+                                        colspan="1" aria-sort="ascending"
+                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">Topic Name</th>
+                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
+                                        colspan="1" aria-sort="ascending"
+                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">Subject Module</th>
+                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
+                                        colspan="1" aria-sort="ascending"
+                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">Action</th>
+                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
+                                        colspan="1" aria-sort="ascending"
+                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">Status</th>
                                 </tr>
                             </thead>
 
@@ -58,14 +72,14 @@
                                             <a href="{{ route('subject.edit', $subject->pk) }}"
                                                 class="btn btn-success text-white btn-sm">Edit</a>
                                             <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
-                                                class="m-0">
+                                                class="m-0 delete-form" data-status="{{ $subject->active_inactive }}">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-danger text-white btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete?')">
-                                                    Delete
-                                                </button>
+                                                <button type="submit" class="btn btn-danger text-white btn-sm">
+                                                        Delete
+                                                    </button>
                                             </form>
+                      
                                         </div>
                                     </td>
 <td>

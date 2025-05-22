@@ -47,7 +47,10 @@ class CalendarController extends Controller
     $dataId = $request->input('data_id');
 
     // Change the field name accordingly (assuming subject_module_master.pk = $dataId)
-    $modules = SubjectModuleMaster::where('pk', $dataId)->get();
+   $modules = SubjectModuleMaster::where('active_inactive', 1)
+                              ->where('pk', $dataId)
+                              ->get();
+
 
     return response()->json($modules);
 }
