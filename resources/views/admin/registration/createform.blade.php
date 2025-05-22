@@ -6,6 +6,15 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
+               @if (session('success') || session('error'))
+                    <div class="container mt-3">
+                        <div class="alert alert-{{ session('success') ? 'success' : 'danger' }} alert-dismissible fade show"
+                            role="alert">
+                            {{ session('success') ?? session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    </div>
+                @endif
             <h3 class="my-4 text-center">Create New Form</h3>
             <hr>
             <form method="POST" action="{{ route('forms.save', ['formid' => $formid]) }}">

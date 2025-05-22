@@ -7,16 +7,17 @@ $validFieldHeadings = [
 'fatherprofession', 'trouser', 'shoessize', 'studentskill'
 ];
 
+// $validFieldHeadings ='';
 $isMappedField = false;
-$mappedHeading = '';
+// $mappedHeading = '';
 
-foreach ($validFieldHeadings as $validHeading) {
-if (stripos($field->formname ?? $field->field_title ?? '', $validHeading) !== false) {
-$isMappedField = true;
-$mappedHeading = $validHeading;
-break;
-}
-}
+// foreach ($validFieldHeadings as $validHeading) {
+// if (stripos($field->formname ?? $field->field_title ?? '', $validHeading) !== false) {
+// $isMappedField = true;
+// $mappedHeading = $validHeading;
+// break;
+// }
+// }
 
 // Determine if this is a table field (has field_type instead of formtype)
 // $sectionId = $sectionId ?? 'unknown'; // This should be passed into the view per section
@@ -70,7 +71,7 @@ $required = $isTableField ? ($field->required ?? false) : ($field->required ?? f
 </div>
 @break
 
-@case('Select Box')
+{{-- @case('Select Box')
 @case('dropdown')
 <div class="form-group">
     <label class="form-label">{{ $fieldLabel }}</label>
@@ -105,7 +106,49 @@ $required = $isTableField ? ($field->required ?? false) : ($field->required ?? f
         @endif
     </select>
 </div>
+@break --}}
+
+@case('Select Box')
+@case('dropdown')
+<div class="form-group">
+    <label class="form-label" for="{{ $fieldName }}">{{ $fieldLabel }}</label>
+    <select class="form-control" id="{{ $fieldName }}" name="{{ $fieldName }}" {{ $required ? 'required' : '' }}>
+        <option value="">Select {{ $fieldLabel }}</option>
+
+        @if($isMappedField)
+            @php
+                $tableName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $mappedHeading)) . '_master';
+                $options = DB::table($tableName)->get();
+                $valueField = $mappedHeading . '_name';
+            @endphp
+
+            @foreach($options as $option)
+                <option value="{{ $option->id }}" {{ old($fieldName, $value) == $option->id ? 'selected' : '' }}>
+                    {{ $option->$valueField ?? $option->name }}
+                </option>
+            @endforeach
+        @else
+            @php
+                $optionsRaw = $field->field_options 
+                            ?? $field->field_checkbox_options 
+                            ?? $field->field_radio_options 
+                            ?? $field->fieldoption 
+                            ?? '';
+                $options = explode(',', $optionsRaw);
+            @endphp
+
+            @foreach($options as $option)
+                @php $option = trim($option); @endphp
+                <option value="{{ $option }}" {{ old($fieldName, $value) == $option ? 'selected' : '' }}>
+                    {{ $option }}
+                </option>
+            @endforeach
+        @endif
+    </select>
+</div>
 @break
+
+
 
 @case('Radio Button')
 @case('radio')

@@ -5,27 +5,46 @@
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">
+                @if (session('success') || session('error'))
+                    <div class="container mt-3">
+                        <div class="alert alert-{{ session('success') ? 'success' : 'danger' }} alert-dismissible fade show"
+                            role="alert">
+                            {{ session('success') ?? session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    </div>
+                @endif
+
                 <div class="card-title">
                     <div class="row">
-                        <div class="col-3">
-                            <img src="{{ asset($data->logo1 ? 'storage/' . $data->logo1 : 'admin_assets/images/logos/logo.png') }}"
-                                alt="logo1" class="img-fluid" style="height: 100px;">
-                        </div>
+                        @if (!empty($data->logo1))
+                            <div class="col-3">
+                                <img src="{{ asset('storage/' . $data->logo1) }}" alt="logo1" class="img-fluid"
+                                    style="height: 100px;">
+                            </div>
+                        @endif
+
 
                         <div class="col-6 text-center">
-
-                            {{-- <h2 class="text-center"><b>{{ $data->heading ?? 'Main Heading Here' }}</b></h2> --}}
                             <!-- Main heading -->
-                            <h2 class="text-center">{!! $data->heading ?? '<b>Main Heading Here</b>' !!}</h2>
-                            <!-- Subheading -->
-                            {{-- <small class="text-center">(August 26, 2024 to November 29, 2024)</small> --}}
-                            <small class="text-center"><b>{{ $data->sub_heading ?? 'Sub Heading Here' }}</b></small>
+                            @if (!empty($data->heading))
+                                <h2 class="text-center">{!! $data->heading !!}</h2>
+                            @endif
 
+                            <!-- Subheading -->
+                            @if (!empty($data->sub_heading))
+                                <small class="text-center"><b>{{ $data->sub_heading }}</b></small>
+                            @endif
                         </div>
-                        <div class="col-3">
-                            <img src="{{ asset($data->logo2 ? 'storage/' . $data->logo2 : 'images/azadi.png') }}"
-                                alt="logo2" class="float-end" style="height: 100px;"> <!--logo2-->
-                        </div>
+
+
+                        @if (!empty($data->logo2))
+                            <div class="col-3">
+                                <img src="{{ asset('storage/' . $data->logo2) }}" alt="logo2" class="float-end"
+                                    style="height: 100px;">
+                            </div>
+                        @endif
+
 
                     </div>
                     <div class="row mt-3">
@@ -44,14 +63,20 @@
                         <!-- Main content area -->
                         <div class="col-md-9">
                             <div class="row my-3">
-                                <div class="col-6">
-                                    <img src="{{ asset($data->logo3 ? 'storage/' . $data->logo3 : 'images/digital.png') }}"
-                                        alt="logo3" class="img-fluid" style="height: 100px;"> <!--logo3-->
-                                </div>
-                                <div class="col-6">
-                                    <img src="{{ asset($data->logo4 ? 'storage/' . $data->logo4 : 'images/swachh.png') }}"
-                                        alt="logo4" class="float-end" style="height: 100px;"> <!--logo4-->
-                                </div>
+                                @if (!empty($data->logo3))
+                                    <div class="col-6">
+                                        <img src="{{ asset('storage/' . $data->logo3) }}" alt="logo3" class="img-fluid"
+                                            style="height: 100px;">
+                                    </div>
+                                @endif
+
+                                @if (!empty($data->logo4))
+                                    <div class="col-6">
+                                        <img src="{{ asset('storage/' . $data->logo4) }}" alt="logo4" class="float-end"
+                                            style="height: 100px;">
+                                    </div>
+                                @endif
+
 
                             </div>
                             <div class="tab-content" id="v-pills-tabContent">
