@@ -66,17 +66,29 @@
 <<<<<<< HEAD
 =======
 =======
+<<<<<<< HEAD
 >>>>>>> 6332f2d (timetable bug solve)
+=======
+>>>>>>> 1f00172 (timetable bug solve)
+>>>>>>> c76a51b (timetable bug solve)
 <<<<<<< HEAD
 
                         <div class="col-md-6">
 =======
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> cb8cad4 (timetable bug solve)
 =======
 =======
 >>>>>>> d707d11 (timetable bug solve)
 >>>>>>> 6332f2d (timetable bug solve)
+=======
+=======
+>>>>>>> d707d11 (timetable bug solve)
+=======
+>>>>>>> cb8cad4 (timetable bug solve)
+>>>>>>> 1f00172 (timetable bug solve)
+>>>>>>> c76a51b (timetable bug solve)
                        <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
                     <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
                         <div class="col-12 col-md-12">
@@ -86,12 +98,23 @@
                         <div class="col-md-4">
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> d707d11 (timetable bug solve)
 >>>>>>> 6332f2d (timetable bug solve)
 =======
 >>>>>>> d707d11 (timetable bug solve)
 >>>>>>> cb8cad4 (timetable bug solve)
+=======
+>>>>>>> d707d11 (timetable bug solve)
+=======
+>>>>>>> d707d11 (timetable bug solve)
+=======
+=======
+>>>>>>> d707d11 (timetable bug solve)
+>>>>>>> cb8cad4 (timetable bug solve)
+>>>>>>> 1f00172 (timetable bug solve)
+>>>>>>> c76a51b (timetable bug solve)
                             <label>Course</label>
                             <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
                         </div>
