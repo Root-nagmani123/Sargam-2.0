@@ -43,8 +43,10 @@
         <strong>Page:</strong> {{ $students->currentPage() }} of {{ $students->lastPage() }} |
         <strong>Per Page:</strong> {{ $students->perPage() }}
     </div>
-
+    
     <div class="student-list-pagination">
         {!! $students->links('pagination::bootstrap-5') !!}
     </div>
 </div>
+
+<input type="hidden" name="groupMappingID" class="view-student" value="{{ encrypt($groupMappingPk) }}" data-id="{{ encrypt($groupMappingPk) }}">
