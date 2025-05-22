@@ -63,9 +63,12 @@
                         <input type="hidden" name="faculty_pk[]" value="{{ $feedback->faculty_master }}">
                         <input type="hidden" name="topic_name[]" value="{{ $feedback->subject_topic }}">
 <<<<<<< HEAD
+<<<<<<< HEAD
 
                         <div class="col-md-6">
 =======
+=======
+>>>>>>> d707d11 (timetable bug solve)
                        <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
                     <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
                         <div class="col-12 col-md-12">
@@ -73,12 +76,19 @@
                             <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
                         </div>
                         <div class="col-md-4">
+<<<<<<< HEAD
+>>>>>>> d707d11 (timetable bug solve)
+=======
 >>>>>>> d707d11 (timetable bug solve)
                             <label>Course</label>
                             <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
                         </div>
 
+<<<<<<< HEAD
                         <div class="col-md-6">
+=======
+                        <div class="col-md-4">
+>>>>>>> d707d11 (timetable bug solve)
                             <label>Faculty</label>
                             <input type="text" class="form-control" value="{{ $feedback->faculty_name }}" readonly>
                         </div>
