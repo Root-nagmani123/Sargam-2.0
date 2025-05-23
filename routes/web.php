@@ -217,6 +217,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/get-attendance-list', 'getAttendanceList')->name('get.attendance.list');
         Route::get('/create', 'create')->name('create');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::get('/mark/{group_pk}/{course_pk}', 'markAttendance')->name('mark');
     });
 
 });
