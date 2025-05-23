@@ -62,33 +62,6 @@
                         <input type="hidden" name="timetable_pk[]" value="{{ $feedback->pk }}">
                         <input type="hidden" name="faculty_pk[]" value="{{ $feedback->faculty_master }}">
                         <input type="hidden" name="topic_name[]" value="{{ $feedback->subject_topic }}">
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
-=======
->>>>>>> 1f00172 (timetable bug solve)
-=======
-=======
->>>>>>> 38d0958 (timetable bug solve)
-=======
-=======
-=======
-<<<<<<< HEAD
->>>>>>> 6332f2d (timetable bug solve)
-<<<<<<< HEAD
->>>>>>> 763230b (timetable bug solve)
-=======
-=======
->>>>>>> 1f00172 (timetable bug solve)
->>>>>>> c76a51b (timetable bug solve)
->>>>>>> 5cffec2 (timetable bug solve)
-<<<<<<< HEAD
->>>>>>> 81eaa8b (timetable bug solve)
-
 
                         <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
                         <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
@@ -96,173 +69,30 @@
                             <label class="form-label">Topic</label>
                             <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
                         </div>
-                        <div class="col-md-6">
-=======
-=======
->>>>>>> e955f27 (timetable bug solve)
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 1f00172 (timetable bug solve)
-=======
-=======
->>>>>>> 38d0958 (timetable bug solve)
-<<<<<<< HEAD
->>>>>>> 3fa31b5 (timetable bug solve)
-=======
-=======
-=======
-=======
->>>>>>> 6332f2d (timetable bug solve)
->>>>>>> 763230b (timetable bug solve)
->>>>>>> e955f27 (timetable bug solve)
-<<<<<<< HEAD
-
-=======
-<<<<<<< HEAD
-=======
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
->>>>>>> cb8cad4 (timetable bug solve)
->>>>>>> 1f00172 (timetable bug solve)
-=======
->>>>>>> cb8cad4 (timetable bug solve)
->>>>>>> 38d0958 (timetable bug solve)
-<<<<<<< HEAD
->>>>>>> 3fa31b5 (timetable bug solve)
-=======
-=======
-=======
->>>>>>> 5cffec2 (timetable bug solve)
->>>>>>> cb8cad4 (timetable bug solve)
-=======
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> 6332f2d (timetable bug solve)
-<<<<<<< HEAD
->>>>>>> 763230b (timetable bug solve)
-<<<<<<< HEAD
->>>>>>> e955f27 (timetable bug solve)
-=======
-=======
-=======
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
->>>>>>> cb8cad4 (timetable bug solve)
->>>>>>> 1f00172 (timetable bug solve)
->>>>>>> c76a51b (timetable bug solve)
->>>>>>> 5cffec2 (timetable bug solve)
->>>>>>> 81eaa8b (timetable bug solve)
-                       <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
-                    <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
-                        <div class="col-12 col-md-12">
-                            <label class="form-label">Topic</label>
-                            <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
-                        </div>
+                        
                         <div class="col-md-4">
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 3fa31b5 (timetable bug solve)
->>>>>>> d707d11 (timetable bug solve)
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
-=======
->>>>>>> 81eaa8b (timetable bug solve)
->>>>>>> d707d11 (timetable bug solve)
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
-=======
-=======
->>>>>>> 5cffec2 (timetable bug solve)
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> 6332f2d (timetable bug solve)
->>>>>>> 763230b (timetable bug solve)
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> e955f27 (timetable bug solve)
->>>>>>> cb8cad4 (timetable bug solve)
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 81eaa8b (timetable bug solve)
->>>>>>> 1f00172 (timetable bug solve)
-=======
-=======
->>>>>>> d707d11 (timetable bug solve)
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> 5cffec2 (timetable bug solve)
-=======
-=======
->>>>>>> d707d11 (timetable bug solve)
->>>>>>> cb8cad4 (timetable bug solve)
-<<<<<<< HEAD
->>>>>>> 38d0958 (timetable bug solve)
-<<<<<<< HEAD
->>>>>>> 3fa31b5 (timetable bug solve)
-=======
-=======
->>>>>>> 1f00172 (timetable bug solve)
->>>>>>> c76a51b (timetable bug solve)
->>>>>>> 5cffec2 (timetable bug solve)
->>>>>>> 81eaa8b (timetable bug solve)
+
                             <label>Course</label>
                             <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
                         </div>
 
-<<<<<<< HEAD
-                        <div class="col-md-6">
-=======
                         <div class="col-md-4">
->>>>>>> d707d11 (timetable bug solve)
                             <label>Faculty</label>
                             <input type="text" class="form-control" value="{{ $feedback->faculty_name }}" readonly>
                         </div>
 
-<<<<<<< HEAD
-
-                        @if($feedback->Ratting_checkbox == 1)
-=======
                         
                        @if($feedback->Ratting_checkbox == 1)
->>>>>>> cb8cad4 (timetable bug solve)
                         <div class="col-12 col-md-4">
                             <label class="form-label">Rating <span class="text-danger">*</span></label>
-                            <select class="form-select" name="rating[]" required>
+                            <select class="form-select" name="rating[]" >
                                 <option disabled {{ old('rating.'.$index) ? '' : 'selected' }}>Choose rating</option>
-<<<<<<< HEAD
-                                @for ($i = 1; $i <= 5; $i++) <option value="{{ $i }}"
-                                    {{ old('rating.'.$index) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                    @endfor
-                            </select>
-                            @error('rating.'.$index)
-                            <div class="text-danger small">{{ $message }}</div>
-=======
                                 @for ($i = 1; $i <= 5; $i++)
                                     <option value="{{ $i }}" {{ old('rating.'.$index) == $i ? 'selected' : '' }}>{{ $i }}</option>
                                 @endfor
                             </select>
                             @error('rating.'.$index)
                                 <div class="text-danger small">{{ $message }}</div>
->>>>>>> cb8cad4 (timetable bug solve)
                             @enderror
                         </div>
                         @endif
@@ -271,25 +101,14 @@
                             <label class="form-label">Presentation <span class="text-danger">*</span></label><br>
                             <div class="star-rating">
                                 @for ($i = 5; $i >= 1; $i--)
-<<<<<<< HEAD
-                                <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
-                                    name="presentation[{{ $index }}]" value="{{ $i }}"
-                                    {{ old('presentation.'.$index) == $i ? 'checked' : '' }} required>
-                                <label for="presentation-{{ $i }}-{{ $index }}">&#9733;</label>
-                                @endfor
-                            </div>
-                            @error('presentation.'.$index)
-                            <div class="text-danger small">{{ $message }}</div>
-=======
                                     <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
                                         name="presentation[{{ $index }}]" value="{{ $i }}"
-                                        {{ old('presentation.'.$index) == $i ? 'checked' : '' }} required>
+                                        {{ old('presentation.'.$index) == $i ? 'checked' : '' }} >
                                     <label for="presentation-{{ $i }}-{{ $index }}">&#9733;</label>
                                 @endfor
                             </div>
                             @error('presentation.'.$index)
                                 <div class="text-danger small">{{ $message }}</div>
->>>>>>> cb8cad4 (timetable bug solve)
                             @enderror
                         </div>
 
@@ -297,50 +116,27 @@
                             <label class="form-label">Content <span class="text-danger">*</span></label><br>
                             <div class="star-rating">
                                 @for ($i = 5; $i >= 1; $i--)
-<<<<<<< HEAD
-                                <input type="radio" id="content-{{ $i }}-{{ $index }}" name="content[{{ $index }}]"
-                                    value="{{ $i }}" {{ old('content.'.$index) == $i ? 'checked' : '' }} required>
-                                <label for="content-{{ $i }}-{{ $index }}">&#9733;</label>
-                                @endfor
-                            </div>
-                            @error('content.'.$index)
-                            <div class="text-danger small">{{ $message }}</div>
-=======
                                     <input type="radio" id="content-{{ $i }}-{{ $index }}"
                                         name="content[{{ $index }}]" value="{{ $i }}"
-                                        {{ old('content.'.$index) == $i ? 'checked' : '' }} required>
+                                        {{ old('content.'.$index) == $i ? 'checked' : '' }} >
                                     <label for="content-{{ $i }}-{{ $index }}">&#9733;</label>
                                 @endfor
                             </div>
                             @error('content.'.$index)
                                 <div class="text-danger small">{{ $message }}</div>
->>>>>>> cb8cad4 (timetable bug solve)
                             @enderror
                         </div>
 
 
-<<<<<<< HEAD
-                        @if($feedback->Remark_checkbox == 1)
-                        <div class="col-12">
-                            <label class="form-label">Remarks <span class="text-danger">*</span></label>
-                            <textarea class="form-control" name="remarks[]" rows="3"
-                                placeholder="Enter your remarks here..."
-                                required>{{ old('remarks.'.$index) }}</textarea>
-                            @error('remarks.'.$index)
-                            <div class="text-danger small">{{ $message }}</div>
-                            @enderror
-                        </div>
-=======
                     @if($feedback->Remark_checkbox == 1)
                             <div class="col-12">
                                 <label class="form-label">Remarks <span class="text-danger">*</span></label>
                                 <textarea class="form-control" name="remarks[]" rows="3"
-                                    placeholder="Enter your remarks here..." required>{{ old('remarks.'.$index) }}</textarea>
+                                    placeholder="Enter your remarks here..." >{{ old('remarks.'.$index) }}</textarea>
                                 @error('remarks.'.$index)
                                     <div class="text-danger small">{{ $message }}</div>
                                 @enderror
                             </div>
->>>>>>> cb8cad4 (timetable bug solve)
                         @endif
                     </div>
                     @endif
