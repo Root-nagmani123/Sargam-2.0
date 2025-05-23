@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\{ClassSessionMaster, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent};
+use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent};
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -92,6 +92,17 @@ $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
 $event->active_inactive = $request->active_inactive ?? 1;
 
 $event->save();
+
+$group_pks = $request->type_names ?? [];
+
+foreach ($group_pks as $group_pk) {
+    CourseGroupTimetableMapping::create([
+        'group_pk' => $group_pk,
+        'course_group_type_master' => $request->group_type,
+        'Programme_pk' => $request->Course_name,
+        'timetable_pk' => $event->pk,
+    ]);
+}
 
     return response()->json(['status' => 'success', 'message' => 'Event created successfully']);
     }
@@ -224,6 +235,19 @@ function event_edit($id){
     $event->active_inactive = $request->active_inactive ?? 1;
 
     $event->save();
+CourseGroupTimetableMapping::where('timetable_pk', $event->pk)->delete();
+
+// ✅ Insert new mappings
+$group_pks = $request->type_names ?? [];
+
+foreach ($group_pks as $group_pk) {
+    CourseGroupTimetableMapping::create([
+        'group_pk' => $group_pk,
+        'course_group_type_master' => $request->group_type,
+        'Programme_pk' => $request->Course_name,
+        'timetable_pk' => $event->pk,
+    ]);
+}
 
     return response()->json(['status' => 'success', 'message' => 'Event updated successfully']);
 }
