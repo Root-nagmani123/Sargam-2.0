@@ -69,7 +69,7 @@
                             <label class="form-label">Topic</label>
                             <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
                         </div>
-                        
+
                         <div class="col-md-4">
 
                             <label>Course</label>
@@ -81,34 +81,35 @@
                             <input type="text" class="form-control" value="{{ $feedback->faculty_name }}" readonly>
                         </div>
 
-                        
-                       @if($feedback->Ratting_checkbox == 1)
+
+                        @if($feedback->Ratting_checkbox == 1)
                         <div class="col-12 col-md-4">
                             <label class="form-label">Rating <span class="text-danger">*</span></label>
-                            <select class="form-select" name="rating[]" >
+                            <select class="form-select" name="rating[{{ $index }}]"
+                                {{ $feedback->Ratting_checkbox == 1 ? 'required' : '' }}>
                                 <option disabled {{ old('rating.'.$index) ? '' : 'selected' }}>Choose rating</option>
-                                @for ($i = 1; $i <= 5; $i++)
-                                    <option value="{{ $i }}" {{ old('rating.'.$index) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                @endfor
+                                @for ($i = 1; $i <= 5; $i++) <option value="{{ $i }}"
+                                    {{ old('rating.'.$index) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                    @endfor
                             </select>
                             @error('rating.'.$index)
-                                <div class="text-danger small">{{ $message }}</div>
+                            <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
-                        @endif
+
 
                         <div class="col-12 col-md-4">
                             <label class="form-label">Presentation <span class="text-danger">*</span></label><br>
                             <div class="star-rating">
                                 @for ($i = 5; $i >= 1; $i--)
-                                    <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
-                                        name="presentation[{{ $index }}]" value="{{ $i }}"
-                                        {{ old('presentation.'.$index) == $i ? 'checked' : '' }} >
-                                    <label for="presentation-{{ $i }}-{{ $index }}">&#9733;</label>
+                                <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
+                                    name="presentation[{{ $index }}]" value="{{ $i }}"
+                                    {{ old('presentation.'.$index) == $i ? 'checked' : '' }}>
+                                <label for="presentation-{{ $i }}-{{ $index }}">&#9733;</label>
                                 @endfor
                             </div>
                             @error('presentation.'.$index)
-                                <div class="text-danger small">{{ $message }}</div>
+                            <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
 
@@ -116,27 +117,26 @@
                             <label class="form-label">Content <span class="text-danger">*</span></label><br>
                             <div class="star-rating">
                                 @for ($i = 5; $i >= 1; $i--)
-                                    <input type="radio" id="content-{{ $i }}-{{ $index }}"
-                                        name="content[{{ $index }}]" value="{{ $i }}"
-                                        {{ old('content.'.$index) == $i ? 'checked' : '' }} >
-                                    <label for="content-{{ $i }}-{{ $index }}">&#9733;</label>
+                                <input type="radio" id="content-{{ $i }}-{{ $index }}" name="content[{{ $index }}]"
+                                    value="{{ $i }}" {{ old('content.'.$index) == $i ? 'checked' : '' }}>
+                                <label for="content-{{ $i }}-{{ $index }}">&#9733;</label>
                                 @endfor
                             </div>
                             @error('content.'.$index)
-                                <div class="text-danger small">{{ $message }}</div>
+                            <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
+                        @endif
 
-
-                    @if($feedback->Remark_checkbox == 1)
-                            <div class="col-12">
-                                <label class="form-label">Remarks <span class="text-danger">*</span></label>
-                                <textarea class="form-control" name="remarks[]" rows="3"
-                                    placeholder="Enter your remarks here..." >{{ old('remarks.'.$index) }}</textarea>
-                                @error('remarks.'.$index)
-                                    <div class="text-danger small">{{ $message }}</div>
-                                @enderror
-                            </div>
+                        @if($feedback->Remark_checkbox == 1)
+                        <div class="col-12">
+                            <label class="form-label">Remarks <span class="text-danger">*</span></label>
+                            <textarea class="form-control" name="remarks[{{ $index }}]" rows="3"
+                                placeholder="Enter your remarks here...">{{ old('remarks.'.$index) }}</textarea>
+                            @error('remarks.'.$index)
+                            <div class="text-danger small">{{ $message }}</div>
+                            @enderror
+                        </div>
                         @endif
                     </div>
                     @endif
@@ -160,27 +160,8 @@
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-        <script>
-        document.querySelector("form").addEventListener("submit", function(e) {
-            const radiosPresentation = document.querySelectorAll('input[name^="presentation"]');
-            const radiosContent = document.querySelectorAll('input[name^="content"]');
+     
 
-            let allPresentationChecked = [...radiosPresentation].every((el, i, arr) => {
-                const name = el.name;
-                return document.querySelector(`input[name="${name}"]:checked`);
-            });
-
-            let allContentChecked = [...radiosContent].every((el, i, arr) => {
-                const name = el.name;
-                return document.querySelector(`input[name="${name}"]:checked`);
-            });
-
-            if (!allPresentationChecked || !allContentChecked) {
-                e.preventDefault();
-                alert("Please give ratings for all 'Presentation' and 'Content' fields.");
-            }
-        });
-        </script>
 
 </body>
 
