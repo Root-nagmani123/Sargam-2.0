@@ -64,13 +64,15 @@
                             </div>
                         </div>
                     </div>
-                    <button class="btn btn-primary hstack gap-6" id="searchAttendance" type="submit">
+                    <hr>
+                    <div class="text-end">
+                        <button class="btn btn-primary" id="searchAttendance" type="button">
                         <i class="material-icons menu-icon">
                             search
                         </i>
                         Search
                     </button>
-                    </form>
+                    </div>
                 </div>
 
 
