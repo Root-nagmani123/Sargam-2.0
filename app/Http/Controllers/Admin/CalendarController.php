@@ -319,63 +319,59 @@ public function submitFeedback(Request $request)
         'timetable_pk' => 'required|array',
         'faculty_pk' => 'required|array',
         'topic_name' => 'required|array',
-        'rating' => 'nullable|array',
-        'presentation' => 'required|array',
-        'content' => 'required|array',
-          'remarks.*' => 'required_if:Remark_checkbox,1',
+       
+        // rating and remarks will be set per-row below
     ];
 
-    // Validate all items for each index (nested validation)
-  foreach ($request->timetable_pk as $index => $value) {
-    $rules["rating.$index"] = 'nullable|integer|min:1|max:5';
-    $rules["presentation.$index"] = 'required|integer|min:1|max:5';
-    $rules["content.$index"] = 'required|integer|min:1|max:5';
+    foreach ($request->timetable_pk as $i => $ttPk) {
+        // Presentation and Content always required
+      
+      
+//  print_r($request->all());die;
+        // Rating required only if Ratting_checkbox is 1
+        if (!empty($request->Ratting_checkbox[$i]) && $request->Ratting_checkbox[$i] == 1) {
+            $rules["rating.$i"] = 'required|in:1,2,3,4,5';
+              $rules["presentation.$i"] = 'required|in:1,2,3,4,5';
+                $rules["content.$i"] = 'required|in:1,2,3,4,5';
+        } else {
+            $rules["rating.$i"] = 'nullable|in:1,2,3,4,5';
+             $rules["presentation.$i"] = 'nullable|in:1,2,3,4,5';
+                $rules["content.$i"] = 'nullable|in:1,2,3,4,5';
+        }
 
-    // Remarks required only if Remark_checkbox is 1 for this row
-    if (!empty($request->Remark_checkbox[$index]) && $request->Remark_checkbox[$index] == 1) {
-        $rules["remarks.$index"] = 'required|string|max:255';
-    } else {
-        $rules["remarks.$index"] = 'nullable|string|max:255';
+        // Remarks required only if Remark_checkbox is 1
+        if (!empty($request->Remark_checkbox[$i]) && $request->Remark_checkbox[$i] == 1) {
+            $rules["remarks.$i"] = 'required|string|max:255';
+        } else {
+            $rules["remarks.$i"] = 'nullable|string|max:255';
+        }
     }
-
-    // Rating required only if Ratting_checkbox is 1 for this row
-    if (!empty($request->Ratting_checkbox[$index]) && $request->Ratting_checkbox[$index] == 1) {
-        $rules["rating.$index"] = 'required|integer|min:1|max:5';
-    } else {
-        $rules["rating.$index"] = 'nullable|integer|min:1|max:5';
-    }
-}
 
     $validated = $request->validate($rules);
 
-     $studentId = Auth::user()->id; // Or however you fetch student ID
-    $now = Carbon::now();
+//    print_r($request->all());die;
+    // Save to DB
+    $studentId = Auth::id();
+    $now = now();
 
-    $timetablePks = $request->input('timetable_pk');
-    $facultyPks = $request->input('faculty_pk');
-    $topicNames = $request->input('topic_name');
-    $ratings = $request->input('rating');
-    $presentations = $request->input('presentation');
-    $contents = $request->input('content');
-    $remarks = $request->input('remarks');
-
-    for ($i = 0; $i < count($timetablePks); $i++) {
+    foreach ($request->timetable_pk as $i => $ttPk) {
         DB::table('topic_feedback')->insert([
-            'timetable_pk'        => $timetablePks[$i],
-            'student_master_pk'   => $studentId,
-            'topic_name'          => $topicNames[$i] ?? '0',
-            'faculty_pk'          => $facultyPks[$i],
-            'presentation'        => $presentations[$i] ?? null,
-            'content'             => $contents[$i] ?? null,
-            'remark'              => $remarks[$i] ?? 0,
-            'rating'              => $ratings[$i] ?? 0,
-            'created_date'        => $now,
-            'modified_date'       => $now,
+            'timetable_pk' => $ttPk,
+            'student_master_pk' => $studentId,
+            'topic_name' => $request->topic_name[$i] ?? '',
+            'faculty_pk' => $request->faculty_pk[$i],
+            'presentation' => $request->presentation[$i] ?? null,
+            'content' => $request->content[$i] ?? null,
+            'remark' => $request->remarks[$i] ?? null,
+            'rating' => $request->rating[$i] ?? null,
+            'created_date' => $now,
+            'modified_date' => $now,
         ]);
     }
 
     return redirect()->back()->with('success', 'Feedback submitted successfully!');
 }
+
 
 
 
