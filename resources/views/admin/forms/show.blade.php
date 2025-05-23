@@ -77,7 +77,7 @@
                         <!-- Sidebar with all forms -->
                         <div class="col-md-3">
                             <div class="nav flex-column nav-pills mb-4 mb-md-0" id="v-pills-tab" role="tablist"
-                                aria-orientation="vertical">
+                                aria-orientation="vertical" style="margin-top: 100px;">
                                 @foreach ($allForms as $f)
                                     <a class="nav-link {{ $f->id == $form->id ? 'active' : '' }}"
                                         href="{{ route('forms.show', $f->id) }}">
@@ -87,7 +87,7 @@
                             </div>
                         </div>
                         <!-- Main content area -->
-                        <div class="col-md-9">
+                        <div class="col-md-9 border-start">
                             <div class="row my-3">
                                 {{-- @if (!empty($data->logo3))
                                     <div class="col-6">
