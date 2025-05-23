@@ -614,39 +614,36 @@ document.addEventListener('DOMContentLoaded', function () {
 // END MDO Escrot Exemption
 
 // Attendance
-function fetchAttendance(page = 1) {
-    $.ajax({
-        url: `${routes.getAttendanceList}?page=${page}`,
-        type: 'POST',
-        data: {
-            _token: $('meta[name="csrf-token"]').attr('content'),
-            programme: $('#programme').val(),
-            from_date: $('#from_date').val(),
-            to_date: $('#to_date').val(),
-            view_type: $('#view_type').val()
-        },
-        success: function (response) {
-            if (response.status === 'success') {
-                $('#attendanceTableBody').html(response.html);
-                $('#attendancePagination').html(response.pagination);
-            } else {
-                alert(response.message);
-            }
-        },
-        error: function () {
-            alert('Failed to fetch attendance data.');
-        }
-    });
-}
+// $(document).ready(function () {
+//     $('#attendanceTable').DataTable({
+//         processing: true,
+//         serverSide: true,
+//         ajax: {
+//             url: routes.getAttendanceList,
+//             type: 'POST',
+//             data: function (d) {
+//                 d._token = $('meta[name="csrf-token"]').attr('content');
+//                 d.programme = $('#programme').val();
+//                 d.from_date = $('#from_date').val();
+//                 d.to_date = $('#to_date').val();
+//             }
+//         },
+//         columns: [
+//             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+//             { data: 'programme_name', name: 'courseGroupTypeMaster.course_name' },
+//             { data: 'mannual_starttime', name: 'mannual_starttime' },
+//             { data: 'session_time', name: 'session_time', orderable: false, searchable: false },
+//             { data: 'venue_name', name: 'venue.venue_name' },
+//             { data: 'subject_topic', name: 'subject_topic' },
+//             { data: 'faculty_name', name: 'faculty.full_name' },
+//             { data: 'actions', name: 'actions', orderable: false, searchable: false },
+//         ]
+//     });
 
-$(document).on('click', '#searchAttendance', function () {
-    fetchAttendance(1);
-});
-
-$(document).on('click', '#attendancePagination .pagination a', function (e) {
-    e.preventDefault();
-    const page = new URL($(this).attr('href')).searchParams.get('page');
-    fetchAttendance(page);
-});
+//     // Optional: Reload on filter
+//     $('#searchAttendance').on('click', function () {
+//         $('#attendanceTable').DataTable().ajax.reload();
+//     });
+// });
 
 // End Attendance
