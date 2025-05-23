@@ -55,15 +55,7 @@
             @enderror
         </div>
 
-        <!-- Topic Name -->
-        <div class="mb-3">
-            <label for="topic_name" class="form-label">Topic Name</label>
-            <input type="text" name="topic_name" id="topic_name" class="form-control" value="{{ old('topic_name', $subject->Topic_name) }}">
-            @error('topic_name')
-                <div class="text-danger">{{ $message }}</div>
-            @enderror
-        </div>
-
+       
         <!-- Subject Module -->
         <div class="mb-3">
             <label for="subject_module" class="form-label">Subject Module <span class="text-danger">*</span></label>
