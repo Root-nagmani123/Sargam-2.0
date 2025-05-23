@@ -614,31 +614,39 @@ document.addEventListener('DOMContentLoaded', function () {
 // END MDO Escrot Exemption
 
 // Attendance
-$(document).on('click', '#searchAttendance', function (e) {
-    e.preventDefault();
-    let programme = $('#programme').val();
-    let from_date = $('#from_date').val();
-    let to_date = $('#to_date').val();
-    let view_type = $('#view_type').val();
-    let token = $('meta[name="csrf-token"]').attr('content');
-
+function fetchAttendance(page = 1) {
     $.ajax({
-        url: routes.getAttendanceList,
+        url: `${routes.getAttendanceList}?page=${page}`,
         type: 'POST',
         data: {
-            _token: token,
-            programme: programme,
-            from_date: from_date,
-            to_date: to_date,
-            view_type: view_type
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            programme: $('#programme').val(),
+            from_date: $('#from_date').val(),
+            to_date: $('#to_date').val(),
+            view_type: $('#view_type').val()
         },
         success: function (response) {
-            
-            $('#attendanceTableBody').html(response.html);
+            if (response.status === 'success') {
+                $('#attendanceTableBody').html(response.html);
+                $('#attendancePagination').html(response.pagination);
+            } else {
+                alert(response.message);
+            }
         },
         error: function () {
-            alert('Error fetching attendance data');
+            alert('Failed to fetch attendance data.');
         }
     });
+}
+
+$(document).on('click', '#searchAttendance', function () {
+    fetchAttendance(1);
 });
+
+$(document).on('click', '#attendancePagination .pagination a', function (e) {
+    e.preventDefault();
+    const page = new URL($(this).attr('href')).searchParams.get('page');
+    fetchAttendance(page);
+});
+
 // End Attendance
