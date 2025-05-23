@@ -99,16 +99,16 @@
                                 <div id="type_name_container" class="mt-3">
                                     <!-- Checkboxes will be appended here -->
                                 </div>
-                            </div>
+                            </div> 
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Subject Name <span class="text-danger">*</span></label>
-                                    <select name="subject_name" id="subject_name" class="form-control">
+                                    <label class="form-label">Subject Module Name <span class="text-danger">*</span></label>
+                                    <select name="subject_module" id="subject_module" class="form-control">
                                         <option value="">Select Subject Name</option>
                                         @foreach($subjects as $subject)
                                         <option value="{{ $subject->pk }}"
-                                            data-id="{{ $subject->subject_module_master_pk }}">
-                                            {{ $subject->subject_name }}
+                                            data-id="{{ $subject->pk }}">
+                                            {{ $subject->module_name }}
                                         </option>
                                         @endforeach
                                     </select>
@@ -116,9 +116,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Subject Module <span class="text-danger">*</span></label>
-                                    <select name="subject_module" id="subject_module" class="form-control">
-                                        <option value="">Select subject Module</option>
+                                    <label class="form-label">Subject Name <span class="text-danger">*</span></label>
+                                    <select name="subject_name" id="subject_name" class="form-control">
+                                        <option value="">Select subject Name</option>
                                     </select>
                                 </div>
                             </div>
@@ -344,32 +344,32 @@ $(document).ready(function () {
     });
 });
 
-    $('#subject_name').on('change', function() {
+    $('#subject_module').on('change', function() {
         // Get data-id from selected option
         var dataId = $(this).find(':selected').data('id');
 
         if (dataId) {
             $.ajax({
-                url: "{{ route('calendar.get.subject.modules') }}",
+                url: "{{ route('calendar.get.subject.name') }}",
                 type: 'GET',
                 data: {
                     data_id: dataId
                 },
                 success: function(response) {
-                    $('#subject_module').empty().append(
-                        '<option value="">Select Subject Module</option>'
+                    $('#subject_name').empty().append(
+                        '<option value="">Select Subject Name</option>'
                     );
                     $.each(response, function(key, module) {
-                        $('#subject_module').append(
+                        $('#subject_name').append(
                             '<option value="' + module.pk +
-                            '">' + module.module_name +
+                            '">' + module.subject_name +
                             '</option>');
                     });
                 }
             });
         } else {
-            $('#subject_module').empty().append(
-                '<option value="">Select Subject Module</option>');
+            $('#subject_name').empty().append(
+                '<option value="">Select Subject Name</option>');
         }
     });
 
@@ -693,13 +693,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                     // Set Course and Subject
                                     $('#Course_name').val(event
                                         .course_master_pk);
-                                    $('#subject_name').val(event
-                                        .subject_master_pk);
+                                    $('#subject_module').val(event
+                                        .subject_module_master_pk);
 
                                     // Subject Module ko AJAX se reload karo
-                                    if (event.subject_master_pk) {
+                                    if (event.subject_module_master_pk) {
                                         $.ajax({
-                                            url: "{{ route('calendar.get.subject.modules') }}",
+                                            url: "{{ route('calendar.get.subject.name') }}",
                                             type: 'GET',
                                             data: {
                                                 data_id: event
@@ -707,7 +707,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             },
                                             success: function(
                                                 response) {
-                                                $('#subject_module')
+                                                $('#subject_name')
                                                     .empty()
                                                     .append(
                                                         '<option value="">Select Subject Module</option>'
@@ -717,29 +717,29 @@ document.addEventListener('DOMContentLoaded', function() {
                                                         key,
                                                         module
                                                     ) {
-                                                        $('#subject_module')
+                                                        $('#subject_name')
                                                             .append(
                                                                 '<option value="' +
                                                                 module
                                                                 .pk +
                                                                 '">' +
                                                                 module
-                                                                .module_name +
+                                                                .subject_name +
                                                                 '</option>'
                                                             );
                                                     });
                                                 // Yahan set karo selected module
-                                                $('#subject_module')
+                                                $('#subject_name')
                                                     .val(
                                                         event
-                                                        .subject_module_master_pk
+                                                        .subject_master_pk
                                                     );
                                             }
                                         });
                                     } else {
-                                        $('#subject_module').empty()
+                                        $('#subject_name').empty()
                                             .append(
-                                                '<option value="">Select Subject Module</option>'
+                                                '<option value="">Select Subject Name</option>'
                                             );
                                     }
                                     $('#Course_name').val(event

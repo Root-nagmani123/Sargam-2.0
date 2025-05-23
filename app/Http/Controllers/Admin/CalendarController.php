@@ -22,8 +22,8 @@ class CalendarController extends Controller
             ->select('pk', 'faculty_type', 'full_name')
             ->get();
     
-        $subjects = SubjectMaster::where('active_inactive', 1)
-            ->select('pk', 'subject_name', 'subject_module_master_pk')
+        $subjects = SubjectModuleMaster::where('active_inactive', 1)
+            ->select('pk', 'module_name')
             ->get();
     
         $venueMaster = VenueMaster::where('active_inactive', 1)
@@ -42,13 +42,13 @@ class CalendarController extends Controller
             'classSessionMaster'
         ));
     }
-    public function getSubjectModules(Request $request)
+    public function getSubjectName(Request $request)
 {
     $dataId = $request->input('data_id');
 
     // Change the field name accordingly (assuming subject_module_master.pk = $dataId)
-   $modules = SubjectModuleMaster::where('active_inactive', 1)
-                              ->where('pk', $dataId)
+   $modules = SubjectMaster::where('active_inactive', 1)
+                              ->where('subject_module_master_pk', $dataId)
                               ->get();
 
 

@@ -57,16 +57,7 @@
                             @enderror
                         </div>
                     </div>
-                    <div class="col-6">
-                        <!-- Topic Name -->
-                        <div class="mb-3">
-                            <label for="topic_name" class="form-label">Topic Name </label>
-                            <input type="text" name="topic_name" id="topic_name" class="form-control">
-                            @error('topic_name')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
+                    
                     <div class="col-6">
                         <!-- Subject Module -->
                         <div class="mb-3">
