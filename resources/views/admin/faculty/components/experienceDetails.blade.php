@@ -1,6 +1,5 @@
 <div>
-    <h4 class="card-subtitle mb-3 mt-3">Experience Details</h4>
-    <hr>
+
 
     @php
         $experiences = $faculty->facultyExperienceMap ?? collect();

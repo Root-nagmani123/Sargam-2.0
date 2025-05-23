@@ -331,12 +331,10 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));
         formData.append('joiningdate', joiningDate);
 
-        let storeUrl = $('#facultyForm').data('store-url');
-        let indexUrl = $('#facultyForm').data('index-url');
 
         $.ajax({
             type: 'POST',
-            url: storeUrl,
+            url: routes.facultyStoreUrl,
             data: formData,
             contentType: false,
             processData: false,
@@ -350,7 +348,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     toastr.options = {
                         timeOut: 50, // 1.5 seconds
                         onHidden: function () {
-                            window.location.href = indexUrl;
+                            window.location.href = routes.facultyIndexUrl;
                         }
                     };
 
