@@ -18,7 +18,8 @@ class SubjectMasterController extends Controller
     // Show the form for creating a new subject
     public function create()
     { 
-        $subjects = SubjectModuleMaster::all();
+        $subjects = SubjectModuleMaster::where('active_inactive', 1)
+                              ->get();
         
         return view('admin.subject.create',compact('subjects'));
     }
@@ -30,15 +31,13 @@ class SubjectMasterController extends Controller
     $request->validate([
         'major_subject_name' => 'required|string|max:255',
         'short_name' => 'required|string|max:100',
-        'topic_name' => 'nullable|string|max:255',
-        'subject_module' => 'required|exists:subject_module_master,pk',
+         'subject_module' => 'required|exists:subject_module_master,pk',
     ]);
 
     // Data insertion
     $subject = new SubjectMaster();
     $subject->subject_name = $request->major_subject_name;
     $subject->sub_short_name = $request->short_name;
-    $subject->Topic_name = $request->topic_name;
     $subject->subject_module_master_pk = $request->subject_module;
     $subject->active_inactive = $request->has('status') ? 1 : 0;
 
@@ -71,7 +70,7 @@ class SubjectMasterController extends Controller
     $request->validate([
         'major_subject_name' => 'required|string|max:255',
         'short_name' => 'required|string|max:100',
-        'topic_name' => 'nullable|string|max:255',
+      
         'subject_module' => 'required|exists:subject_module_master,pk',
     ]);
 
@@ -86,7 +85,6 @@ class SubjectMasterController extends Controller
     // Update the subject record with the new data
     $subject->subject_name = $request->major_subject_name;
     $subject->sub_short_name = $request->short_name;
-    $subject->Topic_name = $request->topic_name;
     $subject->subject_module_master_pk = $request->subject_module;
     $subject->active_inactive = $request->has('status') ? 1 : 0;
 

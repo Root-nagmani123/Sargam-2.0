@@ -39,9 +39,7 @@
                                     <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
                                         colspan="1" aria-sort="ascending"
                                         aria-label="Name: activate to sort column descending" style="width: 224.625px;">Short Name</th>
-                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
-                                        colspan="1" aria-sort="ascending"
-                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">Topic Name</th>
+                                  
                                     <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
                                         colspan="1" aria-sort="ascending"
                                         aria-label="Name: activate to sort column descending" style="width: 224.625px;">Subject Module</th>
@@ -63,7 +61,7 @@
 
                                     <td>{{ $subject->sub_short_name }}</td>
 
-                                    <td>{{ $subject->Topic_name }}</td>
+                                   
 
                                     <td>{{ $subject->module->module_name ?? 'N/A' }}</td>
 
