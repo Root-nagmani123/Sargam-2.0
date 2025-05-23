@@ -73,26 +73,29 @@
 
             <div class="card">
                 <div class="card-body">
-                    <div class="table-responsive" id="attendanceTableDiv">
-                        <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                            aria-describedby="zero_config_info">
+                    <div class="table-responsive" id="attendanceTableWrapper">
+                        <table class="table table-bordered table-striped" id="attendanceTable">
                             <thead>
                                 <tr>
                                     <th>Sr. No.</th>
                                     <th>Programme Name</th>
                                     <th>Date</th>
                                     <th>Session</th>
-                                    <th>Vennu</th>
+                                    <th>Venue</th>
                                     <th>Topic Details</th>
-                                    <th>Name of faculty</th>
+                                    <th>Faculty Name</th>
                                     <th>Attendance</th>
                                 </tr>
                             </thead>
                             <tbody id="attendanceTableBody">
-
+                                {{-- tbody will be replaced via AJAX --}}
+                                @include('admin.attendance.partial.attendance_body', ['attendanceGroup' => $attendanceGroup ?? [], 'offset' => $offset ?? 0])
                             </tbody>
                         </table>
+
+                        <div id="attendancePagination">
+                            {!! $pagination ?? '' !!}
+                        </div>
                     </div>
                 </div>
             </div>
