@@ -614,36 +614,101 @@ document.addEventListener('DOMContentLoaded', function () {
 // END MDO Escrot Exemption
 
 // Attendance
-// $(document).ready(function () {
-//     $('#attendanceTable').DataTable({
-//         processing: true,
-//         serverSide: true,
-//         ajax: {
-//             url: routes.getAttendanceList,
-//             type: 'POST',
-//             data: function (d) {
-//                 d._token = $('meta[name="csrf-token"]').attr('content');
-//                 d.programme = $('#programme').val();
-//                 d.from_date = $('#from_date').val();
-//                 d.to_date = $('#to_date').val();
-//             }
-//         },
-//         columns: [
-//             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-//             { data: 'programme_name', name: 'courseGroupTypeMaster.course_name' },
-//             { data: 'mannual_starttime', name: 'mannual_starttime' },
-//             { data: 'session_time', name: 'session_time', orderable: false, searchable: false },
-//             { data: 'venue_name', name: 'venue.venue_name' },
-//             { data: 'subject_topic', name: 'subject_topic' },
-//             { data: 'faculty_name', name: 'faculty.full_name' },
-//             { data: 'actions', name: 'actions', orderable: false, searchable: false },
-//         ]
-//     });
+$(document).on('click', '#searchAttendance', function () {
+    $.ajax({
+        url: routes.getAttendanceList, // initial check only (optional)
+        type: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            programme: $('#programme').val(),
+            from_date: $('#from_date').val(),
+            to_date: $('#to_date').val(),
+            view_type: $('#view_type').val()
+        },
+        beforeSend: function () {
+            showLoader();
+        },
+        success: function (response) {
+            // Optional: validate response format
+            if (response && typeof response === 'object') {
+                drawAttendanceTable(); 
+            } else {
+                alert("Unexpected response format.");
+            }
+        },
+        error: function () {
+            alert('Failed to fetch attendance data.');
+        },
+        complete: function () {
+            hideLoader();
+        }
+    });
+});
 
-//     // Optional: Reload on filter
-//     $('#searchAttendance').on('click', function () {
-//         $('#attendanceTable').DataTable().ajax.reload();
-//     });
+
+
+// $('#attendanceTable').DataTable({
+//     processing: true,
+//     serverSide: true,
+//     ajax: {
+//         url: routes.getAttendanceList,
+//         type: 'POST',
+//         data: function (d) {
+//             d._token = $('meta[name="csrf-token"]').attr('content');
+//             d.programme = $('#programme').val();
+//             d.from_date = $('#from_date').val();
+//             d.to_date = $('#to_date').val();
+//         }
+//     },
+//     columns: [
+//         { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+//         { data: 'programme_name', name: 'programme_name' },
+//         { data: 'mannual_starttime', name: 'mannual_starttime' },
+//         { data: 'session_time', name: 'session_time', orderable: false, searchable: false },
+//         { data: 'venue_name', name: 'venue_name' },
+//         { data: 'subject_topic', name: 'subject_topic' },
+//         { data: 'faculty_name', name: 'faculty_name' },
+//         { data: 'actions', name: 'actions', orderable: false, searchable: false }
+//     ]
 // });
+
+let attendanceTable; // global variable
+
+function drawAttendanceTable() {
+    if ($.fn.DataTable.isDataTable('#attendanceTable')) {
+        attendanceTable.destroy(); // destroy previous instance
+    }
+
+    attendanceTable = $('#attendanceTable').DataTable({
+        processing: true,
+        serverSide: true,
+        ajax: {
+            url: routes.getAttendanceList,
+            type: 'POST',
+            data: function (d) {
+                d._token = $('meta[name="csrf-token"]').attr('content');
+                d.programme = $('#programme').val();
+                d.from_date = $('#from_date').val();
+                d.to_date = $('#to_date').val();
+                d.view_type = $('#view_type').val();
+            }
+        },
+        drawCallback: function () {
+            $('#attendanceTableCard').removeClass('d-none');
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'programme_name', name: 'programme_name' },
+            { data: 'mannual_starttime', name: 'mannual_starttime' },
+            { data: 'session_time', name: 'session_time', orderable: false, searchable: false },
+            { data: 'venue_name', name: 'venue_name' },
+            { data: 'subject_topic', name: 'subject_topic' },
+            { data: 'faculty_name', name: 'faculty_name' },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ]
+    });
+}
+
+
 
 // End Attendance
