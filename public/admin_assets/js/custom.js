@@ -645,33 +645,6 @@ $(document).on('click', '#searchAttendance', function () {
     });
 });
 
-
-
-// $('#attendanceTable').DataTable({
-//     processing: true,
-//     serverSide: true,
-//     ajax: {
-//         url: routes.getAttendanceList,
-//         type: 'POST',
-//         data: function (d) {
-//             d._token = $('meta[name="csrf-token"]').attr('content');
-//             d.programme = $('#programme').val();
-//             d.from_date = $('#from_date').val();
-//             d.to_date = $('#to_date').val();
-//         }
-//     },
-//     columns: [
-//         { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-//         { data: 'programme_name', name: 'programme_name' },
-//         { data: 'mannual_starttime', name: 'mannual_starttime' },
-//         { data: 'session_time', name: 'session_time', orderable: false, searchable: false },
-//         { data: 'venue_name', name: 'venue_name' },
-//         { data: 'subject_topic', name: 'subject_topic' },
-//         { data: 'faculty_name', name: 'faculty_name' },
-//         { data: 'actions', name: 'actions', orderable: false, searchable: false }
-//     ]
-// });
-
 let attendanceTable; // global variable
 
 function drawAttendanceTable() {

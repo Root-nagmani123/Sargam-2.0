@@ -83,7 +83,10 @@ class AttendanceController extends Controller
                 ->addColumn('venue_name', fn($row) => optional($row->timetable)->venue->venue_name ?? 'N/A')
                 ->addColumn('subject_topic', fn($row) => optional($row->timetable)->subject_topic ?? 'N/A')
                 ->addColumn('faculty_name', fn($row) => optional($row->timetable)->faculty->full_name ?? 'N/A')
-                ->addColumn('actions', fn($row) => '<a href="javascript:void(0);">Mark Attendance</a>')
+                ->addColumn('actions', function($row) {
+                    $actions = '<a href="'.route('attendance.mark', ['group_pk'=>$row->group_pk, 'course_pk'=>$row->Programme_pk]).'" class="btn btn-primary btn-sm" data-id="' . $row->pk . '">Mark Attendance</a>';
+                    return $actions;
+                })
                 ->rawColumns(['actions'])
                 ->make(true);
 
@@ -147,4 +150,8 @@ class AttendanceController extends Controller
 //         ], 500);
 //     }
 // }
+    function markAttendance($group_pk, $course_pk) {
+        // Logic to mark attendance for the given ID
+        dd($group_pk, $course_pk);
+    }
 }
