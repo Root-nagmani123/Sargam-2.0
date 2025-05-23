@@ -1,7 +1,9 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Create New Form - Sargam | Lal Bahadur')
-
+@section('css')
+    <link href="{{ asset('css/forms.css') }}" rel="stylesheet">
+@endsection
 @section('content')
 <div class="container-fluid">
     <div class="card">

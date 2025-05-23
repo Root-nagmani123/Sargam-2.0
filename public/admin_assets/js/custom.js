@@ -625,9 +625,6 @@ $(document).on('click', '#searchAttendance', function () {
             to_date: $('#to_date').val(),
             view_type: $('#view_type').val()
         },
-        beforeSend: function () {
-            showLoader();
-        },
         success: function (response) {
             // Optional: validate response format
             if (response && typeof response === 'object') {
@@ -638,9 +635,6 @@ $(document).on('click', '#searchAttendance', function () {
         },
         error: function () {
             alert('Failed to fetch attendance data.');
-        },
-        complete: function () {
-            hideLoader();
         }
     });
 });
@@ -675,6 +669,7 @@ function drawAttendanceTable() {
             { data: 'mannual_starttime', name: 'mannual_starttime' },
             { data: 'session_time', name: 'session_time', orderable: false, searchable: false },
             { data: 'venue_name', name: 'venue_name' },
+            { data: 'group_name', name: 'group_name' },
             { data: 'subject_topic', name: 'subject_topic' },
             { data: 'faculty_name', name: 'faculty_name' },
             { data: 'actions', name: 'actions', orderable: false, searchable: false }
