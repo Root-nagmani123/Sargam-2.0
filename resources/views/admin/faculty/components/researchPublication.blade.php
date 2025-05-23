@@ -1,6 +1,5 @@
 <div>
-    <h4 class="card-subtitle mb-3 mt-3">Other information</h4>
-    <hr>
+
     <div class="row">
         <div class="col-6">
             

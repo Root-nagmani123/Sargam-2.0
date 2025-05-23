@@ -1,6 +1,5 @@
 <div>
-    <h4 class="card-subtitle mb-3 mt-3">Qualification Details</h4>
-    <hr>
+
     <div id="education_fields" class="my-4"></div>
     @php
         $qualifications = $faculty->facultyQualificationMap ?? collect();

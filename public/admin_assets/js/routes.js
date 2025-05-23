@@ -5,4 +5,7 @@ const routes = {
     'groupMappingStudentList': baseUrl + '/group-mapping/student-list',
     'getStudentListAccordingToGroup': baseUrl + '/mdo-escrot-exemption/get-student-list-according-to-course',
     'getAttendanceList': baseUrl + '/attendance/get-attendance-list',
+    'facultyStoreUrl': baseUrl + '/faculty/store',
+    'facultyIndexUrl': baseUrl + '/faculty/',
+    'facultyUpdateUrl': baseUrl + '/faculty/update',
 };
