@@ -156,13 +156,14 @@ class AttendanceController extends Controller
 // }
     function markAttendance($group_pk, $course_pk)
     {
+            return view('admin.attendance.mark-attendance', []);
         
         if ($group_pk && $course_pk) {
-            $group = CourseGroupTimetableMapping::where('group_pk', $group_pk)->where('Programme_pk', $course_pk)->first();
+            // $group = CourseGroupTimetableMapping::where('group_pk', $group_pk)->where('Programme_pk', $course_pk)->first();
             
-            if (!$group) {
-                return redirect()->back()->with('error', 'Group not found');
-            }
+            // if (!$group) {
+            //     return redirect()->back()->with('error', 'Group not found');
+            // }
 
             return view('admin.attendance.mark-attendance', compact('group'));
             
