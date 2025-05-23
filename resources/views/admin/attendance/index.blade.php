@@ -18,7 +18,11 @@
                         </div>
                     </div>
                     <hr>
+                    <form id="attendanceForm" method="POST" action="{{ route('attendance.get.attendance.list') }}">
+                        @csrf
+                        
                     <div class="row">
+
                         <div class="col-sm-6">
                             <label for="programme" class="form-label">Programme :</label>
                             <div class="mb-3">
@@ -60,12 +64,13 @@
                             </div>
                         </div>
                     </div>
-                    <button class="btn btn-primary hstack gap-6" id="searchAttendance" type="button">
+                    <button class="btn btn-primary hstack gap-6" id="searchAttendance" type="submit">
                         <i class="material-icons menu-icon">
                             search
                         </i>
                         Search
                     </button>
+                    </form>
                 </div>
 
 
@@ -73,29 +78,22 @@
 
             <div class="card">
                 <div class="card-body">
-                    <div class="table-responsive" id="attendanceTableWrapper">
-                        <table class="table table-bordered table-striped" id="attendanceTable">
-                            <thead>
-                                <tr>
-                                    <th>Sr. No.</th>
-                                    <th>Programme Name</th>
-                                    <th>Date</th>
-                                    <th>Session</th>
-                                    <th>Venue</th>
-                                    <th>Topic Details</th>
-                                    <th>Faculty Name</th>
-                                    <th>Attendance</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attendanceTableBody">
-                                {{-- tbody will be replaced via AJAX --}}
-                                @include('admin.attendance.partial.attendance_body', ['attendanceGroup' => $attendanceGroup ?? [], 'offset' => $offset ?? 0])
-                            </tbody>
-                        </table>
+                    <div class="table-responsive" id="attendanceTableDiv">
+                        <table id="attendanceTable" class="table table-bordered">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Programme Name</th>
+            <th>Date</th>
+            <th>Session</th>
+            <th>Venue</th>
+            <th>Topic</th>
+            <th>Faculty</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+</table>
 
-                        <div id="attendancePagination">
-                            {!! $pagination ?? '' !!}
-                        </div>
                     </div>
                 </div>
             </div>
