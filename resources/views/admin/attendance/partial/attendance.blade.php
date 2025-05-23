@@ -12,12 +12,12 @@
             <tr>
                 <th>#</th>
                 <th>Programme Name</th>
-                <th>Group</th>
+                <th>Date</th>
                 <th>Session</th>
                 <th>Venue</th>
-                <th>Topic</th>
-                <th>Faculty</th>
-                <th>Action</th>
+                <th>Topic Details</th>
+                <th>Name of Faculty</th>
+                <th>Attendance</th>
             </tr>
         </thead>
         <tbody>
@@ -26,13 +26,13 @@
                     {{-- @dd($group) --}}
                     <tr>
                         <td>{{ $loop->iteration }}</td>
-                        <td>{{ $group['programme_name'] ?? 'N/A' }}</td>
-                        <td>{{ $group['group_name'] ?? 'N/A' }}</td>
-                        <td>{{ ($group->classSession->start_time) }} - {{ ($group->classSession->end_time) }}</td>
-                        <td>{{ optional($group->venue)->venue_name }}</td>
-                        <td>{{ $group->subject_topic ?? 'N/A' }}</td>
-                        <td>{{ optional($group->faculty)->full_name ?? 'N/A' }}</td>
-                        <td><a href="javascript:void(0);">Mark Attendance</a></td>
+                        <td>{{ $group->course->course_name }}</td>
+                        <td>{{ optional($group->timetable)->mannual_starttime }}</td>
+                        <td>{{ optional($group->timetable)->classSession->start_time }} - {{ optional($group->timetable)->classSession->end_time }}</td>
+                        <td>{{ optional($group->timetable)->venue->venue_name }}</td>
+                        <td>{{ optional($group->timetable)->subject_topic }}</td>
+                        <td>{{ optional($group->timetable)->faculty->full_name }}</td>
+                        <th><a href="javascript:void(0);">Mark Attendance</a></th>
                     </tr>
                 @endforeach
             @endif
