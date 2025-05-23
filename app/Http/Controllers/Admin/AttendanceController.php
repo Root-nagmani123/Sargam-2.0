@@ -60,7 +60,7 @@ class AttendanceController extends Controller
             return DataTables::of($query)
                 ->addIndexColumn()
                 ->addColumn('programme_name', fn($row) => optional($row->course)->course_name ?? 'N/A')
-                ->addColumn('mannual_starttime', function($row) {
+                ->addColumn('mannual_starttime', function ($row) {
                     $startTime = '';
                     if (optional($row->timetable)->mannual_starttime) {
                         $startTime = Carbon::parse(optional($row->timetable)->mannual_starttime)->format('Y-m-d');
@@ -74,17 +74,21 @@ class AttendanceController extends Controller
                     if (optional($row->timetable)->classSession->start_time) {
                         $startTime = Carbon::parse(optional($row->timetable)->classSession->start_time)->format('Y-m-d');
                     }
-                    if(optional($row->timetable)->classSession->end_time) {
+                    if (optional($row->timetable)->classSession->end_time) {
                         $endTime = Carbon::parse(optional($row->timetable)->classSession->end_time)->format('Y-m-d');
                     }
 
                     return $startTime . ' - ' . $endTime;
                 })
                 ->addColumn('venue_name', fn($row) => optional($row->timetable)->venue->venue_name ?? 'N/A')
+                ->addColumn('group_name', function ($row) {
+                    return $row->group->group_name ?? 'NO GROUP';
+                })
+
                 ->addColumn('subject_topic', fn($row) => optional($row->timetable)->subject_topic ?? 'N/A')
                 ->addColumn('faculty_name', fn($row) => optional($row->timetable)->faculty->full_name ?? 'N/A')
-                ->addColumn('actions', function($row) {
-                    $actions = '<a href="'.route('attendance.mark', ['group_pk'=>$row->group_pk, 'course_pk'=>$row->Programme_pk]).'" class="btn btn-primary btn-sm" data-id="' . $row->pk . '">Mark Attendance</a>';
+                ->addColumn('actions', function ($row) {
+                    $actions = '<a href="' . route('attendance.mark', ['group_pk' => $row->group_pk, 'course_pk' => $row->Programme_pk]) . '" class="btn btn-primary btn-sm" data-id="' . $row->pk . '">Mark Attendance</a>';
                     return $actions;
                 })
                 ->rawColumns(['actions'])
@@ -150,8 +154,22 @@ class AttendanceController extends Controller
 //         ], 500);
 //     }
 // }
-    function markAttendance($group_pk, $course_pk) {
-        // Logic to mark attendance for the given ID
-        dd($group_pk, $course_pk);
+    function markAttendance($group_pk, $course_pk)
+    {
+        
+        if ($group_pk && $course_pk) {
+            $group = CourseGroupTimetableMapping::where('group_pk', $group_pk)->where('Programme_pk', $course_pk)->first();
+            
+            if (!$group) {
+                return redirect()->back()->with('error', 'Group not found');
+            }
+
+            return view('admin.attendance.mark-attendance', compact('group'));
+            
+            
+        } else {
+            return redirect()->back()->with('error', 'Invalid parameters');
+        }
+        
     }
 }

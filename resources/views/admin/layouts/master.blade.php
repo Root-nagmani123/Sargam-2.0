@@ -4,9 +4,10 @@
 <head>
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
-    <link href="{{ asset('css/forms.css') }}" rel="stylesheet">
+    {{-- <link href="{{ asset('css/forms.css') }}" rel="stylesheet"> --}}
     {{-- @stack('styles') --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    @section('css')
 </head>
 
 <body>
