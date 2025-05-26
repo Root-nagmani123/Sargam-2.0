@@ -147,7 +147,7 @@
                     </div>
                     @else
                     <div class="text-end">
-                        <button type="submit" class="btn btn-success">Submit All Feedback</button>
+                        <button type="submit" class="btn btn-success">Submit All Feedback.</button>
                     </div>
                     @endif
                 </form>
