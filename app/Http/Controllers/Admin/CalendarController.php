@@ -282,7 +282,7 @@ public function getEventFeedback($id)
 {
     $feedbacks = DB::table('topic_feedback')
         ->where('timetable_pk', $id)
-        ->select('rating', 'remark')
+        ->select('rating', 'remark','presentation','content')
         ->get();
 
     return response()->json($feedbacks);
@@ -302,6 +302,7 @@ function studentFeedback() {
         ->join('course_master', 'timetable.course_master_pk', '=', 'course_master.pk')
         ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
         ->whereNotIn('timetable.pk', $submittedTimetablePks)
+        ->where('timetable.feedback_checkbox', 1)
         ->select(
             'timetable.*',
             'faculty_master.full_name as faculty_name',
@@ -315,31 +316,44 @@ function studentFeedback() {
 
 public function submitFeedback(Request $request)
 {
-     $rules = [
+    // foreach ($request->timetable_pk as $i => $ttPk) {
+        
+    //     if (!empty($request->Ratting_checkbox[$i]) && $request->Ratting_checkbox[$i] == 1) {
+    //         $rules["rating.$i"] = 'required|in:1,2,3,4,5';
+    //           $rules["presentation.$i"] = 'required|in:1,2,3,4,5';
+    //             $rules["content.$i"] = 'required|in:1,2,3,4,5';
+    //     } else {
+    //         $rules["rating.$i"] = 'nullable|in:1,2,3,4,5';
+    //          $rules["presentation.$i"] = 'nullable|in:1,2,3,4,5';
+    //             $rules["content.$i"] = 'nullable|in:1,2,3,4,5';
+    //     }
+  
+    //     // Remarks required only if Remark_checkbox is 1
+    //     if (!empty($request->Remark_checkbox[$i]) && $request->Remark_checkbox[$i] == 1) {
+    //         $rules["remarks.$i"] = 'required|string|max:255';
+    //     } else {
+    //         $rules["remarks.$i"] = 'nullable|string|max:255';
+    //     }
+    // }
+
+    // $validated = $request->validate($rules);
+
+    $rules = [
         'timetable_pk' => 'required|array',
         'faculty_pk' => 'required|array',
         'topic_name' => 'required|array',
-       
-        // rating and remarks will be set per-row below
     ];
 
     foreach ($request->timetable_pk as $i => $ttPk) {
-        // Presentation and Content always required
-      
-      
-//  print_r($request->all());die;
-        // Rating required only if Ratting_checkbox is 1
+        $rules["presentation.$i"] = 'required|in:1,2,3,4,5';
+        $rules["content.$i"] = 'required|in:1,2,3,4,5';
+
         if (!empty($request->Ratting_checkbox[$i]) && $request->Ratting_checkbox[$i] == 1) {
             $rules["rating.$i"] = 'required|in:1,2,3,4,5';
-              $rules["presentation.$i"] = 'required|in:1,2,3,4,5';
-                $rules["content.$i"] = 'required|in:1,2,3,4,5';
         } else {
             $rules["rating.$i"] = 'nullable|in:1,2,3,4,5';
-             $rules["presentation.$i"] = 'nullable|in:1,2,3,4,5';
-                $rules["content.$i"] = 'nullable|in:1,2,3,4,5';
         }
-  
-        // Remarks required only if Remark_checkbox is 1
+
         if (!empty($request->Remark_checkbox[$i]) && $request->Remark_checkbox[$i] == 1) {
             $rules["remarks.$i"] = 'required|string|max:255';
         } else {
@@ -347,7 +361,18 @@ public function submitFeedback(Request $request)
         }
     }
 
-    $validated = $request->validate($rules);
+    // 👇👇👇 User friendly attribute names 👇👇👇
+    $attributes = [];
+    foreach ($request->timetable_pk as $i => $ttPk) {
+        $topic = $request->topic_name[$i] ?? 'this topic';
+        $attributes["rating.$i"] = "rating ";
+        $attributes["presentation.$i"] = "presentation ";
+        $attributes["content.$i"] = "content ";
+        $attributes["remarks.$i"] = "remarks ";
+    }
+
+    $validated = $request->validate($rules, [], $attributes);
+
 
 //    print_r($request->all());die;
     // Save to DB
