@@ -338,7 +338,7 @@ public function submitFeedback(Request $request)
              $rules["presentation.$i"] = 'nullable|in:1,2,3,4,5';
                 $rules["content.$i"] = 'nullable|in:1,2,3,4,5';
         }
-
+  
         // Remarks required only if Remark_checkbox is 1
         if (!empty($request->Remark_checkbox[$i]) && $request->Remark_checkbox[$i] == 1) {
             $rules["remarks.$i"] = 'required|string|max:255';
