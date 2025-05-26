@@ -20,15 +20,20 @@
 
                 <div class="card-title">
                     <div class="row">
-                        @if (!empty($data->logo1))
+                        {{-- @if (!empty($data->logo1))
                             <div class="col-3">
                                 <img src="{{ asset('storage/' . $data->logo1) }}" alt="logo1" class="img-fluid"
                                     style="height: 100px;">
                             </div>
-                        @endif
+                        @endif --}}
+
+                         <div class="col-3">
+                            <img src="{{ asset($data->logo1 ? 'storage/' . $data->logo1 : 'admin_assets/images/logos/logo.png') }}"
+                                alt="logo1" class="img-fluid" style="height: 100px;">
+                        </div>
 
 
-                        <div class="col-6 text-center">
+                        {{-- <div class="col-6 text-center">
                             <!-- Main heading -->
                             @if (!empty($data->heading))
                                 <h2 class="text-center">{!! $data->heading !!}</h2>
@@ -38,15 +43,33 @@
                             @if (!empty($data->sub_heading))
                                 <small class="text-center"><b>{{ $data->sub_heading }}</b></small>
                             @endif
+                        </div> --}}
+
+                        <div class="col-6 text-center">
+
+                            {{-- <h2 class="text-center"><b>{{ $data->heading ?? 'Main Heading Here' }}</b></h2> --}}
+                            <!-- Main heading -->
+                            <h2 class="text-center">{!! $data->heading ?? '<b>Main Heading Here</b>' !!}</h2>
+                            <!-- Subheading -->
+                            {{-- <small class="text-center">(August 26, 2024 to November 29, 2024)</small> --}}
+                            <small class="text-center"><b>{{ $data->sub_heading ?? 'Sub Heading Here' }}</b></small>
+
                         </div>
 
 
-                        @if (!empty($data->logo2))
+
+                        {{-- @if (!empty($data->logo2))
                             <div class="col-3">
                                 <img src="{{ asset('storage/' . $data->logo2) }}" alt="logo2" class="float-end"
                                     style="height: 100px;">
                             </div>
-                        @endif
+                        @endif --}}
+
+
+                         <div class="col-3">
+                            <img src="{{ asset($data->logo2 ? 'storage/' . $data->logo2 : 'images/azadi.png') }}"
+                                alt="logo2" class="float-end" style="height: 100px;"> <!--logo2-->
+                        </div>
 
 
                     </div>
@@ -66,7 +89,7 @@
                         <!-- Main content area -->
                         <div class="col-md-9">
                             <div class="row my-3">
-                                @if (!empty($data->logo3))
+                                {{-- @if (!empty($data->logo3))
                                     <div class="col-6">
                                         <img src="{{ asset('storage/' . $data->logo3) }}" alt="logo3" class="img-fluid"
                                             style="height: 100px;">
@@ -78,7 +101,17 @@
                                         <img src="{{ asset('storage/' . $data->logo4) }}" alt="logo4" class="float-end"
                                             style="height: 100px;">
                                     </div>
-                                @endif
+                                @endif --}}
+
+                                  <div class="col-6">
+                                    <img src="{{ asset($data->logo3 ? 'storage/' . $data->logo3 : 'images/digital.png') }}"
+                                        alt="logo3" class="img-fluid" style="height: 100px;"> <!--logo3-->
+                                </div>
+                                <div class="col-6">
+                                    <img src="{{ asset($data->logo4 ? 'storage/' . $data->logo4 : 'images/swachh.png') }}"
+                                        alt="logo4" class="float-end" style="height: 100px;"> <!--logo4-->
+                                </div>
+                                
 
 
                             </div>
