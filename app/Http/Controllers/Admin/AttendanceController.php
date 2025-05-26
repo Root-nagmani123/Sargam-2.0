@@ -204,9 +204,10 @@ class AttendanceController extends Controller
                     'attendance_status',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
+                            ->where('Course_master_pk', $course_pk) // <-- corrected here
                             ->where('group_pk', $group_pk)
                             ->first();
+
 
                         return '
                         <div class="form-check form-check-inline">
@@ -228,7 +229,7 @@ class AttendanceController extends Controller
                     'mdo_duty',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
+                            ->where('Course_master_pk', $course_pk) // <-- corrected here
                             ->where('group_pk', $group_pk)
                             ->first();
 
@@ -244,7 +245,7 @@ class AttendanceController extends Controller
                     'escort_duty',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
+                            ->where('Course_master_pk', $course_pk) // <-- corrected here
                             ->where('group_pk', $group_pk)
                             ->first();
                         return
@@ -260,7 +261,7 @@ class AttendanceController extends Controller
                     'medical_exempt',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
+                            ->where('Course_master_pk', $course_pk) // <-- corrected here
                             ->where('group_pk', $group_pk)
                             ->first();
 
@@ -277,7 +278,7 @@ class AttendanceController extends Controller
                     'other_exempt',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
+                            ->where('Course_master_pk', $course_pk) // <-- corrected here
                             ->where('group_pk', $group_pk)
                             ->first();
 
