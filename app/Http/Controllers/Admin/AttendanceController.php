@@ -38,14 +38,7 @@ class AttendanceController extends Controller
             $query = CourseGroupTimetableMapping::with([
                 'group',
                 'course:pk,course_name',
-                'timetable' => function ($q) use ($fromDate, $toDate) {
-                    if ($fromDate) {
-                        $q->whereDate('mannual_starttime', '>=', $fromDate);
-                    }
-                    if ($toDate) {
-                        $q->whereDate('mannual_end_time', '<=', $toDate);
-                    }
-                },
+                'timetable',
                 'timetable.classSession:pk,shift_name,start_time,end_time',
                 'timetable.venue:venue_id,venue_name',
                 'timetable.faculty:pk,full_name',
