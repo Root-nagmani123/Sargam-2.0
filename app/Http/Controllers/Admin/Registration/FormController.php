@@ -135,7 +135,17 @@ class FormController extends Controller
     {
         // return view('admin.registration.createform', compact('formid'));
         // Get column names using raw query (Query Builder)
-        $columns = collect(DB::select('SHOW COLUMNS FROM form_submission'))->pluck('Field');
+        $excludedColumns = ['id', 'formid', 'uid', 'timecreated'];
+
+        $columns = collect(DB::select('SHOW COLUMNS FROM form_submission'))
+            ->pluck('Field')
+            ->filter(function ($column) use ($excludedColumns) {
+                return !in_array(strtolower($column), array_map('strtolower', $excludedColumns));
+            })
+            ->map(function ($column) {
+                return ucfirst($column);
+            })
+            ->values();  // optional: reset keys
 
         return view('admin.registration.createform', [
             'formid' => $formid,
@@ -184,28 +194,54 @@ class FormController extends Controller
             }
 
             // Insert standard fields
+            // foreach ($fieldNames as $index => $name) {
+            //     $name = trim($name);
+            //     if (empty($name)) continue;
+
+            //     $sectionIndex = $fieldSections[$index] ?? 0;
+            //     if (!isset($sectionIds[$sectionIndex])) {
+            //         throw new \Exception("Invalid section index: $sectionIndex");
+            //     }
+
+            //     DB::table('form_data')->insert([
+            //         'formid'     => $formid,
+            //         'section_id' => $sectionIds[$sectionIndex],
+            //         'formname'   => $name,
+            //         'formtype'   => $fieldTypes[$index] ?? 'text',
+            //         'formlabel'  => $fieldLabels[$index] ?? '',
+            //         'fieldoption' => $fieldOptions[$index] ?? '',
+            //         // 'required'   => in_array($index, $isRequireds) ? 1 : 0,
+            //         'required'   => isset($isRequireds[$index]) && $isRequireds[$index] == 1 ? 1 : 0,
+            //         'layout'     => $fieldLayouts[$index] ?? 'vertical',
+            //         'created_at' => now(),
+            //         'updated_at' => now(),
+            //     ]);
+            // }
+
             foreach ($fieldNames as $index => $name) {
-                $name = trim($name);
-                if (empty($name)) continue;
+    $name = trim($name);
+    if (empty($name)) continue;
 
-                $sectionIndex = $fieldSections[$index] ?? 0;
-                if (!isset($sectionIds[$sectionIndex])) {
-                    throw new \Exception("Invalid section index: $sectionIndex");
-                }
+    $sectionIndex = $fieldSections[$index] ?? 0;
+    if (!isset($sectionIds[$sectionIndex])) {
+        throw new \Exception("Invalid section index: $sectionIndex");
+    }
 
-                DB::table('form_data')->insert([
-                    'formid'     => $formid,
-                    'section_id' => $sectionIds[$sectionIndex],
-                    'formname'   => $name,
-                    'formtype'   => $fieldTypes[$index] ?? 'text',
-                    'formlabel'  => $fieldLabels[$index] ?? '',
-                    'fieldoption' => $fieldOptions[$index] ?? '',
-                    'required'   => in_array($index, $isRequireds) ? 1 : 0,
-                    'layout'     => $fieldLayouts[$index] ?? 'vertical',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            }
+    $requiredKey = "{$sectionIndex}_{$index}";
+
+    DB::table('form_data')->insert([
+        'formid'      => $formid,
+        'section_id'  => $sectionIds[$sectionIndex],
+        'formname'    => $name,
+        'formtype'    => $fieldTypes[$index] ?? 'text',
+        'formlabel'   => $fieldLabels[$index] ?? '',
+        'fieldoption' => $fieldOptions[$index] ?? '',
+        'required'    => isset($isRequireds[$requiredKey]) && $isRequireds[$requiredKey] == 1 ? 1 : 0,
+        'layout'      => $fieldLayouts[$index] ?? 'vertical',
+        'created_at'  => now(),
+        'updated_at'  => now(),
+    ]);
+}
 
             // Insert table-based fields
             if (!empty($tableSections) && !empty($tableRows) && !empty($tableColumns)) {
@@ -825,152 +861,152 @@ class FormController extends Controller
     }
 
     public function generatePdf($form_id, $user_id)
-{
-    ini_set('pcre.backtrack_limit', '10000000');
+    {
+        ini_set('pcre.backtrack_limit', '10000000');
 
-    if (!is_numeric($form_id) || !is_numeric($user_id) || $form_id <= 0 || $user_id <= 0) {
-        abort(400, 'Invalid ID parameters');
-    }
-
-    try {
-        // Get form metadata
-        $formInfo = DB::table('local_form')
-            ->where('id', $form_id)
-            ->first(['description', 'course_sdate', 'course_edate']);
-
-        if (!$formInfo) abort(404, 'Form not found');
-
-        $form_description = $formInfo->description;
-        $form_date_range = date('d-m-Y', strtotime($formInfo->course_sdate)) . " to " . date('d-m-Y', strtotime($formInfo->course_edate));
-
-        // Get submission (normal fields)
-        $submission = DB::table('form_submission')
-            ->where('formid', $form_id)
-            ->where('uid', $user_id)
-            ->first();
-        $submissionArray = (array) $submission;
-
-        $user_name = $submissionArray['name'] ?? 'User';
-        $logo_path = '';
-        $base64 = '';
-        $sections = [];
-
-        // Profile image
-        if (!empty($submissionArray['profile'])) {
-            $path = storage_path("app/public/{$submissionArray['profile']}");
-            if (file_exists($path)) {
-                $type = pathinfo($path, PATHINFO_EXTENSION);
-                $data = base64_encode(file_get_contents($path));
-                $base64 = "data:image/{$type};base64,{$data}";
-            }
+        if (!is_numeric($form_id) || !is_numeric($user_id) || $form_id <= 0 || $user_id <= 0) {
+            abort(400, 'Invalid ID parameters');
         }
 
-        // Fetch form structure
-        $formStructure = DB::table('form_sections AS s')
-            ->join('form_data AS f', 's.id', '=', 'f.section_id')
-            ->where('f.formid', $form_id)
-            ->select('s.id AS section_id', 's.section_title', 'f.formname', 'f.formlabel', 'f.format')
-            ->orderBy('s.id')
-            ->get();
+        try {
+            // Get form metadata
+            $formInfo = DB::table('local_form')
+                ->where('id', $form_id)
+                ->first(['description', 'course_sdate', 'course_edate']);
 
-        $tableProcessed = [];
+            if (!$formInfo) abort(404, 'Form not found');
 
-        foreach ($formStructure as $item) {
-            $section = $item->section_title;
-            $fieldname = trim($item->formname);
-            $label = $item->formlabel;
-            $type = $item->format;
+            $form_description = $formInfo->description;
+            $form_date_range = date('d-m-Y', strtotime($formInfo->course_sdate)) . " to " . date('d-m-Y', strtotime($formInfo->course_edate));
 
-            if (!isset($sections[$section])) {
-                $sections[$section] = [];
+            // Get submission (normal fields)
+            $submission = DB::table('form_submission')
+                ->where('formid', $form_id)
+                ->where('uid', $user_id)
+                ->first();
+            $submissionArray = (array) $submission;
+
+            $user_name = $submissionArray['name'] ?? 'User';
+            $logo_path = '';
+            $base64 = '';
+            $sections = [];
+
+            // Profile image
+            if (!empty($submissionArray['profile'])) {
+                $path = storage_path("app/public/{$submissionArray['profile']}");
+                if (file_exists($path)) {
+                    $type = pathinfo($path, PATHINFO_EXTENSION);
+                    $data = base64_encode(file_get_contents($path));
+                    $base64 = "data:image/{$type};base64,{$data}";
+                }
             }
 
-            // Handle table fields
-            if ($type === 'table') {
-                $sectionId = $item->section_id;
-                $tableKey = $sectionId . '_' . $fieldname;
-                if (in_array($tableKey, $tableProcessed)) continue;
+            // Fetch form structure
+            $formStructure = DB::table('form_sections AS s')
+                ->join('form_data AS f', 's.id', '=', 'f.section_id')
+                ->where('f.formid', $form_id)
+                ->select('s.id AS section_id', 's.section_title', 'f.formname', 'f.formlabel', 'f.format')
+                ->orderBy('s.id')
+                ->get();
 
-                $tableData = DB::table('form_submission_tabledata')
-                    ->where('formid', $form_id)
-                    ->where('uid', $user_id)
-                    ->where('section_id', $sectionId)
-                    ->get();
+            $tableProcessed = [];
 
-                if ($tableData->isNotEmpty()) {
-                    $grouped = $tableData->groupBy('row_index');
-                    $rows = [];
-                    $headers = [];
+            foreach ($formStructure as $item) {
+                $section = $item->section_title;
+                $fieldname = trim($item->formname);
+                $label = $item->formlabel;
+                $type = $item->format;
 
-                    foreach ($grouped as $row) {
-                        $rowData = [];
-                        foreach ($row as $cell) {
-                            $headers[$cell->column_key] = true;
-                            $rowData[$cell->column_key] = $cell->column_value;
-                        }
-                        $rows[] = $rowData;
-                    }
-
-                    $sections[$section][] = [
-                        'label_en' => $label,
-                        'type' => 'table',
-                        'headers' => array_keys($headers),
-                        'rows' => $rows,
-                    ];
+                if (!isset($sections[$section])) {
+                    $sections[$section] = [];
                 }
 
-                $tableProcessed[] = $tableKey;
-                continue;
+                // Handle table fields
+                if ($type === 'table') {
+                    $sectionId = $item->section_id;
+                    $tableKey = $sectionId . '_' . $fieldname;
+                    if (in_array($tableKey, $tableProcessed)) continue;
+
+                    $tableData = DB::table('form_submission_tabledata')
+                        ->where('formid', $form_id)
+                        ->where('uid', $user_id)
+                        ->where('section_id', $sectionId)
+                        ->get();
+
+                    if ($tableData->isNotEmpty()) {
+                        $grouped = $tableData->groupBy('row_index');
+                        $rows = [];
+                        $headers = [];
+
+                        foreach ($grouped as $row) {
+                            $rowData = [];
+                            foreach ($row as $cell) {
+                                $headers[$cell->column_key] = true;
+                                $rowData[$cell->column_key] = $cell->column_value;
+                            }
+                            $rows[] = $rowData;
+                        }
+
+                        $sections[$section][] = [
+                            'label_en' => $label,
+                            'type' => 'table',
+                            'headers' => array_keys($headers),
+                            'rows' => $rows,
+                        ];
+                    }
+
+                    $tableProcessed[] = $tableKey;
+                    continue;
+                }
+
+                // Handle normal fields
+                $value = $submissionArray[$fieldname] ?? null;
+                if (!is_null($value) && $value !== '') {
+                    $sections[$section][] = [
+                        'label_en' => $label,
+                        'fieldvalue' => $value,
+                    ];
+                }
             }
 
-            // Handle normal fields
-            $value = $submissionArray[$fieldname] ?? null;
-            if (!is_null($value) && $value !== '') {
-                $sections[$section][] = [
-                    'label_en' => $label,
-                    'fieldvalue' => $value,
+            // Render HTML
+            $html = view('admin.registration.form_template', [
+                'form_description' => $form_description,
+                'form_date_range' => $form_date_range,
+                'sections' => $sections,
+                'logo_path' => $base64,
+                'user_name' => $user_name,
+            ])->render();
+
+            // Setup mPDF
+            $tempDir = storage_path('temp/mpdf');
+            if (!is_dir($tempDir)) mkdir($tempDir, 0777, true);
+
+            $fontDir = base_path('vendor/mpdf/mpdf/ttfonts');
+            $mpdf = new \Mpdf\Mpdf([
+                'tempDir' => $tempDir,
+                'fontDir' => [$fontDir],
+                'default_font' => 'dejavusans',
+            ]);
+
+            // Optional: Devanagari font support
+            if (file_exists("{$fontDir}/NotoSansDevanagari-Regular.ttf")) {
+                $mpdf->fontdata['devanagari'] = [
+                    'R' => "{$fontDir}/NotoSansDevanagari-Regular.ttf",
+                    'B' => "{$fontDir}/NotoSansDevanagari-Bold.ttf",
                 ];
+                $mpdf->SetFont('devanagari');
             }
+
+            $mpdf->WriteHTML($html);
+
+            return response($mpdf->Output('form.pdf', 'I'), 200)
+                ->header('Content-Type', 'application/pdf');
+        } catch (\Exception $e) {
+            \Log::error('PDF Generation Error: ' . $e->getMessage());
+            abort(500, 'An error occurred while generating the PDF.');
         }
-
-        // Render HTML
-        $html = view('admin.registration.form_template', [
-            'form_description' => $form_description,
-            'form_date_range' => $form_date_range,
-            'sections' => $sections,
-            'logo_path' => $base64,
-            'user_name' => $user_name,
-        ])->render();
-
-        // Setup mPDF
-        $tempDir = storage_path('temp/mpdf');
-        if (!is_dir($tempDir)) mkdir($tempDir, 0777, true);
-
-        $fontDir = base_path('vendor/mpdf/mpdf/ttfonts');
-        $mpdf = new \Mpdf\Mpdf([
-            'tempDir' => $tempDir,
-            'fontDir' => [$fontDir],
-            'default_font' => 'dejavusans',
-        ]);
-
-        // Optional: Devanagari font support
-        if (file_exists("{$fontDir}/NotoSansDevanagari-Regular.ttf")) {
-            $mpdf->fontdata['devanagari'] = [
-                'R' => "{$fontDir}/NotoSansDevanagari-Regular.ttf",
-                'B' => "{$fontDir}/NotoSansDevanagari-Bold.ttf",
-            ];
-            $mpdf->SetFont('devanagari');
-        }
-
-        $mpdf->WriteHTML($html);
-
-        return response($mpdf->Output('form.pdf', 'I'), 200)
-            ->header('Content-Type', 'application/pdf');
-    } catch (\Exception $e) {
-        \Log::error('PDF Generation Error: ' . $e->getMessage());
-        abort(500, 'An error occurred while generating the PDF.');
     }
-}
 
 
 
@@ -979,224 +1015,224 @@ class FormController extends Controller
 
 
 
-//     public function generatePdf($form_id, $user_id)
-// {
-//     ini_set('pcre.backtrack_limit', '10000000');
+    //     public function generatePdf($form_id, $user_id)
+    // {
+    //     ini_set('pcre.backtrack_limit', '10000000');
 
-//     if (!is_numeric($form_id) || !is_numeric($user_id) || $form_id <= 0 || $user_id <= 0) {
-//         abort(400, 'Invalid ID parameters');
-//     }
+    //     if (!is_numeric($form_id) || !is_numeric($user_id) || $form_id <= 0 || $user_id <= 0) {
+    //         abort(400, 'Invalid ID parameters');
+    //     }
 
-//     try {
-//         $formInfo = DB::table('local_form')
-//             ->where('id', $form_id)
-//             ->first(['description', 'course_sdate', 'course_edate']);
+    //     try {
+    //         $formInfo = DB::table('local_form')
+    //             ->where('id', $form_id)
+    //             ->first(['description', 'course_sdate', 'course_edate']);
 
-//         if (!$formInfo) {
-//             abort(404, 'Form not found');
-//         }
+    //         if (!$formInfo) {
+    //             abort(404, 'Form not found');
+    //         }
 
-//         $form_description = $formInfo->description;
-//         $form_date_range = date('d-m-Y', strtotime($formInfo->course_sdate)) . " to " . date('d-m-Y', strtotime($formInfo->course_edate));
+    //         $form_description = $formInfo->description;
+    //         $form_date_range = date('d-m-Y', strtotime($formInfo->course_sdate)) . " to " . date('d-m-Y', strtotime($formInfo->course_edate));
 
-//         $submission = DB::table('form_submission_tabledata')
-//             ->where('formid', $form_id)
-//             ->where('uid', $user_id)
-//             ->first();
+    //         $submission = DB::table('form_submission_tabledata')
+    //             ->where('formid', $form_id)
+    //             ->where('uid', $user_id)
+    //             ->first();
 
-//         $submissionArray = (array) $submission;
-//         $user_name = $submissionArray['name'] ?? 'User';
+    //         $submissionArray = (array) $submission;
+    //         $user_name = $submissionArray['name'] ?? 'User';
 
-//         $formStructure = DB::table('form_sections as s')
-//             ->join('form_submission_tabledata as t', 's.id', '=', 't.section_id')
-//             ->leftJoin('form_data as d', function ($join) {
-//                 $join->on('t.section_id', '=', 'd.section_id')
-//                     ->on('t.row_index', '=', 'd.row_index')
-//                     ->on('t.col_index', '=', 'd.col_index')
-//                     ->whereColumn('t.formid', 'd.formid');
-//             })
-//             ->where('t.formid', $form_id)
-//             ->where('t.uid', $user_id)
-//             ->select(
-//                 's.section_title',
-//                 't.formid',
-//                 't.uid',
-//                 't.section_id',
-//                 't.row_index',
-//                 't.col_index',
-//                 't.column_key',
-//                 't.field_type',
-//                 't.column_value',
-//                 'd.formlabel',
-//                 'd.formtype',
-//                 'd.format',
-//                 'd.formname'
-//             )
-//             ->orderBy('s.id')
-//             ->get();
+    //         $formStructure = DB::table('form_sections as s')
+    //             ->join('form_submission_tabledata as t', 's.id', '=', 't.section_id')
+    //             ->leftJoin('form_data as d', function ($join) {
+    //                 $join->on('t.section_id', '=', 'd.section_id')
+    //                     ->on('t.row_index', '=', 'd.row_index')
+    //                     ->on('t.col_index', '=', 'd.col_index')
+    //                     ->whereColumn('t.formid', 'd.formid');
+    //             })
+    //             ->where('t.formid', $form_id)
+    //             ->where('t.uid', $user_id)
+    //             ->select(
+    //                 's.section_title',
+    //                 't.formid',
+    //                 't.uid',
+    //                 't.section_id',
+    //                 't.row_index',
+    //                 't.col_index',
+    //                 't.column_key',
+    //                 't.field_type',
+    //                 't.column_value',
+    //                 'd.formlabel',
+    //                 'd.formtype',
+    //                 'd.format',
+    //                 'd.formname'
+    //             )
+    //             ->orderBy('s.id')
+    //             ->get();
 
-//         $sections = [];
-//         $logo_path = '';
-//         $processedTables = [];
+    //         $sections = [];
+    //         $logo_path = '';
+    //         $processedTables = [];
 
-//         foreach ($formStructure as $item) {
-//             $section = $item->section_title;
-//             $fieldname = trim($item->formname);
-//             $label = $item->formlabel;
-//             $type = $item->format;
+    //         foreach ($formStructure as $item) {
+    //             $section = $item->section_title;
+    //             $fieldname = trim($item->formname);
+    //             $label = $item->formlabel;
+    //             $type = $item->format;
 
-//             if (!isset($sections[$section])) {
-//                 $sections[$section] = [];
-//             }
+    //             if (!isset($sections[$section])) {
+    //                 $sections[$section] = [];
+    //             }
 
-//             if ($type === 'table') {
-//                 $sectionId = $item->section_id;
+    //             if ($type === 'table') {
+    //                 $sectionId = $item->section_id;
 
-//                 // Ensure unique table is processed per section
-//                 $tableKey = $sectionId . '_' . $fieldname;
-//                 if (in_array($tableKey, $processedTables)) {
-//                     continue;
-//                 }
+    //                 // Ensure unique table is processed per section
+    //                 $tableKey = $sectionId . '_' . $fieldname;
+    //                 if (in_array($tableKey, $processedTables)) {
+    //                     continue;
+    //                 }
 
-//                 // Get table data for this section
-//                 $tableData = DB::table('form_submission_tabledata')
-//                     ->where('formid', $form_id)
-//                     ->where('uid', $user_id)
-//                     ->where('section_id', $sectionId)
-//                     ->get();
+    //                 // Get table data for this section
+    //                 $tableData = DB::table('form_submission_tabledata')
+    //                     ->where('formid', $form_id)
+    //                     ->where('uid', $user_id)
+    //                     ->where('section_id', $sectionId)
+    //                     ->get();
 
-//                 if ($tableData->isNotEmpty()) {
-//                     $grouped = $tableData->groupBy('row_index');
-//                     $rows = [];
-//                     $headers = [];
+    //                 if ($tableData->isNotEmpty()) {
+    //                     $grouped = $tableData->groupBy('row_index');
+    //                     $rows = [];
+    //                     $headers = [];
 
-//                     foreach ($grouped as $row) {
-//                         $rowData = [];
+    //                     foreach ($grouped as $row) {
+    //                         $rowData = [];
 
-//                         foreach ($row as $cell) {
-//                             $headers[$cell->column_key] = true;
-//                             $rowData[$cell->column_key] = $cell->column_value;
-//                         }
+    //                         foreach ($row as $cell) {
+    //                             $headers[$cell->column_key] = true;
+    //                             $rowData[$cell->column_key] = $cell->column_value;
+    //                         }
 
-//                         $rows[] = $rowData;
-//                     }
+    //                         $rows[] = $rowData;
+    //                     }
 
-//                     $sections[$section][] = [
-//                         'label_en' => $label,
-//                         'type' => 'table',
-//                         'headers' => array_keys($headers),
-//                         'rows' => $rows,
-//                     ];
+    //                     $sections[$section][] = [
+    //                         'label_en' => $label,
+    //                         'type' => 'table',
+    //                         'headers' => array_keys($headers),
+    //                         'rows' => $rows,
+    //                     ];
 
-//                     $processedTables[] = $tableKey;
-//                 }
+    //                     $processedTables[] = $tableKey;
+    //                 }
 
-//                 continue;
-//             }
+    //                 continue;
+    //             }
 
-//             $value = $submissionArray[$fieldname] ?? null;
-//             if (!is_null($value) && $value !== '') {
-//                 $sections[$section][] = [
-//                     'label_en' => $label,
-//                     'fieldvalue' => $value,
-//                 ];
-//             }
-//         }
+    //             $value = $submissionArray[$fieldname] ?? null;
+    //             if (!is_null($value) && $value !== '') {
+    //                 $sections[$section][] = [
+    //                     'label_en' => $label,
+    //                     'fieldvalue' => $value,
+    //                 ];
+    //             }
+    //         }
 
-//         // ✅ ADDITION: Handle individual fields from form_data not already added
-//         $fieldLabelsAdded = [];
+    //         // ✅ ADDITION: Handle individual fields from form_data not already added
+    //         $fieldLabelsAdded = [];
 
-//         foreach ($sections as $secTitle => $fields) {
-//             foreach ($fields as $f) {
-//                 if (isset($f['label_en'])) {
-//                     $fieldLabelsAdded[] = $f['label_en'];
-//                 }
-//             }
-//         }
+    //         foreach ($sections as $secTitle => $fields) {
+    //             foreach ($fields as $f) {
+    //                 if (isset($f['label_en'])) {
+    //                     $fieldLabelsAdded[] = $f['label_en'];
+    //                 }
+    //             }
+    //         }
 
-//         $individualFields = DB::table('form_data as d')
-//             ->join('form_sections as s', 'd.section_id', '=', 's.id')
-//             ->where('d.formid', $form_id)
-//             ->where('d.format', '!=', 'table')
-//             ->select('s.section_title', 'd.formlabel', 'd.formname')
-//             ->orderBy('s.id')
-//             ->get();
+    //         $individualFields = DB::table('form_data as d')
+    //             ->join('form_sections as s', 'd.section_id', '=', 's.id')
+    //             ->where('d.formid', $form_id)
+    //             ->where('d.format', '!=', 'table')
+    //             ->select('s.section_title', 'd.formlabel', 'd.formname')
+    //             ->orderBy('s.id')
+    //             ->get();
 
-//         foreach ($individualFields as $field) {
-//             $sectionTitle = $field->section_title;
-//             $label = $field->formlabel;
-//             $name = $field->formname;
+    //         foreach ($individualFields as $field) {
+    //             $sectionTitle = $field->section_title;
+    //             $label = $field->formlabel;
+    //             $name = $field->formname;
 
-//             if (in_array($label, $fieldLabelsAdded)) {
-//                 continue; // already handled
-//             }
+    //             if (in_array($label, $fieldLabelsAdded)) {
+    //                 continue; // already handled
+    //             }
 
-//             $value = $submissionArray[$name] ?? null;
-//             if (!is_null($value) && $value !== '') {
-//                 if (!isset($sections[$sectionTitle])) {
-//                     $sections[$sectionTitle] = [];
-//                 }
+    //             $value = $submissionArray[$name] ?? null;
+    //             if (!is_null($value) && $value !== '') {
+    //                 if (!isset($sections[$sectionTitle])) {
+    //                     $sections[$sectionTitle] = [];
+    //                 }
 
-//                 $sections[$sectionTitle][] = [
-//                     'label_en' => $label,
-//                     'fieldvalue' => $value,
-//                 ];
-//             }
-//         }
+    //                 $sections[$sectionTitle][] = [
+    //                     'label_en' => $label,
+    //                     'fieldvalue' => $value,
+    //                 ];
+    //             }
+    //         }
 
-//         // Convert logo to base64 (if exists)
-//         $base64 = '';
-//         if (!empty($logo_path)) {
-//             $path = storage_path("app/public/{$logo_path}");
-//             if (file_exists($path)) {
-//                 $type = pathinfo($path, PATHINFO_EXTENSION);
-//                 $data = base64_encode(file_get_contents($path));
-//                 $base64 = "data:image/{$type};base64,{$data}";
-//             }
-//         }
+    //         // Convert logo to base64 (if exists)
+    //         $base64 = '';
+    //         if (!empty($logo_path)) {
+    //             $path = storage_path("app/public/{$logo_path}");
+    //             if (file_exists($path)) {
+    //                 $type = pathinfo($path, PATHINFO_EXTENSION);
+    //                 $data = base64_encode(file_get_contents($path));
+    //                 $base64 = "data:image/{$type};base64,{$data}";
+    //             }
+    //         }
 
-//         // Render HTML view
-//         $html = view('admin.registration.form_template', [
-//             'form_description' => $form_description,
-//             'form_date_range' => $form_date_range,
-//             'sections' => $sections,
-//             'logo_path' => $base64,
-//             'user_name' => $user_name,
-//         ])->render();
+    //         // Render HTML view
+    //         $html = view('admin.registration.form_template', [
+    //             'form_description' => $form_description,
+    //             'form_date_range' => $form_date_range,
+    //             'sections' => $sections,
+    //             'logo_path' => $base64,
+    //             'user_name' => $user_name,
+    //         ])->render();
 
-//         // Prepare PDF
-//         $tempDir = storage_path('temp/mpdf');
-//         if (!is_dir($tempDir)) {
-//             mkdir($tempDir, 0777, true);
-//         }
-//         $fontDir = base_path('vendor/mpdf/mpdf/ttfonts');
+    //         // Prepare PDF
+    //         $tempDir = storage_path('temp/mpdf');
+    //         if (!is_dir($tempDir)) {
+    //             mkdir($tempDir, 0777, true);
+    //         }
+    //         $fontDir = base_path('vendor/mpdf/mpdf/ttfonts');
 
-//         $mpdf = new \Mpdf\Mpdf([
-//             'tempDir' => $tempDir,
-//             'fontDir' => [$fontDir],
-//             'default_font' => 'dejavusans',
-//         ]);
+    //         $mpdf = new \Mpdf\Mpdf([
+    //             'tempDir' => $tempDir,
+    //             'fontDir' => [$fontDir],
+    //             'default_font' => 'dejavusans',
+    //         ]);
 
-//         // Load Devanagari font if available
-//         if (file_exists("{$fontDir}/NotoSansDevanagari-Regular.ttf")) {
-//             $mpdf->fontdata['devanagari'] = [
-//                 'R' => "{$fontDir}/NotoSansDevanagari-Regular.ttf",
-//                 'B' => "{$fontDir}/NotoSansDevanagari-Bold.ttf",
-//             ];
-//             $mpdf->SetFont('devanagari');
-//         }
+    //         // Load Devanagari font if available
+    //         if (file_exists("{$fontDir}/NotoSansDevanagari-Regular.ttf")) {
+    //             $mpdf->fontdata['devanagari'] = [
+    //                 'R' => "{$fontDir}/NotoSansDevanagari-Regular.ttf",
+    //                 'B' => "{$fontDir}/NotoSansDevanagari-Bold.ttf",
+    //             ];
+    //             $mpdf->SetFont('devanagari');
+    //         }
 
-//         $mpdf->WriteHTML($html);
+    //         $mpdf->WriteHTML($html);
 
-//         return response($mpdf->Output('form.pdf', 'I'), 200)
-//             ->header('Content-Type', 'application/pdf');
-//     } catch (\Exception $e) {
-//         \Log::error('PDF Generation Error: ' . $e->getMessage(), [
-//             'line' => $e->getLine(),
-//             'trace' => $e->getTraceAsString()
-//         ]);
-//         abort(500, 'An error occurred while generating the PDF.');
-//     }
-// }
+    //         return response($mpdf->Output('form.pdf', 'I'), 200)
+    //             ->header('Content-Type', 'application/pdf');
+    //     } catch (\Exception $e) {
+    //         \Log::error('PDF Generation Error: ' . $e->getMessage(), [
+    //             'line' => $e->getLine(),
+    //             'trace' => $e->getTraceAsString()
+    //         ]);
+    //         abort(500, 'An error occurred while generating the PDF.');
+    //     }
+    // }
 
 }
