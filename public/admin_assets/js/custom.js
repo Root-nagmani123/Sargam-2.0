@@ -703,7 +703,10 @@ $(document).ready(function () {
         language: {
         emptyTable: "No data found",
     },
-        responsive: true,
+        responsive: false,
+        autoWidth: false,
+        order: [[0, 'asc']], // Default ordering by first column
+        
         ajax: {
             url: routes.studentAttendanceList + '/' + group_pk + '/' + course_pk, // Laravel route returning JSON
             type: 'GET'
