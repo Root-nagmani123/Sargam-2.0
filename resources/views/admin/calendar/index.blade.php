@@ -588,7 +588,13 @@ $('#eventForm').on('submit', function(e) {
             $('#end_datetime').focus();
             return false;
         }
-
+if ($('#feedback_checkbox').is(':checked')) {
+        if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
+            alert("Please select at least Remark or Rating when Feedback is checked.");
+            $('#remarkCheckbox').focus();
+            return false;
+        }
+    }
 
     let formData = new FormData(this);
     $('input[name="group_type_name[]"]:checked').each(function() {
@@ -980,7 +986,13 @@ if (end <= start) {
     $('#end_datetime').focus();
     return false;
 }
-
+if ($('#feedback_checkbox').is(':checked')) {
+        if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
+            alert("Please select at least Remark or Rating when Feedback is checked.");
+            $('#remarkCheckbox').focus();
+            return false;
+        }
+    }
     $.ajax({
         url: '/calendar/event-update/' + eventId,
         method: 'POST',
