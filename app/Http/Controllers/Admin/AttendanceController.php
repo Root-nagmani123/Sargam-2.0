@@ -193,7 +193,7 @@ class AttendanceController extends Controller
                 return redirect()->back()->with('error', 'Group or Course not found');
             }
 
-            $students = StudentCourseGroupMap::with(['studentsMaster:display_name,generated_OT_code,pk', 'attendance' => fn($q) => $q->where('course_pk', $course_pk)->where('group_pk', $group_pk)])
+            $students = StudentCourseGroupMap::with(['studentsMaster:display_name,generated_OT_code,pk', 'attendance' => fn($q) => $q->where('course_master_pk', $course_pk)->where('student_course_group_map_pk', $group_pk)])
                 ->where('group_type_master_course_master_map_pk', $groupTypeMaster->pk);
 
             return DataTables::of($students)
@@ -204,8 +204,8 @@ class AttendanceController extends Controller
                     'attendance_status',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('Course_master_pk', $course_pk) // <-- corrected here
-                            ->where('group_pk', $group_pk)
+                            ->where('Course_master_pk', $course_pk)
+                            ->where('student_course_group_map_pk', $group_pk)
                             ->first();
 
 
@@ -229,8 +229,8 @@ class AttendanceController extends Controller
                     'mdo_duty',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('Course_master_pk', $course_pk) // <-- corrected here
-                            ->where('group_pk', $group_pk)
+                            ->where('Course_master_pk', $course_pk) 
+                            ->where('student_course_group_map_pk', $group_pk)
                             ->first();
 
                         return '
@@ -245,8 +245,8 @@ class AttendanceController extends Controller
                     'escort_duty',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('Course_master_pk', $course_pk) // <-- corrected here
-                            ->where('group_pk', $group_pk)
+                            ->where('Course_master_pk', $course_pk) 
+                            ->where('student_course_group_map_pk', $group_pk)
                             ->first();
                         return
                             '
@@ -261,8 +261,8 @@ class AttendanceController extends Controller
                     'medical_exempt',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('Course_master_pk', $course_pk) // <-- corrected here
-                            ->where('group_pk', $group_pk)
+                            ->where('Course_master_pk', $course_pk) 
+                            ->where('student_course_group_map_pk', $group_pk)
                             ->first();
 
                         return '
@@ -278,8 +278,8 @@ class AttendanceController extends Controller
                     'other_exempt',
                     function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('Course_master_pk', $course_pk) // <-- corrected here
-                            ->where('group_pk', $group_pk)
+                            ->where('Course_master_pk', $course_pk) 
+                            ->where('student_course_group_map_pk', $group_pk)
                             ->first();
 
                         return '
