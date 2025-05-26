@@ -24,8 +24,20 @@ class FormEditController extends Controller
 
     //     return view('admin.registration.fc_edit', compact('form_id', 'sections', 'fields'));
     // }
-    public function fc_edit($form_id)
+    public function fc_edit(Request $request, $form_id)
     {
+        // dd($request->all());
+        if ($request->has('deleted_sections')) {
+            foreach ($request->deleted_sections as $sectionId) {
+                // Delete related fields first
+                DB::table('form_data')->where('section_id', $sectionId)->delete();
+
+                // Then delete the section
+                DB::table('form_sections')->where('id', $sectionId)->delete();
+            }
+        }
+
+
         // Retrieve form sections and fields
         $sections = DB::table('form_sections')
             ->where('formid', $form_id)
@@ -55,157 +67,121 @@ class FormEditController extends Controller
 
     public function fc_update(Request $request)
     {
-        // Validate the request
         $request->validate([
             'section_title.*' => 'required|string',
             'field_label.*' => 'required|string',
             'field_name.*' => 'required|string',
         ]);
-        // Begin database transaction
+
         DB::beginTransaction();
         $form_id = $request->form_id;
+        $newSectionMap = [];
+
         try {
-            // Handle sections
-            foreach ($request->section_id as $index => $section_id) {
-                $title = trim($request->section_title[$index]);
-                $order = $request->sort_order[$index] ?? $index;
+            // Handle Sections
+            if ($request->has('section_id') && is_array($request->section_id)) {
+                foreach ($request->section_id as $index => $section_id) {
+                    $title = trim($request->section_title[$index]);
+                    $order = $request->sort_order[$index] ?? $index;
 
-                if ($section_id === 'new') {
-                    // Insert new section
-                    $newId = DB::table('form_sections')->insertGetId([
-                        'formid' => $form_id,
-                        'section_title' => $title,
-                        'sort_order' => $order,
-                    ]);
-
-                    $newSectionMap[$index] = $newId; // map temporary index to actual ID
-                } else {
-                    // Update existing section
-                    DB::table('form_sections')
-                        ->where('id', $section_id)
-                        ->update([
+                    if ($section_id === 'new') {
+                        // Insert new section
+                        $newId = DB::table('form_sections')->insertGetId([
+                            'formid' => $form_id,
                             'section_title' => $title,
                             'sort_order' => $order,
-                            // 'updated_at' => now(),
                         ]);
+
+                        $newSectionMap[$index] = $newId;
+                    } else {
+                        // Update existing section
+                        DB::table('form_sections')->where('id', $section_id)->update([
+                            'section_title' => $title,
+                            'sort_order' => $order,
+                        ]);
+                    }
                 }
             }
 
-            // Handle fields
-            foreach ($request->field_id as $index => $field_id) {
-                $is_required = isset($request->is_required[$index]) ? 1 : 0;
-                // $section_id = $request->field_section[$index];
-                $temp_section_id = $request->field_section[$index];
-                $section_id = ($temp_section_id === 'new' || !is_numeric($temp_section_id))
-                    ? ($newSectionMap[$index] ?? null)
-                    : $temp_section_id;
+            // Handle Fields
+            if ($request->has('field_id') && is_array($request->field_id)) {
+                foreach ($request->field_id as $index => $field_id) {
+                    $field_type = $request->field_type[$index];
+                    // Check required for existing fields by ID, and for new fields by index
+                    if ($field_id === 'new') {
+                        $is_required = isset($request->is_required[$index]) ? 1 : 0;
+                    } else {
+                        $is_required = isset($request->is_required[$field_id]) ? 1 : 0;
+                    }
 
-                // Determine if this is a table format field
-                $is_table_format = in_array($request->field_type[$index], ['Label', 'View/Download', 'Radio Button', 'Textarea', 'Checkbox', 'Select Box']);
+                    // Resolve Section ID
+                    $temp_section_id = $request->field_section[$index];
+                    $section_id = ($temp_section_id === 'new' || !is_numeric($temp_section_id))
+                        ? ($newSectionMap[$index] ?? null)
+                        : $temp_section_id;
 
-                if ($field_id === 'new') {
-                    // Insert new field
+                    $is_table_format = in_array($field_type, ['Label', 'View/Download', 'Radio Button', 'Textarea', 'Checkbox', 'Select Box']);
+
+                    $common_data = [
+                        'formid' => $form_id,
+                        'section_id' => $section_id,
+                        'formlabel' => $request->field_label[$index],
+                        'required' => $is_required,
+                        'updated_at' => now(),
+                    ];
+
                     if ($is_table_format) {
-                        DB::table('form_data')->insert([
-                            'formid' => $form_id,
-                            'section_id' => $section_id,
-                            'field_type' => $request->field_type[$index],
+                        $field_data = array_merge($common_data, [
+                            'field_type' => $field_type,
                             'field_title' => $request->field_name[$index],
-                            'formlabel' => $request->field_label[$index],
                             'fieldoption' => $request->field_options[$index] ?? null,
                             'field_options' => $request->field_options[$index] ?? null,
                             'field_checkbox_options' => $request->field_options[$index] ?? null,
                             'field_radio_options' => $request->field_options[$index] ?? null,
-                            'field_url' => ($request->field_type[$index] === 'View/Download') ? $request->field_options[$index] : null,
-                            'required' => $is_required,
+                            'field_url' => ($field_type === 'View/Download') ? $request->field_options[$index] : null,
                             'format' => 'table',
-                            'created_at' => now(),
-                            'updated_at' => now(),
                         ]);
                     } else {
-                        DB::table('form_data')->insert([
-                            'formid' => $form_id,
-                            'section_id' => $section_id,
+                        $field_data = array_merge($common_data, [
                             'formname' => $request->field_name[$index],
-                            'formtype' => $request->field_type[$index],
-                            'formlabel' => $request->field_label[$index],
+                            'formtype' => $field_type,
                             'fieldoption' => $request->field_options[$index] ?? null,
-                            'required' => $is_required,
-                            'created_at' => now(),
-                            'updated_at' => now(),
                         ]);
                     }
-                } else {
-                    // Update existing field
-                    if ($is_table_format) {
-                        DB::table('form_data')
-                            ->where('id', $field_id)
-                            ->update([
-                                'section_id' => $section_id,
-                                'field_type' => $request->field_type[$index],
-                                'field_title' => $request->field_name[$index],
-                                'formlabel' => $request->field_label[$index],
-                                'fieldoption' => $request->field_options[$index] ?? null,
-                                'field_options' => $request->field_options[$index] ?? null,
-                                'field_checkbox_options' => $request->field_options[$index] ?? null,
-                                'field_radio_options' => $request->field_options[$index] ?? null,
-                                'field_url' => ($request->field_type[$index] === 'View/Download') ? $request->field_options[$index] : null,
-                                'required' => $is_required,
-                                'format' => 'table',
-                                'updated_at' => now(),
-                            ]);
+
+                    if ($field_id === 'new') {
+                        $field_data['created_at'] = now();
+                        DB::table('form_data')->insert($field_data);
                     } else {
-                        DB::table('form_data')
-                            ->where('id', $field_id)
-                            ->update([
-                                'section_id' => $section_id,
-                                'formname' => $request->field_name[$index],
-                                'formtype' => $request->field_type[$index],
-                                'formlabel' => $request->field_label[$index],
-                                'fieldoption' => $request->field_options[$index] ?? null,
-                                'required' => $is_required,
-                                'updated_at' => now(),
-                            ]);
+                        DB::table('form_data')->where('id', $field_id)->update($field_data);
                     }
                 }
             }
 
-            // Handle deletions
+            // Handle Deletions
             if ($request->has('delete_sections')) {
-                DB::table('form_sections')
-                    ->whereIn('id', $request->delete_sections)
-                    ->delete();
+                DB::table('form_sections')->whereIn('id', $request->delete_sections)->delete();
             }
 
             if ($request->has('delete_fields')) {
-                DB::table('form_data')
-                    ->whereIn('id', $request->delete_fields)
-                    ->delete();
+                DB::table('form_data')->whereIn('id', $request->delete_fields)->delete();
             }
 
-            // Commit transaction
             DB::commit();
-
-            return redirect()->route('forms.index', $form_id)
-                ->with('success', 'Form fields updated successfully!');
+            return redirect()->route('forms.index', $form_id)->with('success', 'Form fields updated successfully!');
         } catch (\Exception $e) {
-            // \Log::info($e);
-            // dd($e->getLine());
-            dd($e->getMessage());
-            // Log the error message
-            // Rollback transaction on error
             DB::rollBack();
-
             return back()->with('error', 'Error updating form: ' . $e->getMessage());
         }
     }
+
 
 
     //registration logo page method
 
     public function LogoCreate()
     {
-        $data = DB::table('registration_logo')->first(); 
+        $data = DB::table('registration_logo')->first();
         return view('admin.forms.logo_page', compact('data'));
     }
 
