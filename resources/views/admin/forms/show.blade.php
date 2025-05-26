@@ -263,42 +263,55 @@
 
 
 
-                    function previewImage(event, input) {
-                        const fileList = input.files;
-                        const previewContainer = document.getElementById(`file-preview-${input.id || input.name}`);
+                  function previewImage(event, input) {
+    const fileList = input.files;
+    const previewContainer = document.getElementById(`file-preview-${input.id || input.name}`);
 
-                        if (!previewContainer) {
-                            console.error(`Preview container not found for ID: file-preview-${input.id || input.name}`);
-                            return;
-                        }
+    if (!previewContainer) {
+        console.error(`Preview container not found for ID: file-preview-${input.id || input.name}`);
+        return;
+    }
 
-                        previewContainer.innerHTML = '';
+    previewContainer.innerHTML = '';
 
-                        if (fileList.length > 0) {
-                            Array.from(fileList).forEach(file => {
-                                if (file.type.startsWith('image/')) {
-                                    const img = document.createElement('img');
-                                    img.src = URL.createObjectURL(file);
-                                    img.style.width = '100px';
-                                    img.style.height = '100px';
-                                    img.style.margin = '5px';
-                                    img.style.display = 'inline-block';
-                                    previewContainer.appendChild(img);
-                                } else if (file.type === 'application/pdf') {
-                                    const link = document.createElement('a');
-                                    link.href = URL.createObjectURL(file);
-                                    link.textContent = 'Preview PDF';
-                                    link.target = '_blank';
-                                    link.classList.add('btn', 'btn-primary'); // Bootstrap button classes
-                                    previewContainer.appendChild(link);
-                                } else {
-                                    const span = document.createElement('span');
-                                    span.textContent = file.name;
-                                    previewContainer.appendChild(span);
-                                }
-                            });
-                        }
-                    }
+    if (fileList.length > 0) {
+        Array.from(fileList).forEach(file => {
+            const fileName = file.name;
+            const fileExtension = fileName.split('.').pop().toLowerCase();
+            const fileUrl = URL.createObjectURL(file);
+
+            // Image Preview
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = fileUrl;
+                img.style.width = '100px';
+                img.style.height = '100px';
+                img.style.margin = '5px';
+                img.style.display = 'inline-block';
+                previewContainer.appendChild(img);
+
+            // PDF Preview
+            } else if (file.type === 'application/pdf') {
+                const link = document.createElement('a');
+                link.href = fileUrl;
+                link.textContent = 'Preview PDF';
+                link.target = '_blank';
+                link.classList.add('btn', 'btn-danger', 'm-1');
+                previewContainer.appendChild(link);
+
+            // Other documents: DOC, DOCX, XLSX, PPT, TXT, ZIP, etc.
+            } else {
+                const link = document.createElement('a');
+                link.href = fileUrl;
+                link.textContent = `Download ${fileName}`;
+                link.setAttribute('download', fileName);
+                link.classList.add('btn', 'btn-secondary', 'm-1');
+                previewContainer.appendChild(link);
+            }
+        });
+    }
+}
+
 
 
                     function replicateRow(event) {

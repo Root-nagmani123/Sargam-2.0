@@ -219,29 +219,29 @@ class FormController extends Controller
             // }
 
             foreach ($fieldNames as $index => $name) {
-    $name = trim($name);
-    if (empty($name)) continue;
+                $name = trim($name);
+                if (empty($name)) continue;
 
-    $sectionIndex = $fieldSections[$index] ?? 0;
-    if (!isset($sectionIds[$sectionIndex])) {
-        throw new \Exception("Invalid section index: $sectionIndex");
-    }
+                $sectionIndex = $fieldSections[$index] ?? 0;
+                if (!isset($sectionIds[$sectionIndex])) {
+                    throw new \Exception("Invalid section index: $sectionIndex");
+                }
 
-    $requiredKey = "{$sectionIndex}_{$index}";
+                $requiredKey = "{$sectionIndex}_{$index}";
 
-    DB::table('form_data')->insert([
-        'formid'      => $formid,
-        'section_id'  => $sectionIds[$sectionIndex],
-        'formname'    => $name,
-        'formtype'    => $fieldTypes[$index] ?? 'text',
-        'formlabel'   => $fieldLabels[$index] ?? '',
-        'fieldoption' => $fieldOptions[$index] ?? '',
-        'required'    => isset($isRequireds[$requiredKey]) && $isRequireds[$requiredKey] == 1 ? 1 : 0,
-        'layout'      => $fieldLayouts[$index] ?? 'vertical',
-        'created_at'  => now(),
-        'updated_at'  => now(),
-    ]);
-}
+                DB::table('form_data')->insert([
+                    'formid'      => $formid,
+                    'section_id'  => $sectionIds[$sectionIndex],
+                    'formname'    => $name,
+                    'formtype'    => $fieldTypes[$index] ?? 'text',
+                    'formlabel'   => $fieldLabels[$index] ?? '',
+                    'fieldoption' => $fieldOptions[$index] ?? '',
+                    'required'    => isset($isRequireds[$requiredKey]) && $isRequireds[$requiredKey] == 1 ? 1 : 0,
+                    'layout'      => $fieldLayouts[$index] ?? 'vertical',
+                    'created_at'  => now(),
+                    'updated_at'  => now(),
+                ]);
+            }
 
             // Insert table-based fields
             if (!empty($tableSections) && !empty($tableRows) && !empty($tableColumns)) {
@@ -444,7 +444,7 @@ class FormController extends Controller
     //finaallll
     public function submit(Request $request, $formId)
     {
-        // dd($request->all());
+        // dd($request->all());ss
         try {
 
 
@@ -472,6 +472,8 @@ class FormController extends Controller
                         $path = $value->storeAs('form-uploads', $filename, 'public');
 
                         $dynamicFields[Str::replaceFirst('field_', '', $key)] = $path;
+                    } elseif (is_array($value)) {
+                        $dynamicFields[Str::replaceFirst('field_', '', $key)] =  implode(',', $value);
                     } else {
                         $dynamicFields[Str::replaceFirst('field_', '', $key)] = $value;
                     }
@@ -641,73 +643,127 @@ class FormController extends Controller
 
 
     //final
+    // public function courseList(Request $request, $formid)
+    // {
+    //     $statusval = $request->input('statusval');
+
+    //     // Fetch records
+    //     $query = DB::table('form_submission')->where('formid', $formid);
+
+    //     if ($statusval) {
+    //         $query->where('confirm_status', $statusval);
+    //     }
+
+    //     $records = $query->get();
+
+    //     // Fetch column names in the order they are defined in the database
+    //     $columns = DB::select(
+    //         'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
+    //         ['form_submission']
+    //     );
+    //     $allColumns = array_map(fn($col) => $col->COLUMN_NAME, $columns);
+
+    //     // Fields to exclude from dynamic listing (static fields will be handled separately)
+    //     $excluded = ['id', 'formid', 'uid', 'timecreated'];
+
+    //     // Preserve column order from DB, but exclude the static fields
+    //     $fields = [];
+    //     foreach ($allColumns as $column) {
+    //         if (!in_array($column, $excluded)) {
+    //             $fields[] = $column;
+    //         }
+    //     }
+    //     // Make sure 'uid' is at the beginning if you want it there
+    //     if (!in_array('uid', $fields)) {
+    //         array_unshift($fields, 'uid');
+    //     }
+
+    //     // Group field values per UID
+    //     $users = [];
+    //     foreach ($records as $record) {
+    //         $uid = $record->uid;
+    //         foreach ($fields as $field) {
+    //             $users[$uid][$field] = $record->$field ?? '';
+    //         }
+    //     }
+
+    //     $uids = array_keys($users);
+
+    //     // Get related user data
+    //     $userDetails = DB::table('users')->whereIn('id', $uids)->get()->keyBy('id');
+    //     $passwords = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
+
+    //     // Total student count
+    //     $total_students = DB::table('form_submission')
+    //         ->where('formid', $formid)
+    //         ->distinct('uid')
+    //         ->count('uid');
+
+    //     return view('admin.forms.course_list', compact(
+    //         'records',
+    //         'users',
+    //         'fields',
+    //         'userDetails',
+    //         'passwords',
+    //         'formid',
+    //         'total_students',
+    //         'statusval'
+    //     ));
+    // }
+
     public function courseList(Request $request, $formid)
-    {
-        $statusval = $request->input('statusval');
+{
+    $statusval = $request->input('statusval');
 
-        // Fetch records
-        $query = DB::table('form_submission')->where('formid', $formid);
-
-        if ($statusval) {
-            $query->where('confirm_status', $statusval);
-        }
-
-        $records = $query->get();
-
-        // Fetch column names in the order they are defined in the database
-        $columns = DB::select(
-            'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
-            ['form_submission']
-        );
-        $allColumns = array_map(fn($col) => $col->COLUMN_NAME, $columns);
-
-        // Fields to exclude from dynamic listing (static fields will be handled separately)
-        $excluded = ['id', 'formid', 'uid', 'timecreated'];
-
-        // Preserve column order from DB, but exclude the static fields
-        $fields = [];
-        foreach ($allColumns as $column) {
-            if (!in_array($column, $excluded)) {
-                $fields[] = $column;
-            }
-        }
-        // Make sure 'uid' is at the beginning if you want it there
-        if (!in_array('uid', $fields)) {
-            array_unshift($fields, 'uid');
-        }
-
-        // Group field values per UID
-        $users = [];
-        foreach ($records as $record) {
-            $uid = $record->uid;
-            foreach ($fields as $field) {
-                $users[$uid][$field] = $record->$field ?? '';
-            }
-        }
-
-        $uids = array_keys($users);
-
-        // Get related user data
-        $userDetails = DB::table('users')->whereIn('id', $uids)->get()->keyBy('id');
-        $passwords = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
-
-        // Total student count
-        $total_students = DB::table('form_submission')
-            ->where('formid', $formid)
-            ->distinct('uid')
-            ->count('uid');
-
-        return view('admin.forms.course_list', compact(
-            'records',
-            'users',
-            'fields',
-            'userDetails',
-            'passwords',
-            'formid',
-            'total_students',
-            'statusval'
-        ));
+    // Fetch submission records
+    $query = DB::table('form_submission')->where('formid', $formid);
+    if ($statusval) {
+        $query->where('confirm_status', $statusval);
     }
+    $records = $query->get();
+
+    // Get dynamic field names used in this form from form_data
+    $dynamicFieldNames = DB::table('form_data')
+        ->where('formid', $formid)
+        ->pluck('formname')
+        ->toArray();
+
+    // Always include 'uid' for mapping user details
+    $fields = array_merge(['uid'], $dynamicFieldNames);
+
+    // Group values per UID
+    $users = [];
+    foreach ($records as $record) {
+        $uid = $record->uid;
+        foreach ($fields as $field) {
+            $users[$uid][$field] = $record->$field ?? '';
+        }
+    }
+
+    $uids = array_keys($users);
+
+    // Get related user details
+    $userDetails = DB::table('users')->whereIn('id', $uids)->get()->keyBy('id');
+    $passwords = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
+
+    // Total student count (distinct users)
+    $total_students = DB::table('form_submission')
+        ->where('formid', $formid)
+        ->distinct('uid')
+        ->count('uid');
+
+    return view('admin.forms.course_list', compact(
+        'records',
+        'users',
+        'fields',
+        'userDetails',
+        'passwords',
+        'formid',
+        'total_students',
+        'statusval'
+    ));
+}
+
 
 
 
@@ -853,7 +909,7 @@ class FormController extends Controller
                 'records' => $records,
                 'fields' => $fields,
                 'formName' => $formName,
-            ])->setPaper('A4', 'landscape');
+            ])->setPaper('A3', 'landscape');
             return $pdf->download($formName . '.pdf');
         } else { // default Excel
             return Excel::download(new FcformListExport($records, $fields),  $formName . '.xlsx');
@@ -900,6 +956,16 @@ class FormController extends Controller
                     $base64 = "data:image/{$type};base64,{$data}";
                 }
             }
+            // If no profile or invalid path, set default
+            if (empty($base64)) {
+                $defaultPath = storage_path("app/public/dummypic.jpeg");
+                if (file_exists($defaultPath)) {
+                    $type = pathinfo($defaultPath, PATHINFO_EXTENSION);
+                    $data = base64_encode(file_get_contents($defaultPath));
+                    $base64 = "data:image/{$type};base64,{$data}";
+                }
+            }
+            // dd($base64);
 
             // Fetch form structure
             $formStructure = DB::table('form_sections AS s')
