@@ -38,24 +38,34 @@ class AttendanceController extends Controller
             $query = CourseGroupTimetableMapping::with([
                 'group',
                 'course:pk,course_name',
-                'timetable',
+                'timetable' => function ($q) use ($fromDate, $toDate) {
+                    if ($fromDate) {
+                        $q->whereDate('mannual_starttime', '>=', $fromDate);
+                    }
+                    if ($toDate) {
+                        $q->whereDate('mannual_end_time', '<=', $toDate);
+                    }
+                },
                 'timetable.classSession:pk,shift_name,start_time,end_time',
                 'timetable.venue:venue_id,venue_name',
                 'timetable.faculty:pk,full_name',
             ]);
 
+            if ($fromDate || $toDate) {
+                $query->whereHas('timetable', function ($q) use ($fromDate, $toDate) {
+                    if ($fromDate) {
+                        $q->whereDate('mannual_starttime', '>=', $fromDate);
+                    }
+                    if ($toDate) {
+                        $q->whereDate('mannual_end_time', '<=', $toDate);
+                    }
+                });
+            }
+
 
             if ($request->course_master_pk) {
                 $query->where('Programme_pk', $request->course_master_pk);
             }
-            if ($fromDate) {
-                $query->whereDate('mannual_starttime', '>=', $fromDate);
-            }
-            if ($toDate) {
-                $query->whereDate('mannual_end_time', '<=', $toDate);
-            }
-
-            // $attendanceData = $query->get();
 
             return DataTables::of($query)
                 ->addIndexColumn()
@@ -198,7 +208,7 @@ class AttendanceController extends Controller
                 ->addColumn('student_code', fn($row) => $row->studentsMaster->generated_OT_code ?? 'N/A')
                 ->addColumn(
                     'attendance_status',
-                    function($row) use ($course_pk, $group_pk) {
+                    function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
                             ->where('course_pk', $course_pk)
                             ->where('group_pk', $group_pk)
@@ -206,55 +216,55 @@ class AttendanceController extends Controller
 
                         return '
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="present_['.$row->studentsMaster->pk.']" value="1" '.($courseStudent && $courseStudent->status == 1 ? 'checked' : '').'>
-                            <label class="form-check-label text-success" for="present_['.$row->studentsMaster->pk.']">Present</label>
+                            <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="present_[' . $row->studentsMaster->pk . ']" value="1" ' . ($courseStudent && $courseStudent->status == 1 ? 'checked' : '') . '>
+                            <label class="form-check-label text-success" for="present_[' . $row->studentsMaster->pk . ']">Present</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="late_['.$row->studentsMaster->pk.']" value="2" '.($courseStudent && $courseStudent->status == 2 ? 'checked' : '').'>
-                            <label class="form-check-label text-warning" for="late_['.$row->studentsMaster->pk.']">Late</label>
+                            <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="late_[' . $row->studentsMaster->pk . ']" value="2" ' . ($courseStudent && $courseStudent->status == 2 ? 'checked' : '') . '>
+                            <label class="form-check-label text-warning" for="late_[' . $row->studentsMaster->pk . ']">Late</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="absent_['.$row->studentsMaster->pk.']" value="3" '.($courseStudent && $courseStudent->status == 3 ? 'checked' : '').'>
-                            <label class="form-check-label text-danger" for="absent_['.$row->studentsMaster->pk.']">Absent</label>
+                            <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="absent_[' . $row->studentsMaster->pk . ']" value="3" ' . ($courseStudent && $courseStudent->status == 3 ? 'checked' : '') . '>
+                            <label class="form-check-label text-danger" for="absent_[' . $row->studentsMaster->pk . ']">Absent</label>
                         </div>
                         ';
                     }
                 )
                 ->addColumn(
                     'mdo_duty',
-                    function($row) use ($course_pk, $group_pk) {
+                    function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
                             ->where('course_pk', $course_pk)
                             ->where('group_pk', $group_pk)
                             ->first();
 
-                    return '
+                        return '
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="mdo_['.$row->studentsMaster->pk.']" value="4" '.($courseStudent && $courseStudent->status == 4 ? 'checked' : '').'>
-                        <label class="form-check-label text-dark" for="mdo_['.$row->studentsMaster->pk.']">MDO</label>
+                        <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="mdo_[' . $row->studentsMaster->pk . ']" value="4" ' . ($courseStudent && $courseStudent->status == 4 ? 'checked' : '') . '>
+                        <label class="form-check-label text-dark" for="mdo_[' . $row->studentsMaster->pk . ']">MDO</label>
                     </div>
                     ';
                     }
                 )
                 ->addColumn(
                     'escort_duty',
-                    function($row) use ($course_pk, $group_pk) {
+                    function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
                             ->where('course_pk', $course_pk)
                             ->where('group_pk', $group_pk)
                             ->first();
-                            return
-                    '
+                        return
+                            '
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="escort_['.$row->studentsMaster->pk.']" value="5" '.($courseStudent && $courseStudent->status == 5 ? 'checked' : '').'>
-                        <label class="form-check-label text-dark" for="escort_['.$row->studentsMaster->pk.']">Escort</label>
+                        <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="escort_[' . $row->studentsMaster->pk . ']" value="5" ' . ($courseStudent && $courseStudent->status == 5 ? 'checked' : '') . '>
+                        <label class="form-check-label text-dark" for="escort_[' . $row->studentsMaster->pk . ']">Escort</label>
                     </div>
                     ';
                     }
                 )
                 ->addColumn(
                     'medical_exempt',
-                    function($row) use ($course_pk, $group_pk) {
+                    function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
                             ->where('course_pk', $course_pk)
                             ->where('group_pk', $group_pk)
@@ -262,16 +272,16 @@ class AttendanceController extends Controller
 
                         return '
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']"
-                                id="medical_exempted_['.$row->studentsMaster->pk.']" value="6" '.($courseStudent && $courseStudent->status == 6 ? 'checked' : '').'>
-                            <label class="form-check-label text-dark" for="medical_exempted_['.$row->studentsMaster->pk.']">Medical Exempted</label>
+                            <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']"
+                                id="medical_exempted_[' . $row->studentsMaster->pk . ']" value="6" ' . ($courseStudent && $courseStudent->status == 6 ? 'checked' : '') . '>
+                            <label class="form-check-label text-dark" for="medical_exempted_[' . $row->studentsMaster->pk . ']">Medical Exempted</label>
                         </div>
                     ';
                     }
                 )
                 ->addColumn(
                     'other_exempt',
-                    function($row) use ($course_pk, $group_pk) {
+                    function ($row) use ($course_pk, $group_pk) {
                         $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
                             ->where('course_pk', $course_pk)
                             ->where('group_pk', $group_pk)
@@ -279,9 +289,9 @@ class AttendanceController extends Controller
 
                         return '
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']"
-                                id="other_exempted_['.$row->studentsMaster->pk.']" value="7" '.($courseStudent && $courseStudent->status == 7 ? 'checked' : '').'>
-                            <label class="form-check-label text-dark" for="other_exempted_['.$row->studentsMaster->pk.']">Other Exempted</label>
+                            <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']"
+                                id="other_exempted_[' . $row->studentsMaster->pk . ']" value="7" ' . ($courseStudent && $courseStudent->status == 7 ? 'checked' : '') . '>
+                            <label class="form-check-label text-dark" for="other_exempted_[' . $row->studentsMaster->pk . ']">Other Exempted</label>
                         </div>
                     ';
                     }
@@ -308,8 +318,9 @@ class AttendanceController extends Controller
 
     }
 
-    public function save(Request $request) {
-        
+    public function save(Request $request)
+    {
+
         try {
 
             $validated = $request->validate([
@@ -319,9 +330,9 @@ class AttendanceController extends Controller
 
             $group_pk = $request->group_pk; // if you have session reference
             $course_pk = $request->course_pk;
-            
-            if( $request->student ) {
-                foreach($request->student as $studentPk => $attendanceStatus) {
+
+            if ($request->student) {
+                foreach ($request->student as $studentPk => $attendanceStatus) {
                     // Validate the attendance status
                     if (!in_array($attendanceStatus, [1, 2, 3, 4, 5, 6, 7])) {
                         return redirect()->back()->with('error', 'Invalid attendance status for student ID: ' . $studentPk);
