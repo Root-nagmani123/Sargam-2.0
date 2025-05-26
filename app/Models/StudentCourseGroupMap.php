@@ -26,4 +26,8 @@ class StudentCourseGroupMap extends Model
         return $this->belongsTo(GroupTypeMasterCourseMasterMap::class, 'group_type_master_course_master_map_pk', 'pk');
     }
 
+    function attendance()
+    {
+        return $this->hasMany(CourseStudentAttendance::class, 'pk', 'Student_master_pk');
+    }
 }

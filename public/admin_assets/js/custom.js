@@ -677,6 +677,39 @@ function drawAttendanceTable() {
     });
 }
 
+// List of students in attendance
+$(document).ready(function () {
+    let group_pk = $('#group_pk').val();
+    let course_pk = $('#course_pk').val();
+    $('#studentAttendanceTable').DataTable({
+        processing: true,
+        serverSide: true,
+        pageLength: 999999,
+        lengthChange: false,
+        language: {
+        emptyTable: "No data found",
+    },
+        responsive: true,
+        ajax: {
+            url: routes.studentAttendanceList + '/' + group_pk + '/' + course_pk, // Laravel route returning JSON
+            type: 'GET'
+        },
+        drawCallback: function () {
+            $('#studentAttendanceTable').removeClass('d-none');
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'student_name', name: 'student_name' },
+            { data: 'student_code', name: 'student_code', searchable: true },
+            { data: 'attendance_status', name: 'attendance_status', orderable: false, searchable: false },
+            { data: 'mdo_duty', name: 'mdo_duty', orderable: false, searchable: false },
+            { data: 'escort_duty', name: 'escort_duty', orderable: false, searchable: false },
+            { data: 'medical_exempt', name: 'medical_exempt', orderable: false, searchable: false },
+            { data: 'other_exempt', name: 'other_exempt', orderable: false, searchable: false },
+        ]
+    });
+});
 
+// End of students in attendance
 
 // End Attendance

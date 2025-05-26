@@ -1,12 +1,26 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Attendance')
+@section('css')
+<style>
 
+
+ table.table-bordered.dataTable td:nth-child(4) {
+    padding: 0 !important;
+}
+</style>
+
+@endsection
 @section('content')
+<form action="{{ route('attendance.save') }}" method="post">
+    @csrf
     <div class="container-fluid">
 
         <x-breadcrum title="Mark Attendance Of Officer Trainees" />
         <x-session_message />
+
+        <input type="hidden" name="group_pk" id="group_pk" value="{{ $group_pk }}">
+        <input type="hidden" name="course_pk" id="course_pk" value="{{ $course_pk }}">
 
         {{-- Session Summary --}}
         <div class="card shadow mb-4">
@@ -22,7 +36,8 @@
                     </div>
                 </div>
 
-                <div class="alert customize-alert rounded-pill alert-success bg-success text-white mt-4 mb-0 border-0 fade show text-center fw-bold">
+                <div
+                    class="alert customize-alert rounded-pill alert-success bg-success text-white mt-4 mb-0 border-0 fade show text-center fw-bold">
                     Attendance has been Marked for the Session
                 </div>
             </div>
@@ -31,82 +46,24 @@
         {{-- Attendance Table --}}
         <div class="card shadow">
             <div class="card-body">
-                {{-- <div class="d-flex justify-content-between mb-2">
-                    <div>
-                        <label for="entries">Show</label>
-                        <select id="entries" class="form-select form-select-sm d-inline-block w-auto mx-2">
-                            <option>All</option>
-                            <option>10</option>
-                            <option>25</option>
-                        </select>
-                        entries
-                    </div>
-                    <input type="search" class="form-control form-control-sm w-25" placeholder="Search in table...">
-                </div> --}}
-
-                <table class="table table-bordered table-hover align-middle text-center">
-                    <thead class="table-primary text-uppercase">
-                        <tr>
-                            <th>S.No.</th>
-                            <th>OT Name</th>
-                            <th>OT Code</th>
-                            <th>20-05-2025<br>(09:30 - 10:30)</th>
-                            <th>MDO Duty</th>
-                            <th>Escort Duty</th>
-                            <th>Medical Exemption</th>
-                            <th>Other Exemption</th>
-                        </tr>
-                    </thead>
-                    <tbody class="table-light">
-                        @for($i = 1; $i <= 5; $i++)
+                
+                <div class="table-responsive" id="attendanceTableDiv">
+                    <table id="studentAttendanceTable" class="table table-bordered table-hover align-middle text-center">
+                        <thead class="table-primary text-uppercase">
                             <tr>
-                                <td>{{ $i }}</td>
-                                <td>Student {{ $i }}</td>
-                                <td>A0{{ $i }}</td>
-                                <td class="bg-light">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="status_{{ $i }}"
-                                            id="present_{{ $i }}">
-                                        <label class="form-check-label text-success" for="present_{{ $i }}">Present</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="status_{{ $i }}" id="late_{{ $i }}">
-                                        <label class="form-check-label text-warning" for="late_{{ $i }}">Late</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="status_{{ $i }}"
-                                            id="absent_{{ $i }}">
-                                        <label class="form-check-label text-danger" for="absent_{{ $i }}">Absent</label>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="status_{{ $i }}" id="mdo_duty_{{ $i }}">
-                                        <label class="form-check-label" for="mdo_duty_{{ $i }}">MDO Duty</label>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="status_{{ $i }}" id="escort_{{ $i }}">
-                                        <label class="form-check-label" for="escort_{{ $i }}">Escort</label>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="status_{{ $i }}" id="medical_exempted_{{ $i }}">
-                                        <label class="form-check-label" for="medical_exempted_{{ $i }}">Medical Exempted</label>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="status_{{ $i }}" id="other_exempted_{{ $i }}">
-                                        <label class="form-check-label" for="other_exempted_{{ $i }}">Other Exempted</label>
-                                    </div>
-                                </td>
+                                <th>S.No.</th>
+                                <th>OT Name</th>
+                                <th>OT Code</th>
+                                <th>Attendance</th>
+                                <th>MDO Duty</th>
+                                <th>Escort Duty</th>
+                                <th>Medical Exemption</th>
+                                <th>Other Exemption</th>
                             </tr>
-                        @endfor
-                    </tbody>
-                </table>
+                        </thead>
+                    </table>
+                </div>
+                <button type="submit">save</button>
             </div>
         </div>
     </div>
