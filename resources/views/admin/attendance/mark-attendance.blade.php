@@ -2,13 +2,13 @@
 
 @section('title', 'Attendance')
 @section('css')
-<style>
+<!-- <style>
 
 
  table.table-bordered.dataTable td:nth-child(4) {
     padding: 0 !important;
 }
-</style>
+</style> -->
 
 @endsection
 @section('content')
@@ -26,6 +26,7 @@
         <div class="card shadow mb-4">
             <div class="card-body">
                 <h5 class="mb-3">Through this page you can manage Attendance of Officer Trainees</h5>
+                <hr>
 
                 <div class="row g-3">
                     <div class="col-md-3"><strong>Major Subject:</strong> <span class="text-primary">PA</span></div>
@@ -47,8 +48,8 @@
         <div class="card shadow">
             <div class="card-body">
                 
-                <div class="table-responsive" id="attendanceTableDiv">
-                    <table id="studentAttendanceTable" class="table table-bordered table-hover align-middle text-center">
+                <div id="attendanceTableDiv" class="table-responsive">
+                    <table id="studentAttendanceTable" class="table table-bordered table-hover align-middle text-center table-striped">
                         <thead class="table-primary text-uppercase">
                             <tr>
                                 <th>S.No.</th>
@@ -63,7 +64,7 @@
                         </thead>
                     </table>
                 </div>
-                <button type="submit">save</button>
+                <button type="submit" class="btn btn-primary">save</button>
             </div>
         </div>
     </div>
