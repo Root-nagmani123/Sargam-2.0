@@ -124,10 +124,6 @@
                         @endforeach
                     </tbody>
                 </table>
-                <!-- Pagination -->
-                <div class="d-flex justify-content-center mt-3">
-                    {{ $forms->links() }}
-                </div>
             </div>
         </div>
     </div>
