@@ -19,11 +19,11 @@
             <input type="hidden" name="group_pk" id="group_pk" value="{{ $group_pk }}">
             <input type="hidden" name="course_pk" id="course_pk" value="{{ $course_pk }}">
 
-            {{-- Session Summary --}}
-            <div class="card shadow mb-4">
-                <div class="card-body">
-                    <h5 class="mb-3">Through this page you can manage Attendance of Officer Trainees</h5>
-                    <hr>
+        {{-- Session Summary --}}
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h5 class="mb-3">Through this page you can manage Attendance of Officer Trainees</h5>
+                <hr>
 
                     <div class="row g-3">
                         <div class="col-md-3">
