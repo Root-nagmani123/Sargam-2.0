@@ -102,6 +102,8 @@
                                     <th class="col">S.No.</th>
                                     <th class="col">Rating</th>
                                     <th class="col">Remarks</th>
+                                    <th class="col">Presentation</th>
+                                    <th class="col">Content</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -192,6 +194,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <td>${index + 1}</td>
                                     <td>${item.rating}</td>
                                     <td>${item.remark}</td>
+                                    <td>${item.presentation}</td>
+                                    <td>${item.content}</td>
                                 </tr>`;
                             });
                             tbody.innerHTML = rows;
