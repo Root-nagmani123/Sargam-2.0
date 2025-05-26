@@ -8,4 +8,5 @@ const routes = {
     'facultyStoreUrl': baseUrl + '/faculty/store',
     'facultyIndexUrl': baseUrl + '/faculty/',
     'facultyUpdateUrl': baseUrl + '/faculty/update',
+    'studentAttendanceList': baseUrl + '/attendance/student-attendance-list',
 };
