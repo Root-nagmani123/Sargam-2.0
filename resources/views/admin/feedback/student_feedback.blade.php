@@ -34,16 +34,7 @@
     </style>
 </head>
 <x-session_message />
-@if ($errors->any())
-<div class="alert alert-danger">
-    <strong>There were some errors:</strong>
-    <ul class="mb-0">
-        @foreach ($errors->all() as $error)
-        <li>{{ $error }}</li>
-        @endforeach
-    </ul>
-</div>
-@endif
+
 
 <body>
     <div class="container my-5">
