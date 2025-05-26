@@ -156,10 +156,21 @@ class AttendanceController extends Controller
 // }
     function markAttendanceView($group_pk, $course_pk)
     {
-        // return view('admin.attendance.mark-attendance', ['group_pk' => $group_pk, 'course_pk' => $course_pk]);
-        // dd($group_pk, $course_pk);
         if ($group_pk && $course_pk) {
-            return view('admin.attendance.mark-attendance', compact('group_pk', 'course_pk'));
+
+            $courseGroup = CourseGroupTimetableMapping::with([
+                'group',
+                'course:pk,course_name',
+                'timetable',
+                'timetable.classSession:pk,shift_name,start_time,end_time',
+                'timetable.venue:venue_id,venue_name',
+                'timetable.faculty:pk,full_name',
+            ])->where('group_pk', $group_pk)
+                ->where('Programme_pk', $course_pk)
+                ->first();
+
+
+            return view('admin.attendance.mark-attendance', compact('group_pk', 'course_pk', 'courseGroup'));
         }
         return redirect()->back()->with('error', 'Invalid parameters');
     }
