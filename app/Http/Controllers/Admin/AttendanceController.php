@@ -71,18 +71,19 @@ class AttendanceController extends Controller
                     return $startTime;
                 })
                 ->addColumn('session_time', function ($row) {
+                    $classSession = optional(optional($row->timetable)->classSession);
 
-                    $startTime = '';
-                    $endTime = '';
-                    if (optional($row->timetable)->classSession->start_time) {
-                        $startTime = Carbon::parse(optional($row->timetable)->classSession->start_time)->format('Y-m-d');
-                    }
-                    if (optional($row->timetable)->classSession->end_time) {
-                        $endTime = Carbon::parse(optional($row->timetable)->classSession->end_time)->format('Y-m-d');
-                    }
+                    $startTime = $classSession->start_time
+                        ? Carbon::parse($classSession->start_time)->format('H:i')
+                        : 'N/A';
+
+                    $endTime = $classSession->end_time
+                        ? Carbon::parse($classSession->end_time)->format('H:i')
+                        : 'N/A';
 
                     return $startTime . ' - ' . $endTime;
                 })
+
                 ->addColumn('venue_name', fn($row) => optional($row->timetable)->venue->venue_name ?? 'N/A')
                 ->addColumn('group_name', function ($row) {
                     return $row->group->group_name ?? 'NO GROUP';
