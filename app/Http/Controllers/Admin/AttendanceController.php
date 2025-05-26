@@ -342,8 +342,8 @@ class AttendanceController extends Controller
                     CourseStudentAttendance::updateOrCreate(
                         [
                             'Student_master_pk' => $studentPk,
-                            'course_pk' => $course_pk,
-                            'group_pk' => $group_pk,
+                            'course_master_pk' => $course_pk,
+                            'student_course_group_map_pk' => $group_pk,
                         ],
                         [
                             'status' => $attendanceStatus,
