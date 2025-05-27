@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\Registration\FormController;
 use App\Http\Controllers\Admin\Registration\ColumnController;
 use App\Http\Controllers\Admin\Registration\FormEditController;
+use App\Http\Controllers\Admin\Registration\FcExemptionMasterController;
 
 //Registration
 
@@ -64,9 +65,16 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
 
     //generate pdf 
     Route::get('/forms/{form_id}/pdf/{user_id}', [FormController::class, 'generatePdf'])
-    ->name('forms.pdf');
+        ->name('forms.pdf');
 
     //Exemption master page
     Route::get('/exemption', [FormController::class, 'exemption'])->name('forms.exemption');
-    
+
+    //Exemption master create
+
+    Route::get('admin/registration/fc-exemption', [FcExemptionMasterController::class, 'index'])->name('admin.fc_exemption.index');
+    Route::get('admin/registration/fc-exemption/create', [FcExemptionMasterController::class, 'create'])->name('admin.fc_exemption.create');
+    Route::post('admin/registration/fc-exemption/store', [FcExemptionMasterController::class, 'store'])->name('admin.fc_exemption.store');
+    Route::get('admin/registration/fc-exemption/edit/{id}', [FcExemptionMasterController::class, 'edit'])->name('admin.fc_exemption.edit');
+    Route::post('admin/registration/fc-exemption/update/{id}', [FcExemptionMasterController::class, 'update'])->name('admin.fc_exemption.update');
 });
