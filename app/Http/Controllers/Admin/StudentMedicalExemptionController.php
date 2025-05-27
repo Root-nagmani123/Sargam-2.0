@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\StudentMedicalExemption;
 <<<<<<< HEAD
+<<<<<<< HEAD
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
 
+=======
+>>>>>>> 0df3a97 (medical exemption master work)
 =======
 >>>>>>> 0df3a97 (medical exemption master work)
 
@@ -22,6 +25,7 @@ class StudentMedicalExemptionController extends Controller
         return view('admin.student_medical_exemption.index', compact('records'));
     }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
    public function create()
 {
@@ -66,6 +70,8 @@ class StudentMedicalExemptionController extends Controller
 }
 
 =======
+=======
+>>>>>>> 0df3a97 (medical exemption master work)
     public function create()
     {
         return view('admin.student_medical_exemption.create_edit');
@@ -105,6 +111,9 @@ class StudentMedicalExemptionController extends Controller
 
         return redirect()->route('student.medical.exemption.index')->with('success', $msg);
     }
+<<<<<<< HEAD
+>>>>>>> 0df3a97 (medical exemption master work)
+=======
 >>>>>>> 0df3a97 (medical exemption master work)
 
     public function edit($id)
