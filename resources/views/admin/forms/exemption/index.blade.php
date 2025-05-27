@@ -27,39 +27,45 @@
             </div>
         </div>
     </div>
-    <!-- start Vertical Steps Example -->
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-3">Create Exemption Master</h4>
-            <hr>
-            <form>
-                <div class="row">
-                    <div class="col-6">
-                        <label for="exemption" class="form-label">Exemption Master :</label>
-
-                        <div class="mb-3">
-                            <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                placeholder="Batch Name">
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-6">
+                            <h4>Faculty</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <a href="{{route('faculty.create')}}" class="btn btn-primary">+ Add Faculty</a>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <label for="Schoolname" class="form-label">Abbreviation :</label>
+                    <hr>
+                    <div id="zero_config_wrapper" class="dataTables_wrapper">
+                        <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
+                            <thead>
+                                <!-- start row -->
+                                <tr>
+                                    
+                                </tr>
+                                <!-- end row -->
+                            </thead>
+                            <tbody>
+                                
+                                
 
-                        <div class="mb-3">
-                            <input type="text" class="form-control" id="Age" name="Age" placeholder="Abbreviation">
-                        </div>
+                            </tbody>
+                        </table>
+
                     </div>
                 </div>
-                <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                        <i class="material-icons menu-icon">send</i>
-                        Submit
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
+        <!-- end Zero Configuration -->
     </div>
-    <!-- end Vertical Steps Example -->
 </div>
 @endsection
