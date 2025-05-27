@@ -370,7 +370,7 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('forms.exemption') }}">
+                                <a class="sidebar-link" href="{{ route('admin.fc_exemption.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Exemption Master</span>
