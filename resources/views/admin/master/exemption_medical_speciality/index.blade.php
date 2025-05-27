@@ -26,6 +26,7 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
+<<<<<<< HEAD
                         <div class="table-responsive">
                             <table class="table table-bordered" id="zero_config" style="width: 100%;">
                                 <thead>
@@ -42,6 +43,15 @@
                                     <tr>
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $speciality->speciality_name }}</td>
+=======
+                       <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Speciality Name</th>
+>>>>>>> 48a903a (Exemption Category and Exemption Medical Speciality)
 
                                         <td>{{ $speciality->created_date }}</td>
 
@@ -69,6 +79,7 @@
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
                                                         }" {{ $speciality->active_inactive == 1 ? 'disabled' : '' }}>
+<<<<<<< HEAD
                                                     Delete
                                                 </button>
                                             </form>
@@ -82,6 +93,19 @@
                                 </tbody>
                             </table>
                         </div>
+=======
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                @empty
+                                <tr>
+                                    <td colspan="6" class="text-center">No specialities found.</td>
+                                </tr>
+                                @endforelse
+                            </tbody>
+>>>>>>> 48a903a (Exemption Category and Exemption Medical Speciality)
                     </div>
                 </div>
             </div>
