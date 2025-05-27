@@ -72,7 +72,7 @@
                     <div class="table-responsive">
                     {!! $dataTable->table(['class' => 'table  table-bordered table-striped table-hover']) !!}
                     </div>
-                    <button type="submit">save</button>
+                    <button type="submit" class="btn btn-primary">save</button>
                 </div>
             </div>
         </div>

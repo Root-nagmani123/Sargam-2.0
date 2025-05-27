@@ -78,18 +78,18 @@
             <div class="card d-none" id="attendanceTableCard">
                 <div class="card-body">
                     <div class="table-responsive" id="attendanceTableDiv">
-                        <table id="attendanceTable" class="table table-bordered table-striped table-hover ">
+                        <table id="attendanceTable" class="table table-bordered table-striped table-hover">
                             <thead>
                                 <tr>
-                                    <th>#</th>
-                                    <th>Programme Name</th>
-                                    <th>Date</th>
-                                    <th>Session</th>
-                                    <th>Venue</th>
-                                    <th>Group</th>
-                                    <th>Topic</th>
-                                    <th>Faculty</th>
-                                    <th>Action</th>
+                                    <th class="col">#</th>
+                                    <th class="col">Programme Name</th>
+                                    <th class="col">Date</th>
+                                    <th class="col">Session</th>
+                                    <th class="col">Venue</th>
+                                    <th class="col">Group</th>
+                                    <th class="col">Topic</th>
+                                    <th class="col">Faculty</th>
+                                    <th class="col">Action</th>
                                 </tr>
                             </thead>
                         </table>
