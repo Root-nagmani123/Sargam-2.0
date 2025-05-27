@@ -271,6 +271,14 @@
                                                         <span class="hide-menu">MDO Escrot Exemption</span>
                                                     </a>
                                                 </li>
+                                                 <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('attendance.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Attendance</span>
+                                                    </a>
+                                                </li>
                                                 
                                             </ul>
                                         </div>
