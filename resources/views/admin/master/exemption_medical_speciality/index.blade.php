@@ -29,6 +29,9 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
                         <div class="table-responsive">
                             <table class="table table-bordered" id="zero_config" style="width: 100%;">
                                 <thead>
@@ -49,6 +52,7 @@
                        <table id="zero_config"
                             class="table table-striped table-bordered text-nowrap align-middle dataTable"
                             aria-describedby="zero_config_info">
+<<<<<<< HEAD
 =======
                         <table class="table table-bordered">
 >>>>>>> 14c43bc (Exemption Category and Exemption Medical Speciality)
@@ -57,11 +61,17 @@
                             class="table table-striped table-bordered text-nowrap align-middle dataTable"
                             aria-describedby="zero_config_info">
 >>>>>>> 259ed71 (student-medical-exemption work)
+=======
+>>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
                             <thead>
                                 <tr>
                                     <th>#</th>
                                     <th>Speciality Name</th>
+<<<<<<< HEAD
 >>>>>>> 48a903a (Exemption Category and Exemption Medical Speciality)
+=======
+>>>>>>> 3277777 (Exemption Category and Exemption Medical Speciality)
+>>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
 
                                         <td>{{ $speciality->created_date }}</td>
 
@@ -115,7 +125,11 @@
                                 </tr>
                                 @endforelse
                             </tbody>
+<<<<<<< HEAD
 >>>>>>> 48a903a (Exemption Category and Exemption Medical Speciality)
+=======
+>>>>>>> 3277777 (Exemption Category and Exemption Medical Speciality)
+>>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
                     </div>
                 </div>
             </div>
