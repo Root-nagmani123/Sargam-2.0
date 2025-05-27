@@ -20,8 +20,12 @@
                         <div class="col-6">
                             <div class="float-end gap-2">
 <<<<<<< HEAD
+<<<<<<< HEAD
                                 <a href="{{route('master.exemption.medical.speciality.create')}}"
                                     class="btn btn-primary">+ Add Speciality</a>
+=======
+                                <a href="{{route('master.exemption.medical.speciality.create')}}" class="btn btn-primary">+ Add Speciality</a>
+>>>>>>> 0df3a97 (medical exemption master work)
 =======
                                 <a href="{{route('master.exemption.medical.speciality.create')}}" class="btn btn-primary">+ Add Speciality</a>
 >>>>>>> 0df3a97 (medical exemption master work)
@@ -31,6 +35,7 @@
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
                         <table class="table table-bordered">
+<<<<<<< HEAD
 <<<<<<< HEAD
                             <thead>
                                 <tr>
@@ -86,6 +91,8 @@
                                 @endforelse
                             </tbody>
 =======
+=======
+>>>>>>> 0df3a97 (medical exemption master work)
         <thead>
             <tr>
                 <th>#</th>
@@ -121,6 +128,9 @@
                 <tr><td colspan="6" class="text-center">No specialities found.</td></tr>
             @endforelse
         </tbody>
+<<<<<<< HEAD
+>>>>>>> 0df3a97 (medical exemption master work)
+=======
 >>>>>>> 0df3a97 (medical exemption master work)
                     </div>
                 </div>

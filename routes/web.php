@@ -223,6 +223,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
 <<<<<<< HEAD
+<<<<<<< HEAD
    Route::prefix('student-medical-exemption')->name('student.medical.exemption.')->controller(StudentMedicalExemptionController::class)->group(function () {
     Route::get('/', 'index')->name('index');
     Route::get('/create', 'create')->name('create');
@@ -230,6 +231,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/edit/{id}', 'edit')->name('edit');
     Route::delete('/delete/{id}', 'delete')->name('delete');
 });
+=======
+   
+>>>>>>> 0df3a97 (medical exemption master work)
 =======
    
 >>>>>>> 0df3a97 (medical exemption master work)
