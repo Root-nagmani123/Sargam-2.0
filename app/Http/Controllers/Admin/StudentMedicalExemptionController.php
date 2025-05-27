@@ -63,40 +63,10 @@ class StudentMedicalExemptionController extends Controller
 }
 
 
-   public function edit($id)
-{
-    $record = StudentMedicalExemption::findOrFail(decrypt($id));
-
-    $courses = CourseMaster::where('active_inactive', '1')->get();
-    $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
-        ->where('status', '1')
-        ->get();
-    $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
-    $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
-
-    return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities'));
-}
-public function update(Request $request, $id)
-{
-    $validated = $request->validate([
-        'course_master_pk' => 'required|numeric',
-        'student_master_pk' => 'required|numeric',
-        'employee_master_pk' => 'nullable|numeric',
-        'exemption_category_master_pk' => 'required|numeric',
-        'from_date' => 'required|date',
-        'to_date' => 'nullable|date|after_or_equal:from_date',
-        'opd_category' => 'nullable|string|max:50',
-        'exemption_medical_speciality_pk' => 'required|numeric',
-        'Description' => 'nullable|string',
-        'active_inactive' => 'required|boolean',
-    ]);
-
-    $record = StudentMedicalExemption::findOrFail(decrypt($id));
-
-    if ($request->hasFile('Doc_upload')) {
-        $file = $request->file('Doc_upload');
-        $filename = time() . '_' . $file->getClientOriginalName();
-        $validated['Doc_upload'] = $file->storeAs('uploads/exemptions', $filename, 'public');
+    public function edit($id)
+    {
+        $record = StudentMedicalExemption::findOrFail(decrypt($id));
+        return view('admin.student_medical_exemption.create_edit', compact('record'));
     }
 
     $record->update($validated);
