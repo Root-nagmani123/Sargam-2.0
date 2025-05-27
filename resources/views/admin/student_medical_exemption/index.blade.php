@@ -86,5 +86,10 @@
             </div>
         </div>
     </div>
+<<<<<<< HEAD
 </div>
 @endsection
+=======
+    </div>
+    @endsection
+>>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
