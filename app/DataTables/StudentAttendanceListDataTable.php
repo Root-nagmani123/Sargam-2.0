@@ -50,6 +50,16 @@ class StudentAttendanceListDataTable extends DataTable
             ->addColumn('other_exempt', function ($row) {
                 return $this->renderRadio($row, 7, 'Other Exempted', 'text-dark');
             })
+            ->filterColumn('student_name', function ($query, $keyword) {
+                $query->whereHas('studentsMaster', function ($q) use ($keyword) {
+                    $q->where('display_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('student_code', function ($query, $keyword) {
+                $query->whereHas('studentsMaster', function ($q) use ($keyword) {
+                    $q->where('generated_OT_code', 'like', "%{$keyword}%");
+                });
+            })
             ->rawColumns(['student_name', 'student_code', 'attendance_status', 'mdo_duty', 'escort_duty', 'medical_exempt', 'other_exempt']);
     }
 
@@ -77,14 +87,14 @@ class StudentAttendanceListDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->orderable(false),
-            Column::make('student_name')->title('OT Name'),
-            Column::make('student_code')->title('OT Code'),
-            Column::make('attendance_status')->title('Attendance'),
-            Column::make('mdo_duty')->title('MDO Duty'),
-            Column::make('escort_duty')->title('Escort Duty'),
-            Column::make('medical_exempt')->title('Medical Exemption'),
-            Column::make('other_exempt')->title('Other Exemption'),
+            Column::computed('DT_RowIndex')->title('#')->orderable(false)->searchable(false),
+            Column::make('student_name')->title('OT Name')->orderable(false),
+            Column::make('student_code')->title('OT Code')->orderable(false),
+            Column::make('attendance_status')->title('Attendance')->orderable(false)->searchable(false),
+            Column::make('mdo_duty')->title('MDO Duty')->orderable(false)->searchable(false),
+            Column::make('escort_duty')->title('Escort Duty')->orderable(false)->searchable(false),
+            Column::make('medical_exempt')->title('Medical Exemption')->orderable(false)->searchable(false),
+            Column::make('other_exempt')->title('Other Exemption')->orderable(false)->searchable(false),
         ];
     }
 
