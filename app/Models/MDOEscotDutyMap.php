@@ -21,4 +21,9 @@ class MDOEscotDutyMap extends Model
     {
         return $this->belongsTo(MDODutyTypeMaster::class, 'mdo_duty_type_master_pk', 'pk');
     }
+
+    public function studentMaster()
+    {
+        return $this->belongsTo(StudentMaster::class, 'selected_student_list', 'pk');
+    }
 }
