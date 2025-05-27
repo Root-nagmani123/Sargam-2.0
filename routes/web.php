@@ -19,7 +19,8 @@ use App\Http\Controllers\Admin\{
     GroupMappingController,
     CalendarController,
     MDOEscrotExemptionController,
-    AttendanceController
+    AttendanceController,
+    StudentMedicalExemptionController
 };
 
 Route::get('clear-cache', function () {
@@ -221,5 +222,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/student-attendance-list/{group_pk}/{course_pk}', 'studentAttendanceList')->name('student-attendance-list');
         Route::post('/save', 'save')->name('save');
     });
+
+   
 
 });
