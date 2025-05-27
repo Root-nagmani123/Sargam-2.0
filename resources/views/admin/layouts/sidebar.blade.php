@@ -378,6 +378,20 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.exemption.category.master.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">Exemption Category</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.exemption.medical.speciality.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:face-scan-square-broken" ></iconify-icon>
+                                    <span class="hide-menu">Exemption Medical Speciality</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.fc_exemption.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
