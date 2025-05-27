@@ -9,19 +9,15 @@ use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
 use App\Exports\GroupMappingExport;
+use App\DataTables\GroupMappingDataTable;
 
 class GroupMappingController extends Controller
 {
-    /**
-     * Display a listing of group mappings.
-     *
-     * @return \Illuminate\View\View
-     */
-    function index()
+    public function index(GroupMappingDataTable $dataTable)
     {
-        $groupTypeMaster = GroupTypeMasterCourseMasterMap::withCount('studentCourseGroupMap')->get();
-        return view('admin.group_mapping.index', compact('groupTypeMaster'));
+        return $dataTable->render('admin.group_mapping.index');
     }
+
 
     /**
      * Show the form for creating a new group mapping.

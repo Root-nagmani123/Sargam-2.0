@@ -123,78 +123,8 @@
   
                         <hr>
 
-                        <div id="zero_config_wrapper" class="dataTables_wrapper">
-                            <table id="zero_config"
-                                class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                                aria-describedby="zero_config_info">
-                                <thead>
-                                    <!-- start row -->
-                                    <tr>
-                                        <th class="col">S.No.</th>
-                                        <th class="col">Group Name</th>
-                                        <th class="col">Student Count</th>
-                                         <th class="col">View/Download</th>
-                                        <th class="col">Action</th>
-                                        <th class="col">Status</th>
-                                    </tr>
-                                    <!-- end row -->
-                                </thead>
-                                <tbody>
-                                    @if (!empty($groupTypeMaster) && count($groupTypeMaster) > 0)
-                                        @foreach ($groupTypeMaster as $groupType)
-                                            <tr class="odd">
-                                                <td>{{ $loop->iteration }}</td>
-                                                <td>{{ $groupType->group_name ?? 'N/A' }}</td>
-                                                <td>{{ $groupType->student_course_group_map_count ?? '-' }}</td>
-                                                <td>
-                                                    <a 
-                                                        href="javascript:void(0)"
-                                                        class="btn btn-info btn-sm view-student"
-                                                        data-id="{{ encrypt($groupType->pk) }}"
-                                                    >View Student</a>
-                                                  
-                                                    <a href="{{ route('group.mapping.export.student.list', ['id' => encrypt($groupType->pk)]) }}"
-                                                        class="btn btn-info btn-sm">
-                                                        <i class="mdi mdi-download"></i> Download Excel
-                                                    </a>
-                                                </td>
-                                                <td class="d-flex justify-content-start align-items-start gap-2">
-                                                    <a 
-                                                        href="{{ route('group.mapping.edit', 
-                                                        ['id' => encrypt($groupType->pk)]) }}"
-                                                        class="btn btn-primary btn-sm"
-                                                    >Edit</a>
-                                                     <form 
-                                                        action="{{ route('master.faculty.expertise.delete', 
-                                                        ['id' => encrypt($groupType->pk)]) }}"
-                                                        method="POST" class="d-inline">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="button" class="btn btn-danger btn-sm" 
-                                                            onclick="event.preventDefault(); 
-                                                            if(confirm('Are you sure you want to delete this record?')) {
-                                                                this.closest('form').submit();
-                                                            }">
-                                                            Delete
-                                                        </button>
-                                                    </form> 
-                                                </td>
-                                                
-                                                <td>
-                                                    <div class="form-check form-switch d-inline-block">
-                                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                            data-table="group_type_master_course_master_map" data-column="active_inactive" data-id="{{ $groupType->pk }}" {{ $groupType->active_inactive == 1 ? 'checked' : '' }}>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @else
-                                        
-                                    @endif
-                                   
-                                </tbody>
-                            </table>
-                            
+                        <div class="table-responsive">
+                            {!! $dataTable->table(['class' => 'table table-striped table-bordered dt-responsive nowrap']) !!}
                         </div>
 
                     </div>
@@ -203,4 +133,7 @@
         </div>
     </div>
 @endsection
+@push('scripts')
+    {!! $dataTable->scripts() !!}
+@endpush
 
