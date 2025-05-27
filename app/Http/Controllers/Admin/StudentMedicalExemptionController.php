@@ -63,6 +63,7 @@ class StudentMedicalExemptionController extends Controller
 }
 
 
+<<<<<<< HEAD
    public function edit($id)
 {
     $record = StudentMedicalExemption::findOrFail(decrypt($id));
@@ -97,6 +98,12 @@ public function update(Request $request, $id)
         $file = $request->file('Doc_upload');
         $filename = time() . '_' . $file->getClientOriginalName();
         $validated['Doc_upload'] = $file->storeAs('uploads/exemptions', $filename, 'public');
+=======
+    public function edit($id)
+    {
+        $record = StudentMedicalExemption::findOrFail(decrypt($id));
+        return view('admin.student_medical_exemption.create_edit', compact('record'));
+>>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
     }
 
     $record->update($validated);
