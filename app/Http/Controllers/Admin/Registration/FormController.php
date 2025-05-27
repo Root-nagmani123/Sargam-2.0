@@ -34,7 +34,7 @@ class FormController extends Controller
             $query->where('name', 'like', '%' . $request->search . '%');
         }
 
-        $forms = $query->paginate();
+        $forms = $query->get();
 
         return view('admin.registration.index', compact('forms'));
     }

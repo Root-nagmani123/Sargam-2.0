@@ -369,6 +369,13 @@
                                     <span class="hide-menu">Faculty Type</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('forms.exemption') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Exemption Master</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                     <!-- Forms -->
@@ -393,13 +400,6 @@
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Landing Page</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('forms.exemption') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Exemption Master</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
