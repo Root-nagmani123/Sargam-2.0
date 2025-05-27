@@ -830,6 +830,11 @@ class FormController extends Controller
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
         return view('admin.forms.main_page', compact('forms'));
     }
+    public function exemption()
+    {
+        $forms = DB::table('local_form')->orderBy('sortorder')->get();
+        return view('admin.forms.exemption', compact('forms'));
+    }
     public function logo_page()
     {
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
