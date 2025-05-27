@@ -69,8 +69,13 @@
 
             <div class="card shadow">
                 <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="card-title">Attendance</h4>
+                        <button type="submit" class="btn btn-primary float-end">save</button>
+                    </div>
+                    <hr>
                     <div class="table-responsive">
-                    {!! $dataTable->table(['class' => 'table  table-bordered table-striped table-hover']) !!}
+                        {!! $dataTable->table(['class' => 'table  table-bordered table-striped table-hover']) !!}
                     </div>
                     <button type="submit" class="btn btn-primary">save</button>
                 </div>
