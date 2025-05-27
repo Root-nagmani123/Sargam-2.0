@@ -54,10 +54,10 @@ class StudentAttendanceListDataTable extends DataTable
             ->minifiedAjax()
             ->orderBy(1)
             ->parameters([
-            'paging' => false,           // ❌ Disable pagination
-            'searching' => true,         // ✅ Keep search enabled (optional)
-            'info' => false,             // ❌ Hide "Showing x to y of z entries"
-            'scrollY' => '100vh',        // ✅ Scroll vertically if too long (optional)
+            'paging' => false,           
+            'searching' => true,         
+            'info' => false,             
+            'scrollY' => '100vh',        
             'scrollCollapse' => true,
         ]);
     }
