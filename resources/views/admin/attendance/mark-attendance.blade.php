@@ -88,7 +88,7 @@
                             </thead>
                         </table>
                     </div>
-                    <button type="submit">save</button>
+                    <button type="submit" class="btn btn-primary">save</button>
                 </div>
             </div>
         </div>
