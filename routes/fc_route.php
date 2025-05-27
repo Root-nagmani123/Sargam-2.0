@@ -65,5 +65,8 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     //generate pdf 
     Route::get('/forms/{form_id}/pdf/{user_id}', [FormController::class, 'generatePdf'])
     ->name('forms.pdf');
+
+    //Exemption master page
+    Route::get('/exemption', [FormController::class, 'exemption'])->name('forms.exemption');
     
 });

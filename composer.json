@@ -17,6 +17,8 @@
         "maatwebsite/excel": "^3.1",
         "mpdf/mpdf": "^8.2",
         "spatie/laravel-permission": "^6.16",
+        "yajra/laravel-datatables-export": "^1.2",
+        "yajra/laravel-datatables-fractal": "^10.0",
         "yajra/laravel-datatables-oracle": "^10.11"
     },
     "require-dev": {

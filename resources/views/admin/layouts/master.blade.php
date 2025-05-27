@@ -15,6 +15,7 @@
     <div class="preloader">
         <img src="{{ asset('admin_assets/images/logos/favicon.ico') }}" alt="loader" class="lds-ripple img-fluid">
     </div>
+    <div class="loading d-none" id="ajaxLoader">Loading&#8230;</div>
     <div id="main-wrapper">
         @include('admin.layouts.sidebar')
         <div class="page-wrapper">

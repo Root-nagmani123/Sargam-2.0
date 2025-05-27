@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance};
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
+use App\DataTables\StudentAttendanceListDataTable;
 
 class AttendanceController extends Controller
 {
@@ -44,18 +45,21 @@ class AttendanceController extends Controller
                 'timetable.faculty:pk,full_name',
             ]);
 
+            if ($fromDate || $toDate) {
+                $query->whereHas('timetable', function ($q) use ($fromDate, $toDate) {
+                    if ($fromDate) {
+                        $q->whereDate('mannual_starttime', '>=', $fromDate);
+                    }
+                    if ($toDate) {
+                        $q->whereDate('mannual_end_time', '<=', $toDate);
+                    }
+                });
+            }
+
 
             if ($request->course_master_pk) {
                 $query->where('Programme_pk', $request->course_master_pk);
             }
-            if ($fromDate) {
-                $query->whereDate('mannual_starttime', '>=', $fromDate);
-            }
-            if ($toDate) {
-                $query->whereDate('mannual_end_time', '<=', $toDate);
-            }
-
-            // $attendanceData = $query->get();
 
             return DataTables::of($query)
                 ->addIndexColumn()
@@ -68,18 +72,19 @@ class AttendanceController extends Controller
                     return $startTime;
                 })
                 ->addColumn('session_time', function ($row) {
+                    $classSession = optional(optional($row->timetable)->classSession);
 
-                    $startTime = '';
-                    $endTime = '';
-                    if (optional($row->timetable)->classSession->start_time) {
-                        $startTime = Carbon::parse(optional($row->timetable)->classSession->start_time)->format('Y-m-d');
-                    }
-                    if (optional($row->timetable)->classSession->end_time) {
-                        $endTime = Carbon::parse(optional($row->timetable)->classSession->end_time)->format('Y-m-d');
-                    }
+                    $startTime = $classSession->start_time
+                        ? Carbon::parse($classSession->start_time)->format('H:i')
+                        : 'N/A';
+
+                    $endTime = $classSession->end_time
+                        ? Carbon::parse($classSession->end_time)->format('H:i')
+                        : 'N/A';
 
                     return $startTime . ' - ' . $endTime;
                 })
+
                 ->addColumn('venue_name', fn($row) => optional($row->timetable)->venue->venue_name ?? 'N/A')
                 ->addColumn('group_name', function ($row) {
                     return $row->group->group_name ?? 'NO GROUP';
@@ -156,149 +161,188 @@ class AttendanceController extends Controller
 // }
     function markAttendanceView($group_pk, $course_pk)
     {
-        // return view('admin.attendance.mark-attendance', ['group_pk' => $group_pk, 'course_pk' => $course_pk]);
-        // dd($group_pk, $course_pk);
-        if ($group_pk && $course_pk) {
-            return view('admin.attendance.mark-attendance', compact('group_pk', 'course_pk'));
-        }
-        return redirect()->back()->with('error', 'Invalid parameters');
+        $courseGroup = CourseGroupTimetableMapping::with([
+            'course:pk,course_name',
+            'timetable',
+            'timetable.faculty:pk,full_name',
+            'timetable.classSession:pk,start_time,end_time'
+        ])
+            ->where('group_pk', $group_pk)
+            ->where('Programme_pk', $course_pk)
+            ->first();
+
+        $dataTable = new StudentAttendanceListDataTable($group_pk, $course_pk);
+        return $dataTable->render('admin.attendance.mark-attendance', [
+                    'group_pk' => $group_pk,
+                    'course_pk' => $course_pk,
+                    'courseGroup' => $courseGroup,
+                ]);
     }
 
     function studentAttendanceList($group_pk, $course_pk)
     {
-        // return view('admin.attendance.mark-attendance', []);
-
-        if ($group_pk && $course_pk) {
-
-            $groupTypeMaster = GroupTypeMasterCourseMasterMap::where('pk', $group_pk)
-                ->where('course_name', $course_pk)
-                ->first();
-
-            if (!$groupTypeMaster) {
-                return redirect()->back()->with('error', 'Group or Course not found');
-            }
-
-            $students = StudentCourseGroupMap::with(['studentsMaster:display_name,generated_OT_code,pk', 'attendance' => fn($q) => $q->where('course_pk', $course_pk)->where('group_pk', $group_pk)])
-                ->where('group_type_master_course_master_map_pk', $groupTypeMaster->pk);
-
-            return DataTables::of($students)
-                ->addIndexColumn()
-                ->addColumn('student_name', fn($row) => $row->studentsMaster->display_name ?? 'N/A')
-                ->addColumn('student_code', fn($row) => $row->studentsMaster->generated_OT_code ?? 'N/A')
-                ->addColumn(
-                    'attendance_status',
-                    function($row) use ($course_pk, $group_pk) {
-                        $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
-                            ->where('group_pk', $group_pk)
-                            ->first();
-
-                        return '
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="present_['.$row->studentsMaster->pk.']" value="1" '.($courseStudent && $courseStudent->status == 1 ? 'checked' : '').'>
-                            <label class="form-check-label text-success" for="present_['.$row->studentsMaster->pk.']">Present</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="late_['.$row->studentsMaster->pk.']" value="2" '.($courseStudent && $courseStudent->status == 2 ? 'checked' : '').'>
-                            <label class="form-check-label text-warning" for="late_['.$row->studentsMaster->pk.']">Late</label>
-                        </div>
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="absent_['.$row->studentsMaster->pk.']" value="3" '.($courseStudent && $courseStudent->status == 3 ? 'checked' : '').'>
-                            <label class="form-check-label text-danger" for="absent_['.$row->studentsMaster->pk.']">Absent</label>
-                        </div>
-                        ';
-                    }
-                )
-                ->addColumn(
-                    'mdo_duty',
-                    function($row) use ($course_pk, $group_pk) {
-                        $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
-                            ->where('group_pk', $group_pk)
-                            ->first();
-
-                    return '
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="mdo_['.$row->studentsMaster->pk.']" value="4" '.($courseStudent && $courseStudent->status == 4 ? 'checked' : '').'>
-                        <label class="form-check-label text-dark" for="mdo_['.$row->studentsMaster->pk.']">MDO</label>
-                    </div>
-                    ';
-                    }
-                )
-                ->addColumn(
-                    'escort_duty',
-                    function($row) use ($course_pk, $group_pk) {
-                        $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
-                            ->where('group_pk', $group_pk)
-                            ->first();
-                            return
-                    '
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']" id="escort_['.$row->studentsMaster->pk.']" value="5" '.($courseStudent && $courseStudent->status == 5 ? 'checked' : '').'>
-                        <label class="form-check-label text-dark" for="escort_['.$row->studentsMaster->pk.']">Escort</label>
-                    </div>
-                    ';
-                    }
-                )
-                ->addColumn(
-                    'medical_exempt',
-                    function($row) use ($course_pk, $group_pk) {
-                        $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
-                            ->where('group_pk', $group_pk)
-                            ->first();
-
-                        return '
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']"
-                                id="medical_exempted_['.$row->studentsMaster->pk.']" value="6" '.($courseStudent && $courseStudent->status == 6 ? 'checked' : '').'>
-                            <label class="form-check-label text-dark" for="medical_exempted_['.$row->studentsMaster->pk.']">Medical Exempted</label>
-                        </div>
-                    ';
-                    }
-                )
-                ->addColumn(
-                    'other_exempt',
-                    function($row) use ($course_pk, $group_pk) {
-                        $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
-                            ->where('course_pk', $course_pk)
-                            ->where('group_pk', $group_pk)
-                            ->first();
-
-                        return '
-                        <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="radio" name="student['.$row->studentsMaster->pk.']"
-                                id="other_exempted_['.$row->studentsMaster->pk.']" value="7" '.($courseStudent && $courseStudent->status == 7 ? 'checked' : '').'>
-                            <label class="form-check-label text-dark" for="other_exempted_['.$row->studentsMaster->pk.']">Other Exempted</label>
-                        </div>
-                    ';
-                    }
-                )
-                ->filterColumn('student_name', function ($query, $keyword) {
-                    $query->whereHas('studentsMaster', function ($q) use ($keyword) {
-                        $q->where('display_name', 'like', "%{$keyword}%");
-                    });
-                })
-                ->filterColumn('student_code', function ($query, $keyword) {
-                    $query->whereHas('studentsMaster', function ($q) use ($keyword) {
-                        $q->where('generated_OT_code', 'like', "%{$keyword}%");
-                    });
-                })
-                ->rawColumns(['attendance_status', 'mdo_duty', 'escort_duty', 'medical_exempt', 'other_exempt'])
-                ->make(true);
+        // return $dataTable
+        // ->with(['group_pk' => $group_pk, 'course_pk' => $course_pk])
+        // ->render('admin.attendance.mark-attendance');
 
 
+        // try {
+        //     // return view('admin.attendance.mark-attendance', []);
+
+        //     if ($group_pk && $course_pk) {
+
+        //         $groupTypeMaster = GroupTypeMasterCourseMasterMap::where('pk', $group_pk)
+        //             ->where('course_name', $course_pk)
+        //             ->first();
+
+        //         if (!$groupTypeMaster) {
+        //             return redirect()->back()->with('error', 'Group or Course not found');
+        //         }
+
+        //         $students = StudentCourseGroupMap::with(['studentsMaster:display_name,generated_OT_code,pk', 'attendance' => fn($q) => $q->where('course_master_pk', $course_pk)->where('student_course_group_map_pk', $group_pk)])
+        //             ->where('group_type_master_course_master_map_pk', $groupTypeMaster->pk);
+
+        //         if (!$students->exists()) {
+        //             return response()->json([
+        //                 'draw' => intval($request->input('draw')),
+        //                 'recordsTotal' => 0,
+        //                 'recordsFiltered' => 0,
+        //                 'data' => [],
+        //                 'error' => 'No students found for this group and course.'
+        //             ]);
+        //         }
 
 
-        } else {
-            return redirect()->back()->with('error', 'Invalid parameters');
-        }
+        //         return DataTables::of($students)
+        //             ->addIndexColumn()
+        //             ->addColumn('student_name', fn($row) => $row->studentsMaster->display_name ?? 'N/A')
+        //             ->addColumn('student_code', fn($row) => $row->studentsMaster->generated_OT_code ?? 'N/A')
+        //             ->addColumn(
+        //                 'attendance_status',
+        //                 function ($row) use ($course_pk, $group_pk) {
+        //                     $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
+        //                         ->where('Course_master_pk', $course_pk)
+        //                         ->where('student_course_group_map_pk', $group_pk)
+        //                         ->first();
+
+
+        //                     return '
+        //                 <div class="form-check form-check-inline">
+        //                     <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="present_[' . $row->studentsMaster->pk . ']" value="1" ' . ($courseStudent && $courseStudent->status == 1 ? 'checked' : '') . '>
+        //                     <label class="form-check-label text-success" for="present_[' . $row->studentsMaster->pk . ']">Present</label>
+        //                 </div>
+        //                 <div class="form-check form-check-inline">
+        //                     <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="late_[' . $row->studentsMaster->pk . ']" value="2" ' . ($courseStudent && $courseStudent->status == 2 ? 'checked' : '') . '>
+        //                     <label class="form-check-label text-warning" for="late_[' . $row->studentsMaster->pk . ']">Late</label>
+        //                 </div>
+        //                 <div class="form-check form-check-inline">
+        //                     <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="absent_[' . $row->studentsMaster->pk . ']" value="3" ' . ($courseStudent && $courseStudent->status == 3 ? 'checked' : '') . '>
+        //                     <label class="form-check-label text-danger" for="absent_[' . $row->studentsMaster->pk . ']">Absent</label>
+        //                 </div>
+        //                 ';
+        //                 }
+        //             )
+        //             ->addColumn(
+        //                 'mdo_duty',
+        //                 function ($row) use ($course_pk, $group_pk) {
+        //                     $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
+        //                         ->where('Course_master_pk', $course_pk)
+        //                         ->where('student_course_group_map_pk', $group_pk)
+        //                         ->first();
+
+        //                     return '
+        //             <div class="form-check form-check-inline">
+        //                 <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="mdo_[' . $row->studentsMaster->pk . ']" value="4" ' . ($courseStudent && $courseStudent->status == 4 ? 'checked' : '') . '>
+        //                 <label class="form-check-label text-dark" for="mdo_[' . $row->studentsMaster->pk . ']">MDO</label>
+        //             </div>
+        //             ';
+        //                 }
+        //             )
+        //             ->addColumn(
+        //                 'escort_duty',
+        //                 function ($row) use ($course_pk, $group_pk) {
+        //                     $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
+        //                         ->where('Course_master_pk', $course_pk)
+        //                         ->where('student_course_group_map_pk', $group_pk)
+        //                         ->first();
+        //                     return
+        //                         '
+        //             <div class="form-check form-check-inline">
+        //                 <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']" id="escort_[' . $row->studentsMaster->pk . ']" value="5" ' . ($courseStudent && $courseStudent->status == 5 ? 'checked' : '') . '>
+        //                 <label class="form-check-label text-dark" for="escort_[' . $row->studentsMaster->pk . ']">Escort</label>
+        //             </div>
+        //             ';
+        //                 }
+        //             )
+        //             ->addColumn(
+        //                 'medical_exempt',
+        //                 function ($row) use ($course_pk, $group_pk) {
+        //                     $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
+        //                         ->where('Course_master_pk', $course_pk)
+        //                         ->where('student_course_group_map_pk', $group_pk)
+        //                         ->first();
+
+        //                     return '
+        //                 <div class="form-check form-check-inline">
+        //                     <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']"
+        //                         id="medical_exempted_[' . $row->studentsMaster->pk . ']" value="6" ' . ($courseStudent && $courseStudent->status == 6 ? 'checked' : '') . '>
+        //                     <label class="form-check-label text-dark" for="medical_exempted_[' . $row->studentsMaster->pk . ']">Medical Exempted</label>
+        //                 </div>
+        //             ';
+        //                 }
+        //             )
+        //             ->addColumn(
+        //                 'other_exempt',
+        //                 function ($row) use ($course_pk, $group_pk) {
+        //                     $courseStudent = CourseStudentAttendance::where('Student_master_pk', $row->studentsMaster->pk)
+        //                         ->where('Course_master_pk', $course_pk)
+        //                         ->where('student_course_group_map_pk', $group_pk)
+        //                         ->first();
+
+        //                     return '
+        //                 <div class="form-check form-check-inline">
+        //                     <input class="form-check-input" type="radio" name="student[' . $row->studentsMaster->pk . ']"
+        //                         id="other_exempted_[' . $row->studentsMaster->pk . ']" value="7" ' . ($courseStudent && $courseStudent->status == 7 ? 'checked' : '') . '>
+        //                     <label class="form-check-label text-dark" for="other_exempted_[' . $row->studentsMaster->pk . ']">Other Exempted</label>
+        //                 </div>
+        //             ';
+        //                 }
+        //             )
+        //             ->filterColumn('student_name', function ($query, $keyword) {
+        //                 $query->whereHas('studentsMaster', function ($q) use ($keyword) {
+        //                     $q->where('display_name', 'like', "%{$keyword}%");
+        //                 });
+        //             })
+        //             ->filterColumn('student_code', function ($query, $keyword) {
+        //                 $query->whereHas('studentsMaster', function ($q) use ($keyword) {
+        //                     $q->where('generated_OT_code', 'like', "%{$keyword}%");
+        //                 });
+        //             })
+        //             ->rawColumns(['attendance_status', 'mdo_duty', 'escort_duty', 'medical_exempt', 'other_exempt'])
+        //             ->make(true);
+
+
+
+
+        //     } else {
+        //         return redirect()->back()->with('error', 'Invalid parameters');
+        //     }
+        // } catch (\Exception $e) {
+
+        //     return response()->json([
+        //         'draw' => intval($request->input('draw')),
+        //         'recordsTotal' => 0,
+        //         'recordsFiltered' => 0,
+        //         'data' => [],
+        //         'error' => 'Server Error: ' . $e->getMessage()
+        //     ]);
+        // }
 
     }
 
-    public function save(Request $request) {
-        
+    public function save(Request $request)
+    {
+
         try {
 
             $validated = $request->validate([
@@ -308,9 +352,9 @@ class AttendanceController extends Controller
 
             $group_pk = $request->group_pk; // if you have session reference
             $course_pk = $request->course_pk;
-            
-            if( $request->student ) {
-                foreach($request->student as $studentPk => $attendanceStatus) {
+
+            if ($request->student) {
+                foreach ($request->student as $studentPk => $attendanceStatus) {
                     // Validate the attendance status
                     if (!in_array($attendanceStatus, [1, 2, 3, 4, 5, 6, 7])) {
                         return redirect()->back()->with('error', 'Invalid attendance status for student ID: ' . $studentPk);
@@ -320,8 +364,8 @@ class AttendanceController extends Controller
                     CourseStudentAttendance::updateOrCreate(
                         [
                             'Student_master_pk' => $studentPk,
-                            'course_pk' => $course_pk,
-                            'group_pk' => $group_pk,
+                            'course_master_pk' => $course_pk,
+                            'student_course_group_map_pk' => $group_pk,
                         ],
                         [
                             'status' => $attendanceStatus,
