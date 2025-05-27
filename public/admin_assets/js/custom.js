@@ -7,6 +7,10 @@ function hideLoader() {
     $('.preloader').hide();
 }
 
+
+function showAjaxLoader() {
+    $('.ajax-loader').show();
+}
 // Step 4 : Contact Information
 
 
@@ -615,15 +619,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Attendance
 $(document).on('click', '#searchAttendance', function () {
+    let programme = $('#programme').val();
+    let fromDate = $('#from_date').val();
+    let toDate = $('#to_date').val();
+    let viewType = $('#view_type').val();
+    // || !viewType
+    // Validate inputs
+    if (!programme || !fromDate || !toDate ) {
+        alert('Please fill all fields before searching.');
+        return;
+    }
     $.ajax({
         url: routes.getAttendanceList, // initial check only (optional)
         type: 'POST',
         data: {
             _token: $('meta[name="csrf-token"]').attr('content'),
-            programme: $('#programme').val(),
-            from_date: $('#from_date').val(),
-            to_date: $('#to_date').val(),
-            view_type: $('#view_type').val()
+            programme: programme,
+            from_date: fromDate,
+            to_date: toDate,
+            view_type: viewType
         },
         success: function (response) {
             // Optional: validate response format
