@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Main Page - Sargam | Lal Bahadur')
+@section('title', 'Exemption Master - Sargam | Lal Bahadur')
 
 @section('content')
 <div class="container-fluid">
@@ -8,7 +8,7 @@
         <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Main Page</h4>
+                    <h4 class="mb-4 mb-sm-0 card-title">Exemption Master</h4>
                     <nav aria-label="breadcrumb" class="ms-auto">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item d-flex align-items-center">
@@ -18,7 +18,7 @@
                             </li>
                             <li class="breadcrumb-item" aria-current="page">
                                 <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    Main Page
+                                    Exemption Master
                                 </span>
                             </li>
                         </ol>
@@ -30,7 +30,7 @@
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
-            <h4 class="card-title mb-3">Create Main Page</h4>
+            <h4 class="card-title mb-3">Create Exemption Master</h4>
             <hr>
             <form>
                 <div class="row">
