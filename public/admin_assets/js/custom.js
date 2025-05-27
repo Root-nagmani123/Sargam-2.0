@@ -9,7 +9,10 @@ function hideLoader() {
 
 
 function showAjaxLoader() {
-    $('.ajax-loader').show();
+    $('#ajaxLoader').removeClass('d-none');
+}
+function hideAjaxLoader() {
+    $('#ajaxLoader').addClass('d-none');
 }
 // Step 4 : Contact Information
 
@@ -625,10 +628,10 @@ $(document).on('click', '#searchAttendance', function () {
     let viewType = $('#view_type').val();
     // || !viewType
     // Validate inputs
-    if (!programme || !fromDate || !toDate ) {
-        alert('Please fill all fields before searching.');
-        return;
-    }
+    // if (!programme || !fromDate || !toDate ) {
+    //     alert('Please fill all fields before searching.');
+    //     return;
+    // }
     $.ajax({
         url: routes.getAttendanceList, // initial check only (optional)
         type: 'POST',
@@ -638,6 +641,12 @@ $(document).on('click', '#searchAttendance', function () {
             from_date: fromDate,
             to_date: toDate,
             view_type: viewType
+        },
+        beforeSend: function () {
+            showAjaxLoader(); 
+        },
+        complete: function () {
+            hideAjaxLoader(); 
         },
         success: function (response) {
             // Optional: validate response format
@@ -690,42 +699,6 @@ function drawAttendanceTable() {
         ]
     });
 }
-
-// List of students in attendance
-$(document).ready(function () {
-    let group_pk = $('#group_pk').val();
-    let course_pk = $('#course_pk').val();
-    $('#studentAttendanceTable').DataTable({
-        processing: true,
-        serverSide: true,
-        pageLength: 999999,
-        lengthChange: false,
-        language: {
-        emptyTable: "No data found",
-    },
-        responsive: false,
-        autoWidth: false,
-        order: [[0, 'asc']], // Default ordering by first column
-        
-        ajax: {
-            url: routes.studentAttendanceList + '/' + group_pk + '/' + course_pk, // Laravel route returning JSON
-            type: 'GET'
-        },
-        drawCallback: function () {
-            $('#studentAttendanceTable').removeClass('d-none');
-        },
-        columns: [
-            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'student_name', name: 'student_name' },
-            { data: 'student_code', name: 'student_code', searchable: true },
-            { data: 'attendance_status', name: 'attendance_status', orderable: false, searchable: false },
-            { data: 'mdo_duty', name: 'mdo_duty', orderable: false, searchable: false },
-            { data: 'escort_duty', name: 'escort_duty', orderable: false, searchable: false },
-            { data: 'medical_exempt', name: 'medical_exempt', orderable: false, searchable: false },
-            { data: 'other_exempt', name: 'other_exempt', orderable: false, searchable: false },
-        ]
-    });
-});
 
 // End of students in attendance
 
