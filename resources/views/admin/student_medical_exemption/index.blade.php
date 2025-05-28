@@ -86,25 +86,5 @@
             </div>
         </div>
     </div>
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
 </div>
 @endsection
-=======
-    </div>
-    @endsection
->>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
-=======
-</div>
-@endsection
->>>>>>> 33db3ab (student-medical-exemption work)
-=======
-    </div>
-    @endsection
->>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
-=======
-</div>
-@endsection
->>>>>>> 33db3ab (student-medical-exemption work)
