@@ -26,6 +26,7 @@
             </div>
         </div>
     </div>
+    
     @include('admin.layouts.footer')
     <script src="{{ asset('js/forms.js') }}"></script>
     @stack('scripts')
