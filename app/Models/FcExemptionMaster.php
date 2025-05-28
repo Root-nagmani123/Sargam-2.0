@@ -19,4 +19,15 @@ class FcExemptionMaster extends Model
         'Modified_by',
         'Modified_date',
     ];
+
+
+    public function createdByUser()
+    {
+        return $this->belongsTo(User::class, 'Created_by');
+    }
+
+    public function modifiedByUser()
+    {
+        return $this->belongsTo(User::class, 'Modified_by');
+    }
 }
