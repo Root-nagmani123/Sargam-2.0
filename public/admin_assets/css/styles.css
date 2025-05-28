@@ -30878,8 +30878,8 @@ body {
 }
 .body-wrapper {
     margin-top: 72px;
-    margin-left: calc(90px / 2);
-    margin-right: calc(90px / 2);
+    margin-left: calc(30px / 2);
+    margin-right: calc(30px / 2);
     margin-bottom: 30px;
     border-radius: 20px;
     background: #f4f7fb;
@@ -31052,7 +31052,7 @@ pre.code-view code.hljs {
 .side-mini-panel .sidebarmenu .sidebar-nav {
     position: absolute;
     height: calc(100vh - 72px);
-    width: 280px;
+    width: 240px;
     background: var(--bs-white);
     top: 72px;
     transition: left 0.4s ease-in-out;
@@ -31087,7 +31087,7 @@ pre.code-view code.hljs {
 .sidebar-nav ul .sidebar-item .sidebar-link {
     display: flex;
     font-size: 15px;
-    white-space: nowrap;
+    white-space: normal;
     align-items: center;
     position: relative;
     padding: 11px 16px;
@@ -31304,7 +31304,11 @@ pre.code-view code.hljs {
     border: 1px dashed var(--bs-primary);
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
-
+@media (min-width: 1300px) {
+    [data-layout="vertical"] [data-sidebartype="full"] .body-wrapper {
+        margin-left: 0;
+    }
+}
 .topbar {
     position: fixed;
     top: 0;
