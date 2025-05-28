@@ -16,8 +16,8 @@ class FacultyExpertiseMap extends Model
         return $this->belongsTo(FacultyMaster::class, 'faculty_master_pk', 'pk');
     }
 
-    // public function facultyExpertise()
-    // {
-    //     return $this->belongsTo(FacultyExpertise::class, 'faculty_expertise_pk', 'pk');
-    // }
+    public function facultyExpertise()
+    {
+        return $this->belongsTo(FacultyExpertiseMaster::class, 'faculty_expertise_pk', 'pk');
+    }
 }

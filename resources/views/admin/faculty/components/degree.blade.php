@@ -20,9 +20,19 @@
                 </div>
 
                 <div class="col-3">
-                    <x-input type="number" name="year_of_passing[]" label="Year of Passing :" placeholder="Year of Passing"
+                    {{-- <x-input type="number" name="year_of_passing[]" label="Year of Passing :" placeholder="Year of Passing"
                         formLabelClass="form-label" min="1900" max="{{ date('Y') }}" step="1" required="true"
-                        value="{{ $qualification->Year_of_passing }}" />
+                        value="{{ $qualification->Year_of_passing }}" /> --}}
+                        <x-select
+                                        name="year_of_passing[]"
+                                        label="Year of Passing :"
+                                        placeholder="Year of Passing"
+                                        formLabelClass="form-label"
+                                        :options="$years"
+                                        required="true"
+                                        helperSmallText="Select the year of passing"
+                                        value="{{ $qualification->Year_of_passing }}"
+                                    />
                 </div>
 
                 <div class="col-3">
@@ -59,8 +69,16 @@
                     placeholder="University/Institution Name" formLabelClass="form-label" required="true" />
             </div>
             <div class="col-3">
-                <x-input type="number" name="year_of_passing[]" label="Year of Passing :" placeholder="Year of Passing"
-                    formLabelClass="form-label" min="1900" max="{{ date('Y') }}" step="1" required="true" />
+                <x-select
+                                        name="year_of_passing[]"
+                                        label="Year of Passing :"
+                                        placeholder="Year of Passing"
+                                        formLabelClass="form-label"
+                                        :options="$years"
+                                        required="true"
+                                        helperSmallText="Select the year of passing"
+                                        value="{{ $qualification->Year_of_passing }}"
+                                    />
             </div>
             <div class="col-3">
                 <x-input type="number" min="0" max="100" name="percentage_CGPA[]" label="Percentage/CGPA"

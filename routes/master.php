@@ -22,6 +22,9 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/edit/{id}', 'countryEdit')->name('edit');
         Route::PUT('/update/{id}', 'countryUpdate')->name('update');
         Route::delete('/delete/{id}', 'countryDelete')->name('delete');
+        Route::post('/get-states-by-country', 'getStatesByCountry')->name('get.state.by.country');
+        Route::post('/get-districts-by-state', 'getDistrictsByState')->name('get.district.by.state');
+        Route::post('/get-cities-by-district', 'getCitiesByDistrict')->name('get.city.by.district');
     });
 
     // state

@@ -255,4 +255,25 @@ class LocationController extends Controller
         City::destroy($id);
         return redirect()->route('master.city.index')->with('success', 'City deleted successfully');
     }
+
+    function getStatesByCountry(Request $request)
+    {
+        $countryId = $request->input('country_id');
+        $states = State::where('country_master_pk', $countryId)->select('pk', 'state_name')->get()->toArray();
+        return response()->json(['status' => true, 'states' => $states]);
+    }
+
+    function getDistrictsByState(Request $request)
+    {
+        $stateId = $request->input('state_id');
+        $districts = District::where('state_master_pk', $stateId)->select('pk', 'district_name')->get()->toArray();
+        return response()->json(['status' => true, 'districts' => $districts]);
+    }
+
+    function getCitiesByDistrict(Request $request)
+    {
+        $districtId = $request->input('district_id');
+        $cities = City::where('district_master_pk', $districtId)->select('pk', 'city_name')->get()->toArray();
+        return response()->json(['status' => true, 'cities' => $cities]);
+    }
 }

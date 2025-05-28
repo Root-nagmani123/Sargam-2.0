@@ -30,4 +30,28 @@ class FacultyMaster extends Model
         return $this->hasMany(FacultyExperienceMap::class, 'faculty_master_pk', 'pk');
     }
 
+    public function facultyTypeMaster()
+    {
+        return $this->belongsTo(FacultyTypeMaster::class, 'faculty_type', 'pk');
+    }
+
+    public function countryMaster() 
+    {
+        return $this->belongsTo(Country::class, 'country_master_pk', 'pk');
+    }
+
+    public function stateMaster() 
+    {
+        return $this->belongsTo(State::class, 'state_master_pk', 'Pk');
+    }
+
+    public function districtMaster() 
+    {
+        return $this->belongsTo(District::class, 'state_district_mapping_pk', 'pk');
+    }
+
+    public function cityMaster() 
+    {
+        return $this->belongsTo(City::class, 'city_master_pk', 'pk');
+    }
 }

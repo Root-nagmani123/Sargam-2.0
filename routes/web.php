@@ -72,6 +72,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', [FacultyController::class, 'store'])->name('store');
         Route::get('edit/{id}', [FacultyController::class, 'edit'])->name('edit');
         Route::post('update', [FacultyController::class, 'update'])->name('update');
+        Route::get('show/{id}', [FacultyController::class, 'show'])->name('show');
 
     });
 
