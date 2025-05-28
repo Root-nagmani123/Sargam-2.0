@@ -26,7 +26,9 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
-                        <table class="table table-bordered">
+                       <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
                             <thead>
                                 <tr>
                                     <th>#</th>
