@@ -27,8 +27,13 @@ class FacultyController extends Controller
         $state              = State::pluck('state_name', 'pk')->toArray();
         $district           = District::pluck('district_name', 'pk')->toArray();
         $city               = City::pluck('city_name', 'pk')->toArray();
+        
+        $years = [];
+        for ($i = date('Y'); $i >= 1950; $i--) {
+            $years[$i] = $i;
+        }
 
-        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList'));
+        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
     }
 
     public function store(FacultyRequest $request)
@@ -193,9 +198,13 @@ class FacultyController extends Controller
         $state      = State::pluck('state_name', 'pk')->toArray();
         $district   = District::pluck('district_name', 'pk')->toArray();
         $city       = City::pluck('city_name', 'pk')->toArray();
+        $years = [];
+        for ($i = date('Y'); $i >= 1950; $i--) {
+            $years[$i] = $i;
+        }
 
         $facultExpertise = $faculty->facultyExpertiseMap->isNotEmpty() ? $faculty->facultyExpertiseMap->pluck('faculty_expertise_pk')->toArray() : [];
-        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise'));
+        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years'));
     }
 
     public function update(FacultyUpdateRequest $request)
@@ -396,4 +405,23 @@ class FacultyController extends Controller
         $faculty->save(); // or update() if you prefer
     }
 
+    function show(String $id)
+    {
+        $faculty = FacultyMaster::with([
+            'cityMaster:pk,city_name',
+            'stateMaster:Pk,state_name',
+            'countryMaster:pk,country_name',
+            'districtMaster:pk,district_name',
+            'facultyTypeMaster:pk,faculty_type_name',
+            'facultyExpertiseMap.facultyExpertise:pk,expertise_name', 
+            'facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
+            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk', 
+            'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA'
+        ])->find(decrypt($id));
+        
+        if (!$faculty) {
+            return redirect()->route('faculty.index')->with('error', 'Faculty not found');
+        }
+        return view('admin.faculty.show', compact('faculty'));
+    }
 }

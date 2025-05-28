@@ -204,15 +204,20 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('permanent_address', permanent_address);
 
         // photo is file
-        if ($('input[name="photo"]')[0].files.length > 0) {
-            photo = $('input[name="photo"]')[0].files[0];
+        const photoInput = $('input[name="photo"]')[0];
+
+        if (photoInput && photoInput.files.length > 0) {
+            const photo = photoInput.files[0];
             formData.append('photo', photo);
         }
         // document is file
-        if ($('input[name="document"]')[0].files.length > 0) {
-            document = $('input[name="document"]')[0].files[0];
-            formData.append('document', document);
+        const documentInput = $('input[name="document"]')[0];
+
+        if (documentInput && documentInput.files.length > 0) {
+            const documentFile = documentInput.files[0];
+            formData.append('document', documentFile);
         }
+
 
         // Qualification Details
         let degrees = [];
@@ -398,6 +403,92 @@ document.addEventListener('DOMContentLoaded', function () {
                 hideLoader();
             }
         });
+    })
+
+    $('.facultyForm #country').on('change', function () {
+        if($(this).val() != '') {
+            let countryId = $(this).val();
+            $.ajax({
+                url: routes.getStatesByCountry,
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    country_id: countryId
+                },
+                success: function (response) {
+                    if (response.status) {
+                        let stateSelect = $('.facultyForm #state');
+                        stateSelect.empty();
+                        stateSelect.append('<option value="">Select State</option>');
+                        response.states.forEach(function (state) {
+                            stateSelect.append(`<option value="${state.pk}">${state.state_name}</option>`);
+                        });
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function () {
+                    toastr.error('Error fetching states.');
+                }
+            });
+        }
+    });
+    $('.facultyForm #state').on('change', function () {
+        if($(this).val() != '') {
+            let stateId = $(this).val();
+            $.ajax({
+                url: routes.getDistrictsByState,
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    state_id: stateId
+                },
+                success: function (response) {
+                    if (response.status) {
+                        let districtSelect = $('.facultyForm #district');
+                        districtSelect.empty();
+                        districtSelect.append('<option value="">Select District</option>');
+                        response.districts.forEach(function (district) {
+                            districtSelect.append(`<option value="${district.pk}">${district.district_name}</option>`);
+                        });
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function () {
+                    toastr.error('Error fetching districts.');
+                }
+            });
+        }
+    });
+
+    $('.facultyForm #district').on('change', function () {
+        if($(this).val() != '') {
+            let districtId = $(this).val();
+            $.ajax({
+                url: routes.getCitiesByDistrict,
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    district_id: districtId
+                },
+                success: function (response) {
+                    if (response.status) {
+                        let citySelect = $('.facultyForm #city');
+                        citySelect.empty();
+                        citySelect.append('<option value="">Select City</option>');
+                        response.cities.forEach(function (city) {
+                            citySelect.append(`<option value="${city.pk}">${city.city_name}</option>`);
+                        });
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function () {
+                    toastr.error('Error fetching cities.');
+                }
+            });
+        }
     })
 });
 
@@ -617,6 +708,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+
+
 
 // END MDO Escrot Exemption
 

@@ -28,38 +28,39 @@
         </div>
     </div>
     <!-- start Vertical Steps Example -->
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-3">Create Exemption Master</h4>
+   <div class="card">
+    <div class="card-body">
+        <h4 class="card-title mb-3">Create Exemption Master</h4>
+        <hr>
+        <form action="{{ route('admin.fc_exemption.store') }}" method="POST">
+            @csrf
+            <div class="row">
+                <div class="col-6">
+                    <label for="Exemption_name" class="form-label">Exemption Name :</label>
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="Exemption_name" name="Exemption_name"
+                            placeholder="Enter Exemption Name" required>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <label for="Exemption_short_name" class="form-label">Exemption Short Name :</label>
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="Exemption_short_name" name="Exemption_short_name"
+                            placeholder="Enter Short Name" required>
+                    </div>
+                </div>
+            </div>
             <hr>
-            <form>
-                <div class="row">
-                    <div class="col-6">
-                        <label for="exemption" class="form-label">Exemption Master :</label>
-
-                        <div class="mb-3">
-                            <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                placeholder="Batch Name">
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <label for="Schoolname" class="form-label">Abbreviation :</label>
-
-                        <div class="mb-3">
-                            <input type="text" class="form-control" id="Age" name="Age" placeholder="Abbreviation">
-                        </div>
-                    </div>
-                </div>
-                <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                        <i class="material-icons menu-icon">send</i>
-                        Submit
-                    </button>
-                </div>
-            </form>
-        </div>
+            <div class="mb-3">
+                <button class="btn btn-primary hstack gap-6 float-end" type="submit">
+                    <i class="material-icons menu-icon">send</i>
+                    Submit
+                </button>
+            </div>
+        </form>
     </div>
+</div>
+
     <!-- end Vertical Steps Example -->
 </div>
 @endsection

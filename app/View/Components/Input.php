@@ -15,6 +15,7 @@ class Input extends Component
     public $formLabelClass;
     public $formInputClass;
     public $helperSmallText;
+    public $labelRequired;
 
     /**
      * Create a new component instance.
@@ -29,7 +30,8 @@ class Input extends Component
         $required = false,
         $formLabelClass = null,
         $formInputClass = null,
-        $helperSmallText = null
+        $helperSmallText = null,
+        $labelRequired = false
     )
     {
         $this->name = $name;
@@ -40,6 +42,7 @@ class Input extends Component
         $this->formLabelClass = $formLabelClass;
         $this->formInputClass = $formInputClass;
         $this->helperSmallText = $helperSmallText;
+        $this->labelRequired = $labelRequired;
     }
 
     /**

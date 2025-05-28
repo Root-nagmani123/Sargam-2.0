@@ -11,7 +11,7 @@
     {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
         <div class="card-body"> --}}
             
-            <form>
+            <form class="facultyForm">
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title">Personal Information</h4>
@@ -149,7 +149,7 @@
                                         label="State :"
                                         placeholder="State"
                                         formLabelClass="form-label"
-                                        :options="$state"
+                                        {{-- :options="$state" --}}
                                         required="true"
                                         />
 
@@ -163,7 +163,7 @@
                                         label="District :"
                                         placeholder="District"
                                         formLabelClass="form-label"
-                                        :options="$district"
+                                        {{-- :options="$district" --}}
                                         required="true"
                                         />
 
@@ -177,7 +177,7 @@
                                         label="City :"
                                         placeholder="City"
                                         formLabelClass="form-label"
-                                        :options="$city"
+                                        {{-- :options="$city" --}}
                                         required="true"
                                         />
 
@@ -278,7 +278,7 @@
                                         />
                                 </div>
                                 <div class="col-3">
-                                    <x-input
+                                    {{-- <x-input
                                         type="number"
                                         name="year_of_passing[]"
                                         label="Year of Passing :"
@@ -288,7 +288,17 @@
                                         max="{{ date('Y') }}"
                                         step="1"
                                         required="true"
-                                        />
+                                        /> --}}
+                                        
+                                    <x-select
+                                        name="year_of_passing[]"
+                                        label="Year of Passing :"
+                                        placeholder="Year of Passing"
+                                        formLabelClass="form-label"
+                                        :options="$years"
+                                        required="true"
+                                        helperSmallText="Select the year of passing"
+                                    />
                                 </div>
                                 <div class="col-3">
                                     <x-input

@@ -17,12 +17,25 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
+<<<<<<< HEAD
+<<<<<<< HEAD
                                 <a href="{{route('student.medical.exemption.create')}}" class="btn btn-primary">+ Add
                                     Student Medical Exemption</a>
+=======
+                                <a href="{{route('student.medical.exemption.create')}}" class="btn btn-primary">+ Add Student Medical Exemption</a>
+>>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
+=======
+                                <a href="{{route('student.medical.exemption.create')}}" class="btn btn-primary">+ Add
+                                    Student Medical Exemption</a>
+>>>>>>> 33db3ab (student-medical-exemption work)
                             </div>
                         </div>
                     </div>
                     <hr>
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 33db3ab (student-medical-exemption work)
                     <div class="table-responsive">
                         <table id="zero_config" class="table table-bordered table-striped w-100">
                                 <thead>
@@ -57,6 +70,7 @@
                                         <td>
                                             <a href="{{ route('student.medical.exemption.edit', ['id' => encrypt(value: $row->pk)])  }}"
                                                 class="btn btn-sm btn-info">Edit</a>
+<<<<<<< HEAD
 
                                             <form
                                                 title="{{ $row->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
@@ -82,9 +96,112 @@
                         </div>
                     </div>
 
+=======
+                    <div id="zero_config_wrapper" class="dataTables_wrapper">
+=======
+>>>>>>> 33db3ab (student-medical-exemption work)
+
+                                            <form
+                                                title="{{ $row->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
+                                                action="{{ route('student.medical.exemption.delete', 
+                                                    ['id' => encrypt($row->pk)]) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
+                                                        if(confirm('Are you sure you want to delete this record?')) {
+                                                            this.closest('form').submit();
+                                                        }" {{ $row->active_inactive == 1 ? 'disabled' : '' }}>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </td>
+
+                                    </tr>
+                                    @empty
+
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+<<<<<<< HEAD
+>>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
+=======
+
+>>>>>>> 33db3ab (student-medical-exemption work)
                 </div>
             </div>
         </div>
     </div>
+<<<<<<< HEAD
 </div>
 @endsection
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+</div>
+@endsection
+=======
+    </div>
+    @endsection
+>>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
+=======
+</div>
+@endsection
+>>>>>>> 33db3ab (student-medical-exemption work)
+=======
+    </div>
+    @endsection
+>>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
+=======
+</div>
+@endsection
+>>>>>>> 33db3ab (student-medical-exemption work)
+=======
+    </div>
+    @endsection
+>>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
+<<<<<<< HEAD
+>>>>>>> 14c43bc (Exemption Category and Exemption Medical Speciality)
+=======
+=======
+</div>
+@endsection
+>>>>>>> 33db3ab (student-medical-exemption work)
+<<<<<<< HEAD
+>>>>>>> 259ed71 (student-medical-exemption work)
+=======
+=======
+</div>
+@endsection
+>>>>>>> cebb19a (resolve conflict)
+<<<<<<< HEAD
+>>>>>>> 5dbca3d (resolve conflict)
+=======
+=======
+    </div>
+    @endsection
+>>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
+<<<<<<< HEAD
+>>>>>>> c55af26 (Exemption Category and Exemption Medical Speciality)
+=======
+=======
+</div>
+@endsection
+>>>>>>> 33db3ab (student-medical-exemption work)
+<<<<<<< HEAD
+>>>>>>> fee5ee9 (student-medical-exemption work)
+=======
+=======
+</div>
+@endsection
+>>>>>>> cebb19a (resolve conflict)
+>>>>>>> 09f1872 (resolve conflict)
