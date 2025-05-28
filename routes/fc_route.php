@@ -72,9 +72,27 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
 
     //Exemption master create
 
-    Route::get('admin/registration/fc-exemption', [FcExemptionMasterController::class, 'index'])->name('admin.fc_exemption.index');
-    Route::get('admin/registration/fc-exemption/create', [FcExemptionMasterController::class, 'create'])->name('admin.fc_exemption.create');
-    Route::post('admin/registration/fc-exemption/store', [FcExemptionMasterController::class, 'store'])->name('admin.fc_exemption.store');
-    Route::get('admin/registration/fc-exemption/edit/{id}', [FcExemptionMasterController::class, 'edit'])->name('admin.fc_exemption.edit');
-    Route::post('admin/registration/fc-exemption/update/{id}', [FcExemptionMasterController::class, 'update'])->name('admin.fc_exemption.update');
+    Route::get('admin/registration/fc-exemption_master', [FcExemptionMasterController::class, 'index'])->name('admin.fc_exemption.index');
+    Route::get('admin/registration/fc-exemption_master/create', [FcExemptionMasterController::class, 'create'])->name('admin.fc_exemption.create');
+    Route::post('admin/registration/fc-exemption_master/store', [FcExemptionMasterController::class, 'store'])->name('admin.fc_exemption.store');
+    Route::get('admin/registration/fc-exemption_master/edit/{id}', [FcExemptionMasterController::class, 'edit'])->name('admin.fc_exemption.edit');
+    Route::post('admin/registration/fc-exemption_master/update/{id}', [FcExemptionMasterController::class, 'update'])->name('admin.fc_exemption.update');
+    Route::delete('admin/registration/fc-exemption_master/delete/{id}', [FcExemptionMasterController::class, 'destroy'])->name('admin.fc_exemption.destroy');
+
+    // User exemption store
+    Route::get('/exemption-create', [FcExemptionMasterController::class, 'exemptioncreate'])->name('exemption.create');
+    Route::post('/exemption-store', [FcExemptionMasterController::class, 'exemptionstore'])->name('exemption.store');
+
+    // user exemption listing 
+    Route::get('/exemptions_data', [FcExemptionMasterController::class, 'exemption_list'])->name('exemptions.datalist');
+
+    //verify user 
+    Route::post('/registration/verify', [FcExemptionMasterController::class, 'verify'])->name('registration.verify');
+
+    //exemption datalist export
+    Route::get('/admin/exemption-data/export', [FcExemptionMasterController::class, 'exemptionexport'])->name('admin.exemption.export');
+
+    // toggle exemption php
+    Route::post('/admin/fc_exemption/{id}/toggle-visible', [FcExemptionMasterController::class, 'toggleVisible'])
+        ->name('admin.fc_exemption.toggleVisible');
 });

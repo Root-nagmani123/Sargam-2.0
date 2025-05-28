@@ -1,65 +1,51 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Exemption Master - Sargam | Lal Bahadur')
+@section('title', 'Edit Exemption Master - Sargam | Lal Bahadur')
 
 @section('content')
 <div class="container-fluid">
     <div class="card card-body py-3">
         <div class="row align-items-center">
             <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Exemption Master</h4>
+                <div class="d-sm-flex align-items-center justify-content-between">
+                    <h4 class="card-title mb-0">Edit Exemption</h4>
                     <nav aria-label="breadcrumb" class="ms-auto">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="index.html">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
+                            <li class="breadcrumb-item">
+                                <a href="{{ route('admin.fc_exemption.index') }}" class="text-muted">Exemption Master</a>
                             </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    Exemption Master
-                                </span>
-                            </li>
+                            <li class="breadcrumb-item active" aria-current="page">Edit</li>
                         </ol>
                     </nav>
                 </div>
             </div>
         </div>
     </div>
-    <!-- start Vertical Steps Example -->
-    <div class="card">
+
+    <div class="card mt-3">
         <div class="card-body">
-            <h4 class="card-title mb-3">Create Exemption Master</h4>
-            <hr>
-            <form>
+            <form action="{{ route('admin.fc_exemption.update', $exemption->Pk) }}" method="POST">
+                @csrf
                 <div class="row">
-                    <div class="col-6">
-                        <label for="exemption" class="form-label">Exemption Master :</label>
-
-                        <div class="mb-3">
-                            <input type="text" class="form-control" id="Schoolname" name="Schoolname"
-                                placeholder="Batch Name">
-                        </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="Exemption_name" class="form-label">Exemption Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="Exemption_name" name="Exemption_name" value="{{ old('Exemption_name', $exemption->Exemption_name) }}" required>
                     </div>
-                    <div class="col-6">
-                        <label for="Schoolname" class="form-label">Abbreviation :</label>
 
-                        <div class="mb-3">
-                            <input type="text" class="form-control" id="Age" name="Age" placeholder="Abbreviation">
-                        </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="Exemption_short_name" class="form-label">Short Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="Exemption_short_name" name="Exemption_short_name" value="{{ old('Exemption_short_name', $exemption->Exemption_short_name) }}" required>
                     </div>
                 </div>
-                <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                        <i class="material-icons menu-icon">send</i>
-                        Submit
+
+                <div class="text-end mt-4">
+                    <a href="{{ route('admin.fc_exemption.index') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        Update
                     </button>
                 </div>
             </form>
         </div>
     </div>
-    <!-- end Vertical Steps Example -->
 </div>
 @endsection

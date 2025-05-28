@@ -403,7 +403,7 @@
                                 <a class="sidebar-link" href="{{ route('admin.fc_exemption.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
-                                    <span class="hide-menu">Exemption Master</span>
+                                    <span class="hide-menu">Fc Exemption Master</span>
                                 </a>
                             </li>
                         </ul>
@@ -419,14 +419,14 @@
                                 <span class="hide-menu">Forms</span>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('forms.home.user') }}">
+                                <a class="sidebar-link" href="#">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Home Page</span>
                                 </a>
                             </li>
                              <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('forms.main_page') }}">
+                                <a class="sidebar-link" href="{{ route('exemption.create') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Landing Page</span>
@@ -451,6 +451,14 @@
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Registartion</span>
+                                </a>
+                            </li>
+
+                                <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('exemptions.datalist') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu"> Fc Exemption data</span>
                                 </a>
                             </li>
                         </ul>
