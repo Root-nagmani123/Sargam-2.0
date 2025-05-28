@@ -11,7 +11,7 @@
     {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
         <div class="card-body"> --}}
             
-            <form>
+            <form class="facultyForm">
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title">Personal Information</h4>
@@ -149,7 +149,7 @@
                                         label="State :"
                                         placeholder="State"
                                         formLabelClass="form-label"
-                                        :options="$state"
+                                        {{-- :options="$state" --}}
                                         required="true"
                                         />
 
@@ -163,7 +163,7 @@
                                         label="District :"
                                         placeholder="District"
                                         formLabelClass="form-label"
-                                        :options="$district"
+                                        {{-- :options="$district" --}}
                                         required="true"
                                         />
 
@@ -177,7 +177,7 @@
                                         label="City :"
                                         placeholder="City"
                                         formLabelClass="form-label"
-                                        :options="$city"
+                                        {{-- :options="$city" --}}
                                         required="true"
                                         />
 

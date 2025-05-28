@@ -8,4 +8,7 @@ const routes = {
     'facultyStoreUrl': baseUrl + '/faculty/store',
     'facultyIndexUrl': baseUrl + '/faculty/',
     'facultyUpdateUrl': baseUrl + '/faculty/update',
+    'getStatesByCountry': baseUrl + '/master/country/get-states-by-country',
+    'getDistrictsByState': baseUrl + '/master/country/get-districts-by-state',
+    'getCitiesByDistrict': baseUrl + '/master/country/get-cities-by-district',
 };
