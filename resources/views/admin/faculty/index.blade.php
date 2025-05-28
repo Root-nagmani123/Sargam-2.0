@@ -61,6 +61,8 @@
                                             <td>
                                                 <a href="{{ route('faculty.edit', ['id' => encrypt($faculty->pk)]) }}"
                                                     class="btn btn-primary btn-sm">Edit</a>
+                                                <a href="{{ route('faculty.show', ['id' => encrypt($faculty->pk)]) }}"
+                                                    class="btn btn-info btn-sm">View</a>
                                             </td>
                                             <td>
                                                  <div class="form-check form-switch d-inline-block">

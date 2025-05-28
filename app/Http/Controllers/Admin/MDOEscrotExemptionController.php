@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\{MDODutyTypeMaster, StudentMaster, CourseMaster, MDOEscotDutyMap};
 use App\DataTables\MDOEscrotExemptionDataTable;
+use App\Http\Requests\MDOEscrotExemptionRequest;
 
 class MDOEscrotExemptionController extends Controller
 {
@@ -32,7 +33,7 @@ class MDOEscrotExemptionController extends Controller
         return view('admin.mdo_escrot_exemption.edit', compact('id'));
     }
 
-    function store(Request $request)
+    function store(MDOEscrotExemptionRequest $request)
     {
         try {
             

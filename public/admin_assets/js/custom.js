@@ -204,15 +204,20 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('permanent_address', permanent_address);
 
         // photo is file
-        if ($('input[name="photo"]')[0].files.length > 0) {
-            photo = $('input[name="photo"]')[0].files[0];
+        const photoInput = $('input[name="photo"]')[0];
+
+        if (photoInput && photoInput.files.length > 0) {
+            const photo = photoInput.files[0];
             formData.append('photo', photo);
         }
         // document is file
-        if ($('input[name="document"]')[0].files.length > 0) {
-            document = $('input[name="document"]')[0].files[0];
-            formData.append('document', document);
+        const documentInput = $('input[name="document"]')[0];
+
+        if (documentInput && documentInput.files.length > 0) {
+            const documentFile = documentInput.files[0];
+            formData.append('document', documentFile);
         }
+
 
         // Qualification Details
         let degrees = [];
@@ -617,6 +622,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+
+
 
 // END MDO Escrot Exemption
 
