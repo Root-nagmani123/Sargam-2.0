@@ -13,6 +13,14 @@ class MDOEscotDutyMap extends Model
 
     protected $primaryKey = 'pk';
 
+    public static function getMdoDutyTypes(): array
+    {
+        return [
+            'mdo' => optional(MDODutyTypeMaster::whereRaw('LOWER(mdo_duty_type_name) = ?', ['mdo'])->first())->pk,
+            'escot' => optional(MDODutyTypeMaster::whereRaw('LOWER(mdo_duty_type_name) = ?', ['escot'])->first())->pk,
+        ];
+    }
+
     public function courseMaster()
     {
         return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');

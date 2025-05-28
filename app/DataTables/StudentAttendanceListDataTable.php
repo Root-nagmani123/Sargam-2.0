@@ -93,7 +93,7 @@ class StudentAttendanceListDataTable extends DataTable
         if (!$checked && $value === 4) {
             $mdoEscot = MDOEscotDutyMap::where([
                 ['course_master_pk', '=', $this->course_pk],
-                ['mdo_duty_type_master_pk', '=', 1],
+                ['mdo_duty_type_master_pk', '=', MDOEscotDutyMap::getMdoDutyTypes()['mdo']],
                 ['selected_student_list', '=', $studentId],
             ])->first();
 
