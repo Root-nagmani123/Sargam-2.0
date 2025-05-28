@@ -278,7 +278,7 @@
                                         />
                                 </div>
                                 <div class="col-3">
-                                    <x-input
+                                    {{-- <x-input
                                         type="number"
                                         name="year_of_passing[]"
                                         label="Year of Passing :"
@@ -288,7 +288,17 @@
                                         max="{{ date('Y') }}"
                                         step="1"
                                         required="true"
-                                        />
+                                        /> --}}
+                                        
+                                    <x-select
+                                        name="year_of_passing[]"
+                                        label="Year of Passing :"
+                                        placeholder="Year of Passing"
+                                        formLabelClass="form-label"
+                                        :options="$years"
+                                        required="true"
+                                        helperSmallText="Select the year of passing"
+                                    />
                                 </div>
                                 <div class="col-3">
                                     <x-input
