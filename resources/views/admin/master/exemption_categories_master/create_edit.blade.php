@@ -22,7 +22,7 @@
                 @endif
                 <div class="row">
 
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <x-input name="exemp_category_name" label="Category Name :"
                                 placeholder="Enter Category Name" formLabelClass="form-label" required="true"
@@ -30,7 +30,7 @@
                         </div>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <x-input name="exemp_cat_short_name" label="Short Name :" placeholder="Enter Short Name"
                                 formLabelClass="form-label" required="true"
@@ -38,7 +38,7 @@
                         </div>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <div class="mb-3">
                             <label class="form-label">Status</label>
                             <select name="active_inactive" class="form-control" required>
@@ -53,15 +53,13 @@
                     </div>
 
                 </div>
-
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit" id="saveExemptionCategoryForm">
-                        <i class="material-icons menu-icon">save</i>
+<hr>
+                <div class="text-end">
+                    <button class="btn btn-primary" type="submit" id="saveExemptionCategoryForm">
                         {{ !empty($exemptionCategory) ? 'Update' : 'Save' }}
                     </button>
                     <a href="{{ route('master.exemption.category.master.index') }}"
-                        class="btn btn-secondary hstack gap-6 float-end me-2">
-                        <i class="material-icons menu-icon">arrow_back</i>
+                        class="btn btn-secondary">
                         Back
                     </a>
                 </div>

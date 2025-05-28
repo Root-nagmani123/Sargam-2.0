@@ -26,60 +26,62 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Speciality Name</th>
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="zero_config" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th class="col">#</th>
+                                        <th class="col">Speciality Name</th>
+                                        <th class="col">Created Date</th>
+                                        <th class="col">Status</th>
+                                        <th class="col">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($specialities as $index => $speciality)
+                                    <tr>
+                                        <td>{{ $index + 1 }}</td>
+                                        <td>{{ $speciality->speciality_name }}</td>
 
-                                    <th>Created Date</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse($specialities as $index => $speciality)
-                                <tr>
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $speciality->speciality_name }}</td>
+                                        <td>{{ $speciality->created_date }}</td>
 
-                                    <td>{{ $speciality->created_date }}</td>
+                                        <td>
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input status-toggle" type="checkbox"
+                                                    role="switch" data-table="exemption_medical_speciality_master"
+                                                    data-column="active_inactive" data-id="{{ $speciality->pk }}"
+                                                    {{ $speciality->active_inactive == 1 ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
 
-                                    <td>
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="exemption_medical_speciality_master"
-                                                data-column="active_inactive" data-id="{{ $speciality->pk }}"
-                                                {{ $speciality->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-
-                                    <td>
-                                        <a href="{{ route('master.exemption.medical.speciality.edit', 
+                                        <td>
+                                            <a href="{{ route('master.exemption.medical.speciality.edit', 
                                                     ['id' => encrypt(value: $speciality->pk)]) }}"
-                                            class="btn btn-primary btn-sm">Edit</a>
-                                        <form
-                                            title="{{ $speciality->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                            action="{{ route('master.exemption.medical.speciality.delete', 
+                                                class="btn btn-primary btn-sm">Edit</a>
+                                            <form
+                                                title="{{ $speciality->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
+                                                action="{{ route('master.exemption.medical.speciality.delete', 
                                                     ['id' => encrypt($speciality->pk)]) }}" method="POST"
-                                            class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
+                                                class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
                                                         }" {{ $speciality->active_inactive == 1 ? 'disabled' : '' }}>
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="6" class="text-center">No specialities found.</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center">No specialities found.</td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

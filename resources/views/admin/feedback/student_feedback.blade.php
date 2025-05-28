@@ -24,12 +24,12 @@
     }
 
     .star-rating input[type="radio"]:checked~label {
-        color: #ffc107;
+        color: #af2910;
     }
 
     .star-rating label:hover,
     .star-rating label:hover~label {
-        color: #ffc107;
+        color: #af2910;
     }
     </style>
 </head>
@@ -48,7 +48,7 @@
 
                     @foreach ($data as $index => $feedback)
                     @if($feedback->feedback_checkbox == 1)
-                    <div class="row g-3 border p-3 mb-4 shadow rounded">
+                    <div class="row">
                         {{-- Hidden Inputs --}}
                         <input type="hidden" name="timetable_pk[]" value="{{ $feedback->pk }}">
                         <input type="hidden" name="faculty_pk[]" value="{{ $feedback->faculty_master }}">
@@ -57,65 +57,78 @@
                         <input type="hidden" name="Remark_checkbox[]" value="{{ $feedback->Remark_checkbox }}">
                         <input type="hidden" name="Ratting_checkbox[]" value="{{ $feedback->Ratting_checkbox }}">
                         <div class="col-12 col-md-12">
-                            <label class="form-label">Topic</label>
-                            <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
+                            <div class="mb-3">
+                                <label class="form-label">Topic</label>
+                                <input type="text" class="form-control" value="{{ $feedback->subject_topic }}" readonly>
+                            </div>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
 
-                            <label>Course</label>
-                            <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
+                            <div class="mb-3">
+                                <label class="form-label">Course</label>
+                                <input type="text" class="form-control" value="{{ $feedback->course_name }}" readonly>
+                            </div>
                         </div>
 
-                        <div class="col-md-4">
-                            <label>Faculty</label>
-                            <input type="text" class="form-control" value="{{ $feedback->faculty_name }}" readonly>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Faculty</label>
+                                <input type="text" class="form-control" value="{{ $feedback->faculty_name }}" readonly>
+                            </div>
                         </div>
 
 
                         @if($feedback->Ratting_checkbox == 1)
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Rating <span class="text-danger">*</span></label>
-                            <select class="form-select" name="rating[{{ $index }}]"
-                                {{ $feedback->Ratting_checkbox == 1 ? 'required' : '' }}>
-                                <option disabled {{ old('rating.'.$index) ? '' : 'selected' }}>Choose rating</option>
-                                @for ($i = 1; $i <= 5; $i++) <option value="{{ $i }}"
-                                    {{ old('rating.'.$index) == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                    @endfor
-                            </select>
+                        <div class="col-12 col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Rating <span class="text-danger">*</span></label>
+                                <select class="form-select" name="rating[{{ $index }}]"
+                                    {{ $feedback->Ratting_checkbox == 1 ? 'required' : '' }}>
+                                    <option disabled {{ old('rating.'.$index) ? '' : 'selected' }}>Choose rating
+                                    </option>
+                                    @for ($i = 1; $i <= 5; $i++) <option value="{{ $i }}"
+                                        {{ old('rating.'.$index) == $i ? 'selected' : '' }}>{{ $i }}</option>
+                                        @endfor
+                                </select>
+                            </div>
                             @error('rating.'.$index)
                             <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
 
 
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Presentation <span class="text-danger">*</span></label><br>
-                            <div class="star-rating">
-                                @for ($i = 5; $i >= 1; $i--)
-                                <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
-                                    name="presentation[{{ $index }}]" value="{{ $i }}"
-                                    {{ old('presentation.'.$index) == $i ? 'checked' : '' }}>
-                                <label for="presentation-{{ $i }}-{{ $index }}">&#9733;</label>
-                                @endfor
+                        <div class="col-12 col-md-6">
+                            <div class="d-flex gap-3">
+                                <div class="mb-3">
+                                <label class="form-label">Presentation <span class="text-danger">*</span></label><br>
+                                <div class="star-rating">
+                                    @for ($i = 5; $i >= 1; $i--)
+                                    <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
+                                        name="presentation[{{ $index }}]" value="{{ $i }}"
+                                        {{ old('presentation.'.$index) == $i ? 'checked' : '' }}>
+                                    <label for="presentation-{{ $i }}-{{ $index }}">&#9733;</label>
+                                    @endfor
+                                </div>
                             </div>
                             @error('presentation.'.$index)
                             <div class="text-danger small">{{ $message }}</div>
                             @enderror
-                        </div>
 
-                        <div class="col-12 col-md-4">
-                            <label class="form-label">Content <span class="text-danger">*</span></label><br>
-                            <div class="star-rating">
-                                @for ($i = 5; $i >= 1; $i--)
-                                <input type="radio" id="content-{{ $i }}-{{ $index }}" name="content[{{ $index }}]"
-                                    value="{{ $i }}" {{ old('content.'.$index) == $i ? 'checked' : '' }}>
-                                <label for="content-{{ $i }}-{{ $index }}">&#9733;</label>
-                                @endfor
+                            <div class="mb-3">
+                                <label class="form-label">Content <span class="text-danger">*</span></label><br>
+                                <div class="star-rating">
+                                    @for ($i = 5; $i >= 1; $i--)
+                                    <input type="radio" id="content-{{ $i }}-{{ $index }}" name="content[{{ $index }}]"
+                                        value="{{ $i }}" {{ old('content.'.$index) == $i ? 'checked' : '' }}>
+                                    <label for="content-{{ $i }}-{{ $index }}">&#9733;</label>
+                                    @endfor
+                                </div>
                             </div>
                             @error('content.'.$index)
                             <div class="text-danger small">{{ $message }}</div>
                             @enderror
+                            </div>
                         </div>
                         @endif
 
@@ -130,6 +143,7 @@
                         </div>
                         @endif
                     </div>
+                    <hr>
                     @endif
                     @endforeach
                     @if($data->isEmpty())
@@ -142,7 +156,7 @@
                     </div>
                     @endif
                 </form>
-   
+
 
             </div>
 
