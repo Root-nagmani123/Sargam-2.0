@@ -146,6 +146,7 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 </div>
 @endsection
 =======
@@ -196,4 +197,11 @@
 </div>
 @endsection
 >>>>>>> 33db3ab (student-medical-exemption work)
+<<<<<<< HEAD
 >>>>>>> fee5ee9 (student-medical-exemption work)
+=======
+=======
+</div>
+@endsection
+>>>>>>> cebb19a (resolve conflict)
+>>>>>>> 09f1872 (resolve conflict)
