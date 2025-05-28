@@ -26,4 +26,22 @@ class StudentMedicalExemption extends Model
         'created_date',
         'modified_date',
     ];
+    public function category()
+{
+    return $this->belongsTo(ExemptionCategoryMaster::class, 'exemption_category_master_pk', 'pk');
+}
+
+public function speciality()
+{
+    return $this->belongsTo(ExemptionMedicalSpecialityMaster::class, 'exemption_medical_speciality_pk', 'pk');
+}
+
+public function course()
+{
+    return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
+}
+public function student()
+{
+    return $this->belongsTo(StudentMaster::class, 'student_master_pk', 'pk');
+}
 }
