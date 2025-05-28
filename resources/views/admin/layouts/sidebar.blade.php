@@ -252,6 +252,14 @@
                                                         <span class="hide-menu">Student Feedback</span>
                                                     </a>
                                                 </li>
+                                                 <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('student.medical.exemption.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:feed-bold-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Student Medical Exemption</span>
+                                                    </a>
+                                                </li>
                                                 <li>
                                                     <span class="sidebar-divider"></span>
                                                 </li>
