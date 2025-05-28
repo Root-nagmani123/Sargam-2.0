@@ -28,6 +28,7 @@
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
                         <div class="table-responsive">
                             <table class="table table-bordered" id="zero_config" style="width: 100%;">
                                 <thead>
@@ -51,6 +52,11 @@
 =======
                         <table class="table table-bordered">
 >>>>>>> 14c43bc (Exemption Category and Exemption Medical Speciality)
+=======
+                       <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
+>>>>>>> 259ed71 (student-medical-exemption work)
                             <thead>
                                 <tr>
                                     <th>#</th>
