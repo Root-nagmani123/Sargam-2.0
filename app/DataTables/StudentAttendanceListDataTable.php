@@ -54,25 +54,28 @@ class StudentAttendanceListDataTable extends DataTable
             ->minifiedAjax()
             ->orderBy(1)
             ->parameters([
-            'paging' => false,           
-            'searching' => true,         
-            'info' => false,             
-            'scrollY' => '100vh',        
-            'scrollCollapse' => true,
-        ]);
+                'paging' => false,           
+                'searching' => true,         
+                'info' => false,             
+                'scrollY' => '100vh',        
+                'scrollCollapse' => true,
+                'responsive' => true,
+                'scrollX' => true,
+                'autoWidth' => false,
+            ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('OT Name')->orderable(false),
-            Column::make('student_code')->title('OT Code')->orderable(false),
-            Column::make('attendance_status')->title('Attendance')->orderable(false)->searchable(false),
-            Column::make('mdo_duty')->title('MDO Duty')->orderable(false)->searchable(false),
-            Column::make('escort_duty')->title('Escort Duty')->orderable(false)->searchable(false),
-            Column::make('medical_exempt')->title('Medical Exemption')->orderable(false)->searchable(false),
-            Column::make('other_exempt')->title('Other Exemption')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('student_name')->title('OT Name')->addClass('text-center')->orderable(false),
+            Column::make('student_code')->title('OT Code')->addClass('text-center')->orderable(false),
+            Column::make('attendance_status')->title('Attendance')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('mdo_duty')->title('MDO Duty')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('escort_duty')->title('Escort Duty')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('medical_exempt')->title('Medical Exemption')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('other_exempt')->title('Other Exemption')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
 

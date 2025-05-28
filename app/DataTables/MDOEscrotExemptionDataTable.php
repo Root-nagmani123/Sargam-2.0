@@ -53,20 +53,25 @@ class MDOEscrotExemptionDataTable extends DataTable
             ->minifiedAjax()
             ->orderBy(1)
             ->responsive(true)
+            ->parameters([
+                'responsive' => true,
+                'scrollX' => true,
+                'autoWidth' => false,
+            ])
             ->buttons(['excel', 'csv', 'pdf', 'print', 'reset', 'reload']);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_date')->title('Date')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('Student Name'),
-            Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false),
-            Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false),
-            Column::make('course_name')->title('Programme Name'),
-            Column::make('mdo_name')->title('MDO Name'),
-            Column::make('Remark')->title('Remarks'),
+            Column::make('student_name')->title('Student Name')->addClass('text-center'),
+            Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::make('course_name')->title('Programme Name')->addClass('text-center'),
+            Column::make('mdo_name')->title('MDO Name')->addClass('text-center'),
+            Column::make('Remark')->title('Remarks')->addClass('text-center'),
         ];
     }
 
