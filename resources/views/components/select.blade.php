@@ -1,6 +1,6 @@
 
 @if($label)
-    <label class="form-label" for="{{ $name }}">{{ $label }}</label>
+    <label class="form-label" for="{{ $name }}">{{ $label }} {{ $labelRequired ? '*' : '' }}</label>
 @endif
 
 @php
