@@ -79,19 +79,24 @@ class GroupMappingDataTable extends DataTable
             ->minifiedAjax()
             ->orderBy(1)
             ->responsive(true)
-            ->selectStyleSingle();
+            ->selectStyleSingle()
+            ->parameters([
+                'responsive' => true,
+                'scrollX' => true,
+                'autoWidth' => false,
+            ]);
     }
 
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->width(50)->addClass('text-center'),
-            Column::make('group_name')->title('Group Name'),
-            Column::computed('student_count')->title('Student Count'),
-            Column::computed('view_download')->title('View/Download')->exportable(false)->printable(false),
-            Column::computed('action')->exportable(false)->printable(false),
-            Column::computed('status')->exportable(false)->printable(false),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
+            Column::make('group_name')->title('Group Name')->addClass('text-center'),
+            Column::computed('student_count')->title('Student Count')->addClass('text-center'),
+            Column::computed('view_download')->title('View/Download')->addClass('text-center')->exportable(false)->printable(false),
+            Column::computed('action')->addClass('text-center')->exportable(false)->printable(false),
+            Column::computed('status')->addClass('text-center')->exportable(false)->printable(false),
         ];
     }
 

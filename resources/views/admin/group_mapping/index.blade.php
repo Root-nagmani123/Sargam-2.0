@@ -122,11 +122,7 @@
 
   
                         <hr>
-
-                        <div class="table-responsive">
-                            {!! $dataTable->table(['class' => 'table table-striped table-bordered dt-responsive nowrap']) !!}
-                        </div>
-
+                        {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
                     </div>
                 </div>
             </div>

@@ -10,15 +10,14 @@ use App\Http\Requests\ProgrammeRequest;
 use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
-
+use App\DataTables\CourseMasterDataTable;
 
 
 class CourseController extends Controller
 {
-    public function index()
+    public function index(CourseMasterDataTable $dataTable)
     {
-        $courseMasterList = CourseMaster::get();
-        return view('admin.programme.index', compact('courseMasterList'));
+        return $dataTable->render('admin.programme.index');
     }
 
     public function create()

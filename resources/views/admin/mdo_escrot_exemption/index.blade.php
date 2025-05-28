@@ -25,9 +25,9 @@
                             </div>
                         </div>
                         <hr>
-                        <div class="table-responsive">
+                        
                         {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
-                        </div>
+                        
                     </div>
                 </div>
             </div>
