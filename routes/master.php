@@ -115,5 +115,13 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     Route::get('/edit/{id}', 'medicalSpecialityEdit')->name('edit');
     Route::delete('/delete/{id}', 'medicalSpecialityDelete')->name('delete');
 });
+
+//memo management
+Route::get('/memo', function () {
+            return view('admin.master.memo.index');
+})->name('memo.index');
+Route::get('/conversation', function () {
+            return view('admin.master.memo.conversation');
+})->name('memo.conversation');
     
 });
