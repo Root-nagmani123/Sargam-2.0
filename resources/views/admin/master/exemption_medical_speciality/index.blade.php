@@ -31,10 +31,13 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
 =======
 >>>>>>> c55af26 (Exemption Category and Exemption Medical Speciality)
+=======
+>>>>>>> fee5ee9 (student-medical-exemption work)
                         <div class="table-responsive">
                             <table class="table table-bordered" id="zero_config" style="width: 100%;">
                                 <thead>
@@ -71,7 +74,15 @@
 =======
                         <table class="table table-bordered">
 >>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
+<<<<<<< HEAD
 >>>>>>> c55af26 (Exemption Category and Exemption Medical Speciality)
+=======
+=======
+                       <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
+>>>>>>> 33db3ab (student-medical-exemption work)
+>>>>>>> fee5ee9 (student-medical-exemption work)
                             <thead>
                                 <tr>
                                     <th>#</th>
