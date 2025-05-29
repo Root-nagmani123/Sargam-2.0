@@ -9,7 +9,9 @@ use App\Http\Controllers\Admin\Master\{
     CourseGroupTypeController,
     ClassSessionMasterController,
     FacultyExpertiseMasterController,
-    ExemptionCategoryController
+    ExemptionCategoryController,
+    MemoTypeMasterController,
+    MemoConclusionMasterController
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -117,6 +119,20 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     Route::post('/store', 'medicalSpecialityStore')->name('store');
     Route::get('/edit/{id}', 'medicalSpecialityEdit')->name('edit');
     Route::delete('/delete/{id}', 'medicalSpecialityDelete')->name('delete');
+});
+Route::prefix('memo-type-master')->name('memo.type.master.')->controller(MemoTypeMasterController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::delete('/delete/{id}', 'delete')->name('delete');
+});
+Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->controller(MemoConclusionMasterController::class)->group(function () {
+    Route::get('/', 'index')->name('index');
+    Route::get('/create', 'create')->name('create');
+    Route::post('/store', 'store')->name('store');
+    Route::get('/edit/{id}', 'edit')->name('edit');
+    Route::delete('/delete/{id}', 'destroy')->name('delete');
 });
 
 //memo management
