@@ -413,6 +413,20 @@
                                     <span class="hide-menu">Memo Management</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.memo.type.master.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Memo Type Master</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.memo.conclusion.master.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Memo Conclusion Master</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                     <!-- Forms -->
