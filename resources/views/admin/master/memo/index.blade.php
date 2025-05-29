@@ -18,7 +18,12 @@
                             <h4 class="card-title">Memo Management</h4>
                         </div>
                         <div class="col-6">
-                            <div class="row">
+                            <div class="float-end gap-2">
+                                <a href="{{ route('master.memo.create') }}" class="btn btn-primary">+ Add Notice/Memo</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
                         <div class="col-6">
                             <div class="mb-3">
                                 <label for="program_name" class="form-label">Program Name</label>
@@ -39,9 +44,6 @@
                             </div>
                         </div>
                     </div>
-                        </div>
-                    </div>
-                    
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
                         <table id="zero_config"
@@ -70,13 +72,15 @@
                                     <td>John Doe</td>
                                     <td>
                                         <div class="d-flex gap-2">
-                                            <span class="badge text-bg-danger">Memo</span><span class="badge text-bg-primary">Notice</span>
+                                            <span class="badge text-bg-danger">Memo</span><span
+                                                class="badge text-bg-primary">Notice</span>
                                         </div>
                                     </td>
                                     <td>2023-10-01</td>
                                     <td>Discussion on project progress</td>
                                     <td>
-                                       <a href="{{route('master.memo.conversation')}}" class="btn btn-primary btn-sm">View Conversation</a>
+                                        <a href="{{route('master.memo.conversation')}}"
+                                            class="btn btn-primary btn-sm">View Conversation</a>
                                     </td>
                                     <td>2</td>
                                     <td>3</td>
@@ -84,7 +88,7 @@
                                 </tr>
                             </tbody>
                         </table>
-                        
+
                     </div>
                 </div>
             </div>

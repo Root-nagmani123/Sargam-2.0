@@ -126,5 +126,8 @@ Route::get('/memo', function () {
 Route::get('/conversation', function () {
             return view('admin.master.memo.conversation');
 })->name('memo.conversation');
+Route::get('/create', function () {
+            return view('admin.master.memo.create');
+})->name('memo.create');
     
 });
