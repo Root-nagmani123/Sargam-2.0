@@ -26,23 +26,7 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
-=======
->>>>>>> c55af26 (Exemption Category and Exemption Medical Speciality)
-=======
->>>>>>> fee5ee9 (student-medical-exemption work)
-=======
-=======
->>>>>>> 35e7663 (new ui)
->>>>>>> 8027569 (new ui)
+
                         <div class="table-responsive">
                             <table class="table table-bordered" id="zero_config" style="width: 100%;">
                                 <thead>
@@ -59,49 +43,6 @@
                                     <tr>
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $speciality->speciality_name }}</td>
-<<<<<<< HEAD
-=======
-                       <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                            aria-describedby="zero_config_info">
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-                        <table class="table table-bordered">
->>>>>>> 14c43bc (Exemption Category and Exemption Medical Speciality)
-=======
-                       <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                            aria-describedby="zero_config_info">
->>>>>>> 259ed71 (student-medical-exemption work)
-=======
->>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
-=======
-=======
-                        <table class="table table-bordered">
->>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
-<<<<<<< HEAD
->>>>>>> c55af26 (Exemption Category and Exemption Medical Speciality)
-=======
-=======
-                       <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                            aria-describedby="zero_config_info">
->>>>>>> 33db3ab (student-medical-exemption work)
->>>>>>> fee5ee9 (student-medical-exemption work)
-                            <thead>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Speciality Name</th>
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 48a903a (Exemption Category and Exemption Medical Speciality)
-=======
-=======
->>>>>>> c55af26 (Exemption Category and Exemption Medical Speciality)
->>>>>>> 3277777 (Exemption Category and Exemption Medical Speciality)
->>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
-
                                         <td>{{ $speciality->created_date }}</td>
 
                                         <td>
@@ -128,7 +69,6 @@
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
                                                         }" {{ $speciality->active_inactive == 1 ? 'disabled' : '' }}>
-<<<<<<< HEAD
                                                     Delete
                                                 </button>
                                             </form>
@@ -142,79 +82,6 @@
                                 </tbody>
                             </table>
                         </div>
-=======
-=======
-=======
->>>>>>> 35e7663 (new ui)
-
-                                        <td>{{ $speciality->created_date }}</td>
-
-                                        <td>
-                                            <div class="form-check form-switch d-inline-block">
-                                                <input class="form-check-input status-toggle" type="checkbox"
-                                                    role="switch" data-table="exemption_medical_speciality_master"
-                                                    data-column="active_inactive" data-id="{{ $speciality->pk }}"
-                                                    {{ $speciality->active_inactive == 1 ? 'checked' : '' }}>
-                                            </div>
-                                        </td>
-
-                                        <td>
-                                            <a href="{{ route('master.exemption.medical.speciality.edit', 
-                                                    ['id' => encrypt(value: $speciality->pk)]) }}"
-                                                class="btn btn-primary btn-sm">Edit</a>
-                                            <form
-                                                title="{{ $speciality->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                                action="{{ route('master.exemption.medical.speciality.delete', 
-                                                    ['id' => encrypt($speciality->pk)]) }}" method="POST"
-                                                class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }" {{ $speciality->active_inactive == 1 ? 'disabled' : '' }}>
-<<<<<<< HEAD
->>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
-                                                Delete
-                                            </button>
-                                        </form>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr>
-                                    <td colspan="6" class="text-center">No specialities found.</td>
-                                </tr>
-                                @endforelse
-                            </tbody>
-<<<<<<< HEAD
-<<<<<<< HEAD
->>>>>>> 48a903a (Exemption Category and Exemption Medical Speciality)
-=======
->>>>>>> 3277777 (Exemption Category and Exemption Medical Speciality)
->>>>>>> ed5bd5b (Exemption Category and Exemption Medical Speciality)
-=======
->>>>>>> 3277777 (Exemption Category and Exemption Medical Speciality)
-=======
->>>>>>> 234cd48 (Exemption Category and Exemption Medical Speciality)
-<<<<<<< HEAD
->>>>>>> c55af26 (Exemption Category and Exemption Medical Speciality)
-=======
-=======
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    @empty
-                                    <tr>
-                                        <td colspan="6" class="text-center">No specialities found.</td>
-                                    </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
->>>>>>> 35e7663 (new ui)
->>>>>>> 8027569 (new ui)
                     </div>
                 </div>
             </div>
