@@ -12,8 +12,7 @@
         <!-- start Zero Configuration -->
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
+                 <div class="row">
                         <div class="col-6">
                             <h4 class="card-title">Memo Management</h4>
                         </div>
@@ -46,8 +45,9 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
-                        <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                       <div class="table-responsive">
+                         <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable w-100"
                             aria-describedby="zero_config_info">
                             <thead>
                                 <!-- start row -->
@@ -88,9 +88,9 @@
                                 </tr>
                             </tbody>
                         </table>
+                       </div>
 
                     </div>
-                </div>
             </div>
         </div>
         <!-- end Zero Configuration -->
