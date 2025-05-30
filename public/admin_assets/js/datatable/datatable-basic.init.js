@@ -10,7 +10,9 @@ $(function () {
 /****************************************
  *       Basic Table                   *
  ****************************************/
-$("#zero_config").DataTable();
+ $('#zero_config').DataTable({
+        responsive: true
+    });
 
 /****************************************
  *       Default Order Table           *
