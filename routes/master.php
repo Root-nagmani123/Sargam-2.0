@@ -12,7 +12,8 @@ use App\Http\Controllers\Admin\Master\{
     ExemptionCategoryController,
     MemoTypeMasterController,
     MemoConclusionMasterController,
-    DepartmentMasterController
+    DepartmentMasterController,
+    DesignationMasterController
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -117,6 +118,15 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
 
     // Department Master
     Route::prefix('department-master')->name('department.master.')->controller(DepartmentMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Designation Master
+    Route::prefix('designation')->name('designation.')->controller(DesignationMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');

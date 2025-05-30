@@ -427,6 +427,21 @@
                                     <span class="hide-menu">Memo Conclusion Master</span>
                                 </a>
                             </li>
+
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.department.master.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Department Master</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.designation.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Designation Master</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                     <!-- Forms -->
