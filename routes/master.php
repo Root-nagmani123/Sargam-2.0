@@ -4,14 +4,15 @@ use App\Http\Controllers\Admin\{
     LocationController
 };
 use App\Http\Controllers\Admin\Master\{
-    FacultyTypeMasterController, 
-    MDODutyTypeController, 
+    FacultyTypeMasterController,
+    MDODutyTypeController,
     CourseGroupTypeController,
     ClassSessionMasterController,
     FacultyExpertiseMasterController,
     ExemptionCategoryController,
     MemoTypeMasterController,
-    MemoConclusionMasterController
+    MemoConclusionMasterController,
+    DepartmentMasterController
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -83,10 +84,10 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     // Course Group Type Master Routes
     Route::prefix('course-group-type')->name('course.group.type.')->controller(CourseGroupTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
-        Route::get('/create',  'create')->name('create');
-        Route::post('/store',  'store')->name('store');
-        Route::get('/edit/{id}',  'edit')->name('edit');
-        Route::delete('/delete/{id}',  'delete')->name('delete');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
     Route::prefix('mdo')->name('mdo_duty_type.')->controller(MDODutyTypeController::class)->group(function () {
@@ -113,37 +114,47 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
-    Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
-    Route::get('/', 'medicalSpecialityIndex')->name('index');
-    Route::get('/create', 'medicalSpecialityCreate')->name('create');
-    Route::post('/store', 'medicalSpecialityStore')->name('store');
-    Route::get('/edit/{id}', 'medicalSpecialityEdit')->name('edit');
-    Route::delete('/delete/{id}', 'medicalSpecialityDelete')->name('delete');
-});
-Route::prefix('memo-type-master')->name('memo.type.master.')->controller(MemoTypeMasterController::class)->group(function () {
-    Route::get('/', 'index')->name('index');
-    Route::get('/create', 'create')->name('create');
-    Route::post('/store', 'store')->name('store');
-    Route::get('/edit/{id}', 'edit')->name('edit');
-    Route::delete('/delete/{id}', 'delete')->name('delete');
-});
-Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->controller(MemoConclusionMasterController::class)->group(function () {
-    Route::get('/', 'index')->name('index');
-    Route::get('/create', 'create')->name('create');
-    Route::post('/store', 'store')->name('store');
-    Route::get('/edit/{id}', 'edit')->name('edit');
-    Route::delete('/delete/{id}', 'destroy')->name('delete');
-});
 
-//memo management
-Route::get('/memo', function () {
-            return view('admin.master.memo.index');
-})->name('memo.index');
-Route::get('/conversation', function () {
-            return view('admin.master.memo.conversation');
-})->name('memo.conversation');
-Route::get('/create', function () {
-            return view('admin.master.memo.create');
-})->name('memo.create');
-    
+    // Department Master
+    Route::prefix('department-master')->name('department.master.')->controller(DepartmentMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
+        Route::get('/', 'medicalSpecialityIndex')->name('index');
+        Route::get('/create', 'medicalSpecialityCreate')->name('create');
+        Route::post('/store', 'medicalSpecialityStore')->name('store');
+        Route::get('/edit/{id}', 'medicalSpecialityEdit')->name('edit');
+        Route::delete('/delete/{id}', 'medicalSpecialityDelete')->name('delete');
+    });
+    Route::prefix('memo-type-master')->name('memo.type.master.')->controller(MemoTypeMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+    Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->controller(MemoConclusionMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
+    //memo management
+    Route::get('/memo', function () {
+        return view('admin.master.memo.index');
+    })->name('memo.index');
+    Route::get('/conversation', function () {
+        return view('admin.master.memo.conversation');
+    })->name('memo.conversation');
+    Route::get('/create', function () {
+        return view('admin.master.memo.create');
+    })->name('memo.create');
+
 });
