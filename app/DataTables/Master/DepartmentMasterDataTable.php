@@ -1,6 +1,6 @@
 <?php
 
-namespace App\DataTables;
+namespace App\DataTables\Master;
 
 use App\Models\DepartmentMaster;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
