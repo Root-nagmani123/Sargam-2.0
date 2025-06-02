@@ -14,84 +14,66 @@
             <form action="" method="POST">
                 <div class="row">
                     <div class="col-6">
-                         <div class="mb-3">
-                            <label for="type" class="form-label">Course Student Attendance</label>
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Course</label>
                             <select name="type" class="form-control" id="">
-                                <option value="">Select Type</option>
-                                <option value="memo">Memo</option>
-                                <option value="notice">Notice</option>
+                                <option value="">Select Course</option>
+
                             </select>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
-                            <label for="" class="form-label">Student Master <span style="color:#af2910;">*</span></label>
+                            <label for="" class="form-label">Subject <span style="color:#af2910;">*</span></label>
                             <select name="student_master_id" class="form-control" id="">
-                                <option value="">Select Student</option>
+                                <option value="">Select Subject</option>
+                                <!-- Options will be populated dynamically -->
+                            </select>
+                            <small>For student who have absent or late in that session</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label for="" class="form-label">Topic</label>
+                            <select name="student_master_id" class="form-control" id="">
+                                <option value="">Select Topic</option>
                                 <!-- Options will be populated dynamically -->
                             </select>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
-                            <label for="" class="form-label">OT Code</label>
-                            <input type="text" class="form-control" name="ot_code" id="" placeholder="Enter OT Code" readonly>
+                            <label for="type" class="form-label">Venue <span style="color:#af2910;">*</span></label>
+                            <input type="text" name="" id="" class="form-control">
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
-                            <label for="type" class="form-label">Type <span style="color:#af2910;">*</span></label>
-                            <select name="type" class="form-control" id="">
-                                <option value="">Select Type</option>
-                                <option value="memo">Memo</option>
-                                <option value="notice">Notice</option>
-                            </select>
-                        </div>
-                    </div>
-                     <div class="col-6">
-                        <div class="mb-3">
-                            <label for="type" class="form-label">Course Master <span style="color:#af2910;">*</span></label>
-                            <select name="type" class="form-control" id="">
-                                <option value="">Select Type</option>
-                                <option value="memo">Memo</option>
-                                <option value="notice">Notice</option>
-                            </select>
-                        </div>
-                    </div>
-                     <div class="col-6">
-                        <div class="mb-3">
-                            <label for="type" class="form-label">Type <span style="color:#af2910;">*</span></label>
-                            <select name="type" class="form-control" id="">
-                                <option value="">Select Type</option>
-                                <option value="memo">Memo</option>
-                                <option value="notice">Notice</option>
-                            </select>
-                        </div>
-                    </div>
-                     <div class="col-12">
-                        <div class="mb-3">
-                            <label for="type" class="form-label">Message <span style="color:#af2910;">*</span></label>
-                            <textarea name="message" id="message" class="form-control" rows="5"></textarea>
-                        </div>
-                    </div>
-                    <div class="col-12">
-                        <div class="mb-3">
-                            <label for="" class="form-label">Status</label>
-                            <select name="status" id="status" class="form-control">
-                                <option value="">Select Status</option>
-                                <option value="0">Active</option>
-                                <option value="1">Inactive</option>
-                            </select>
+                            <label for="" class="form-label">Session</label>
+                            <select name="" class="form-control" id="">
+                                <option value="">Select Session</option>
+                                <!-- Options will be populated dynamically -->
                         </div>
                     </div>
                     
+
                 </div>
-                
+
                 <hr>
 
-                <div class="text-end gap-3">
-                    <button type="submit" class="btn btn-primary">Save</button>
-                    <a href="{{ route('master.memo.index') }}" class="btn btn-secondary">Back</a>
+                <div class="row">
+                    <div class="col-10">
+                        <div class="text-center gap-3">
+                            <button type="submit" class="btn btn-danger">Notice</button>
+                            <button type="submit" class="btn btn-warning" style="margin-left: 5%;">Memo</button>
+                        </div>
+                    </div>
+                    <div class="col-2">
+                        <div class="text-end gap-3">
+                            <button type="reset" class="btn btn-primary">Preview</button>
+                            <a href="{{ route('master.memo.index') }}" class="btn btn-secondary">Back</a>
+                        </div>
+                    </div>
                 </div>
             </form>
 
