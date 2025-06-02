@@ -41,7 +41,7 @@ class EmployeeTypeMasterController extends Controller
         if ($id && !$employeeType) {
             return redirect()->back()->with('error', 'Employee Type not found.');
         }
-
+        
         $employeeType->category_type_name = $request->employee_type_name;
         $employeeType->save();
 
