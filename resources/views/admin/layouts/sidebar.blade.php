@@ -427,7 +427,7 @@
                                     <span class="hide-menu">Memo Conclusion Master</span>
                                 </a>
                             </li>
-
+                            <hr>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('master.department.master.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
@@ -440,6 +440,20 @@
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Designation Master</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.employee.type.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Employee Type</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.employee.group.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Employee Group</span>
                                 </a>
                             </li>
                         </ul>

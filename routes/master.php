@@ -14,7 +14,8 @@ use App\Http\Controllers\Admin\Master\{
     MemoConclusionMasterController,
     DepartmentMasterController,
     DesignationMasterController,
-    EmployeeTypeMasterController
+    EmployeeTypeMasterController,
+    EmployeeGroupMasterController
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -150,7 +151,14 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::delete('/delete/{id}', 'employeeTypeDelete')->name('delete');
+    });
+
+    // Employee Group Master
+    Route::prefix('employee-group')->name('employee.group.')->controller(EmployeeGroupMasterController::class)->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
     });
 
     Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
