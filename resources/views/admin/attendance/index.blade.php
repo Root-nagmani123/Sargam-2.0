@@ -21,15 +21,15 @@
                     <div class="row">
 
                         <div class="col-sm-6">
-                            <label for="programme" class="form-label">Programme :</label>
+                            <label for="programme" class="form-label">Course Name :</label>
                             <div class="mb-3">
                                 <select name="course_master_pk" id="programme" class="form-select select2" required>
-                                    <option value="">Select Programme</option>
+                                    <option value="">Select Course</option>
                                     @foreach($courseMasters as $course)
                                         <option value="{{ $course['pk'] }}">{{ $course['course_name'] }}</option>
                                     @endforeach
                                 </select>
-                                <small class="form-text text-muted">Select Programme</small>
+                                <small class="form-text text-muted">Select Course</small>
                             </div>
                         </div>
                         <div class="col-sm-6">

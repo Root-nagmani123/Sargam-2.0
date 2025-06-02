@@ -24,6 +24,10 @@
                     <tr>
                         <th>Date</th>
                         <th>No. of Session(s)</th>
+                        <th>Topics</th>
+                        <th>
+                            Venue
+                        </th>
                         <th>Session(s)</th>
                     </tr>
                 </thead>
@@ -31,6 +35,8 @@
                     <tr>
                         <td>22-11-2013</td>
                         <td>1</td>
+                        <td>Lorem ipsum dolor sit amet.</td>
+                         <td>Lorem, ipsum.</td>
                         <td>06:00-07:00</td>
                     </tr>
                 </tbody>
