@@ -23,7 +23,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="discussion_name" class="form-label">Discussion Name <span>*</span></label>
+                            <label for="discussion_name" class="form-label">Discussion Name<span style="color:red;">*</span></label>
                             <input type="text" name="discussion_name" class="form-control"
                                    value="{{ old('discussion_name', $conclusion->discussion_name ?? '') }}" required>
                             @error('discussion_name')
@@ -47,7 +47,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="active_inactive" class="form-label">Status <span>*</span></label>
+                            <label for="active_inactive" class="form-label">Status <span style="color:red;">*</span></label>
                             <select name="active_inactive" class="form-select" required>
                                 <option value="1" {{ (old('active_inactive', $conclusion->active_inactive ?? 1) == 1) ? 'selected' : '' }}>Active</option>
                                 <option value="2" {{ (old('active_inactive', $conclusion->active_inactive ?? 1) == 2) ? 'selected' : '' }}>Inactive</option>
