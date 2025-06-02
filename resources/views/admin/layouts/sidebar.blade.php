@@ -456,6 +456,13 @@
                                     <span class="hide-menu">Employee Group</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.caste.category.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Caste Category</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                     <!-- Forms -->
