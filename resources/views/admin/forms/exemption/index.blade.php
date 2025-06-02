@@ -41,7 +41,7 @@
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
                         <div class="table-responsive">
                             <table id="zero_config"
-                            class="table table-striped table-bordered align-middle dataTable"
+                            class="table table-striped table-bordered align-middle dataTable nowrap"
                             aria-describedby="zero_config_info">
                             <thead>
                                 <tr>

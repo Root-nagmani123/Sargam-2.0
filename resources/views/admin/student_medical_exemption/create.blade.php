@@ -39,7 +39,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Doctor Name *</label>
+                            <label class="form-label">Doctor Name <span class="text-danger">*</span></label>
                             <select name="employee_master_pk" class="form-control col-form-label" readonly required>
                                 <option value="1" selected>XYZ</option>
                             </select>
@@ -52,7 +52,7 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Course *</label>
+                            <label class="form-label">Course <span class="text-danger">*</span></label>
                             <select name="course_master_pk" class="form-control col-form-label" required>
                                 <option value="">Select Course</option>
                                 @foreach($courses as $course)
@@ -70,7 +70,7 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Student Name *</label>
+                            <label class="form-label">Student Name <span class="text-danger">*</span></label>
                             <select name="student_master_pk" class="form-control select2" id="studentDropdown" required>
                                 <option value="">Search Student</option>
                                 @foreach($students as $student)
@@ -95,7 +95,7 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Exemption Category *</label>
+                            <label class="form-label">Exemption Category <span class="text-danger">*</span></label>
                             <select name="exemption_category_master_pk" class="form-control col-form-label" required>
                                 <option value="">Select Category</option>
                                 @foreach($categories as $cat)
@@ -130,7 +130,7 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Medical Speciality *</label>
+                            <label class="form-label">Medical Speciality <span class="text-danger">*</span></label>
                             <select name="exemption_medical_speciality_pk" class="form-control col-form-label" required>
                                 <option value="">Select Speciality</option>
                                 @foreach($specialities as $spec)
@@ -148,7 +148,7 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">From Date *</label>
+                            <label class="form-label">From Date <span class="text-danger">*</span></label>
                             <input type="date" name="from_date" class="form-control col-form-label" required
                                 value="{{ old('from_date') }}">
                         </div>
@@ -190,7 +190,7 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Status *</label>
+                            <label class="form-label">Status <span class="text-danger">*</span></label>
                             <select name="active_inactive" class="form-control col-form-label" required>
                                 <option value="1" {{ old('active_inactive', '1') == '1' ? 'selected' : '' }}>Active
                                 </option>
