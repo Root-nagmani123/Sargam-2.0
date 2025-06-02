@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\DataTables\DepartmentMasterDataTable;
+use App\DataTables\Master\DepartmentMasterDataTable;
 use App\Models\DepartmentMaster;
 use Illuminate\Validation\Rule;
 

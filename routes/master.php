@@ -13,7 +13,8 @@ use App\Http\Controllers\Admin\Master\{
     MemoTypeMasterController,
     MemoConclusionMasterController,
     DepartmentMasterController,
-    DesignationMasterController
+    DesignationMasterController,
+    EmployeeTypeMasterController
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -132,6 +133,24 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Category Type
+    // Route::prefix('category-type')->name('category.type.')->controller(ExemptionCategoryController::class)->group(function () {
+    //     Route::get('/', 'categoryTypeIndex')->name('index');
+    //     Route::get('/create', 'categoryTypeCreate')->name('create');
+    //     Route::post('/store', 'categoryTypeStore')->name('store');
+    //     Route::get('/edit/{id}', 'categoryTypeEdit')->name('edit');
+    //     Route::delete('/delete/{id}', 'categoryTypeDelete')->name('delete');
+    // });
+
+    // Employee Type Master
+    Route::prefix('employee-type')->name('employee.type.')->controller(EmployeeTypeMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::delete('/delete/{id}', 'employeeTypeDelete')->name('delete');
     });
 
     Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
