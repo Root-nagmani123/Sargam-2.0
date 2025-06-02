@@ -30,7 +30,6 @@
                                 <th>#</th>
                                 <th>Discussion Name</th>
                                 <th>PT Discussion</th>
-                                <th>Created Date</th>
                                 <th>Status</th>
                                 <th>Actions</th>
                             </tr>
@@ -41,7 +40,6 @@
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $conclusion->discussion_name }}</td>
                                     <td>{{ $conclusion->pt_discusion }}</td>
-                                    <td>{{ $conclusion->created_date }}</td>
                                     <td>
                                         <div class="form-check form-switch d-inline-block">
                                             <input class="form-check-input status-toggle" type="checkbox"
