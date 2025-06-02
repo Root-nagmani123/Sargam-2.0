@@ -26,7 +26,7 @@
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
                         <div class="table-responsive">
-                            <table class="table table-bordered" id="zero_config" style="width: 100%;">
+                            <table class="table table-bordered dataTables dataTable w-100 table-striped nowrap" id="zero_config" style="width: 100%;">
                                 <thead>
                                     <tr>
                                         <th>#</th>
