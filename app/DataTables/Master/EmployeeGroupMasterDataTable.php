@@ -24,7 +24,7 @@ class EmployeeGroupMasterDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('group_name', fn($row) => $row->group_name ?? '-')
+            ->addColumn('emp_group_name', fn($row) => $row->emp_group_name ?? '-')
             ->addColumn('action', function ($row) {
                 $editUrl = route('master.employee.group.edit', ['id' => encrypt($row->pk)]);
                 return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
@@ -39,10 +39,10 @@ class EmployeeGroupMasterDataTable extends DataTable
 
             ->setRowId('pk')
             ->setRowClass('text-center')
-            ->filterColumn('group_name', function ($query, $keyword) {
-                $query->where('group_name', 'like', "%{$keyword}%");
+            ->filterColumn('emp_group_name', function ($query, $keyword) {
+                $query->where('emp_group_name', 'like', "%{$keyword}%");
             })
-            ->rawColumns(['group_name', 'action', 'status']);
+            ->rawColumns(['emp_group_name', 'action', 'status']);
     }
 
     /**
@@ -94,7 +94,7 @@ class EmployeeGroupMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('group_name')->title('Category Type Name')->orderable(false)->addClass('text-center'),
+            Column::make('emp_group_name')->title('Employee Group Name')->orderable(false)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];
