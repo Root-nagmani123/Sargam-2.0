@@ -41,20 +41,26 @@ class MemoTypeMasterController extends Controller
                     $memoType->active_inactive = $request->active_inactive;
 
                     // File Upload to Storage
-                  if ($request->hasFile('memo_doc_upload')) {
-                        $file = $request->file('memo_doc_upload');
+             if ($request->hasFile('memo_doc_upload')) {
+                    $file = $request->file('memo_doc_upload');
 
-                        // Delete old file if editing
-                        if (isset($memoType->memo_doc_upload) && Storage::disk('public')->exists($memoType->memo_doc_upload)) {
-                            Storage::disk('public')->delete($memoType->memo_doc_upload);
-                        }
-
-                        // Store the file inside storage/app/public/memo_documents
-                        $path = $file->store('memo_documents', 'public');
-
-                        // Save only the relative path in DB (without 'public/')
-                        $memoType->memo_doc_upload = $path;
+                    // Delete old file if editing
+                    if (isset($memoType->memo_doc_upload) && Storage::disk('public')->exists($memoType->memo_doc_upload)) {
+                        Storage::disk('public')->delete($memoType->memo_doc_upload);
                     }
+
+                    // Get original file name with extension
+                    $originalFileName = $file->getClientOriginalName();
+
+                    // Optional: create a unique file name to avoid overwrite
+                    $filename = uniqid() . '_' . $originalFileName;
+
+                    // Store the file in 'public/memo_documents' with custom name
+                    $path = $file->storeAs('memo_documents', $filename, 'public');
+
+                    // Save the relative path to DB
+                    $memoType->memo_doc_upload = $path;
+                }
 
 
                     $memoType->save();

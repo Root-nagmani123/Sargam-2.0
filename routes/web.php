@@ -20,7 +20,8 @@ use App\Http\Controllers\Admin\{
     CalendarController,
     MDOEscrotExemptionController,
     AttendanceController,
-    StudentMedicalExemptionController
+    StudentMedicalExemptionController,
+    CourseMemoDecisionMappController
 };
 
 Route::get('clear-cache', function () {
@@ -232,5 +233,19 @@ Route::middleware(['auth'])->group(function () {
 
     Route::delete('/delete/{id}', 'delete')->name('delete');
 });
+
+Route::prefix('admin/course-memo-decision')
+    ->name('course.memo.decision.')
+    ->controller(CourseMemoDecisionMappController::class)
+    ->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
+
+    });
+
 
 });

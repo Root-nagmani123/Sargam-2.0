@@ -24,7 +24,7 @@
                     <!-- Memo Type Name -->
                    <div class="col-md-6">
                         <div class="mb-3">
-                            <label for="memo_type_name" class="form-label">Memo Type Name <span>*</span></label>
+                            <label for="memo_type_name" class="form-label">Memo Type Name <span style="color:red;">*</span></label>
                             <input type="text" name="memo_type_name" class="form-control"
                                 value="{{ old('memo_type_name', $memoType->memo_type_name ?? '') }}" required>
                             @error('memo_type_name')
@@ -38,6 +38,7 @@
                         <div class="mb-3">
                             <label for="memo_doc_upload" class="form-label">Upload Document</label>
                             <input type="file" name="memo_doc_upload" class="form-control" accept=".pdf,.doc,.docx">
+                            <small class="text-muted">Supported formats: PDF, DOC, DOCX</small>
                             @if(isset($memoType) && $memoType->memo_doc_upload)
                                 <small class="d-block mt-1">
                                     Existing File: 
@@ -56,7 +57,7 @@
                 <!-- Status -->
                <div class="col-md-6">
                     <div class="mb-3">
-                        <label for="active_inactive" class="form-label">Status <span>*</span></label>
+                        <label for="active_inactive" class="form-label">Status <span style="color:red;">*</span></label>
                         <select name="active_inactive" class="form-select" required>
                             <option value="1" {{ (old('active_inactive', $memoType->active_inactive ?? 1) == 1) ? 'selected' : '' }}>
                                 Active
