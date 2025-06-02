@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\DesignationMaster;
-use App\DataTables\DesignationMasterDataTable;
+use App\DataTables\Master\DesignationMasterDataTable;
 use Illuminate\Validation\Rule; 
 class DesignationMasterController extends Controller
 {
