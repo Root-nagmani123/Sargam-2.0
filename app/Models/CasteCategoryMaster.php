@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CasteCategoryMaster extends Model
 {
-    use HasFactory;
+    protected $table = 'caste_category_master';
+    protected $primaryKey = 'pk';
+    protected $gurarded = [];
+    public $timestamps = false;
 }
