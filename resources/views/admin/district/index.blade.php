@@ -12,24 +12,37 @@
         <!-- start Zero Configuration -->
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>District</h4>
+                <div class="row">
+                    <div class="col-6">
+                        <h4>District</h4>
+                    </div>
+                    <div class="col-6">
+                        <div class="float-end gap-2">
+                            <a href="{{ route('master.district.create') }}" class="btn btn-primary">+ Add
+                                District</a>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{ route('master.district.create') }}" class="btn btn-primary">+ Add
-                                    District</a>
+                    </div>
+                </div>
+                <hr>
+                <div class="dataTables_wrapper">
+                    <div class="row mb-3">
+                        <div class="col-1">
+                            <select name="search" id="" class="form-control">
+                                <option value="">10</option>
+                                <option value="">20</option>
+                                <option value="">50</option>
+                                <option value="">100</option>
+                            </select>
+                        </div>
+                        <div class="col-11">
+                            <div class="float-end">
+                                <input type="search" class="form-control" id="search"
+                                    placeholder="Search by district name">
                             </div>
                         </div>
                     </div>
-                    <hr>
-                    <div id="zero_config_wrapper" class="dataTables_wrapper">
-
-                        <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                            aria-describedby="zero_config_info">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered text-nowrap align-middle dataTable">
                             <thead>
                                 <!-- start row -->
                                 <tr>
@@ -70,10 +83,10 @@
 
                             </tbody>
                         </table>
-                        <div class="mt-3">
-                            {{ $districts->links('pagination::bootstrap-5') }}
+                    </div>
+                    <div class="mt-3">
+                        {{ $districts->links('pagination::bootstrap-5') }}
 
-                        </div>
                     </div>
                 </div>
             </div>
