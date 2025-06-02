@@ -12,7 +12,7 @@ class CourseMemoDecisionMapp extends Model
 
     protected $fillable = [ 
         'course_master_pk',
-        'memo_decision_master_pk',
+        'memo_type_master_pk',
         'memo_conclusion_master_pk',
         'active_inactive',
         'created_date',
@@ -26,7 +26,7 @@ class CourseMemoDecisionMapp extends Model
     // Define relationship with MemoTypeMaster
     public function memo()
     {
-        return $this->belongsTo(MemoTypeMaster::class, 'memo_decision_master_pk', 'pk');
+        return $this->belongsTo(MemoTypeMaster::class, 'memo_type_master_pk', 'pk');
     }
    public function memoConclusion()
 {

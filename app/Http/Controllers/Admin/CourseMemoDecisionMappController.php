@@ -8,7 +8,7 @@ use App\Models\{CourseMemoDecisionMapp,CourseMaster, MemoTypeMaster, MemoConclus
 class CourseMemoDecisionMappController extends Controller
 {
      public function index()
-    {
+    { 
         // $mappings = CourseMemoDecisionMapp::all();
         $mappings = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])->get();
         return view('admin.course_memo_decision_mapping.index', compact('mappings'));
@@ -28,7 +28,8 @@ class CourseMemoDecisionMappController extends Controller
         
         $request->validate([
             'course_master_pk' => 'required|numeric',
-            'memo_decision_master_pk' => 'required|numeric',
+            'memo_type_master_pk' => 'required|numeric',
+            'memo_conclusion_master_pk' => 'required|numeric',
             'active_inactive' => 'required|in:1,2',
         ]);
         CourseMemoDecisionMapp::create($request->all());
@@ -50,7 +51,8 @@ class CourseMemoDecisionMappController extends Controller
     {
         $request->validate([
             'course_master_pk' => 'required|numeric',
-            'memo_decision_master_pk' => 'required|numeric',
+            'memo_type_master_pk' => 'required|numeric',
+            'memo_conclusion_master_pk' => 'required|numeric',
             'active_inactive' => 'required|in:1,2',
         ]);
 

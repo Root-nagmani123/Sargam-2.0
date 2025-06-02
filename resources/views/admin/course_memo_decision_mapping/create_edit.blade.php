@@ -29,7 +29,7 @@
                         <!-- Course Dropdown -->
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="course_master_pk" class="form-label">Select Course <span>*</span></label>
+                                <label for="course_master_pk" class="form-label">Select Course <span style="color:red;">*</span></label>
                                 <select name="course_master_pk" class="form-select" required>
                                     <option value="">-- Select Course --</option>
                                     @foreach($CourseMaster as $course)
@@ -49,17 +49,17 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="memo_decision_master_pk" class="form-label">Select Memo
-                                    <span>*</span></label>
-                                <select name="memo_decision_master_pk" class="form-select" required>
+                                    <span style="color:red;">*</span></label>
+                                <select name="memo_type_master_pk" class="form-select" required>
                                     <option value="">-- Select Memo --</option>
                                     @foreach($MemoTypeMaster as $memo)
                                     <option value="{{ $memo->pk }}"
-                                        {{ (old('memo_decision_master_pk', $courseMemoMap->memo_decision_master_pk ?? '') == $memo->pk) ? 'selected' : '' }}>
+                                        {{ (old('memo_type_master_pk', $courseMemoMap->memo_type_master_pk ?? '') == $memo->pk) ? 'selected' : '' }}>
                                         {{ $memo->memo_type_name }}
                                     </option>
                                     @endforeach
                                 </select>
-                                @error('memo_decision_master_pk')
+                                @error('memo_type_master_pk')
                                 <small class="text-danger">{{ $message }}</small>
                                 @enderror
                             </div>
@@ -68,7 +68,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="memo_conclusion_master_pk" class="form-label">Select Memo Conclusion
-                                    <span>*</span></label>
+                                    <span style="color:red;">*</span></label>
                                 <select name="memo_conclusion_master_pk" class="form-select" required>
                                     <option value="">-- Select Memo Conclusion --</option>
                                     @foreach($MemoConclusionMaster as $memo)
@@ -88,7 +88,7 @@
                         <!-- Status -->
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="active_inactive" class="form-label">Status <span>*</span></label>
+                                <label for="active_inactive" class="form-label">Status <span style="color:red;">*</span></label>
                                 <select name="active_inactive" class="form-select" required>
                                     <option value="1"
                                         {{ (old('active_inactive', $courseMemoMap->active_inactive ?? 1) == 1) ? 'selected' : '' }}>
