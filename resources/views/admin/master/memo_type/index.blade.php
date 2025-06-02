@@ -32,7 +32,6 @@
                                         <th>#</th>
                                         <th>Memo Type Name</th>
                                         <th>Document</th>
-                                        <th>Created Date</th>
                                         <th>Status</th>
                                         <th>Action</th>
                                     </tr>
@@ -49,8 +48,7 @@
                                                 N/A
                                             @endif
                                         </td>
-                                        <td>{{ $memo->created_date }}</td>
-                                        <td>
+                                         <td>
                                             <div class="form-check form-switch d-inline-block">
                                                 <input class="form-check-input status-toggle" type="checkbox"
                                                     role="switch"
