@@ -34,7 +34,7 @@ class CasteCategoryMasterDataTable extends DataTable
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return '<div class="form-check form-switch d-inline-block ms-2">
                 <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="Seat_name" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                    data-table="caste_category_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
             </div>';
             })
 

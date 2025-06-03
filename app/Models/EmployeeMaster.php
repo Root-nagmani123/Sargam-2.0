@@ -30,13 +30,7 @@ class EmployeeMaster extends Model
         3 => 'Other'
     ];
 
-    public const casteCategory = [
-        1 => 'General',
-        2 => 'OBC',
-        3 => 'SC',
-        4 => 'ST',
-        5 => 'Other'
-    ];
+    
     
     public static function getDeputationEmployeeList()
     {

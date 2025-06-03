@@ -55,9 +55,9 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            @php $casteCategoryOptions = App\Models\EmployeeMaster::casteCategory; @endphp
 
-            <x-select name="caste_category" label="Caste Category :" :options="$casteCategoryOptions" :value="old('caste_category')" formLabelClass="form-label" formSelectClass="form-select" />
+            @php $casteCategory = App\Models\CasteCategoryMaster::GetSeatName(); @endphp
+            <x-select name="caste_category" label="Caste Category :" :options="$casteCategory" :value="old('caste_category')" formLabelClass="form-label" formSelectClass="form-select" />
 
         </div>
     </div>

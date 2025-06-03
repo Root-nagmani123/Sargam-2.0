@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Member;
 
+use App\Models\CasteCategoryMaster;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use App\Models\EmployeeMaster;
@@ -24,6 +25,7 @@ class StoreMemberStep1Request extends FormRequest
      */
     public function rules()
     {
+        // dd(array_keys(CasteCategoryMaster::GetSeatName()));
         return [
             'title' => 'required|string|max:20',
             'first_name' => 'required|string|max:100',
@@ -40,7 +42,7 @@ class StoreMemberStep1Request extends FormRequest
             ],
             'caste_category' => [
                 'required',
-                Rule::in(array_keys(EmployeeMaster::casteCategory))
+                Rule::in(array_keys(CasteCategoryMaster::GetSeatName()->toArray()))
             ],
             'height' => 'nullable|string|max:20',
             'date_of_birth' => 'required|date|before_or_equal:today',

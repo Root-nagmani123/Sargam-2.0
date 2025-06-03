@@ -14,10 +14,13 @@ class DepartmentMaster extends Model
 
     protected $guarded = [];
 
-    // Cache the department list
+    public function scopeActive($query)
+    {
+        return $query->where('active_inactive', 1);
+    }
     public static function getDepartmentList()
     {
-        $departmentList = self::select('pk', 'department_name')->get();
+        $departmentList = self::active()->select('pk', 'department_name')->get();
         return $departmentList->toArray();
     }
 }
