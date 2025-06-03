@@ -8,7 +8,7 @@
                 
             @endphp
 
-            <x-select name="type" label="Employee Type :" :options="$employeeTypeOptions" :value="old('type')" formLabelClass="form-label" formSelectClass="form-select @error('type') is-invalid @enderror" />
+            <x-select name="type" label="Employee Type :" :options="$employeeTypeOptions" :value="old('type')" formLabelClass="form-label" formSelectClass="form-select" />
 
             
         </div>
@@ -16,7 +16,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="id" label="Employee ID :" type="text" value="{{ old('id') }}" formLabelClass="form-label" formInputClass="form-control @error('id') is-invalid @enderror" />
+            <x-input name="id" label="Employee ID :" type="text" value="{{ old('id') }}" formLabelClass="form-label" formInputClass="form-control" />
 
         </div>
     </div>
@@ -28,7 +28,7 @@
                 $employeeGroupOptions = array_column($employeeGroupOptions, 'group_name', 'pk');
             @endphp 
 
-            <x-select name="group" label="Employee Group :" :options="$employeeGroupOptions" :value="old('group')" formLabelClass="form-label" formSelectClass="form-select @error('group') is-invalid @enderror" />
+            <x-select name="group" label="Employee Group :" :options="$employeeGroupOptions" :value="old('group')" formLabelClass="form-label" formSelectClass="form-select" />
 
         </div>
     </div>
@@ -40,14 +40,14 @@
                 $designationOptions = array_column($designationOptions, 'designation_name', 'pk');
             @endphp
 
-            <x-select name="designation" label="Designation :" :options="$designationOptions" :value="old('designation')" formLabelClass="form-label" formSelectClass="form-select @error('designation') is-invalid @enderror" />
+            <x-select name="designation" label="Designation :" :options="$designationOptions" :value="old('designation')" formLabelClass="form-label" formSelectClass="form-select" />
 
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="userid" label="User ID :" type="text" value="{{ old('userid') }}" formLabelClass="form-label" formInputClass="form-control @error('userid') is-invalid @enderror" />
+            <x-input name="userid" label="User ID :" type="text" value="{{ old('userid') }}" formLabelClass="form-label" formInputClass="form-control" />
 
         </div>
     </div>
@@ -59,7 +59,7 @@
                 $sectionOptions = array_column($sectionOptions, 'department_name', 'pk');
             @endphp
 
-            <x-select name="section" label="Department Name :" :options="$sectionOptions" :value="old('section')" formLabelClass="form-label" formSelectClass="form-select @error('section') is-invalid @enderror" />
+            <x-select name="section" label="Department Name :" :options="$sectionOptions" :value="old('section')" formLabelClass="form-label" formSelectClass="form-select" />
 
         </div>
     </div>
