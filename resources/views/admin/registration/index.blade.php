@@ -31,8 +31,7 @@
     <!-- Registration Table -->
     <div class="card">
         <div class="card-body">
-            <div class="table-responsive">
-                <div class="row">
+            <div class="row">
                     <div class="col-6">
                         <h4>Registration</h4>
                     </div>
@@ -44,87 +43,88 @@
                 @if (session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
                 @endif
-                <table id="zero_config" class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                    aria-describedby="zero_config_info">
-                    <thead>
-                        <tr>
-                            <th class="col">S.No.</th>
-                            <th class="col">Form ID</th>
-                            <th class="col">Name</th>
-                            <th class="col">Description</th>
-                            <th class="col">From</th>
-                            <th class="col">To</th>
-                            <th class="col">Submissions List</th>
-                            <th class="col">Pending Submissions</th>
-                            <th class="col">Edit Form Fields</th>
-                            <th class="col">Actions</th>
-                            <th class="col">Status</th>
-                            <th class="col">Position</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($forms as $index => $form)
-                        <tr>
-                            <td>{{ $loop->iteration }}</td>
-                            <td>{{ $form->id }}</td>
-                            <td>{{ $form->name }}</td>
-                            <td>{{ $form->description }}</td>
-                            <td>{{ \Carbon\Carbon::parse($form->course_sdate)->format('d-m-Y') }}</td>
-                            <td>{{ \Carbon\Carbon::parse($form->course_edate)->format('d-m-Y') }}</td>
-                            <td>
-                                <a href="{{ route('forms.courseList', $form->id) }}" class="btn btn-sm btn-success">
-                                    View
-                                </a>
-                            </td>
-                            <td>
-                                <a href="{{ route('forms.show', $form->id) }}" class="btn btn-sm btn-info">
-                                    Preview
-                                </a>
-                            </td>
-                            <td>
-                                <a href="{{ route('forms.fc_edit', $form->id) }}" class="btn btn-sm btn-warning">
-                                    Edit Fields
-                                </a>
-                            </td>
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered text-nowrap align-middle dataTable">
+                        <thead>
+                            <tr>
+                                <th class="col">S.No.</th>
+                                <th class="col">Form ID</th>
+                                <th class="col">Name</th>
+                                <th class="col">Description</th>
+                                <th class="col">From</th>
+                                <th class="col">To</th>
+                                <th class="col">Submissions List</th>
+                                <th class="col">Pending Submissions</th>
+                                <th class="col">Edit Form Fields</th>
+                                <th class="col">Actions</th>
+                                <th class="col">Status</th>
+                                <th class="col">Position</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($forms as $index => $form)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $form->id }}</td>
+                                <td>{{ $form->name }}</td>
+                                <td>{{ $form->description }}</td>
+                                <td>{{ \Carbon\Carbon::parse($form->course_sdate)->format('d-m-Y') }}</td>
+                                <td>{{ \Carbon\Carbon::parse($form->course_edate)->format('d-m-Y') }}</td>
+                                <td>
+                                    <a href="{{ route('forms.courseList', $form->id) }}" class="btn btn-sm btn-success">
+                                        View
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ route('forms.show', $form->id) }}" class="btn btn-sm btn-info">
+                                        Preview
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="{{ route('forms.fc_edit', $form->id) }}" class="btn btn-sm btn-warning">
+                                        Edit Fields
+                                    </a>
+                                </td>
 
-                            <td class="d-flex gap-1">
-                                <a href="{{ route('forms.edit', $form->id) }}" class="btn btn-sm btn-danger">Edit</a>
-                            </td>
-                            <td>
-                                <!-- Visibility Toggle -->
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input toggle-visible-switch" type="checkbox"
-                                        data-id="{{ $form->id }}" {{ $form->visible ? 'checked' : '' }}>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="form-check d-flex gap-2">
-                                    <!-- Move Up -->
-                                @if ($index > 0)
-                                <form action="{{ route('forms.moveup', $form->id) }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-primary" title="Move Up">
-                                        <i class="bi bi-arrow-up"></i>
-                                    </button>
-                                </form>
-                                @endif
+                                <td class="d-flex gap-1">
+                                    <a href="{{ route('forms.edit', $form->id) }}"
+                                        class="btn btn-sm btn-danger">Edit</a>
+                                </td>
+                                <td>
+                                    <!-- Visibility Toggle -->
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input toggle-visible-switch" type="checkbox"
+                                            data-id="{{ $form->id }}" {{ $form->visible ? 'checked' : '' }}>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-check d-flex gap-2">
+                                        <!-- Move Up -->
+                                        @if ($index > 0)
+                                        <form action="{{ route('forms.moveup', $form->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Move Up">
+                                                <i class="bi bi-arrow-up"></i>
+                                            </button>
+                                        </form>
+                                        @endif
 
-                                <!-- Move Down -->
-                                @if ($index < count($forms) - 1) <form action="{{ route('forms.movedown', $form->id) }}"
-                                    method="POST">
-                                    @csrf
-                                    <button type="submit" class="btn btn-sm btn-primary" title="Move Down">
-                                        <i class="bi bi-arrow-down"></i>
-                                    </button>
-                                    </form>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                                        <!-- Move Down -->
+                                        @if ($index < count($forms) - 1) <form
+                                            action="{{ route('forms.movedown', $form->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-primary" title="Move Down">
+                                                <i class="bi bi-arrow-down"></i>
+                                            </button>
+                                            </form>
+                                            @endif
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
         </div>
     </div>
 </div>
