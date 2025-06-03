@@ -16,6 +16,11 @@ class City extends Model
         'district_master_pk',
         'city_name',
     ];
+
+    public static function getCityList()
+    {
+        return self::select('pk', 'city_name')->get()->pluck('city_name', 'pk');
+    }
     public function state()
     {
         return $this->belongsTo(State::class, 'state_master_pk', 'Pk');

@@ -16,4 +16,9 @@ class Country extends Model
         'updated_by',
         'updated_date',
     ];
+
+    public static function getCountryList()
+    {
+        return self::select('pk', 'country_name')->get()->pluck('country_name', 'pk');
+    }
 }
