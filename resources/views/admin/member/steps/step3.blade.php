@@ -8,7 +8,7 @@
                 ];
             @endphp
 
-            <x-select name="userrole" label="User Role :" :options="$userRoleOptions" :value="old('userrole')" formLabelClass="form-label" formSelectClass="form-select @error('userrole') is-invalid @enderror" />
+            <x-select name="userrole" label="User Role :" :options="$userRoleOptions" :value="old('userrole')" formLabelClass="form-label" formSelectClass="form-select" />
 
             
         </div>

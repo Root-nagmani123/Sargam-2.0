@@ -144,7 +144,7 @@
                                                         id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:shield-user-line-duotone">
                                                         </iconify-icon>
-                                                        <span class="hide-menu">Role Mapping</span>
+                                                        <span class="hide-menu">Member</span>
                                                     </a>
                                                 </li>
                                                 <li class="sidebar-item">

@@ -1,32 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Role Mapping - Sargam | Lal Bahadur')
+@section('title', 'Member')
 
 @section('content')
 <div class="container-fluid">
-    <div class="card card-body py-3">
-        <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Role Mapping</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="{{ route('dashboard') }}">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    Role Mapping
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-        </div>
-    </div>
+    <x-breadcrum title="Member" />
+    <x-session_message />
 
     <div class="datatables">
         <!-- start Zero Configuration -->
@@ -35,11 +14,11 @@
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Role Mapping</h4>
+                            <h4>Member</h4>
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{ route('member.create') }}" class="btn btn-primary">+ Add Role Mapping</a>
+                                <a href="{{ route('member.create') }}" class="btn btn-primary">+ Add Member</a>
                                 <a href="#" class="btn btn-success" data-bs-toggle="modal"
                                     data-bs-target="#vertical-center-scroll-modal">Bulk Upload</a>
 
