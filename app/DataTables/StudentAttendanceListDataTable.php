@@ -13,7 +13,8 @@ class StudentAttendanceListDataTable extends DataTable
 {
     public function __construct(
         protected int $group_pk,
-        protected int $course_pk
+        protected int $course_pk,
+        protected int $timetable_pk
     ) {}
 
     public function dataTable(QueryBuilder $query): EloquentDataTable
@@ -36,6 +37,7 @@ class StudentAttendanceListDataTable extends DataTable
     {
         $groupTypeMaster = GroupTypeMasterCourseMasterMap::where('pk', $this->group_pk)
             ->where('course_name', $this->course_pk)
+
             ->firstOrFail();
 
         return StudentCourseGroupMap::with([
@@ -86,6 +88,7 @@ class StudentAttendanceListDataTable extends DataTable
             ['Student_master_pk', '=', $studentId],
             ['Course_master_pk', '=', $this->course_pk],
             ['student_course_group_map_pk', '=', $this->group_pk],
+            ['timetable_pk', '=', $this->timetable_pk]
         ])->first();
 
         $checked = ($courseStudent && $courseStudent->status == $value) ? 'checked' : '';
@@ -98,7 +101,15 @@ class StudentAttendanceListDataTable extends DataTable
             ])->first();
 
             if ($mdoEscot) {
-                $checked = 'checked';
+                $courseStudentMDO = CourseStudentAttendance::where([
+                    ['Student_master_pk', '=', $studentId],
+                    ['Course_master_pk', '=', $this->course_pk],
+                    ['student_course_group_map_pk', '=', $this->group_pk],
+                    ['timetable_pk', '=', $this->timetable_pk]
+                ])->first();
+                if($courseStudentMDO) {
+                    $checked = 'checked';
+                }
             }
         }
 
@@ -115,6 +126,7 @@ class StudentAttendanceListDataTable extends DataTable
             ['Student_master_pk', '=', $studentId],
             ['Course_master_pk', '=', $this->course_pk],
             ['student_course_group_map_pk', '=', $this->group_pk],
+            ['timetable_pk', '=', $this->timetable_pk]
         ])->first();
 
         $html = '';

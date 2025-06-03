@@ -18,6 +18,7 @@
 
             <input type="hidden" name="group_pk" id="group_pk" value="{{ $group_pk }}">
             <input type="hidden" name="course_pk" id="course_pk" value="{{ $course_pk }}">
+            <input type="hidden" name="timetable_pk" id="timetable_pk" value="{{ $courseGroup->timetable_pk }}">
 
         {{-- Session Summary --}}
         <div class="card shadow mb-4">

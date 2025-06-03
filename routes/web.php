@@ -220,7 +220,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/get-attendance-list', 'getAttendanceList')->name('get.attendance.list');
         Route::get('/create', 'create')->name('create');
         Route::get('/edit/{id}', 'edit')->name('edit');
-        Route::get('/mark/{group_pk}/{course_pk}', 'markAttendanceView')->name('mark');
+        Route::get('/mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('mark');
         Route::post('/save', 'save')->name('save');
     });
 

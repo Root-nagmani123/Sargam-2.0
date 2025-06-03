@@ -93,7 +93,7 @@ class AttendanceController extends Controller
                 ->addColumn('subject_topic', fn($row) => optional($row->timetable)->subject_topic ?? 'N/A')
                 ->addColumn('faculty_name', fn($row) => optional($row->timetable)->faculty->full_name ?? 'N/A')
                 ->addColumn('actions', function ($row) {
-                    $actions = '<a href="' . route('attendance.mark', ['group_pk' => $row->group_pk, 'course_pk' => $row->Programme_pk]) . '" class="btn btn-primary btn-sm" data-id="' . $row->pk . '">Mark Attendance</a>';
+                    $actions = '<a href="' . route('attendance.mark', ['group_pk' => $row->group_pk, 'course_pk' => $row->Programme_pk, 'timetable_pk' => $row->timetable_pk]) . '" class="btn btn-primary btn-sm" data-id="' . $row->pk . '">Mark Attendance</a>';
                     return $actions;
                 })
                 ->rawColumns(['actions'])
@@ -111,7 +111,7 @@ class AttendanceController extends Controller
         }
     }
 
-    function markAttendanceView($group_pk, $course_pk)
+    function markAttendanceView($group_pk, $course_pk, $timetable_pk)
     {
         try {
 
@@ -124,9 +124,10 @@ class AttendanceController extends Controller
             ])
                 ->where('group_pk', $group_pk)
                 ->where('Programme_pk', $course_pk)
+                ->where('timetable_pk', $timetable_pk)
                 ->first();
 
-            $dataTable = new StudentAttendanceListDataTable($group_pk, $course_pk);
+            $dataTable = new StudentAttendanceListDataTable($group_pk, $course_pk, $timetable_pk);
             return $dataTable->render('admin.attendance.mark-attendance', [
                 'group_pk' => $group_pk,
                 'course_pk' => $course_pk,
@@ -163,6 +164,7 @@ class AttendanceController extends Controller
                             'Student_master_pk' => $studentPk,
                             'course_master_pk' => $course_pk,
                             'student_course_group_map_pk' => $group_pk,
+                            'timetable_pk' => $request->timetable_pk,
                         ],
                         [
                             'status' => $attendanceStatus,
