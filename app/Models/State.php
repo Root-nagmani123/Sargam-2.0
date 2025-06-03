@@ -19,6 +19,11 @@ class State extends Model
         'modified_by',
         'modified_date',
     ];
+
+    public static function getStateList()
+    {
+        return self::select('Pk', 'state_name')->get()->pluck('state_name', 'Pk');
+    }
     public function cities()
     {
         return $this->hasMany(City::class, 'state_master_pk', 'pk');

@@ -8,43 +8,35 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-
+            @php
+                $countryOptions = App\Models\Country::getCountryList();
+            @endphp
             <x-select name="country" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" />
 
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
+            @php
+                $stateOptions = App\Models\State::getStateList();
+            @endphp
             <x-select name="state" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="district ">District :</label>
-            <select class="form-select" id="district" name="district">
-                <option value="">Select</option>
-            </select>
+            @php
+                $districtOptions = App\Models\District::getDistrictList();
+            @endphp
+            <x-select name="district" label="District :" formLabelClass="form-label" formSelectClass="form-select" :options="$districtOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="district ">District :</label>
-            <select class="form-select" id="district" name="district">
-                <option value="">Select</option>
-            </select>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="mb-3">
-            <label class="form-label" for="city ">City :</label>
-            <select class="form-select" id="city" name="city">
-                <option value="">Select</option>
-            </select>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="mb-3">
-            <x-input name="city" label="City :" formLabelClass="form-label" formInputClass="form-control" />
+            @php
+                $cityOptions = App\Models\City::getCityList();
+            @endphp
+            <x-select name="city" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
@@ -72,24 +64,34 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="permanentcountry">Country :</label>
-            <select class="form-select" id="permanentcountry" name="permanentcountry" name="permanentcountry">
-                <option value="">Select</option>
-            </select>
+            @php
+                $countryOptions = App\Models\Country::getCountryList();
+            @endphp
+            <x-select name="country" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="permanentstate">State :</label>
-            <select class="form-select" id="permanentstate" name="permanentstate" name="permanentstate">
-                <option value="">Select</option>
-            </select>
+            @php
+                $stateOptions = App\Models\State::getStateList();
+            @endphp
+            <x-select name="state" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="permanentcity ">City :</label>
-            <input type="text" class="form-control" id="permanentcity" name="permanentcity">
+            @php
+                $districtOptions = App\Models\District::getDistrictList();
+            @endphp
+            <x-select name="district" label="District :" formLabelClass="form-label" formSelectClass="form-select" :options="$districtOptions ?? []" />
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            @php
+                $cityOptions = App\Models\City::getCityList();
+            @endphp
+            <x-select name="city" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">

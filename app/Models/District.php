@@ -19,4 +19,9 @@ class District extends Model
     {
         return $this->hasMany(City::class, 'district_master_pk', 'pk');
     }
+
+    public static function getDistrictList()
+    {
+        return self::select('pk', 'district_name')->get()->pluck('district_name', 'pk');
+    }
 }
