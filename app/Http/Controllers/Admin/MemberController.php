@@ -17,6 +17,7 @@ class MemberController extends Controller
 {
     public function index()
     {
+        
         return view('admin.member.index');
     }
 
@@ -49,9 +50,9 @@ class MemberController extends Controller
 
 
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+        // if ($validator->fails()) {
+        //     return response()->json(['errors' => $validator->errors()], 422);
+        // }
 
         return response()->json(['message' => 'Step validated'], 200);
     }

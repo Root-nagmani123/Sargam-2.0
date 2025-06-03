@@ -25,7 +25,7 @@
 
             @php
                 $employeeGroupOptions = App\Models\EmployeeGroupMaster::getEmployeeGroupList();
-                $employeeGroupOptions = array_column($employeeGroupOptions, 'group_name', 'pk');
+                $employeeGroupOptions = array_column($employeeGroupOptions, 'emp_group_name', 'pk');
             @endphp 
 
             <x-select name="group" label="Employee Group :" :options="$employeeGroupOptions" :value="old('group')" formLabelClass="form-label" formSelectClass="form-select" />

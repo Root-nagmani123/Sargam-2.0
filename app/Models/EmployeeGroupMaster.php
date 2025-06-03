@@ -13,11 +13,16 @@ class EmployeeGroupMaster extends Model
 
     protected $guarded = [];
 
+    public function scopeActive($query)
+    {
+        return $query->where('active_inactive', 1);
+    }
+
     public static function getEmployeeGroupList()
     {
-        $employeeGroupList = self::select('pk', 'group_name')->get();
+        $employeeGroupList = self::active()->select('pk', 'emp_group_name')->get();
         return $employeeGroupList->toArray();
     }
-    
+
     
 }

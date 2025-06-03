@@ -13,10 +13,15 @@ class EmployeeTypeMaster extends Model
     public $created_at = 'created_date';
     public $updated_at = 'modified_date';
 
+    public function scopeActive($query)
+    {
+        return $query->where('active_inactive', 1);
+    }
+
     // get employee type list
     public static function getEmployeeTypeList()
     {
-        $employeeTypeList = self::select('pk', 'category_type_name')->get();
+        $employeeTypeList = self::active()->select('pk', 'category_type_name')->get();
         return $employeeTypeList->toArray();
     }
 
