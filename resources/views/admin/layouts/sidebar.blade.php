@@ -413,13 +413,7 @@
                                     <span class="hide-menu">Fc Exemption Master</span>
                                 </a>
                             </li>
-                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('master.memo.index') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Memo Management</span>
-                                </a>
-                            </li>
+                            
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('master.memo.type.master.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
