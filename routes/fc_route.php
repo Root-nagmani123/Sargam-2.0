@@ -5,6 +5,11 @@ use App\Http\Controllers\Admin\Registration\FormController;
 use App\Http\Controllers\Admin\Registration\ColumnController;
 use App\Http\Controllers\Admin\Registration\FormEditController;
 use App\Http\Controllers\Admin\Registration\FcExemptionMasterController;
+use Mews\Captcha\Captcha;
+
+
+
+
 
 //Registration
 
@@ -95,4 +100,7 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     // toggle exemption php
     Route::post('/admin/fc_exemption/{id}/toggle-visible', [FcExemptionMasterController::class, 'toggleVisible'])
         ->name('admin.fc_exemption.toggleVisible');
+
+    //captcha route
+    Route::get('captcha', [FcExemptionMasterController::class, 'reloadCaptcha'])->name('reload.captcha');
 });

@@ -143,7 +143,7 @@ class FormController extends Controller
                 return !in_array(strtolower($column), array_map('strtolower', $excludedColumns));
             })
             ->map(function ($column) {
-                return ucfirst($column);
+                return ($column);
             })
             ->values();  // optional: reset keys
 
@@ -390,16 +390,19 @@ class FormController extends Controller
         // Fetch sections for the selected form
         $sections = DB::table('form_sections')
             ->where('formid', $formId)
-            ->orderBy('sort_order')
+            // ->orderBy('sort_order')
             ->get();
 
         // Fetch fields
         $fields = DB::table('form_data')
             ->where('formid', $formId)
-            ->orderBy('section_id')
+            ->orderBy('id') // Ensure consistent ordering
+            // ->orderBy('section_id')
             ->orderBy('row_index')
             ->orderBy('col_index')
             ->get();
+
+            // dd($fields);
 
         $fieldsBySection = [];
         $gridFields = [];
@@ -444,7 +447,7 @@ class FormController extends Controller
     //finaallll
     public function submit(Request $request, $formId)
     {
-        // dd($request->all());ss
+        // dd($request->all());
         try {
 
 

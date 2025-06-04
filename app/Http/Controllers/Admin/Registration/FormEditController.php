@@ -50,12 +50,14 @@ class FormEditController extends Controller
 
         // Get all column names from the form_submission table
         $columns = Schema::getColumnListing('form_submission');
-
+        
         // Optional: Exclude technical columns
         $excluded = ['id', 'formid', 'uid', 'created_at', 'updated_at'];
-        $filteredColumns = array_filter($columns, function ($col) use ($excluded) {
-            return !in_array($col, $excluded);
-        });
+      $filteredColumns = array_values(array_filter($columns, function ($col) use ($excluded) {
+    return !in_array($col, $excluded);
+}));
+
+        // dd($filteredColumns);
 
         return view('admin.registration.fc_edit', [
             'form_id' => $form_id,
@@ -67,6 +69,7 @@ class FormEditController extends Controller
 
     public function fc_update(Request $request)
     {
+        // dd($request->all());
         $request->validate([
             'section_title.*' => 'required|string',
             'field_label.*' => 'required|string',
@@ -174,6 +177,119 @@ class FormEditController extends Controller
             return back()->with('error', 'Error updating form: ' . $e->getMessage());
         }
     }
+
+//     public function fc_update(Request $request)
+// {
+//     $request->validate([
+//         'section_title.*' => 'required|string',
+//         'field_label.*' => 'required|string',
+//         'field_name.*' => 'required|string',
+//     ]);
+
+//     DB::beginTransaction();
+//     $form_id = $request->form_id;
+//     $newSectionMap = [];
+
+//     try {
+//         // STEP 1: Insert or Update Sections
+//         if ($request->has('section_id') && is_array($request->section_id)) {
+//             foreach ($request->section_id as $index => $section_id) {
+//                 $title = trim($request->section_title[$index]);
+//                 $order = is_numeric($request->sort_order[$index]) ? $request->sort_order[$index] : $index;
+//     dd($order);
+
+//                 if ($section_id === 'new') {
+//                     $newId = DB::table('form_sections')->insertGetId([
+//                         'formid' => $form_id,
+//                         'section_title' => $title,
+//                         'sort_order' => $order,
+//                         'created_at' => now(),
+//                         'updated_at' => now(),
+//                     ]);
+                    
+//                     // Map by title for easier lookup
+//                     $newSectionMap[$title] = $newId;
+//                 } else {
+//                     DB::table('form_sections')->where('id', $section_id)->update([
+//                         'section_title' => $title,
+//                         'sort_order' => $order,
+//                         'updated_at' => now(),
+//                     ]);
+//                 }
+//             }
+//         }
+
+//         // STEP 2: Insert or Update Fields
+//         if ($request->has('field_id') && is_array($request->field_id)) {
+//             foreach ($request->field_id as $index => $field_id) {
+//                 $field_type = $request->field_type[$index];
+//                 $is_required = isset($request->is_required[$field_id]) || isset($request->is_required[$index]) ? 1 : 0;
+
+//                 $temp_section_id = $request->field_section[$index];
+
+//                 // Resolve section ID
+//                 if ($temp_section_id === 'new' || !is_numeric($temp_section_id)) {
+//                     $section_title = $request->section_title[array_search('new', $request->section_id)];
+//                     $section_id = $newSectionMap[$section_title] ?? null;
+//                 } else {
+//                     $section_id = $temp_section_id;
+//                 }
+
+//                 $is_table_format = in_array($field_type, ['Label', 'View/Download', 'Radio Button', 'Textarea', 'Checkbox', 'Select Box']);
+
+//                 $common_data = [
+//                     'formid' => $form_id,
+//                     'section_id' => $section_id,
+//                     'formlabel' => $request->field_label[$index],
+//                     'required' => $is_required,
+//                     'updated_at' => now(),
+//                 ];
+
+//                 if ($is_table_format) {
+//                     $field_data = array_merge($common_data, [
+//                         'field_type' => $field_type,
+//                         'field_title' => $request->field_name[$index],
+//                         'fieldoption' => $request->field_options[$index] ?? null,
+//                         'field_options' => $request->field_options[$index] ?? null,
+//                         'field_checkbox_options' => $request->field_options[$index] ?? null,
+//                         'field_radio_options' => $request->field_options[$index] ?? null,
+//                         'field_url' => ($field_type === 'View/Download') ? $request->field_options[$index] : null,
+//                         'format' => 'table',
+//                     ]);
+//                 } else {
+//                     $field_data = array_merge($common_data, [
+//                         'formname' => $request->field_name[$index],
+//                         'formtype' => $field_type,
+//                         'fieldoption' => $request->field_options[$index] ?? null,
+//                     ]);
+//                 }
+
+//                 if ($field_id === 'new') {
+//                     $field_data['created_at'] = now();
+//                     DB::table('form_data')->insert($field_data);
+//                 } else {
+//                     DB::table('form_data')->where('id', $field_id)->update($field_data);
+//                 }
+//             }
+//         }
+
+//         // STEP 3: Handle Deletions
+//         if ($request->has('delete_sections')) {
+//             DB::table('form_sections')->whereIn('id', $request->delete_sections)->delete();
+//         }
+
+//         if ($request->has('delete_fields')) {
+//             DB::table('form_data')->whereIn('id', $request->delete_fields)->delete();
+//         }
+
+//         DB::commit();
+//         return redirect()->route('forms.index', $form_id)->with('success', 'Form fields updated successfully!');
+//     } catch (\Exception $e) {
+//         DB::rollBack();
+//         return back()->with('error', 'Error updating form: ' . $e->getMessage());
+//     }
+// }
+
 
 
 

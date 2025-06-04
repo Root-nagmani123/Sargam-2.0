@@ -96,95 +96,147 @@ class FcExemptionMasterController extends Controller
 
 
     //exemptionstore
-    public function exemptionstore(Request $request)
-    {
-        // dd($request->all());
-        // Validation rules
-        $rules = [
-            'ex_mobile' => 'required|digits_between:7,15',
-            'reg_web_code' => 'required|string',
-            'exemption_category' => 'required|exists:fc_exemption_master,Pk',
-            // 'captcha' => 'required|captcha',
-        ];
+   public function exemptionstore(Request $request)
+{
+    // Validation rules
+    $rules = [
+        'ex_mobile' => 'required|digits_between:7,15',
+        'reg_web_code' => 'required|string',
+        'exemption_category' => 'required|exists:fc_exemption_master,Pk',
+        'captcha' => 'required|captcha',
+    ];
 
-        // Check if medical doc upload is required based on exemption short name
-        $exemption = DB::table('fc_exemption_master')
-            ->where('Pk', $request->exemption_category)
-            ->first();
-        // dd($exemption);
+    // Check if medical doc upload is required based on exemption short name
+    $exemption = DB::table('fc_exemption_master')
+        ->where('Pk', $request->exemption_category)
+        ->first();
 
-
-        if ($exemption && strtolower($exemption->Exemption_short_name) === 'medical') {
-
-            $rules['medical_doc'] = 'required|file|mimes:pdf,jpg,jpeg,png|max:2048';
-        }
-
-
-
-        // Validate input
-        $validator = Validator::make($request->all(), $rules);
-        //  if ($validator->fails()) {
-        //     // Redirect back with errors and old input
-        //     return redirect()->back()
-        //         ->withErrors($validator)
-        //         ->withInput()
-        //         ->with('captcha_refresh', true); // optional flag to know captcha failed
-        // }
-
-
-        // if ($validator->fails()) {
-        // dd('hereeeee');
-
-        //     return redirect()->back()->withErrors($validator)->withInput();
-        // }
-
-        // Handle file upload if present and valid
-        $medicalDocPath = null;
-        if ($request->hasFile('medical_doc') && $request->file('medical_doc')->isValid()) {
-
-            $medicalDocPath = $request->file('medical_doc')->store('medical_docs', 'public');
-        }
-
-
-        // Insert into database (adjust column names as per your table)
-        DB::table('exemption_data')->insert([
-            'contact_no' => $request->ex_mobile,
-            'user_id' => Auth::id(), // Assuming the user is authenticated
-            'web_auth' => $request->reg_web_code,  // hash for security, or remove if not needed
-            'fc_exemption_master_pk' => $request->exemption_category,
-            'medical_exemption_doc' => $medicalDocPath,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return redirect()->route('exemptions.datalist')->with('success', 'Exemption form submitted successfully.');
-
-        // return redirect()->back()->with('success', 'Exemption form submitted successfully.');
+    if ($exemption && strtolower($exemption->Exemption_short_name) === 'medical') {
+        $rules['medical_doc'] = 'required|file|mimes:pdf,jpg,jpeg,png|max:2048';
     }
+
+    // Validate input
+    $validator = Validator::make($request->all(), $rules);
+
+    if ($validator->fails()) {
+        return redirect()->back()
+            ->withErrors($validator)
+            ->withInput()
+            ->with('captcha_refresh', true);
+    }
+
+    // ✅ Check if the mobile number and web code exist in fc_registration_master
+    $registration = DB::table('fc_registration_master')
+        ->where('contact_no', $request->ex_mobile)
+        ->where('web_auth', $request->reg_web_code)
+        ->first();
+
+    if (!$registration) {
+        return redirect()->back()
+            ->withErrors(['reg_web_code' => 'Invalid Web Code or Mobile Number.'])
+            ->withInput();
+    }
+
+    // Handle file upload if present and valid
+    $medicalDocPath = null;
+    if ($request->hasFile('medical_doc') && $request->file('medical_doc')->isValid()) {
+        $medicalDocPath = $request->file('medical_doc')->store('medical_docs', 'public');
+    }
+
+    // Insert into database
+    DB::table('exemption_data')->insert([
+        'contact_no' => $request->ex_mobile,
+        'user_id' => Auth::id(),
+        'web_auth' => $request->reg_web_code,
+        'fc_exemption_master_pk' => $request->exemption_category,
+        'medical_exemption_doc' => $medicalDocPath,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    return redirect()->route('exemptions.datalist')->with('success', 'Exemption form submitted successfully.');
+}
+
+
 
     //validates user exists 
 
     public function verify(Request $request)
     {
+        // Validate input including captcha
         $request->validate([
-            'reg_mobile' => 'required|digits_between:7,15',
+            'reg_mobile' => 'required',
             'reg_web_code' => 'required|string',
+            'captcha' => 'required|captcha',  // Add captcha validation rule
+
+        ], [
+            'captcha.captcha' => 'Invalid captcha.',
         ]);
 
-        $student = DB::table('students')
-            ->where('mobile', $request->reg_mobile)
-            ->where('web_code', $request->reg_web_code)
+        // Check in fc_registration_master table
+        $registration = DB::table('fc_registration_master')
+            ->where('contact_no', $request->reg_mobile)
+            ->where('web_auth', $request->reg_web_code)
             ->first();
 
-        if ($student) {
-            // Redirect somewhere after successful verification
-            return redirect()->route('forms.index', ['id' => $student->id]);
+        if ($registration) {
+            // Get the first visible form ID from local_form
+            $form = DB::table('local_form')
+                ->where('visible', 1)
+                ->orderBy('id')
+                ->first();
+
+            if ($form) {
+                // Redirect using formid from local_form
+                return redirect()->route('forms.show', $form->id);
+            } else {
+                return redirect()->back()
+                    ->withErrors(['formid' => 'No visible form found.']);
+            }
         } else {
             return redirect()->back()
-                ->withErrors(['reg_web_code' => 'Invalid mobile number or web code.'])
+                ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
                 ->withInput();
         }
     }
+
+
+
+    // public function verify(Request $request)
+    // {
+    //     // Validate input
+    //     $request->validate([
+    //         // 'reg_mobile' => 'required|digits_between:7,15',
+    //         'reg_mobile' => 'required',
+    //         'reg_web_code' => 'required|string',
+    //     ]);
+
+    //     // Check in fc_registration_master table
+    //     $registration = DB::table('fc_registration_master')
+    //         ->where('contact_no', $request->reg_mobile)
+    //         ->where('web_auth', $request->reg_web_code)
+    //         ->first();
+
+    //     if ($registration) {
+    //         // Get the first visible form ID from local_form
+    //         $form = DB::table('local_form')
+    //             ->where('visible', 1)
+    //             ->orderBy('id') // Optional: ensure consistent ordering
+    //             ->first();
+
+    //         if ($form) {
+    //             // Redirect using formid from local_form
+    //             return redirect()->route('forms.show', $form->id);
+    //         } else {
+    //             return redirect()->back()
+    //                 ->withErrors(['formid' => 'No visible form found.']);
+    //         }
+    //     } else {
+    //         return redirect()->back()
+    //             ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
+    //             ->withInput();
+    //     }
+    // }
 
     // Exemption listing
     public function exemption_list()
@@ -239,5 +291,9 @@ class FcExemptionMasterController extends Controller
         }
     }
 
-    
+    //captcha refresh
+    public function reloadCaptcha()
+    {
+        return response()->json(['captcha' => captcha_img()]);
+    }
 }
