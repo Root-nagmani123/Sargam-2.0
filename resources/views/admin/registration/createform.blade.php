@@ -237,7 +237,50 @@
 
             toggleOptionsField(); // Initialize on load
             fieldTypeSelect.addEventListener('change', toggleOptionsField);
+
+            // Attach change listener to new dropdown option apper only once
+            document.getElementById(`field_name_${sectionIndex}_${index}`).addEventListener('change',
+                updateFieldNameOptions);
+
         }
+
+        //update fields to apper only once 
+
+        function updateFieldNameOptions() {
+            const allSelects = document.querySelectorAll('select[name="field_name[]"]');
+
+            // Step 1: Get all selected values except the one being edited
+            const selectedValues = Array.from(allSelects).map(select => select.value).filter(v => v !== '');
+
+            allSelects.forEach(select => {
+                const currentValue = select.value;
+                // Clear current options
+                while (select.firstChild) {
+                    select.removeChild(select.firstChild);
+                }
+
+                // Step 2: Rebuild options
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select Column';
+                select.appendChild(defaultOption);
+
+                submissionColumns.forEach(col => {
+                    if (col === currentValue || !selectedValues.includes(col)) {
+                        const option = document.createElement('option');
+                        option.value = col;
+                        option.textContent = col;
+                        select.appendChild(option);
+                    }
+                });
+
+                // Restore current selection if still valid
+                if (currentValue !== '') {
+                    select.value = currentValue;
+                }
+            });
+        }
+
 
 
         function removeSection(sectionIndex) {

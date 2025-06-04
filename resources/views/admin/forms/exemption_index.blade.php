@@ -350,16 +350,24 @@
                         <h6 class="mb-0 pb-3"><span>Registration </span><span>Exemption</span></h6>
                         <input class="checkbox" type="checkbox" id="reg-log" name="reg-log" />
                         <label for="reg-log"></label>
-
                         <div class="card-3d-wrap mx-auto">
                             <div class="card-3d-wrapper">
-
                                 <!-- Registration Form -->
                                 <div class="card-front">
                                     <div class="center-wrap">
                                         <div class="section text-center">
                                             <h4 class="mb-4 pb-3">Registration</h4>
-                                            
+                                            <!--display errors if any -->
+                                            @if ($errors->any())
+                                                <div class="alert alert-danger mb-3">
+                                                    <ul class="mb-0">
+                                                        @foreach ($errors->all() as $error)
+                                                            <li>{{ $error }}</li>
+                                                        @endforeach
+                                                    </ul>
+                                                </div>
+                                            @endif
+
                                             <form method="POST" action="{{ route('registration.verify') }}">
                                                 @csrf
                                                 <div class="form-group">
@@ -372,20 +380,23 @@
                                                         placeholder="Your Web Code" autocomplete="off" required />
                                                     <i class="input-icon uil uil-code-branch"></i>
                                                 </div>
-                                                <!-- Captcha -->
-                                                {{-- <div
-                                                    class="form-group mt-2 d-flex align-items-center justify-content-center">
-                                                    <input type="text" name="captcha" class="form-style me-3"
-                                                        placeholder="Enter Captcha" required />
-                                                    <div id="captcha-text-registration" class="captcha-box"
-                                                        title="Click to refresh captcha"></div>
-                                                </div> --}}
+                                                <div class="form-group mt-2">
+                                                    <label for="captcha">CAPTCHA</label><br>
+                                                    <span id="captcha-img-registration">{!! captcha_img() !!}</span>
+                                                    <button type="button" class="btn btn-warning btn-sm"
+                                                        id="reload-registration">&#x21bb;</button>
+                                                </div>
+                                                <div class="form-group mt-2">
+                                                    <input type="text" class="form-style" placeholder="Enter CAPTCHA"
+                                                        name="captcha" required>
+                                                    <i class="input-icon uil uil-shield-check"></i>
+                                                </div>
                                                 <button type="submit" class="btn mt-4">Submit</button>
                                             </form>
+
                                         </div>
                                     </div>
                                 </div>
-
                                 <!-- Exemption Form -->
                                 <div class="card-back">
                                     <div class="center-wrap">
@@ -404,7 +415,6 @@
                                                         placeholder="Your Web Code" autocomplete="off" required>
                                                     <i class="input-icon uil uil-code-branch"></i>
                                                 </div>
-
                                                 <div class="form-group mt-2">
                                                     <select id="exemptionReason" name="exemption_category"
                                                         class="form-style">
@@ -416,103 +426,80 @@
                                                             </option>
                                                         @endforeach
                                                     </select>
-
                                                     <i class="input-icon uil uil-arrow-from-top"></i>
                                                 </div>
-
                                                 <div class="form-group mt-2" id="medicalInput" style="display: none;">
                                                     <input type="file" name="medical_doc" class="form-style"
                                                         placeholder="Enter Medical Doc" />
                                                     <i class="input-icon uil uil-medkit"></i>
                                                 </div>
-
-                                                <!-- Captcha -->
-                                                {{-- <div
-                                                    class="form-group mt-2 d-flex align-items-center justify-content-center">
-                                                    <input type="text" name="captcha" class="form-style me-3"
-                                                        placeholder="Enter Captcha" required
-                                                        value="{{ old('captcha') }}">
-                                                    <img id="captchaImage" src="{{ captcha_src() }}" alt="captcha"
-                                                        style="cursor:pointer;" title="Click to refresh captcha"
-                                                        onclick="refreshCaptcha()">
-                                                </div> --}}
-
+                                                <div class="form-group">
+                                                    <label for="captcha">CAPTCHA</label><br>
+                                                    <span id="captcha-img-exemption">{!! captcha_img() !!}</span>
+                                                    <button type="button" class="btn btn-warning btn-sm"
+                                                        id="reload-exemption">&#x21bb;</button>
+                                                </div>
+                                                <div class="form-group">
+                                                    <input type="text" class="form-style"
+                                                        placeholder="Enter CAPTCHA" name="captcha" required>
+                                                    <i class="input-icon uil uil-shield-check"></i>
+                                                </div>
                                                 <button type="submit" class="btn mt-4">Submit</button>
                                             </form>
+
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <style>
-        .captcha-box {
-            padding: 10px 15px;
-            background: #eee;
-            font-weight: bold;
-            user-select: none;
-            letter-spacing: 3px;
-            cursor: pointer;
-            font-size: 24px;
-            line-height: 1.5;
-            min-width: 120px;
-            text-align: center;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-    </style>
-
     <script>
         // Show/hide medical doc file input based on exemption selection
         document.getElementById('exemptionReason').addEventListener('change', function() {
             const medicalInput = document.getElementById('medicalInput');
             const selectedOption = this.options[this.selectedIndex];
             const shortName = selectedOption.getAttribute('data-shortname');
+            const optionText = selectedOption.textContent.toLowerCase();
 
-            medicalInput.style.display = (shortName === 'medical') ? 'block' : 'none';
+            if (shortName === 'medical' || optionText.includes('medical')) {
+                medicalInput.style.display = 'block';
+            } else {
+                medicalInput.style.display = 'none';
+            }
         });
-
-        // Captcha generation function
-        function generateCaptcha(length = 5) {
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let captcha = '';
-            for (let i = 0; i < length; i++) {
-                captcha += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            return captcha;
-        }
-
-        // Initialize captcha for given element by ID
-        function initCaptcha(id) {
-            const elem = document.getElementById(id);
-            if (!elem) return;
-
-            function refreshCaptcha() {
-                elem.textContent = generateCaptcha();
-            }
-
-            // Initial load
-            refreshCaptcha();
-
-            // Refresh captcha on click
-            elem.addEventListener('click', refreshCaptcha);
-        }
-
-        // Initialize captchas on both forms
-        initCaptcha('captcha-text');
-        initCaptcha('captcha-text-registration');
     </script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.9.2/umd/popper.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.1.0/js/bootstrap.min.js"></script>
-    <src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.1.0/js/bootstrap.min.js"></script>
+    <script>
+        document.getElementById('reload-registration').addEventListener('click', function() {
+            fetch("{{ route('reload.captcha') }}")
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('captcha-img-registration').innerHTML = data.captcha;
+                });
+        });
+
+        document.getElementById('reload-exemption').addEventListener('click', function() {
+            fetch("{{ route('reload.captcha') }}")
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('captcha-img-exemption').innerHTML = data.captcha;
+                });
+        });
+    </script>
+
+    {{-- <style>
+    #captcha-img img {
+    width: 200px !important;
+    height: auto !important;
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.3));
+}
+</style> --}}
+
+
 </body>
 
 </html>

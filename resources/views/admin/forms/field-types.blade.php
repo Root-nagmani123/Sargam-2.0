@@ -1,11 +1,11 @@
 <!-- resources/views/forms/field-types.blade.php -->
 @php
-$validFieldHeadings = [
-    'country', 'state', 'district', 'language', 'admissioncategory',
-    'stream', 'institution', 'jobtype', 'boardname', 'qualification',
-    'religion', 'service', 'sports', 'size', 'fcscale', 'distinction',
-    'fatherprofession', 'trouser', 'shoessize', 'studentskill'
-];
+// $validFieldHeadings = [
+//     'country', 'state', 'district', 'language', 'admissioncategory',
+//     'stream', 'institution', 'jobtype', 'boardname', 'qualification',
+//     'religion', 'service', 'sports', 'size', 'fcscale', 'distinction',
+//     'fatherprofession', 'trouser', 'shoessize', 'studentskill'
+// ];
 
 $isTableField = isset($field->field_type);
 $fieldType = $isTableField ? $field->field_type : $field->formtype;
@@ -17,13 +17,13 @@ $requiredAsterisk = $required ? '<span class="text-danger">*</span>' : '';
 $isMappedField = false;
 $mappedHeading = '';
 
-foreach ($validFieldHeadings as $validHeading) {
-    if (stripos($field->formname ?? $field->field_title ?? '', $validHeading) !== false) {
-        $isMappedField = true;
-        $mappedHeading = $validHeading;
-        break;
-    }
-}
+// foreach ($validFieldHeadings as $validHeading) {
+//     if (stripos($field->formname ?? $field->field_title ?? '', $validHeading) !== false) {
+//         $isMappedField = true;
+//         $mappedHeading = $validHeading;
+//         break;
+//     }
+// }
 @endphp
 
 @switch($fieldType)
@@ -70,7 +70,7 @@ foreach ($validFieldHeadings as $validHeading) {
 <div class="form-group">
     <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
     <select class="form-control" id="{{ $fieldName }}" name="{{ $fieldName }}" {{ $required ? 'required' : '' }}>
-        <option value="">Select {{ $fieldLabel }}</option>
+        <option value="">Choose Option</option>
 
         @if($isMappedField)
             @php
