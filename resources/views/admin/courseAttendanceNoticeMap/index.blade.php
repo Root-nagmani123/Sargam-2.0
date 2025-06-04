@@ -18,7 +18,7 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{ route('master.memo.create') }}" class="btn btn-primary">+ Add Notice/Memo</a>
+                                <a href="{{ route('memo.notice.management.create') }}" class="btn btn-primary">+ Add Notice/Memo</a>
                             </div>
                         </div>
                     </div>
