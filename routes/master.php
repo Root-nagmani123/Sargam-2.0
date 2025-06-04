@@ -206,14 +206,14 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
     });
 
     //memo management
-    Route::get('/memo', function () {
-        return view('admin.master.memo.index');
-    })->name('memo.index');
-    Route::get('/conversation', function () {
-        return view('admin.master.memo.conversation');
-    })->name('memo.conversation');
-    Route::get('/create', function () {
-        return view('admin.master.memo.create');
-    })->name('memo.create');
+    // Route::get('/memo', function () {
+    //      view('admin.courseAttendanceNoticeMap.index');
+    // })->name('memo.index');
+    // Route::get('/conversation', function () {
+    //     return view('admin.courseAttendanceNoticeMap.conversation');
+    // })->name('memo.conversation');
+    // Route::get('/create', function () {
+    //     return view('admin.courseAttendanceNoticeMap.create');
+    // })->name('memo.create');
 
 });

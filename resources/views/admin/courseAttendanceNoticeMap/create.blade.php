@@ -16,27 +16,40 @@
                 <div class="row">
                     <div class="col-6">
                         <div class="mb-3">
-                            <label for="type" class="form-label">Course</label>
-                            <select name="type" class="form-control" id="">
+                            <label for="course_master_pk" class="form-label">Course</label>
+                            <select name="course_master_pk" class="form-control" id="courseSelect" required>
                                 <option value="">Select Course</option>
-
+                                @foreach ($activeCourses as $course)
+                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                @endforeach
                             </select>
+
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
+                            <label for="date_memo_notice" class="form-label">Date</label>
+                            <input type="date" class="form-control" id="date_memo_notice" name="date_memo_notice" required>
+                            @error('date_memo_notice')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
+                        </div>
+                    </div>
+
+
+                    <div class="col-6">
+                        <div class="mb-3">
                             <label for="" class="form-label">Subject <span style="color:#af2910;">*</span></label>
-                            <select name="student_master_id" class="form-control" id="">
+                            <select name="subject_master_id" class="form-control" id="subject_master_id">
                                 <option value="">Select Subject</option>
                                 <!-- Options will be populated dynamically -->
                             </select>
-                            <small>For student who have absent or late in that session</small>
-                        </div>
+                            </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
                             <label for="" class="form-label">Topic</label>
-                            <select name="student_master_id" class="form-control" id="">
+                            <select name="topic_id" class="form-control" id="topic_id">
                                 <option value="">Select Topic</option>
                                 <!-- Options will be populated dynamically -->
                             </select>
@@ -45,40 +58,28 @@
                     <div class="col-6">
                         <div class="mb-3">
                             <label for="type" class="form-label">Venue <span style="color:#af2910;">*</span></label>
-                            <input type="text" name="" id="" class="form-control">
+                            <input type="text" id="venue_name" class="form-control" readonly>
+                        <input type="hidden" id="venue_id" name="venue_id">
+
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
                             <label for="" class="form-label">Session</label>
-                            <select name="" class="form-control" id="">
-                                <option value="">Select Session</option>
-                                <!-- Options will be populated dynamically -->
+                          <input type="text" id="session_name" class="form-control" readonly>
+                        <input type="hidden" id="class_session_master_pk" name="class_session_master_pk">
+
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label for="" class="form-label">Session</label>
-                        </div>
-                    </div>
+                    
                     <div class="col-6">
                         <div class="mb-3">
                             <label for="" class="form-label">Faculty Name</label>
-                            <select name="" class="form-control" id="">
-                                <option value="">Select Faculty</option>
-                                <!-- Options will be populated dynamically -->
-                            </select>
+                           <input type="text" id="faculty_name" class="form-control" readonly>
+                        <input type="hidden" id="faculty_master_pk" name="faculty_master_pk">
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label for="" class="form-label">Faculty Name</label>
-                            <select name="" class="form-control" id="">
-                                <option value="">Select Faculty</option>
-                                <!-- Options will be populated dynamically -->
-                            </select>
-                        </div>
-                    </div>
+                    
                     <div class="col-12">
                         <label for="selected_student_list" class="form-label">Select Students</label>
                         <select id="select" class="select1 form-control" name="selected_student_list[]" multiple>
@@ -112,7 +113,7 @@
                     <div class="col-2">
                         <div class="text-end gap-3">
                             <button type="reset" class="btn btn-primary">Preview</button>
-                            <a href="{{ route('master.memo.index') }}" class="btn btn-secondary">Back</a>
+                            <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">Back</a>
                         </div>
                     </div>
                 </div>
@@ -173,5 +174,91 @@
 </div>
     <!-- end Vertical Steps Example -->
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('date_memo_notice');
+    dateInput.value = today;         // Set today's date
+    dateInput.max = today;           // Prevent future dates
+});
+
+    $('#courseSelect').on('change', function() {
+        var courseId = $(this).val();
+
+        if (courseId) {
+            $.ajax({
+             url: "{{ route('memo.notice.management.getSubjectByCourse') }}",
+
+                type: "GET",
+                data: { course_id: courseId },
+                success: function (response) {
+                $('#subject_master_id').html(response);
+            },
+            error: function () {
+                $('#subject_master_id').html('<option>Error loading subjects</option>');
+            }
+            });
+        } else {
+             $('#subject_master_id').html('<option value="">Select Subject</option>');
+        }
+    });
+   $('#subject_master_id').on('change', function() {
+    var subject_master_id = $(this).val();
+    var courseId = $('#courseSelect').val(); // Fix: use selector, not variable
+
+    if (subject_master_id && courseId) {
+        $.ajax({
+            url: "{{ route('memo.notice.management.getTopicBysubject') }}",
+            type: "GET",
+            data: {
+                subject_master_id: subject_master_id,
+                course_id: courseId
+            },
+            success: function (response) {
+                $('#topic_id').html(response);
+            },
+            error: function () {
+                $('#topic_id').html('<option>Error loading topics</option>');
+            }
+        });
+    } else {
+        $('#topic_id').html('<option value="">Select Topic</option>');
+    }
+    });
+     $('#topic_id').on('change', function() {
+    var topic_id = $(this).val();
+   
+    if (topic_id) {
+        $.ajax({
+            url: "{{ route('memo.notice.management.gettimetableDetailsBytopic') }}",
+            type: "GET",
+            data: {
+                topic_id: topic_id,
+            },
+            success: function (response) {
+                console.log(response);
+                if (response) {
+                    $('#venue_name').val(response.venue_name);
+                    $('#session_name').val(response.shift_name);
+                    $('#faculty_name').val(response.faculty_name);
+                     $('#faculty_master_pk').val(data.faculty_master);
+                        $('#venue_id').val(data.venue_id);
+                        $('#class_session_master_pk').val(data.class_session_master_pk);
+                } else {
+                    $('#venue_name, #session_name, #faculty_name ,#faculty_master_pk,#venue_id,#class_session_master_pk').val('');
+                }
+            },
+            error: function () {
+                alert('Error fetching timetable details.');
+            }
+        });
+    } else {
+        $('#venue_name, #session_name, #faculty_name').val('');
+    }
+    });
+
+</script>
 
 @endsection

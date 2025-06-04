@@ -21,7 +21,8 @@ use App\Http\Controllers\Admin\{
     MDOEscrotExemptionController,
     AttendanceController,
     StudentMedicalExemptionController,
-    CourseMemoDecisionMappController
+    CourseMemoDecisionMappController,
+    CourseAttendanceNoticeMapController
 };
 
 Route::get('clear-cache', function () {
@@ -245,6 +246,18 @@ Route::prefix('admin/course-memo-decision')
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
 
+    });
+    Route::prefix('admin/memo-notice-management')
+    ->name('memo.notice.management.')
+    ->controller(CourseAttendanceNoticeMapController::class)
+    ->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/Subject-by-course', 'getSubjectByCourse')->name('getSubjectByCourse'); // <-- New AJAX route
+        Route::get('/Topic-by-subject', 'getTopicBysubject')->name('getTopicBysubject'); // <-- New AJAX route
+        Route::get('/get-timetable-Details-By-topic', 'gettimetableDetailsBytopic')->name('gettimetableDetailsBytopic'); // <-- New AJAX route
+   
     });
 
 
