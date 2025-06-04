@@ -16915,8 +16915,8 @@ fieldset:disabled .btn {
 }
 .btn-danger {
     --bs-btn-color: #fff;
-    --bs-btn-bg: #ff6692;
-    --bs-btn-border-color: #ff6692;
+    --bs-btn-bg: #af2910;
+    --bs-btn-border-color: #af2910;
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: #d9577c;
     --bs-btn-hover-border-color: #cc5275;
@@ -16926,8 +16926,8 @@ fieldset:disabled .btn {
     --bs-btn-active-border-color: #bf4d6e;
     --bs-btn-active-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125);
     --bs-btn-disabled-color: #fff;
-    --bs-btn-disabled-bg: #ff6692;
-    --bs-btn-disabled-border-color: #ff6692;
+    --bs-btn-disabled-bg: #af2910;
+    --bs-btn-disabled-border-color: #af2910;
 }
 .btn-light {
     --bs-btn-color: #000;
@@ -31107,6 +31107,18 @@ pre.code-view code.hljs {
 }
 .sidebar-nav ul .sidebar-item .sidebar-link:hover {
     color: var(--bs-primary);
+     display: flex;
+    font-size: 15px;
+    white-space: normal;
+    align-items: center;
+    position: relative;
+    padding: 11px 16px;
+    border-radius: 12px;
+    gap: 10px;
+    text-decoration: none;
+    font-weight: 400;
+    margin-bottom: 4px;
+    background-color: var(--bs-primary-bg-subtle);
 }
 .sidebar-nav ul .sidebar-item .sidebar-link:hover iconify-icon {
     color: var(--bs-primary);
