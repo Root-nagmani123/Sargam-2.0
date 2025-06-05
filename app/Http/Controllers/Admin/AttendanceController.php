@@ -145,7 +145,7 @@ class AttendanceController extends Controller
         try {
             $validated = $request->validate([
                 'student' => 'required|array',
-                'student.*' => 'required|in:1,2,3,4,5,6,7', // values from radio buttons
+                'student.*' => 'required|in:0,1,2,3,4,5,6,7', // values from radio buttons
             ]);
 
             $group_pk = $request->group_pk; // if you have session reference
@@ -163,7 +163,7 @@ class AttendanceController extends Controller
                         [
                             'Student_master_pk' => $studentPk,
                             'course_master_pk' => $course_pk,
-                            'student_course_group_map_pk' => $group_pk,
+                            'group_type_master_course_master_map_pk' => $group_pk,
                             'timetable_pk' => $request->timetable_pk,
                         ],
                         [
