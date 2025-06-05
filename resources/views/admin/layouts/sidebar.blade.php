@@ -525,6 +525,15 @@
                                     <span class="hide-menu"> Fc Exemption data</span>
                                 </a>
                             </li>
+                            
+                            <!--import Fcregistration-->
+                              <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.registration.import.form') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu"> Fc Registration Import</span>
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                 </div>
