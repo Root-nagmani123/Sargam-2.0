@@ -154,7 +154,7 @@ class AttendanceController extends Controller
             if ($request->student) {
                 foreach ($request->student as $studentPk => $attendanceStatus) {
                     // Validate the attendance status
-                    if (!in_array($attendanceStatus, [1, 2, 3, 4, 5, 6, 7])) {
+                    if (!in_array($attendanceStatus, [0,1, 2, 3, 4, 5, 6, 7])) {
                         return redirect()->back()->with('error', 'Invalid attendance status for student ID: ' . $studentPk);
                     }
 
