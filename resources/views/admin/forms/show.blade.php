@@ -27,7 +27,7 @@
                             </div>
                         @endif --}}
 
-                         <div class="col-3">
+                        <div class="col-3">
                             <img src="{{ asset($data->logo1 ? 'storage/' . $data->logo1 : 'admin_assets/images/logos/logo.png') }}"
                                 alt="logo1" class="img-fluid" style="height: 100px;">
                         </div>
@@ -66,7 +66,7 @@
                         @endif --}}
 
 
-                         <div class="col-3">
+                        <div class="col-3">
                             <img src="{{ asset($data->logo2 ? 'storage/' . $data->logo2 : 'images/azadi.png') }}"
                                 alt="logo2" class="float-end" style="height: 100px;"> <!--logo2-->
                         </div>
@@ -74,18 +74,31 @@
 
                     </div>
                     <div class="row mt-3">
-                        <!-- Sidebar with all forms -->
-                        <div class="col-md-3">
-                            <div class="nav flex-column nav-pills mb-4 mb-md-0" id="v-pills-tab" role="tablist"
-                                aria-orientation="vertical" style="margin-top: 100px;">
-                                @foreach ($allForms as $f)
-                                    <a class="nav-link {{ $f->id == $form->id ? 'active' : '' }}"
-                                        href="{{ route('forms.show', $f->id) }}">
-                                        {{ $f->name }}
-                                    </a>
-                                @endforeach
-                            </div>
-                        </div>
+                        {{-- Sidebar: Only child forms of the current form (or its parent) --}}
+                       <div class="col-md-3">
+    <div class="nav flex-column nav-pills mb-4 mb-md-0" id="v-pills-tab" role="tablist"
+        aria-orientation="vertical" style="margin-top: 100px;">
+
+        @if ($childForms->isEmpty())
+            {{-- No children: show parent as active --}}
+            <a class="nav-link active" href="{{ route('forms.show', $form->id) }}">
+                {{ $form->name }}
+            </a>
+        @else
+            {{-- Has children: show all child forms (siblings) --}}
+            @foreach ($childForms as $child)
+                <a class="nav-link {{ $child->id == $form->id ? 'active' : '' }}"
+                    href="{{ route('forms.show', $child->id) }}">
+                    {{ $child->name }}
+                </a>
+            @endforeach
+        @endif
+
+    </div>
+</div>
+
+
+
                         <!-- Main content area -->
                         <div class="col-md-9 border-start">
                             <div class="row my-3">
@@ -103,7 +116,7 @@
                                     </div>
                                 @endif --}}
 
-                                  <div class="col-6">
+                                <div class="col-6">
                                     <img src="{{ asset($data->logo3 ? 'storage/' . $data->logo3 : 'images/digital.png') }}"
                                         alt="logo3" class="img-fluid" style="height: 100px;"> <!--logo3-->
                                 </div>
@@ -111,7 +124,7 @@
                                     <img src="{{ asset($data->logo4 ? 'storage/' . $data->logo4 : 'images/swachh.png') }}"
                                         alt="logo4" class="float-end" style="height: 100px;"> <!--logo4-->
                                 </div>
-                                
+
 
 
                             </div>
@@ -263,54 +276,54 @@
 
 
 
-                  function previewImage(event, input) {
-    const fileList = input.files;
-    const previewContainer = document.getElementById(`file-preview-${input.id || input.name}`);
+                    function previewImage(event, input) {
+                        const fileList = input.files;
+                        const previewContainer = document.getElementById(`file-preview-${input.id || input.name}`);
 
-    if (!previewContainer) {
-        console.error(`Preview container not found for ID: file-preview-${input.id || input.name}`);
-        return;
-    }
+                        if (!previewContainer) {
+                            console.error(`Preview container not found for ID: file-preview-${input.id || input.name}`);
+                            return;
+                        }
 
-    previewContainer.innerHTML = '';
+                        previewContainer.innerHTML = '';
 
-    if (fileList.length > 0) {
-        Array.from(fileList).forEach(file => {
-            const fileName = file.name;
-            const fileExtension = fileName.split('.').pop().toLowerCase();
-            const fileUrl = URL.createObjectURL(file);
+                        if (fileList.length > 0) {
+                            Array.from(fileList).forEach(file => {
+                                const fileName = file.name;
+                                const fileExtension = fileName.split('.').pop().toLowerCase();
+                                const fileUrl = URL.createObjectURL(file);
 
-            // Image Preview
-            if (file.type.startsWith('image/')) {
-                const img = document.createElement('img');
-                img.src = fileUrl;
-                img.style.width = '100px';
-                img.style.height = '100px';
-                img.style.margin = '5px';
-                img.style.display = 'inline-block';
-                previewContainer.appendChild(img);
+                                // Image Preview
+                                if (file.type.startsWith('image/')) {
+                                    const img = document.createElement('img');
+                                    img.src = fileUrl;
+                                    img.style.width = '100px';
+                                    img.style.height = '100px';
+                                    img.style.margin = '5px';
+                                    img.style.display = 'inline-block';
+                                    previewContainer.appendChild(img);
 
-            // PDF Preview
-            } else if (file.type === 'application/pdf') {
-                const link = document.createElement('a');
-                link.href = fileUrl;
-                link.textContent = 'Preview PDF';
-                link.target = '_blank';
-                link.classList.add('btn', 'btn-danger', 'm-1');
-                previewContainer.appendChild(link);
+                                    // PDF Preview
+                                } else if (file.type === 'application/pdf') {
+                                    const link = document.createElement('a');
+                                    link.href = fileUrl;
+                                    link.textContent = 'Preview PDF';
+                                    link.target = '_blank';
+                                    link.classList.add('btn', 'btn-danger', 'm-1');
+                                    previewContainer.appendChild(link);
 
-            // Other documents: DOC, DOCX, XLSX, PPT, TXT, ZIP, etc.
-            } else {
-                const link = document.createElement('a');
-                link.href = fileUrl;
-                link.textContent = `Download ${fileName}`;
-                link.setAttribute('download', fileName);
-                link.classList.add('btn', 'btn-secondary', 'm-1');
-                previewContainer.appendChild(link);
-            }
-        });
-    }
-}
+                                    // Other documents: DOC, DOCX, XLSX, PPT, TXT, ZIP, etc.
+                                } else {
+                                    const link = document.createElement('a');
+                                    link.href = fileUrl;
+                                    link.textContent = `Download ${fileName}`;
+                                    link.setAttribute('download', fileName);
+                                    link.classList.add('btn', 'btn-secondary', 'm-1');
+                                    previewContainer.appendChild(link);
+                                }
+                            });
+                        }
+                    }
 
 
 

@@ -22,26 +22,34 @@ use Illuminate\Http\UploadedFile;
 
 class FormController extends Controller
 {
-    public function index(Request $request)
-    {
-        // $forms = DB::table('local_form')->orderBy('sortorder')->get();
-        // $forms = DB::table('local_form')->orderBy('sortorder')->paginate(3);
+   public function index(Request $request)
+{
+    $query = DB::table('local_form')->orderBy('sortorder');
 
-        // return view('admin.registration.index', compact('forms'));
-        $query = DB::table('local_form')->orderBy('sortorder');
-
-        if ($request->has('search') && $request->search != '') {
-            $query->where('name', 'like', '%' . $request->search . '%');
-        }
-
-        $forms = $query->get();
-
-        return view('admin.registration.index', compact('forms'));
+    if ($request->has('search') && $request->search != '') {
+        $query->where('name', 'like', '%' . $request->search . '%');
     }
+
+    $forms = $query->get();
+
+    // Group forms by parent_id (null or 0 for parents)
+    $groupedForms = $forms->groupBy(function($item) {
+        return $item->parent_id ?: null;
+    });
+
+    return view('admin.registration.index', [
+        'forms' => $forms,  // ✅ Needed for arrow logic in view
+        'groupedForms' => $groupedForms,
+    ]);
+}
+
+
 
     public function create()
     {
-        return view('admin.registration.create');
+        $forms = DB::table('local_form')->select('id', 'name', 'shortname')->orderBy('name')->get();
+        return view('admin.registration.create', compact('forms'));
+        // return view('admin.registration.create');
     }
 
     public function store(Request $request)
@@ -52,36 +60,40 @@ class FormController extends Controller
             'description' => 'required|string',
             'course_sdate' => 'required|date',
             'course_edate' => 'required|date|after_or_equal:course_sdate',
+            'parent_id' => 'nullable|exists:local_form,id',
         ]);
 
         $sortorder = DB::table('local_form')->max('sortorder') + 1;
 
         $id = DB::table('local_form')->insertGetId([
+            'parent_id' => $request->parent_id,
             'name' => $request->name,
             'shortname' => $request->shortname,
             'description' => $request->description,
             'course_sdate' => $request->course_sdate,
             'course_edate' => $request->course_edate,
             'visible' => $request->has('visible'),
-            // 'fc_registration' => $request->has('fc_registration'),
-            // 'createcohort' => $request->has('createcohort'),
             'sortorder' => $sortorder,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
         return redirect()->route('forms.createnew', ['formid' => $id])->with('success', 'Form created successfully.');
-
-        // return redirect()->route('forms.index')->with('success', 'Form submitted!');
     }
+
 
     public function edit($id)
     {
         $form = DB::table('local_form')->where('id', $id)->first();
+        $forms = DB::table('local_form')
+            ->where('id', '!=', $id) // don't allow setting itself as parent
+            ->orderBy('name')->get();
+
         if (!$form) {
-            abort(404); // or redirect()->back()->with('error', 'Form not found');
+            abort(404);
         }
-        return view('admin.registration.edit', compact('form'));
+
+        return view('admin.registration.edit', compact('form', 'forms'));
     }
 
     public function update(Request $request, $id)
@@ -92,22 +104,23 @@ class FormController extends Controller
             'description' => 'required|string',
             'course_sdate' => 'required|date',
             'course_edate' => 'required|date|after_or_equal:course_sdate',
+            'parent_id' => 'nullable|exists:local_form,id',
         ]);
 
         DB::table('local_form')->where('id', $id)->update([
+            'parent_id' => $request->parent_id,
             'name' => $request->name,
             'shortname' => $request->shortname,
             'description' => $request->description,
             'course_sdate' => $request->course_sdate,
             'course_edate' => $request->course_edate,
             'visible' => $request->has('visible'),
-            // 'fc_registration' => $request->has('fc_registration'),
-            // 'createcohort' => $request->has('createcohort'),
             'updated_at' => now(),
         ]);
 
         return redirect()->route('forms.index')->with('success', 'Form updated!');
     }
+
     public function toggleVisible($id)
     {
         $form = DB::table('local_form')->where('id', $id)->first();
@@ -366,81 +379,168 @@ class FormController extends Controller
 
 
 
+    // public function show($formId)
+    // {
+    //     // Get all visible forms (for sidebar)
+    //     $allForms = DB::table('local_form')
+    //         ->where('visible', 1)
+    //         ->orderBy('sortorder')
+    //         ->get();
+
+    //     //dynamic logo  
+
+    //     $data = DB::table('registration_logo')->first(); // Assumes single row
+    //     // return view('your_view_name', compact('form', 'allForms', 'data'));
+
+
+    //     // Get selected form details
+    //     $form = DB::table('local_form')->where('id', $formId)->first();
+
+    //     if (!$form) {
+    //         abort(404, 'Form not found');
+    //     }
+
+    //     // Fetch sections for the selected form
+    //     $sections = DB::table('form_sections')
+    //         ->where('formid', $formId)
+    //         // ->orderBy('sort_order')
+    //         ->get();
+
+    //     // Fetch fields
+    //     $fields = DB::table('form_data')
+    //         ->where('formid', $formId)
+    //         ->orderBy('id') // Ensure consistent ordering
+    //         // ->orderBy('section_id')
+    //         ->orderBy('row_index')
+    //         ->orderBy('col_index')
+    //         ->get();
+
+    //     // dd($fields);
+
+    //     $fieldsBySection = [];
+    //     $gridFields = [];
+
+    //     foreach ($fields as $field) {
+    //         if ($field->format === 'table') {
+    //             $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
+    //         } else {
+    //             $gridFields[$field->section_id][] = $field;
+    //         }
+    //     }
+
+    //     // Get headers
+    //     $headersBySection = [];
+    //     foreach ($fields as $field) {
+    //         if ($field->format === 'table') {
+    //             $headersBySection[$field->section_id][$field->col_index] = $field->header;
+    //         }
+    //     }
+
+    //     // Get user submissions
+    //     $submissions = DB::table('form_submission')
+    //         ->where('formid', $formId)
+    //         ->where('uid', Auth::id())
+    //         ->get()
+    //         ->keyBy('fieldname');
+    //     // dd($data);
+    //     return view('admin.forms.show', compact(
+    //         'form',
+    //         'data',
+    //         'allForms',
+    //         'sections',
+    //         'fieldsBySection',
+    //         'gridFields',
+    //         'headersBySection',
+    //         'submissions'
+    //     ));
+    // }
+
     public function show($formId)
-    {
-        // Get all visible forms (for sidebar)
-        $allForms = DB::table('local_form')
-            ->where('visible', 1)
-            ->orderBy('sortorder')
-            ->get();
+{
+    // Fetch the requested form
+    $form = DB::table('local_form')->where('id', $formId)->first();
+    if (!$form) abort(404, 'Form not found');
 
-        //dynamic logo  
+    // Determine parent form ID
+    $parentFormId = ($form->parent_id && $form->parent_id != 0) ? $form->parent_id : $form->id;
 
-        $data = DB::table('registration_logo')->first(); // Assumes single row
-        // return view('your_view_name', compact('form', 'allForms', 'data'));
+    // Fetch children of the parent form
+    $childForms = DB::table('local_form')
+        ->where('parent_id', $parentFormId)
+        ->where('visible', 1)
+        ->orderBy('sortorder')
+        ->get();
 
+    // Check fields for the current form
+    $fields = DB::table('form_data')
+        ->where('formid', $form->id)
+        ->orderBy('id')
+        ->orderBy('row_index')
+        ->orderBy('col_index')
+        ->get();
 
-        // Get selected form details
-        $form = DB::table('local_form')->where('id', $formId)->first();
+    // If this is a parent form with no fields, but children exist,
+    // switch to first child form and load its fields instead
+    if (($form->parent_id == 0 || $form->parent_id == null) && $fields->isEmpty() && $childForms->isNotEmpty()) {
+        // Switch form to first child
+        $form = $childForms->first();
 
-        if (!$form) {
-            abort(404, 'Form not found');
-        }
-
-        // Fetch sections for the selected form
-        $sections = DB::table('form_sections')
-            ->where('formid', $formId)
-            // ->orderBy('sort_order')
-            ->get();
-
-        // Fetch fields
+        // Reload fields for first child form
         $fields = DB::table('form_data')
-            ->where('formid', $formId)
-            ->orderBy('id') // Ensure consistent ordering
-            // ->orderBy('section_id')
+            ->where('formid', $form->id)
+            ->orderBy('id')
             ->orderBy('row_index')
             ->orderBy('col_index')
             ->get();
-
-            // dd($fields);
-
-        $fieldsBySection = [];
-        $gridFields = [];
-
-        foreach ($fields as $field) {
-            if ($field->format === 'table') {
-                $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
-            } else {
-                $gridFields[$field->section_id][] = $field;
-            }
-        }
-
-        // Get headers
-        $headersBySection = [];
-        foreach ($fields as $field) {
-            if ($field->format === 'table') {
-                $headersBySection[$field->section_id][$field->col_index] = $field->header;
-            }
-        }
-
-        // Get user submissions
-        $submissions = DB::table('form_submission')
-            ->where('formid', $formId)
-            ->where('uid', Auth::id())
-            ->get()
-            ->keyBy('fieldname');
-        // dd($data);
-        return view('admin.forms.show', compact(
-            'form',
-            'data',
-            'allForms',
-            'sections',
-            'fieldsBySection',
-            'gridFields',
-            'headersBySection',
-            'submissions'
-        ));
     }
+
+    // Group fields for display (table and grid)
+    $fieldsBySection = [];
+    $gridFields = [];
+    foreach ($fields as $field) {
+        if ($field->format === 'table') {
+            $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
+        } else {
+            $gridFields[$field->section_id][] = $field;
+        }
+    }
+
+    // Fetch sections for the (possibly switched) form
+    $sections = DB::table('form_sections')
+        ->where('formid', $form->id)
+        ->get();
+
+    // Table headers for table fields
+    $headersBySection = [];
+    foreach ($fields as $field) {
+        if ($field->format === 'table') {
+            $headersBySection[$field->section_id][$field->col_index] = $field->header;
+        }
+    }
+
+    // Submission data for current user and form
+    $submissions = DB::table('form_submission')
+        ->where('formid', $form->id)
+        ->where('uid', Auth::id())
+        ->get()
+        ->keyBy('fieldname');
+
+    // Fetch logo or other dynamic data if needed
+    $data = DB::table('registration_logo')->first();
+
+    return view('admin.forms.show', compact(
+        'form',
+        'data',
+        'childForms',
+        'sections',
+        'fieldsBySection',
+        'gridFields',
+        'headersBySection',
+        'submissions'
+    ));
+}
+
+
 
 
 
@@ -715,57 +815,57 @@ class FormController extends Controller
     // }
 
     public function courseList(Request $request, $formid)
-{
-    $statusval = $request->input('statusval');
+    {
+        $statusval = $request->input('statusval');
 
-    // Fetch submission records
-    $query = DB::table('form_submission')->where('formid', $formid);
-    if ($statusval) {
-        $query->where('confirm_status', $statusval);
-    }
-    $records = $query->get();
-
-    // Get dynamic field names used in this form from form_data
-    $dynamicFieldNames = DB::table('form_data')
-        ->where('formid', $formid)
-        ->pluck('formname')
-        ->toArray();
-
-    // Always include 'uid' for mapping user details
-    $fields = array_merge(['uid'], $dynamicFieldNames);
-
-    // Group values per UID
-    $users = [];
-    foreach ($records as $record) {
-        $uid = $record->uid;
-        foreach ($fields as $field) {
-            $users[$uid][$field] = $record->$field ?? '';
+        // Fetch submission records
+        $query = DB::table('form_submission')->where('formid', $formid);
+        if ($statusval) {
+            $query->where('confirm_status', $statusval);
         }
+        $records = $query->get();
+
+        // Get dynamic field names used in this form from form_data
+        $dynamicFieldNames = DB::table('form_data')
+            ->where('formid', $formid)
+            ->pluck('formname')
+            ->toArray();
+
+        // Always include 'uid' for mapping user details
+        $fields = array_merge(['uid'], $dynamicFieldNames);
+
+        // Group values per UID
+        $users = [];
+        foreach ($records as $record) {
+            $uid = $record->uid;
+            foreach ($fields as $field) {
+                $users[$uid][$field] = $record->$field ?? '';
+            }
+        }
+
+        $uids = array_keys($users);
+
+        // Get related user details
+        $userDetails = DB::table('users')->whereIn('id', $uids)->get()->keyBy('id');
+        $passwords = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
+
+        // Total student count (distinct users)
+        $total_students = DB::table('form_submission')
+            ->where('formid', $formid)
+            ->distinct('uid')
+            ->count('uid');
+
+        return view('admin.forms.course_list', compact(
+            'records',
+            'users',
+            'fields',
+            'userDetails',
+            'passwords',
+            'formid',
+            'total_students',
+            'statusval'
+        ));
     }
-
-    $uids = array_keys($users);
-
-    // Get related user details
-    $userDetails = DB::table('users')->whereIn('id', $uids)->get()->keyBy('id');
-    $passwords = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
-
-    // Total student count (distinct users)
-    $total_students = DB::table('form_submission')
-        ->where('formid', $formid)
-        ->distinct('uid')
-        ->count('uid');
-
-    return view('admin.forms.course_list', compact(
-        'records',
-        'users',
-        'fields',
-        'userDetails',
-        'passwords',
-        'formid',
-        'total_students',
-        'statusval'
-    ));
-}
 
 
 
@@ -832,7 +932,6 @@ class FormController extends Controller
     {
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
         return view('admin.forms.main_page', compact('forms'));
-        
     }
     public function exemption()
     {

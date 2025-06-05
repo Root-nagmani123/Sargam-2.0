@@ -6,6 +6,8 @@ use App\Http\Controllers\Admin\Registration\ColumnController;
 use App\Http\Controllers\Admin\Registration\FormEditController;
 use App\Http\Controllers\Admin\Registration\FcExemptionMasterController;
 use Mews\Captcha\Captcha;
+use App\Http\Controllers\Admin\Registration\RegistrationImportController;
+
 
 
 
@@ -103,4 +105,12 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
 
     //captcha route
     Route::get('captcha', [FcExemptionMasterController::class, 'reloadCaptcha'])->name('reload.captcha');
+
+   
+});
+
+ //FcRegistration Master Import
+    Route::prefix('/registration')->group(function () {
+    Route::get('/import', [RegistrationImportController::class, 'showForm'])->name('admin.registration.import.form');
+    Route::post('/import', [RegistrationImportController::class, 'import'])->name('admin.registration.import');
 });

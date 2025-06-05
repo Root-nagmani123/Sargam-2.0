@@ -6,21 +6,20 @@
 
     <div class="container-fluid">
         <div class="card card-body py-3">
+            <!-- Header + Breadcrumb -->
             <div class="row align-items-center">
                 <div class="col-12">
                     <div class="d-sm-flex align-items-center justify-space-between">
                         <h4 class="mb-4 mb-sm-0 card-title">Create Form</h4>
                         <nav aria-label="breadcrumb" class="ms-auto">
                             <ol class="breadcrumb">
-                                <li class="breadcrumb-item d-flex align-items-center">
-                                    <a class="text-muted text-decoration-none d-flex" href="{{ route('forms.index') }}">
+                                <li class="breadcrumb-item">
+                                    <a href="{{ route('forms.index') }}" class="text-muted text-decoration-none">
                                         <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
                                     </a>
                                 </li>
-                                <li class="breadcrumb-item" aria-current="page">
-                                    <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                        Forms
-                                    </span>
+                                <li class="breadcrumb-item active" aria-current="page">
+                                    <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">Forms</span>
                                 </li>
                             </ol>
                         </nav>
@@ -29,69 +28,70 @@
             </div>
         </div>
 
-        <!-- Start Form Card -->
-        <div class="card">
+        <!-- Form -->
+        <div class="card mt-3">
             <div class="card-body">
-                <hr>
-
                 <form action="{{ route('forms.store') }}" method="POST">
                     @csrf
-                    <div class="row">
+                    <div class="row g-3">
                         <!-- Form Name -->
-                        <div class="col-sm-6">
-                            <label for="name" class="form-label">Form Name:</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="name" name="name"
-                                    placeholder="Enter Form Name" required>
-                            </div>
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Course Name:</label>
+                            <input type="text" class="form-control" id="name" name="name"
+                                placeholder="Enter Form Name" required>
                         </div>
 
                         <!-- Short Name -->
-                        <div class="col-sm-6">
-                            <label for="shortname" class="form-label">Short Name:</label>
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="shortname" name="shortname"
-                                    placeholder="Enter Short Name" required>
-                            </div>
+                        <div class="col-md-6">
+                            <label for="shortname" class="form-label">Form Name:</label>
+                            <input type="text" class="form-control" id="shortname" name="shortname"
+                                placeholder="Enter Short Name" required>
                         </div>
 
                         <!-- Description -->
-                        <div class="col-sm-12">
+                        <div class="col-12">
                             <label for="description" class="form-label">Description:</label>
-                            <div class="mb-3">
-                                <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter Description"
-                                    required></textarea>
-                            </div>
+                            <textarea class="form-control" id="description" name="description" rows="4" placeholder="Enter Description"></textarea>
+                        </div>
+
+                        <!-- Parent Form -->
+                        <div class="col-md-6">
+                            <label for="parent_id" class="form-label">Parent Form:</label>
+                            <select name="parent_id" id="parent_id" class="form-select">
+                                <option value="">Choose Option</option>
+                                @foreach ($forms as $item)
+                                    <option value="{{ $item->id }}"
+                                        {{ old('parent_id') == $item->id ? 'selected' : '' }}>
+                                        {{ $item->name }}
+                                    </option>
+                                @endforeach
+                            </select>
                         </div>
 
                         <!-- Course Start Date -->
-                        <div class="col-sm-6">
+                        <div class="col-md-6">
                             <label for="course_sdate" class="form-label">Course Start Date:</label>
-                            <div class="mb-3">
-                                <input type="date" class="form-control" id="course_sdate" name="course_sdate" required>
-                            </div>
+                            <input type="date" class="form-control" id="course_sdate" name="course_sdate" required>
                         </div>
 
                         <!-- Course End Date -->
-                        <div class="col-sm-6">
+                        <div class="col-md-6">
                             <label for="course_edate" class="form-label">Course End Date:</label>
-                            <div class="mb-3">
-                                <input type="date" class="form-control" id="course_edate" name="course_edate" required>
-                            </div>
+                            <input type="date" class="form-control" id="course_edate" name="course_edate" required>
                         </div>
 
                         <!-- Visibility Toggle -->
-                        <div class="col-sm-12">
-                            <label class="form-label">Visible:</label>
+                        <div class="col-md-6 d-flex align-items-center pt-3">
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="visible" name="visible">
-                                <label class="form-check-label" for="visible">Enable visibility for this form</label>
+                                <label class="form-check-label ms-2" for="visible">Visible</label>
                             </div>
                         </div>
                     </div>
 
-                    <hr>
-                    <div class="mb-3 d-flex justify-content-end gap-2">
+                    <!-- Action Buttons -->
+                    <hr class="mt-4">
+                    <div class="d-flex justify-content-end gap-2">
                         <a href="{{ route('forms.index') }}" class="btn btn-secondary">
                             <i class="material-icons menu-icon">cancel</i> Cancel
                         </a>
@@ -102,9 +102,8 @@
                 </form>
             </div>
         </div>
-
-        <!-- End Form Card -->
     </div>
+
 
 @endsection
 
