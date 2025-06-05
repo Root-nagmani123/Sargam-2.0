@@ -43,7 +43,7 @@ class StudentAttendanceListDataTable extends DataTable
         return StudentCourseGroupMap::with([
                 'studentsMaster:display_name,generated_OT_code,pk',
                 'attendance' => fn($q) => $q->where('course_master_pk', $this->course_pk)
-                                          ->where('student_course_group_map_pk', $this->group_pk)
+                                          ->where('group_type_master_course_master_map_pk', $this->group_pk)
             ])
             ->where('group_type_master_course_master_map_pk', $groupTypeMaster->pk);
     }
@@ -87,7 +87,7 @@ class StudentAttendanceListDataTable extends DataTable
         $courseStudent = CourseStudentAttendance::where([
             ['Student_master_pk', '=', $studentId],
             ['Course_master_pk', '=', $this->course_pk],
-            ['student_course_group_map_pk', '=', $this->group_pk],
+            ['group_type_master_course_master_map_pk', '=', $this->group_pk],
             ['timetable_pk', '=', $this->timetable_pk]
         ])->first();
 
@@ -104,7 +104,7 @@ class StudentAttendanceListDataTable extends DataTable
                 $courseStudentMDO = CourseStudentAttendance::where([
                     ['Student_master_pk', '=', $studentId],
                     ['Course_master_pk', '=', $this->course_pk],
-                    ['student_course_group_map_pk', '=', $this->group_pk],
+                    ['group_type_master_course_master_map_pk', '=', $this->group_pk],
                     ['timetable_pk', '=', $this->timetable_pk]
                 ])->first();
                 if($courseStudentMDO) {
@@ -125,7 +125,7 @@ class StudentAttendanceListDataTable extends DataTable
         $courseStudent = CourseStudentAttendance::where([
             ['Student_master_pk', '=', $studentId],
             ['Course_master_pk', '=', $this->course_pk],
-            ['student_course_group_map_pk', '=', $this->group_pk],
+            ['group_type_master_course_master_map_pk', '=', $this->group_pk],
             ['timetable_pk', '=', $this->timetable_pk]
         ])->first();
 

@@ -14,6 +14,15 @@ class GroupMappingDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
+            ->addColumn('course_name', function ($row) {
+                return $row->courseGroup->course_name ?? '';
+            })
+            ->addColumn('type_name', function ($row) {
+                return $row->courseGroupType->type_name ?? '';
+            })
+            ->addColumn('group_name', function ($row) {
+                return $row->group_name ?? '';
+            })
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
             ->addColumn('view_download', function ($row) {
                 $id = encrypt($row->pk);
@@ -63,12 +72,15 @@ class GroupMappingDataTable extends DataTable
                 ";
             })
 
-            ->rawColumns(['view_download', 'action', 'status']);
+            ->rawColumns(['course_name', 'group_name', 'view_download', 'action', 'status']);
     }
 
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
     {
-        return $model->withCount('studentCourseGroupMap')->newQuery();
+        return $model->newQuery()
+                ->withCount('studentCourseGroupMap')
+                ->with(['courseGroup', 'courseGroupType'])
+                ->orderBy('pk');
     }
 
     public function html(): HtmlBuilder
@@ -92,11 +104,40 @@ class GroupMappingDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
-            Column::make('group_name')->title('Group Name')->addClass('text-center'),
-            Column::computed('student_count')->title('Student Count')->addClass('text-center'),
-            Column::computed('view_download')->title('View/Download')->addClass('text-center')->exportable(false)->printable(false),
-            Column::computed('action')->addClass('text-center')->exportable(false)->printable(false),
-            Column::computed('status')->addClass('text-center')->exportable(false)->printable(false),
+            Column::make('course_name')
+                ->title('Course Name')
+                ->addClass('text-center')
+                ->searchable(false)
+                ->orderable(false),
+            Column::make('type_name')
+                ->title('Type Name')
+                ->addClass('text-center')
+                ->searchable(false)
+                ->orderable(false),
+            Column::make('group_name')
+                ->title('Group Name')
+                ->addClass('text-center')
+                ->searchable(true),
+            Column::computed('student_count')
+                ->title('Student Count')
+                ->addClass('text-center')
+                ->searchable(false)
+                ->orderable(false),
+            Column::computed('view_download')
+                ->title('View/Download')
+                ->addClass('text-center')
+                ->searchable(false)
+                ->orderable(false)
+                ->exportable(false)
+                ->printable(false),
+            Column::computed('action')
+                ->addClass('text-center')
+                ->exportable(false)
+                ->printable(false),
+            Column::computed('status')
+                ->addClass('text-center')
+                ->exportable(false)
+                ->printable(false)
         ];
     }
 
