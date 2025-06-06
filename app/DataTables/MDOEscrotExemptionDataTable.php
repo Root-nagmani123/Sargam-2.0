@@ -8,14 +8,14 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
-
+use Carbon\Carbon;
 class MDOEscrotExemptionDataTable extends DataTable
 {
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->editColumn('mdo_date', fn($row) => $row->mdo_date ?? 'N/A')
+            ->editColumn('mdo_date', fn($row) => format_date($row->mdo_date) ?? 'N/A')
             ->editColumn('student_name', fn($row) => $row->studentMaster->display_name ?? 'N/A')
             ->editColumn('Time_from', fn($row) => $row->Time_from ?? 'N/A')
             ->editColumn('Time_to', fn($row) => $row->Time_to ?? 'N/A')
