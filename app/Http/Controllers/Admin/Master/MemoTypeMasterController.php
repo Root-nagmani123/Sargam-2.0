@@ -25,7 +25,7 @@ class MemoTypeMasterController extends Controller
     {
                 $request->validate([
                     'memo_type_name' => 'required|string|max:100',
-                    'memo_doc_upload' => 'nullable|mimes:pdf,doc,docx|max:2048',
+                     'memo_doc_upload' => 'nullable|mimes:pdf,doc,docx|max:2048',
                     'active_inactive' => 'required|in:1,2',
                 ]);
 
@@ -50,13 +50,14 @@ class MemoTypeMasterController extends Controller
                     }
 
                     // Get original file name with extension
-                    $originalFileName = $file->getClientOriginalName();
+                 $extension = $file->getClientOriginalExtension();
 
-                    // Optional: create a unique file name to avoid overwrite
-                    $filename = uniqid() . '_' . $originalFileName;
+                    // Generate safe file name (remove spaces and special characters)
+                    $filename = 'memo_' . time() . '.' . $extension;
 
                     // Store the file in 'public/memo_documents' with custom name
                     $path = $file->storeAs('memo_documents', $filename, 'public');
+                    
 
                     // Save the relative path to DB
                     $memoType->memo_doc_upload = $path;

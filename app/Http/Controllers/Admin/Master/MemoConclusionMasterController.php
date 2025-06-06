@@ -29,7 +29,7 @@ class MemoConclusionMasterController extends Controller
     {
         $request->validate([
             'discussion_name' => 'required|string|max:100',
-            'pt_discusion' => 'nullable|integer',
+            'pt_discusion' => 'nullable|string',
             'active_inactive' => 'required|in:1,2',
         ]);
 

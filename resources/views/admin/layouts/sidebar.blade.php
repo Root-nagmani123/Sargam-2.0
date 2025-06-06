@@ -163,14 +163,7 @@
                                                         <span class="hide-menu">Faculty</span>
                                                     </a>
                                                 </li>
-                                                <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('programme.index') }}"
-                                                        id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:mask-happly-line-duotone">
-                                                        </iconify-icon>
-                                                        <span class="hide-menu">Course Master</span>
-                                                    </a>
-                                                </li>
+                                               
                                                 <!-- <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('batch.index') }}"
                                                         id="get-url" aria-expanded="false">
@@ -187,14 +180,7 @@
                                                     <span class="hide-menu">Stream</span>
                                                 </a>
                                             </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('subject-module.index') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:widget-4-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Subject Module</span>
-                                                </a>
-                                            </li>
+                                            
                                             <li class="sidebar-item">
                                                 <a class="sidebar-link" href="{{ route('subject.index') }}" id="get-url"
                                                     aria-expanded="false">
@@ -272,14 +258,7 @@
                                                     <span class="hide-menu">Memo Course Mapping</span>
                                                 </a>
                                             </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('group.mapping.index') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Group Mapping</span>
-                                                </a>
-                                            </li>
+                                          
                                             <li class="sidebar-item">
                                                 <a class="sidebar-link" href="{{ route('mdo-escrot-exemption.index') }}"
                                                     id="get-url" aria-expanded="false">
@@ -374,12 +353,36 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
+                                                <a class="sidebar-link" href="{{ route('subject-module.index') }}"
+                                                    id="get-url" aria-expanded="false">
+                                                    <iconify-icon icon="solar:widget-4-line-duotone">
+                                                    </iconify-icon>
+                                                    <span class="hide-menu">Subject Module</span>
+                                                </a>
+                                            </li>
+                              <li class="sidebar-item">
+                                                <a class="sidebar-link" href="{{ route('group.mapping.index') }}"
+                                                    id="get-url" aria-expanded="false">
+                                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                    </iconify-icon>
+                                                    <span class="hide-menu">Group Mapping</span>
+                                                </a>
+                                            </li>
+                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('master.course.group.type.index') }}"
                                     id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
                                     <span class="hide-menu">Course Group Type</span>
                                 </a>
                             </li>
+                             <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('programme.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:mask-happly-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Course Master</span>
+                                                    </a>
+                                                </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('master.mdo_duty_type.index') }}" id="get-url"
                                     aria-expanded="false">
