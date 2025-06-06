@@ -37,6 +37,7 @@
                                         placeholder="First Name" 
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                 </div>
                             </div>
@@ -63,6 +64,7 @@
                                         placeholder="Last Name"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -98,6 +100,7 @@
                                         formLabelClass="form-label" 
                                         :options="$genderList" 
                                         required="true"
+                                        labelRequired="true"
                                         />
                                         
                                 </div>
@@ -112,6 +115,9 @@
                                         placeholder="Landline Number" 
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
+                                        inputmode="numeric"
+                                        pattern="\d*"
                                         />
 
                                 </div>
@@ -125,6 +131,10 @@
                                         placeholder="Mobile Number" 
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
+                                        inputmode="numeric"
+                                        pattern="\d*"
+
                                         />
                                 </div>
                             </div>
@@ -137,6 +147,7 @@
                                         formLabelClass="form-label"
                                         :options="$country" 
                                         required="true"
+                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -151,6 +162,7 @@
                                         formLabelClass="form-label"
                                         {{-- :options="$state" --}}
                                         required="true"
+                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -179,6 +191,7 @@
                                         formLabelClass="form-label"
                                         {{-- :options="$city" --}}
                                         required="true"
+                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -212,6 +225,7 @@
                                     label="Email :"
                                     placeholder="Email :"
                                     formLabelClass="form-label"
+                                    labelRequired="true"
                                     />
                                 
                             </div>
@@ -221,6 +235,7 @@
                                     label="Alternate Email :"
                                     placeholder="Alternate Email :"
                                     formLabelClass="form-label"
+                                    
                                     />
                                 
                             </div>
@@ -228,12 +243,18 @@
                                 <x-input 
                                     type="file"
                                     name="photo"
-                                    label="Photo upload :"
-                                    placeholder="Photo upload :"
+                                    label="Photo Upload:"
+                                    placeholder="Photo Upload:"
                                     formLabelClass="form-label"
-                                    />
-                                
+                                    labelRequired="true"
+                                />
+
+                                <!-- Preview Container -->
+                                <div class="mt-2">
+                                    <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
+                                </div>
                             </div>
+
                             <div class="col-md-6 mt-3">
 
                                 <x-input 
@@ -242,6 +263,7 @@
                                     label="Document upload :"
                                     placeholder="Document upload :"
                                     formLabelClass="form-label"
+                                    labelRequired="true"
                                     />
 
                             </div>
@@ -265,6 +287,7 @@
                                         formLabelClass="form-label"
                                         required="true"
                                         helperSmallText="Bachelors, Masters, PhD"
+                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -275,6 +298,7 @@
                                         placeholder="University/Institution Name"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-3">
@@ -298,6 +322,7 @@
                                         :options="$years"
                                         required="true"
                                         helperSmallText="Select the year of passing"
+                                        labelRequired="true"
                                     />
                                 </div>
                                 <div class="col-3">
@@ -310,6 +335,7 @@
                                         placeholder="Percentage/CGPA"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                     
                                 </div>
@@ -323,6 +349,7 @@
                                         formLabelClass="form-label"
                                         required="true"
                                         helperSmallText="Please upload your certificates/documents, if any"
+                                        labelRequired="true"
                                         />
 
                                     
@@ -353,6 +380,7 @@
                                         placeholder="Years of Experience"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-3">
@@ -363,6 +391,7 @@
                                         placeholder="Area of Specialization"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -373,6 +402,7 @@
                                         placeholder="Previous Institutions"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-3">
@@ -382,6 +412,7 @@
                                         placeholder="Position Held"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                     
                                 </div>
@@ -394,6 +425,7 @@
                                         formLabelClass="form-label"
                                         min="0"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-3 mt-3">
@@ -403,6 +435,7 @@
                                         placeholder="Nature of Work"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-6">
@@ -432,6 +465,7 @@
                                         placeholder="Bank Name"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                     
                                 </div>
@@ -444,6 +478,7 @@
                                         placeholder="Account Number"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                     
                                 </div>
@@ -455,6 +490,7 @@
                                         placeholder="IFSC Code"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                     
                                 </div>
@@ -467,6 +503,7 @@
                                         placeholder="PAN Number"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                 </div>
                             </div>
@@ -526,6 +563,7 @@
                                         placeholder="Joining Date"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
                                     
                                 </div>

@@ -214,6 +214,7 @@
             label="Photo upload :"
             placeholder="Photo upload :"
             formLabelClass="form-label"
+            labelRequired="true"
             />
         
             @if(!empty($faculty->photo_uplode_path))
@@ -223,6 +224,9 @@
                 <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
             </a>
         @endif
+        <div class="mt-2">
+            <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
+        </div>
     </div>
     <div class="col-md-6 mt-3">
 

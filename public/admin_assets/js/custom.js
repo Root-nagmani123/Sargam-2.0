@@ -160,6 +160,40 @@ $(document).on('change', '.status-toggle', function () {
 
 document.addEventListener('DOMContentLoaded', function () {
 
+$('input[name="photo"]').on('change', function () {
+    console.log('Photo input changed');
+    
+    const input = this;
+    const preview = $('#photoPreview');
+
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            preview.attr('src', e.target.result).removeClass('d-none');
+        };
+
+        reader.readAsDataURL(input.files[0]);
+    }
+});
+
+
+    $('input[name="landline"], input[name="mobile"]').on('input', function () {
+        this.value = this.value.replace(/\D/g, '');
+    });
+
+    function updateFullName() {
+        const first = $('input[name="firstName"]').val().trim();
+        const middle = $('input[name="middlename"]').val().trim();
+        const last = $('input[name="lastname"]').val().trim();
+
+        // Construct full name, skipping empty values
+        const fullName = [first, middle, last].filter(Boolean).join(' ');
+        $('input[name="fullname"]').val(fullName);
+    }
+
+    $('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
+
     $('#saveFacultyForm').click(function (e) {
 
         const formData = new FormData();
@@ -380,8 +414,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (key.includes('.')) {
                             const [fieldName, index] = key.split('.');
                             const inputField = $(`[name="${fieldName}[]"]`).eq(index);
+                            const label = $(`label[for="${inputField.attr('id')}"]`);
 
                             if (inputField.length > 0) {
+                                label.addClass('text-danger').append(` <span class="text-danger">*</span>`);
                                 const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
                                 inputField.addClass('is-invalid').after(errorDiv);
                             }
@@ -389,7 +425,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         // Handle regular fields
                         else {
                             const inputField = $(`[name="${key}"], select[name="${key}"]`);
+                            const label = $(`label[for="${inputField.attr('id')}"]`);
                             if (inputField.length > 0) {
+                                label.addClass('text-danger').append(` <span class="text-danger">*</span>`);
                                 const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
                                 inputField.addClass('is-invalid').after(errorDiv);
                             }

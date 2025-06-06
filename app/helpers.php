@@ -14,6 +14,6 @@ function view_file_link($path) {
     return $path ? asset('storage/' . $path) : null;
 }
 
-function format_date($date) {
-    return \Carbon\Carbon::parse($date)->format('d/m/Y');
+function format_date($date, $format = 'd-m-Y') {
+    return \Carbon\Carbon::parse($date)->format($format);
 }
