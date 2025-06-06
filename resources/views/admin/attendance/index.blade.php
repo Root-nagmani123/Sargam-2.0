@@ -82,7 +82,7 @@
                             <thead>
                                 <tr>
                                     <th class="col">#</th>
-                                    <th class="col">Programme Name</th>
+                                    <th class="col">Course Name</th>
                                     <th class="col">Date</th>
                                     <th class="col">Session</th>
                                     <th class="col">Venue</th>
