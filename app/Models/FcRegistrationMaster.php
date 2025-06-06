@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class FcRegistrationMaster extends Model
 {
     protected $table = 'fc_registration_master1';
+    public $primaryKey = 'pk';
 
     protected $fillable = [
         'first_name',

@@ -528,10 +528,10 @@
                             
                             <!--import Fcregistration-->
                               <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.registration.import.form') }}">
+                                <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
-                                    <span class="hide-menu"> Fc Registration Import</span>
+                                    <span class="hide-menu"> Fc Registration Master</span>
                                 </a>
                             </li>
                         </ul>

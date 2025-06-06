@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\Registration\FormEditController;
 use App\Http\Controllers\Admin\Registration\FcExemptionMasterController;
 use Mews\Captcha\Captcha;
 use App\Http\Controllers\Admin\Registration\RegistrationImportController;
+use App\Http\Controllers\Admin\Registration\FcRegistrationMasterController;
 
 
 
@@ -109,8 +110,16 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
    
 });
 
- //FcRegistration Master Import
-    Route::prefix('/registration')->group(function () {
+Route::prefix('/registration')->group(function () {
     Route::get('/import', [RegistrationImportController::class, 'showForm'])->name('admin.registration.import.form');
-    Route::post('/import', [RegistrationImportController::class, 'import'])->name('admin.registration.import');
+    Route::post('/import/preview', [RegistrationImportController::class, 'preview'])->name('admin.registration.preview');
+    Route::post('/import/confirm', [RegistrationImportController::class, 'importConfirmed'])->name('admin.registration.import.confirm');
+});
+
+//Fc Registration Master list
+Route::prefix('/registration')->group(function () {
+    Route::get('/fc_masterlist', [RegistrationImportController::class, 'fc_masterindex'])->name('admin.registration.index');
+    Route::get('/fc_masteredit/{id}', [RegistrationImportController::class, 'fc_masteredit'])->name('admin.registration.edit');
+    Route::put('/fc_masterupdate/{id}', [RegistrationImportController::class, 'fc_masterupdate'])->name('admin.registration.update');
+    // Route::delete('/fc_masterdelete/{id}', [RegistrationImportController::class, 'fc_masterdestroy'])->name('admin.registration.delete');
 });
