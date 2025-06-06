@@ -43,20 +43,20 @@
 
                         <div class="col-md-3">
                             <strong>Faculty Name:</strong>
-                            <span class="text-primary">{{ $courseGroup->timetable->faculty->full_name }}</span>
+                            <span class="text-primary">{{ optional($courseGroup->timetable)->faculty->full_name }}</span>
                         </div>
                         <div class="col-md-3">
                             <strong>Topic Date:</strong>
                             <span class="text-primary">
-                                {{ Carbon\Carbon::parse($courseGroup->timetable->mannual_starttime)->format('Y-m-d') }}
+                                {{ Carbon\Carbon::parse(optional($courseGroup->timetable)->mannual_starttime)->format('Y-m-d') }}
                             </span>
                         </div>
                         <div class="col-md-3">
                             <strong>Session Time:</strong>
                             <span class="text-primary">
-                                {{ Carbon\Carbon::parse($courseGroup->timetable->classSession->start_time)->format('Y-m-d') }}
+                                {{ Carbon\Carbon::parse(optional($courseGroup->timetable->classSession)->start_time)->format('Y-m-d') }}
                                 to
-                                {{ Carbon\Carbon::parse($courseGroup->timetable->classSession->end_time)->format('Y-m-d') }}
+                                {{ Carbon\Carbon::parse(optional($courseGroup->timetable->classSession)->end_time)->format('Y-m-d') }}
                             </span>
                         </div>
                     </div>
