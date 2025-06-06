@@ -38,7 +38,7 @@
                         <div class="mb-3">
                             <label for="memo_doc_upload" class="form-label">Upload Document</label>
                             <input type="file" name="memo_doc_upload" class="form-control" accept=".pdf,.doc,.docx">
-                            <small class="text-muted">Supported formats: PDF, DOC, DOCX</small>
+                            <small class="text-muted">Supported formats: PDF, Word</small>
                             @if(isset($memoType) && $memoType->memo_doc_upload)
                                 <small class="d-block mt-1">
                                     Existing File: 

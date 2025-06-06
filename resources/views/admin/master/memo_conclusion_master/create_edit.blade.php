@@ -35,7 +35,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="pt_discusion" class="form-label">PT Discussion</label>
-                            <input type="number" name="pt_discusion" class="form-control"
+                            <input type="text" name="pt_discusion" class="form-control"
                                    value="{{ old('pt_discusion', $conclusion->pt_discusion ?? '') }}">
                             @error('pt_discusion')
                                 <small class="text-danger">{{ $message }}</small>

@@ -17,14 +17,17 @@ class CourseMemoDecisionMappController extends Controller
     public function create()
     { 
         $mappings = CourseMemoDecisionMapp::all();
-        $CourseMaster = CourseMaster::all();
-        $MemoTypeMaster = MemoTypeMaster::all();
-        $MemoConclusionMaster = MemoConclusionMaster::all();
+        $CourseMaster = CourseMaster::where('active_inactive', 1)
+                              ->get();
+        $MemoTypeMaster = MemoTypeMaster::where('active_inactive', 1)
+                              ->get();
+        $MemoConclusionMaster = MemoConclusionMaster::where('active_inactive', 1)
+                              ->get();
         return view('admin.course_memo_decision_mapping.create_edit', compact('mappings', 'CourseMaster', 'MemoTypeMaster', 'MemoConclusionMaster'));
     }
 
     public function store(Request $request)
-    {
+    { 
         
         $request->validate([
             'course_master_pk' => 'required|numeric',
