@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class FcRegistrationMaster extends Model
 {
-    protected $table = 'fc_registration_master1';
+    protected $table = 'fc_registration_master';
     public $primaryKey = 'pk';
 
     protected $fillable = [
