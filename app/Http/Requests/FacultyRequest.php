@@ -48,7 +48,7 @@ class FacultyRequest extends FormRequest
             // Qualification Details (array fields)
             'degree.*' => 'required|string|max:255',
             'university_institution_name.*' => 'required|string|max:255',
-            'year_of_passing.*' => 'required|date_format:Y',
+            'year_of_passing.*' => 'required',
             'percentage_CGPA.*' => 'required|numeric|min:0|max:100',
             'certificate.*' => 'required|mimes:pdf,jpg,jpeg,png|max:2048',
 
