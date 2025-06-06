@@ -17,14 +17,14 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.registration.import') }}" method="POST" enctype="multipart/form-data">
-        @csrf
-        <div class="mb-3">
-            <label for="file" class="form-label">Upload Excel File</label>
-            <input type="file" name="file" class="form-control" required>
-            <small class="text-muted">Only .xlsx, .xls or .csv allowed</small>
-        </div>
-        <button type="submit" class="btn btn-primary">Import</button>
-    </form>
+   <form action="{{ route('admin.registration.preview') }}" method="POST" enctype="multipart/form-data">
+    @csrf
+    <div class="mb-3">
+        <label for="file" class="form-label">Upload Excel File</label>
+        <input type="file" name="file" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Preview</button>
+</form>
+
 </div>
 @endsection
