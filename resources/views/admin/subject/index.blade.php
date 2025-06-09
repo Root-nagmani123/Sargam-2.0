@@ -20,7 +20,8 @@
             </div>
             <hr>
             <div class="table-responsive">
-                <table class="table table-bordered text-nowrap align-middle dataTable table-striped" id="alt_pagination" aria-describedby="alt_pagination_info">
+                
+                <table class="table table-bordered text-nowrap table-striped">
                     <thead>
                         <tr>
                             <th class="col">S.No.</th>
