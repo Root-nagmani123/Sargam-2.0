@@ -72,7 +72,10 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="card-title">Attendance</h4>
-                        <button type="submit" class="btn btn-primary float-end">save</button>
+                        <div class="">
+                            <a href="{{ route('attendance.index') }}" class="btn btn-secondary">Back</a>
+                            <button type="submit" class="btn btn-primary ">save</button>
+                        </div>
                     </div>
                     <hr>
                     {!! $dataTable->table(['class' => 'table  table-bordered table-striped table-hover']) !!}
