@@ -48,17 +48,17 @@ class GroupMappingDataTable extends DataTable
                 $csrf = csrf_token();
 
                 $editUrl = route('group.mapping.edit', ['id' => $id]);
-                $deleteUrl = route('master.faculty.expertise.delete', ['id' => $id]);
+                $deleteUrl = route('group.mapping.delete', ['id' => $id]);
 
                 return '
                     <a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>
-                    
+                    <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
+                        <input type="hidden" name="_token" value="'.$csrf.'">
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>    
                 ';
-                // <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
-                //         <input type="hidden" name="_token" value="'.$csrf.'">
-                //         <input type="hidden" name="_method" value="DELETE">
-                //         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                //     </form>
+                
             })
 
             ->addColumn('status', function ($row) {
