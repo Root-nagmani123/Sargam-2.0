@@ -41,10 +41,8 @@
                                 @foreach($states as $key => $state)
                                 <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
                                     <td>{{ $key + 1 }}</td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">{{ $state->state_name }}</h6>
-                                        </div>
+                                    <td>
+                                        {{ $state->state_name }}
                                     </td>
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
