@@ -70,27 +70,46 @@ $topics = DB::table('timetable as t')
     }
     return $html;
 }
-function gettimetableDetailsBytopic(Request $request)
+public function gettimetableDetailsBytopic(Request $request)
 {
-
     $topicId = $request->topic_id;
 
-   $timeTableDetails = DB::table('timetable as t')
-    ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
-    ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
-    ->leftJoin('class_session_master as s', 't.class_session_master_pk', '=', 's.pk')
-    ->where('t.pk', $topicId)
-    ->select(
-        't.*',
-        'f.full_name as faculty_name',
-        'f.full_name as faculty_name',
-        'v.venue_name',
-        's.shift_name'
-    )
-    
-    ->get();
-    return response()->json($timeTableDetails[0]);
-    
+    // First get the basic timetable details
+    $query = DB::table('timetable as t')
+        ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+        ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+        ->where('t.pk', $topicId)
+        ->select(
+            't.*',
+            'f.full_name as faculty_name',
+            'v.venue_name',
+            't.class_session',
+            't.session_type'
+        );
+
+    // If session_type == 1, join class_session_master and get start_time + end_time
+    $timetable = $query->first();
+
+    if ($timetable->session_type == '1') {
+        $session = DB::table('class_session_master')
+            ->where('pk', $timetable->class_session)
+            ->first();
+
+        if ($session) {
+            // Format time to AM/PM
+            $startTime = date("h:i A", strtotime($session->start_time));
+            $endTime = date("h:i A", strtotime($session->end_time));
+            $timetable->shift_name = $startTime . ' - ' . $endTime;
+        } else {
+            $timetable->shift_name = null;
+        }
+    } else {
+        // If session_type != 1, use the string from class_session
+        $timetable->shift_name = $timetable->class_session;
+    }
+
+    return response()->json($timetable);
 }
+
 
 } 

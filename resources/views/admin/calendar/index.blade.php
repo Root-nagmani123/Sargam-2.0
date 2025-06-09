@@ -6,6 +6,10 @@
 
 
 <style>
+    .readonly-checkbox {
+    pointer-events: none;
+    opacity: 0.6;
+}
 /* Month ke har din ke box ki height/padding badhao */
 .fc .fc-daygrid-day-frame {
     min-height: 110px !important;
@@ -54,7 +58,7 @@
             </div>
         </div>
     </div>
-    <button type="button" class="btn btn-primary mb-3 " id="createEventupperButton">
+    <button type="button" class="btn btn-primary" id="createEventupperButton">
         <i class="bi bi-plus"></i> Add Event</button>
     <div class="card">
         <div class="card-body calender-sidebar app-calendar">
@@ -72,6 +76,7 @@
                         <h5 class="modal-title" id="eventModalLabel">
                             {{ $modalTitle ?? __('Add / Edit Calendar Event') }}
                         </h5>
+                        <input type="date" name="start_datetime" id="start_datetime">
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
@@ -147,7 +152,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-md-12">
+                            <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
                                     <select name="faculty_type" id="faculty_type" class="form-control">
@@ -170,7 +175,21 @@
 
                                 </div>
                             </div>
+                        </div>
+                        <div class="row">
                             <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Shift Type<span class="text-danger">*</span></label>
+                                    <input type="radio" name="shift_type" id="normalShift" value="1"
+                                        class="form-check-input" checked>
+                                    <label class="form-check-label" for="normalShift">Normal Shift</label>
+                                    <input type="radio" name="shift_type" id="manualShift" value="2"
+                                        class="form-check-input">
+                                    <label class="form-check-label" for="manualShift">Manual Shift</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12" id="shiftSelect">
                                 <div class="mb-3">
                                     <label class="form-label">Shift <span class="text-danger">*</span></label>
                                     <select name="shift" id="shift" class="form-control">
@@ -179,10 +198,10 @@
                                         <option value="{{ $shift->pk }}">{{ $shift->shift_name }}</option>
                                         @endforeach
                                     </select>
-
                                 </div>
                             </div>
-                            <div class="col-md-12">
+
+                            <div class="col-md-12" id="manualShiftFields" style="display: none;">
                                 <div class="mb-3 form-check">
                                     <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
                                         name="fullDayCheckbox">
@@ -192,82 +211,79 @@
                                 <div id="dateTimeFields">
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label for="start_datetime" class="form-label">Start <span
+                                            <label for="start_time" class="form-label">Start Time <span
                                                     class="text-danger">*</span></label>
-                                            <input type="datetime-local" name="start_datetime" id="start_datetime"
-                                                class="form-control">
+                                            <input type="time" name="start_time" id="start_time" class="form-control">
                                         </div>
                                         <div class="col-md-6">
-                                            <label for="end_datetime" class="form-label">End <span
+                                            <label for="end_time" class="form-label">End Time <span
                                                     class="text-danger">*</span></label>
-                                            <input type="datetime-local" name="end_datetime" id="end_datetime"
-                                                class="form-control">
+                                            <input type="time" name="end_time" id="end_time" class="form-control">
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="row py-3">
-                                <div class="col-md-3 mb-3">
-                                    <div>
-                                        <label class="form-label">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" value="1"
-                                                    name="feedback_checkbox" id="feedback_checkbox" checked>
-                                                <label class="form-check-label" for="feedback_checkbox">
-                                                    Feedback
-                                                </label>
-                                            </div>
-                                        </label>
+                        <div class="row py-3">
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="feedback_checkbox" id="feedback_checkbox" checked>
+                                            <label class="form-check-label" for="feedback_checkbox">
+                                                Feedback
+                                            </label>
+                                        </div>
+                                    </label>
 
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div>
-                                        <label class="form-label">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" value="1"
-                                                    name="remarkCheckbox" id="remarkCheckbox">
-                                                <label class="form-check-label" for="remarkCheckbox">
-                                                    Remark
-                                                </label>
-                                            </div>
-                                        </label>
-
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div>
-                                        <label class="form-label">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" value="1"
-                                                    name="ratingCheckbox" id="ratingCheckbox">
-                                                <label class="form-check-label" for="ratingCheckbox">
-                                                    Ratting
-                                                </label>
-                                            </div>
-                                        </label>
-
-                                    </div>
-                                </div>
-                                <div class="col-md-3 mb-3">
-                                    <div>
-                                        <label class="form-label">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" value="1"
-                                                    name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                                <label class="form-check-label" for="bio_attendanceCheckbox">
-                                                    Bio Attendance
-                                                </label>
-                                            </div>
-                                        </label>
-
-                                    </div>
                                 </div>
                             </div>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="remarkCheckbox" id="remarkCheckbox">
+                                            <label class="form-check-label" for="remarkCheckbox">
+                                                Remark
+                                            </label>
+                                        </div>
+                                    </label>
 
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="ratingCheckbox" id="ratingCheckbox">
+                                            <label class="form-check-label" for="ratingCheckbox">
+                                                Ratting
+                                            </label>
+                                        </div>
+                                    </label>
 
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
+                                            <label class="form-check-label" for="bio_attendanceCheckbox">
+                                                Bio Attendance
+                                            </label>
+                                        </div>
+                                    </label>
+
+                                </div>
+                            </div>
                         </div>
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-danger-subtle text-danger" data-bs-dismiss="modal">
@@ -281,9 +297,10 @@
                             Add Calendar Event
                         </button>
                     </div>
-                </div>
+
             </form>
         </div>
+    </div>
     </div>
     <!-- END MODAL -->
     <!-- eventDetails modal do-->
@@ -330,15 +347,41 @@
 <script>
 $(document).ready(function() {
     $(document).ready(function() {
-        function toggleRemarkRating() {
-            if ($('#feedback_checkbox').is(':checked')) {
-                $('#remarkCheckbox').prop('disabled', false);
-                $('#ratingCheckbox').prop('disabled', false);
+        toggleShiftFields();
+
+        // On change of shift type
+        $('input[name="shift_type"]').on('change', function() {
+            toggleShiftFields();
+        });
+
+        function toggleShiftFields() {
+            if ($('#manualShift').is(':checked')) {
+                $('#shiftSelect').hide();
+                $('#manualShiftFields').show();
             } else {
-                $('#remarkCheckbox').prop('disabled', true).prop('checked', false);
-                $('#ratingCheckbox').prop('disabled', true).prop('checked', false);
+                $('#shiftSelect').show();
+                $('#manualShiftFields').hide();
             }
         }
+
+      function toggleRemarkRating() {
+            if ($('#feedback_checkbox').is(':checked')) {
+                $('#remarkCheckbox').off('click.readonly').removeClass('readonly-checkbox');
+                $('#ratingCheckbox').off('click.readonly').removeClass('readonly-checkbox');
+            } else {
+                $('#remarkCheckbox')
+                    .prop('checked', false)
+                    .on('click.readonly', function(e) { e.preventDefault(); })
+                    .addClass('readonly-checkbox');
+
+                $('#ratingCheckbox')
+                    .prop('checked', false)
+                    .on('click.readonly', function(e) { e.preventDefault(); })
+                    .addClass('readonly-checkbox');
+            }
+        }
+
+
 
         // Initial call
         toggleRemarkRating();
@@ -400,26 +443,21 @@ $(document).ready(function() {
         });
 
         // Now handle behavior based on the numeric faculty_type values
-        $('#faculty_type').on('change', function() {
-            let selectedVal = $(this).val();
+       $('#faculty_type').on('change', function () {
+    let selectedVal = $(this).val();
 
-            if (selectedVal === "1") { // Internal
-                $('#remarkCheckbox').prop('disabled', false);
-                $('#ratingCheckbox').prop('disabled', true).prop('checked',
-                    false);
-            } else if (selectedVal === "2") { // Guest
-                $('#remarkCheckbox').prop('disabled', false).prop('checked',
-                    true);
-                $('#ratingCheckbox').prop('disabled', false).prop('checked',
-                    true);
-            } else {
-                // For Research or other, disable both
-                $('#remarkCheckbox').prop('disabled', true).prop('checked',
-                    false);
-                $('#ratingCheckbox').prop('disabled', true).prop('checked',
-                    false);
-            }
-        });
+    if (selectedVal === "1") { // Internal
+        makeCheckboxReadonly('#remarkCheckbox', false, false); // enabled, unchecked
+        makeCheckboxReadonly('#ratingCheckbox', true);         // readonly, unchecked
+    } else if (selectedVal === "2") { // Guest
+        makeCheckboxReadonly('#remarkCheckbox', false, true);  // enabled, checked
+        makeCheckboxReadonly('#ratingCheckbox', false, true);  // enabled, checked
+    } else {
+        // Research or Other
+        makeCheckboxReadonly('#remarkCheckbox', true);         // readonly, unchecked
+        makeCheckboxReadonly('#ratingCheckbox', true);         // readonly, unchecked
+    }
+});
 
         // Trigger once to set initial state
         $('#faculty').trigger('change');
@@ -516,6 +554,7 @@ waitForGroupTypeAndSet(event.course_group_type_master, function() {
 // });
 $('#eventForm').on('submit', function(e) {
     e.preventDefault();
+
     let isValid = true;
     let errorMsg = "";
     const courseName = $('#Course_name').val();
@@ -524,7 +563,9 @@ $('#eventForm').on('submit', function(e) {
     const faculty = $('#faculty').val();
     const facultyType = $('#faculty_type').val();
     const vanue = $('#vanue').val();
-    const shift = $('#shift').val();
+    const shift_type = $('[name="shift_type"]').val();
+
+
     const topic = $('#topic').val();
     if (!courseName) {
         alert("Please select a Course Name.");
@@ -561,37 +602,35 @@ $('#eventForm').on('submit', function(e) {
         $('#vanue').focus();
         return false;
     }
-    if (!shift) {
-        alert("Please select a Shift.");
-        $('#shift').focus();
+
+
+    if (!shift_type) {
+        alert("Please select a shift.");
+        $('[name="shift_type"]').focus();
         return false;
     }
-    let startDate = $('#start_datetime').val().trim();
-    let endDate = $('#end_datetime').val().trim();
-    if (startDate === "") {
-        alert("Start Date is required.");
-        $('#start_datetime').focus();
-        return false;
-    }
-    if (endDate === "") {
-        alert("End Date is required.");
-        $('#end_datetime').focus();
-        return false;
-    }
-    let now = new Date();
-    let start = new Date(startDate);
-    let end = new Date(endDate);
-    // Check if start date is in the past
-    if (start < now) {
-        alert("Start Date & Time cannot be in the past.");
-        $('#start_datetime').focus();
-        return false;
-    }
-    // Check if end date is before start date
-    if (end <= start) {
-        alert("End Date & Time must be after Start Date & Time.");
-        $('#end_datetime').focus();
-        return false;
+    // Shift type specific validations
+    if ($('#normalShift').is(':checked')) {
+        const shift = $('#shift').val();
+        if (!shift) {
+            $('#shift').addClass('is-invalid');
+            $('#shift').next('.text-danger').text("Please select a Shift.");
+            isValid = false;
+        }
+    } else if ($('#manualShift').is(':checked')) {
+        const startTime = $('#start_time').val();
+        const endTime = $('#end_time').val();
+
+        if (!startTime) {
+            $('#start_time').addClass('is-invalid');
+            $('#start_time').next('.text-danger').text("Start Time is required.");
+            isValid = false;
+        }
+        if (!endTime) {
+            $('#end_time').addClass('is-invalid');
+            $('#end_time').next('.text-danger').text("End Time is required.");
+            isValid = false;
+        }
     }
     if ($('#feedback_checkbox').is(':checked')) {
         if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
@@ -636,31 +675,34 @@ document.addEventListener('DOMContentLoaded', function() {
         editable: true,
         selectable: true,
         displayEventTime: false,
+        eventTimeFormat: false,
+        eventTimeFormat: {
+            hour: '2-digit',
+            minute: '2-digit',
+            meridiem: false,
+            hour12: false
+        },
         selectAllow: function(selectInfo) {
             let today = new Date();
             today.setHours(0, 0, 0, 0); // remove time for accuracy
 
             let selectedDate = new Date(selectInfo.start);
             selectedDate.setHours(0, 0, 0, 0);
-
             return selectedDate >= today;
         },
-
         events: '/calendar/full-calendar-details', // Data fetch karna
         eventContent: function(arg) {
             // Get custom fields
             const topic = arg.event.title || '';
             const venue = arg.event.extendedProps.vanue || '';
-            const start = arg.event.start ? new Date(arg.event.start).toLocaleString() : '';
-            const end = arg.event.end ? new Date(arg.event.end).toLocaleString() : '';
+            const start = arg.event.start ? new Date(arg.event.start).toLocaleDateString() : '';
 
             // Design: topic (bold), venue (italic), start, end (each on new line)
             let html = `
         <div style="line-height:1.3">
             <b>${topic}</b><br>
             <span style="font-size:0.95em;color:#444;"><i>${venue}</i></span><br>
-            <span style="font-size:0.9em;">Start: ${start}</span><br>
-            <span style="font-size:0.9em;">End: ${end}</span>
+            <span style="font-size:0.9em;">Date: ${start}</span><br>
         </div>
     `;
             return {
@@ -668,9 +710,8 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         },
         eventClick: function(info) {
+                
             let eventId = info.event.id;
-
-
             $.ajax({
                 url: '/calendar/single-calendar-details?id=' + eventId, // ✅ Fix here
                 type: 'GET',
@@ -678,27 +719,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     _token: '{{ csrf_token() }}'
                 },
                 success: function(data) {
-
+                 
                     $('#eventTopic').text(data.topic ?? '');
+                   const startDate = new Date(data.start).toLocaleDateString();
 
-                    const startDate = new Date(data.start).toLocaleString();
                     const endDate = new Date(data.end).toLocaleString();
                     $('#eventDate').html(
-                        `<b>Start:</b> ${startDate} <br><b>End:</b> ${endDate}`);
+                        `<b>Date:</b> ${startDate}`);
                     $('#eventfaculty').text(data.faculty_name ?? '');
                     $('#eventVanue').text(data.venue_name ?? '');
                     $('#editEventBtn').attr('data-id', data.id);
                     $('#deleteEventBtn').attr('data-id', data.id);
 
+                    
                     $('#editEventBtn')
                         .off('click') // ✅ Remove any old handler
                         .click(function() {
                             $('#eventDetails').modal('hide');
                             $('#eventForm')[0].reset();
-
                             const eventId = $(this).attr(
                                 'data-id'); // or .data('id')
-
                             $.ajax({
                                 url: '/calendar/event-edit/' + eventId,
                                 type: 'GET',
@@ -708,7 +748,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                         .course_master_pk);
                                     $('#subject_module').val(event
                                         .subject_module_master_pk);
-
                                     // Subject Module ko AJAX se reload karo
                                     if (event
                                         .subject_module_master_pk) {
@@ -742,7 +781,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                                                 '</option>'
                                                             );
                                                     });
-                                                // Yahan set karo selected module
                                                 $('#subject_name')
                                                     .val(
                                                         event
@@ -780,23 +818,43 @@ document.addEventListener('DOMContentLoaded', function() {
                                                         );
                                                 });
                                         });
-
                                     $('#topic').val(event
                                         .subject_topic);
+                                        $('#start_datetime').val(
+                                        event.START_DATE);
                                     $('#faculty').val(event
                                         .faculty_master);
                                     $('#faculty_type').val(event
                                         .faculty_type);
                                     $('#vanue').val(event.venue_id);
                                     $('#shift').val(event
-                                        .class_session_master_pk);
-                                    $('#start_datetime').val(event
-                                        .mannual_starttime);
-                                    $('#end_datetime').val(event
-                                        .mannual_end_time);
+                                        .class_session);
+                                    $('#normalShift').prop('checked',
+                                        event
+                                        .session_type == 1);
+                                    $('#manualShift').prop('checked',
+                                        event
+                                        .session_type == 2);
+                                        if(event
+                                        .session_type == 2) {
+                                        $('#shiftSelect').hide();
+                                        $('#manualShiftFields').show();
+                                    } else {
+                                        $('#shiftSelect').show();
+                                        $('#manualShiftFields').hide();
+                                    }
+                                   if (event.class_session && event.session_type == 2) {
+                                        const times = event.class_session.split(" - ");
+                                        if (times.length === 2) {
+                                            const start24 = convertTo24Hour(times[0].trim()); // e.g., "09:30 AM" → "09:30"
+                                            const end24 = convertTo24Hour(times[1].trim());   // e.g., "05:30 PM" → "17:30"
+                                            $('#start_time').val(start24);
+                                            $('#end_time').val(end24);
+                                        }
+                                    }
                                     $('#fullDayCheckbox').prop(
                                         'checked', event
-                                        .fullday == 1);
+                                        .full_day == 1);
                                     $('#feedback_checkbox').prop(
                                         'checked', event
                                         .feedback_checkbox == 1);
@@ -809,7 +867,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                     $('#bio_attendanceCheckbox').prop(
                                         'checked', event
                                         .Bio_attendance == 1);
-
                                     $('#eventModalLabel').text(
                                         'Edit Calendar Event');
                                     $('.btn-update-event')
@@ -818,22 +875,24 @@ document.addEventListener('DOMContentLoaded', function() {
                                             .pk) // JS memory ke liye
                                         .attr('data-id', event
                                             .pk
-                                        ); // HTML attribute ke liye
+                                        );
+                                    $('#start_datetime').prop(
+                                        'readonly', true);
                                     $('.btn-add-event').hide();
                                     $('#eventModal').modal('show');
-
                                 }
                             });
                         });
                     $('#eventDetails').modal('show');
                 }
             });
-
-
         },
         select: function(info) {
+             
             // Reset form
             $('#eventForm')[0].reset();
+            $('#shiftSelect').show();
+            $('#manualShiftFields').hide();
             $('.btn-update-event').hide().removeAttr('data-id');
             $('#group_type').empty().append('<option value="">Select Group Type</option>');
             $('#type_name_container').html('');
@@ -846,33 +905,23 @@ document.addEventListener('DOMContentLoaded', function() {
             let day = ("0" + selectedDate.getDate()).slice(-2);
             let formattedDate = `${year}-${month}-${day}`;
 
-            // Combine with fixed times
-            let startDateTime = `${formattedDate}T09:30`;
-            // let endDateTime = `${formattedDate}T17:30`;
-
-            // Set values
+            let startDateTime = `${formattedDate}`;
+            
             $('#start_datetime').val(startDateTime);
-            // $('#end_datetime').val(endDateTime);
-
-            // Show modal
+            $('#start_datetime').prop('readonly', true);
             $('#eventModal').modal('show');
-            let clickedDate = info.startStr.split("T")[0]; // only date part (e.g., "2025-05-21")
-
-            // Set default start and end time (for full day)
             $('#fullDayCheckbox').off('change').on('change', function() {
                 if ($(this).is(':checked')) {
-                    $('#start_datetime').val(clickedDate + 'T09:30');
-                    $('#end_datetime').val(clickedDate + 'T17:30');
+                    $('#start_time').val('09:30');
+                    $('#end_time').val('17:30');
                 } else {
-                    $('#start_datetime').val('');
-                    $('#end_datetime').val('');
+                    $('#start_time').val('');
+                    $('#end_time').val('');
                 }
             });
         },
-
         eventRender: function(info) {
-            // Custom rendering logic if needed, but normally FullCalendar should automatically handle color from JSON
-        }
+         }
     });
     calendar.render();
 
@@ -968,20 +1017,14 @@ $(document).on('click', '.btn-update-event', function(e) {
         return false;
     }
     let startDate = $('#start_datetime').val().trim();
-    let endDate = $('#end_datetime').val().trim();
     if (startDate === "") {
         alert("Start Date is required.");
         $('#start_datetime').focus();
         return false;
     }
-    if (endDate === "") {
-        alert("End Date is required.");
-        $('#end_datetime').focus();
-        return false;
-    }
+  
     let now = new Date();
     let start = new Date(startDate);
-    let end = new Date(endDate);
     // Check if start date is in the past
     if (start < now) {
         alert("Start Date & Time cannot be in the past.");
@@ -989,11 +1032,7 @@ $(document).on('click', '.btn-update-event', function(e) {
         return false;
     }
     // Check if end date is before start date
-    if (end <= start) {
-        alert("End Date & Time must be after Start Date & Time.");
-        $('#end_datetime').focus();
-        return false;
-    }
+  
     if ($('#feedback_checkbox').is(':checked')) {
         if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
             alert("Please select at least Remark or Rating when Feedback is checked.");
@@ -1035,14 +1074,49 @@ function waitForGroupTypeAndSet(value, callback, retries = 20) {
 }
 $(document).on('click', '#createEventupperButton', function() {
     $('#eventForm')[0].reset();
+    $('#start_datetime').prop('readonly', false);
+    $('#shiftSelect').show();
+    $('#manualShiftFields').hide();
     $('.btn-update-event').hide().removeAttr('data-id');
     $('#group_type').empty().append('<option value="">Select Group Type</option>');
     $('#type_name_container').html('');
+
     $('.btn-add-event').show();
     window.selectedGroupNames = 'ALL';
     // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
+
     $('#eventModal').modal('show');
+
+
+
+
 });
+function convertTo24Hour(timeStr) {
+    const [time, modifier] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':');
+
+    hours = parseInt(hours);
+    if (modifier === 'PM' && hours !== 12) {
+        hours += 12;
+    } else if (modifier === 'AM' && hours === 12) {
+        hours = 0;
+    }
+
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+}
+function makeCheckboxReadonly(selector, isReadonly, isChecked = false) {
+    const checkbox = $(selector);
+    checkbox.prop('checked', isChecked);
+
+    if (isReadonly) {
+        checkbox.on('click.readonly', function(e) { e.preventDefault(); });
+        checkbox.addClass('readonly-checkbox');
+    } else {
+        checkbox.off('click.readonly');
+        checkbox.removeClass('readonly-checkbox');
+    }
+}
+
 </script>
 
 @endsection
