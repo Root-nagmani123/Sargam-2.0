@@ -6,22 +6,25 @@
 
 
 <style>
-    /* Month ke har din ke box ki height/padding badhao */
-    .fc .fc-daygrid-day-frame {
-        min-height: 110px !important;   /* Height badhao (adjust as needed) */
-        padding: 8px 4px !important;
-    }
-    
+/* Month ke har din ke box ki height/padding badhao */
+.fc .fc-daygrid-day-frame {
+    min-height: 110px !important;
+    /* Height badhao (adjust as needed) */
+    padding: 8px 4px !important;
+}
+
+.fc .fc-daygrid-day {
+    min-height: 110px !important;
+}
+
+/* Responsive ke liye thoda adjust */
+@media (max-width: 600px) {
+
+    .fc .fc-daygrid-day-frame,
     .fc .fc-daygrid-day {
-        min-height: 110px !important;
+        min-height: 70px !important;
     }
-    /* Responsive ke liye thoda adjust */
-    @media (max-width: 600px) {
-        .fc .fc-daygrid-day-frame,
-        .fc .fc-daygrid-day {
-            min-height: 70px !important;
-        }
-    }
+}
 </style>
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js'></script>
@@ -51,7 +54,7 @@
             </div>
         </div>
     </div>
-<button type="button" class="btn btn-primary" id="createEventupperButton">
+    <button type="button" class="btn btn-primary mb-3 " id="createEventupperButton">
         <i class="bi bi-plus"></i> Add Event</button>
     <div class="card">
         <div class="card-body calender-sidebar app-calendar">
@@ -84,7 +87,7 @@
                                     </select>
                                 </div>
                             </div>
-                             <div class="col-md-6">
+                            <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Group Type <span class="text-danger">*</span></label>
                                     <select name="group_type" id="group_type" class="form-control">
@@ -99,15 +102,15 @@
                                 <div id="type_name_container" class="mt-3">
                                     <!-- Checkboxes will be appended here -->
                                 </div>
-                            </div> 
+                            </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Subject Module Name <span class="text-danger">*</span></label>
+                                    <label class="form-label">Subject Module Name <span
+                                            class="text-danger">*</span></label>
                                     <select name="subject_module" id="subject_module" class="form-control">
                                         <option value="">Select Subject Name</option>
                                         @foreach($subjects as $subject)
-                                        <option value="{{ $subject->pk }}"
-                                            data-id="{{ $subject->pk }}">
+                                        <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
                                             {{ $subject->module_name }}
                                         </option>
                                         @endforeach
@@ -129,7 +132,7 @@
 
                                 </div>
                             </div>
-                           
+
                             <div class="col-md-12">
                                 <div class="mb-3">
                                     <label class="form-label">Faculty <span class="text-danger">*</span></label>
@@ -189,12 +192,14 @@
                                 <div id="dateTimeFields">
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label for="start_datetime" class="form-label">Start <span class="text-danger">*</span></label>
+                                            <label for="start_datetime" class="form-label">Start <span
+                                                    class="text-danger">*</span></label>
                                             <input type="datetime-local" name="start_datetime" id="start_datetime"
                                                 class="form-control">
                                         </div>
                                         <div class="col-md-6">
-                                            <label for="end_datetime" class="form-label">End <span class="text-danger">*</span></label>
+                                            <label for="end_datetime" class="form-label">End <span
+                                                    class="text-danger">*</span></label>
                                             <input type="datetime-local" name="end_datetime" id="end_datetime"
                                                 class="form-control">
                                         </div>
@@ -324,25 +329,25 @@
 
 <script>
 $(document).ready(function() {
-$(document).ready(function () {
-    function toggleRemarkRating() {
-        if ($('#feedback_checkbox').is(':checked')) {
-            $('#remarkCheckbox').prop('disabled', false);
-            $('#ratingCheckbox').prop('disabled', false);
-        } else {
-            $('#remarkCheckbox').prop('disabled', true).prop('checked', false);
-            $('#ratingCheckbox').prop('disabled', true).prop('checked', false);
+    $(document).ready(function() {
+        function toggleRemarkRating() {
+            if ($('#feedback_checkbox').is(':checked')) {
+                $('#remarkCheckbox').prop('disabled', false);
+                $('#ratingCheckbox').prop('disabled', false);
+            } else {
+                $('#remarkCheckbox').prop('disabled', true).prop('checked', false);
+                $('#ratingCheckbox').prop('disabled', true).prop('checked', false);
+            }
         }
-    }
 
-    // Initial call
-    toggleRemarkRating();
-
-    // On change of Feedback checkbox
-    $('#feedback_checkbox').on('change', function () {
+        // Initial call
         toggleRemarkRating();
+
+        // On change of Feedback checkbox
+        $('#feedback_checkbox').on('change', function() {
+            toggleRemarkRating();
+        });
     });
-});
 
     $('#subject_module').on('change', function() {
         // Get data-id from selected option
@@ -455,21 +460,22 @@ $(document).ready(function () {
                     }
 
                     $('#group_type').off('change').on('change', function() {
-        const selectedType = $(this).val();
-        let html = '';
-        let groupNames = window.selectedGroupNames;
+                        const selectedType = $(this).val();
+                        let html = '';
+                        let groupNames = window.selectedGroupNames;
 
-        if (groupedData[selectedType]) {
-            // Agar create ke time hai, toh sab checked
-            let allChecked = groupNames === 'ALL';
-            groupedData[selectedType].forEach(group => {
-                let checked = '';
-                if (allChecked) {
-                    checked = 'checked';
-                } else if (Array.isArray(groupNames) && groupNames.includes(group.pk)) {
-                    checked = 'checked';
-                }
-                html += `
+                        if (groupedData[selectedType]) {
+                            // Agar create ke time hai, toh sab checked
+                            let allChecked = groupNames === 'ALL';
+                            groupedData[selectedType].forEach(group => {
+                                let checked = '';
+                                if (allChecked) {
+                                    checked = 'checked';
+                                } else if (Array.isArray(groupNames) &&
+                                    groupNames.includes(group.pk)) {
+                                    checked = 'checked';
+                                }
+                                html += `
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" 
                             name="type_names[]" 
@@ -480,11 +486,11 @@ $(document).ready(function () {
                         </label>
                     </div>
                 `;
-            });
-        }
+                            });
+                        }
 
-        $('#type_name_container').html(html);
-    });
+                        $('#type_name_container').html(html);
+                    });
                 }
             });
         } else {
@@ -503,7 +509,6 @@ waitForGroupTypeAndSet(event.course_group_type_master, function() {
     window.selectedGroupNames = groupNames; // <-- Set here for edit
     $('#group_type').trigger('change');
 });
-
 </script>
 <script>
 // $('.btn-update-event').on('click', function() {
@@ -536,7 +541,7 @@ $('#eventForm').on('submit', function(e) {
         $('#subject_module').focus();
         return false;
     }
-     if (!topic) {
+    if (!topic) {
         alert("Please Enter topic.");
         $('#topic').focus();
         return false;
@@ -573,22 +578,22 @@ $('#eventForm').on('submit', function(e) {
         $('#end_datetime').focus();
         return false;
     }
-        let now = new Date();
-        let start = new Date(startDate);
-        let end = new Date(endDate);
-        // Check if start date is in the past
-        if (start < now) {
-            alert("Start Date & Time cannot be in the past.");
-            $('#start_datetime').focus();
-            return false;
-        }
-        // Check if end date is before start date
-        if (end <= start) {
-            alert("End Date & Time must be after Start Date & Time.");
-            $('#end_datetime').focus();
-            return false;
-        }
-if ($('#feedback_checkbox').is(':checked')) {
+    let now = new Date();
+    let start = new Date(startDate);
+    let end = new Date(endDate);
+    // Check if start date is in the past
+    if (start < now) {
+        alert("Start Date & Time cannot be in the past.");
+        $('#start_datetime').focus();
+        return false;
+    }
+    // Check if end date is before start date
+    if (end <= start) {
+        alert("End Date & Time must be after Start Date & Time.");
+        $('#end_datetime').focus();
+        return false;
+    }
+    if ($('#feedback_checkbox').is(':checked')) {
         if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
             alert("Please select at least Remark or Rating when Feedback is checked.");
             $('#remarkCheckbox').focus();
@@ -604,13 +609,13 @@ if ($('#feedback_checkbox').is(':checked')) {
         url: "{{ route('calendar.event.store') }}",
         method: "POST",
         data: $(this).serialize(),
-       success: function (response) {
-        alert("Event created successfully!");
-        $('#eventModal').modal('hide');
-        $('#eventForm')[0].reset();
-       
-        window.location.reload(); // now this will work
-    },
+        success: function(response) {
+            alert("Event created successfully!");
+            $('#eventModal').modal('hide');
+            $('#eventForm')[0].reset();
+
+            window.location.reload(); // now this will work
+        },
         error: function(xhr) {
             if (xhr.status === 422) {
                 let errors = xhr.responseJSON.errors;
@@ -624,33 +629,33 @@ if ($('#feedback_checkbox').is(':checked')) {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    
+
     let calendarEl = document.getElementById('calendar');
     let calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
         editable: true,
         selectable: true,
         displayEventTime: false,
-     selectAllow: function(selectInfo) {
-        let today = new Date();
-        today.setHours(0, 0, 0, 0); // remove time for accuracy
+        selectAllow: function(selectInfo) {
+            let today = new Date();
+            today.setHours(0, 0, 0, 0); // remove time for accuracy
 
-        let selectedDate = new Date(selectInfo.start);
-        selectedDate.setHours(0, 0, 0, 0);
+            let selectedDate = new Date(selectInfo.start);
+            selectedDate.setHours(0, 0, 0, 0);
 
-        return selectedDate >= today;
-    },
+            return selectedDate >= today;
+        },
 
         events: '/calendar/full-calendar-details', // Data fetch karna
-       eventContent: function(arg) {
-    // Get custom fields
-    const topic = arg.event.title || '';
-    const venue = arg.event.extendedProps.vanue || '';
-    const start = arg.event.start ? new Date(arg.event.start).toLocaleString() : '';
-    const end = arg.event.end ? new Date(arg.event.end).toLocaleString() : '';
+        eventContent: function(arg) {
+            // Get custom fields
+            const topic = arg.event.title || '';
+            const venue = arg.event.extendedProps.vanue || '';
+            const start = arg.event.start ? new Date(arg.event.start).toLocaleString() : '';
+            const end = arg.event.end ? new Date(arg.event.end).toLocaleString() : '';
 
-    // Design: topic (bold), venue (italic), start, end (each on new line)
-    let html = `
+            // Design: topic (bold), venue (italic), start, end (each on new line)
+            let html = `
         <div style="line-height:1.3">
             <b>${topic}</b><br>
             <span style="font-size:0.95em;color:#444;"><i>${venue}</i></span><br>
@@ -658,8 +663,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <span style="font-size:0.9em;">End: ${end}</span>
         </div>
     `;
-    return { html: html };
-},
+            return {
+                html: html
+            };
+        },
         eventClick: function(info) {
             let eventId = info.event.id;
 
@@ -703,7 +710,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                         .subject_module_master_pk);
 
                                     // Subject Module ko AJAX se reload karo
-                                    if (event.subject_module_master_pk) {
+                                    if (event
+                                        .subject_module_master_pk) {
                                         $.ajax({
                                             url: "{{ route('calendar.get.subject.name') }}",
                                             type: 'GET',
@@ -810,7 +818,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             .pk) // JS memory ke liye
                                         .attr('data-id', event
                                             .pk
-                                            ); // HTML attribute ke liye
+                                        ); // HTML attribute ke liye
                                     $('.btn-add-event').hide();
                                     $('#eventModal').modal('show');
 
@@ -823,44 +831,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
         },
-      select: function(info) {
-    // Reset form
-    $('#eventForm')[0].reset();
-    $('.btn-update-event').hide().removeAttr('data-id');
-    $('#group_type').empty().append('<option value="">Select Group Type</option>');
-    $('#type_name_container').html('');
-    $('.btn-add-event').show();
-  window.selectedGroupNames = 'ALL';
-    // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
-    let selectedDate = new Date(info.start);
-    let year = selectedDate.getFullYear();
-    let month = ("0" + (selectedDate.getMonth() + 1)).slice(-2);
-    let day = ("0" + selectedDate.getDate()).slice(-2);
-    let formattedDate = `${year}-${month}-${day}`;
+        select: function(info) {
+            // Reset form
+            $('#eventForm')[0].reset();
+            $('.btn-update-event').hide().removeAttr('data-id');
+            $('#group_type').empty().append('<option value="">Select Group Type</option>');
+            $('#type_name_container').html('');
+            $('.btn-add-event').show();
+            window.selectedGroupNames = 'ALL';
+            // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
+            let selectedDate = new Date(info.start);
+            let year = selectedDate.getFullYear();
+            let month = ("0" + (selectedDate.getMonth() + 1)).slice(-2);
+            let day = ("0" + selectedDate.getDate()).slice(-2);
+            let formattedDate = `${year}-${month}-${day}`;
 
-    // Combine with fixed times
-    let startDateTime = `${formattedDate}T09:30`;
-    // let endDateTime = `${formattedDate}T17:30`;
+            // Combine with fixed times
+            let startDateTime = `${formattedDate}T09:30`;
+            // let endDateTime = `${formattedDate}T17:30`;
 
-    // Set values
-    $('#start_datetime').val(startDateTime);
-    // $('#end_datetime').val(endDateTime);
+            // Set values
+            $('#start_datetime').val(startDateTime);
+            // $('#end_datetime').val(endDateTime);
 
-    // Show modal
-    $('#eventModal').modal('show');
-    let clickedDate = info.startStr.split("T")[0]; // only date part (e.g., "2025-05-21")
+            // Show modal
+            $('#eventModal').modal('show');
+            let clickedDate = info.startStr.split("T")[0]; // only date part (e.g., "2025-05-21")
 
-    // Set default start and end time (for full day)
-    $('#fullDayCheckbox').off('change').on('change', function () {
-        if ($(this).is(':checked')) {
-            $('#start_datetime').val(clickedDate + 'T09:30');
-            $('#end_datetime').val(clickedDate + 'T17:30');
-        } else {
-            $('#start_datetime').val('');
-            $('#end_datetime').val('');
-        }
-    });
-},
+            // Set default start and end time (for full day)
+            $('#fullDayCheckbox').off('change').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#start_datetime').val(clickedDate + 'T09:30');
+                    $('#end_datetime').val(clickedDate + 'T17:30');
+                } else {
+                    $('#start_datetime').val('');
+                    $('#end_datetime').val('');
+                }
+            });
+        },
 
         eventRender: function(info) {
             // Custom rendering logic if needed, but normally FullCalendar should automatically handle color from JSON
@@ -900,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
-   
+
 });
 $(document).on('click', '.btn-update-event', function(e) {
     e.preventDefault();
@@ -908,7 +916,7 @@ $(document).on('click', '.btn-update-event', function(e) {
     if (!eventId) return alert('Event ID not found!');
 
 
-      e.preventDefault();
+    e.preventDefault();
     let isValid = true;
     let errorMsg = "";
     const courseName = $('#Course_name').val();
@@ -971,22 +979,22 @@ $(document).on('click', '.btn-update-event', function(e) {
         $('#end_datetime').focus();
         return false;
     }
-let now = new Date();
-let start = new Date(startDate);
-let end = new Date(endDate);
-// Check if start date is in the past
-if (start < now) {
-    alert("Start Date & Time cannot be in the past.");
-    $('#start_datetime').focus();
-    return false;
-}
-// Check if end date is before start date
-if (end <= start) {
-    alert("End Date & Time must be after Start Date & Time.");
-    $('#end_datetime').focus();
-    return false;
-}
-if ($('#feedback_checkbox').is(':checked')) {
+    let now = new Date();
+    let start = new Date(startDate);
+    let end = new Date(endDate);
+    // Check if start date is in the past
+    if (start < now) {
+        alert("Start Date & Time cannot be in the past.");
+        $('#start_datetime').focus();
+        return false;
+    }
+    // Check if end date is before start date
+    if (end <= start) {
+        alert("End Date & Time must be after Start Date & Time.");
+        $('#end_datetime').focus();
+        return false;
+    }
+    if ($('#feedback_checkbox').is(':checked')) {
         if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
             alert("Please select at least Remark or Rating when Feedback is checked.");
             $('#remarkCheckbox').focus();
@@ -1025,16 +1033,16 @@ function waitForGroupTypeAndSet(value, callback, retries = 20) {
         }, 150);
     }
 }
- $(document).on('click', '#createEventupperButton', function() {
-        $('#eventForm')[0].reset();
-            $('.btn-update-event').hide().removeAttr('data-id');
-            $('#group_type').empty().append('<option value="">Select Group Type</option>');
-            $('#type_name_container').html('');
-            $('.btn-add-event').show();
-            window.selectedGroupNames = 'ALL';
-            // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
-            $('#eventModal').modal('show');
-        });
+$(document).on('click', '#createEventupperButton', function() {
+    $('#eventForm')[0].reset();
+    $('.btn-update-event').hide().removeAttr('data-id');
+    $('#group_type').empty().append('<option value="">Select Group Type</option>');
+    $('#type_name_container').html('');
+    $('.btn-add-event').show();
+    window.selectedGroupNames = 'ALL';
+    // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
+    $('#eventModal').modal('show');
+});
 </script>
 
 @endsection

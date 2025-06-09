@@ -433,7 +433,6 @@
                                     <span class="hide-menu">Memo Conclusion Master</span>
                                 </a>
                             </li>
-                            <hr>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('master.department.master.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
