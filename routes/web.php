@@ -196,6 +196,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('student-list', 'studentList')->name('student.list');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
+        Route::delete('delete/{id}', 'delete')->name('delete');
     });
 
     //feedback route

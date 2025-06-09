@@ -173,4 +173,19 @@ class GroupMappingController extends Controller
             return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
     }
+
+
+    function delete(string $id)
+    {
+        try {
+            
+            $groupMapping = GroupTypeMasterCourseMasterMap::findOrFail(decrypt($id));
+            $groupMapping->studentCourseGroupMap()->delete();
+            $groupMapping->delete();
+            
+            return redirect()->route('group.mapping.index')->with('success', 'Group Mapping deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage())->withInput();
+        }
+    }
 }
