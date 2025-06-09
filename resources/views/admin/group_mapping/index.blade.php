@@ -64,7 +64,7 @@
                                             <button type="button" class="btn btn-success" id="upload_import">
                                                 <i class="mdi mdi-upload"></i> Upload & Import
                                             </button>
-                                            <a href="{{ asset('assets/sample/group_mapping_sample.xlsx') }}"
+                                            <a href="{{ asset('admin_assets/sample/group_mapping_sample.xlsx') }}"
                                                 class="btn btn-info" download>
                                                 <i class="mdi mdi-download"></i> Download Sample
                                             </a>
