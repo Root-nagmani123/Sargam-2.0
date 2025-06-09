@@ -31196,8 +31196,8 @@ pre.code-view code.hljs {
 }
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item .sidebar-link.active {
     box-shadow: none !important;
-    background-color: transparent !important;
-    color: var(--bs-primary) !important;
+    background-color: #af2910 !important;
+    color: #fff !important;
 }
 .sidebar-nav ul .sidebar-item .three-level .sidebar-item .sidebar-link,
 .sidebar-nav ul .sidebar-item .two-level .sidebar-item .sidebar-link {
