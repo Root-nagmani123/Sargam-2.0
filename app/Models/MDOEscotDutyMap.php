@@ -18,6 +18,7 @@ class MDOEscotDutyMap extends Model
         return [
             'mdo' => optional(MDODutyTypeMaster::whereRaw('LOWER(mdo_duty_type_name) = ?', ['mdo'])->first())->pk,
             'escot' => optional(MDODutyTypeMaster::whereRaw('LOWER(mdo_duty_type_name) = ?', ['escot'])->first())->pk,
+            'other' => optional(MDODutyTypeMaster::whereRaw('LOWER(mdo_duty_type_name) = ?', ['other'])->first())->pk,
         ];
     }
 
