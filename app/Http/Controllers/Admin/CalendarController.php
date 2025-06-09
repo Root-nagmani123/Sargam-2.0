@@ -40,7 +40,7 @@ class CalendarController extends Controller
             'subjects',
             'venueMaster',
             'classSessionMaster'
-        ));
+        )); 
     }
     public function getSubjectName(Request $request)
 {
@@ -66,9 +66,9 @@ public function store(Request $request)
         'faculty' => 'required|integer',
         'faculty_type' => 'required|integer',
         'vanue' => 'required|integer',
-        'shift' => 'required|integer',
-        'start_datetime' => 'nullable|date',
-        'end_datetime' => 'nullable|date',
+        'shift' => 'required_if:shift_type,1',
+        'start_time' => 'required_if:shift_type,2',
+        'end_time' => 'required_if:shift_type,2',
     ]);
 
     $event = new CalendarEvent();
@@ -81,10 +81,19 @@ $event->group_name = json_encode($request->type_names ?? []);
 $event->faculty_master = $request->faculty;
 $event->faculty_type = $request->faculty_type;
 $event->venue_id = $request->vanue;
-$event->class_session_master_pk = $request->shift;
-$event->fullday = $request->has('fullDayCheckbox') ? 1 : 0;
-$event->mannual_starttime = $request->start_datetime;
-$event->mannual_end_time = $request->end_datetime;
+$event->START_DATE = $request->start_datetime;
+$event->END_DATE = $request->start_datetime;
+$event->session_type = $request->shift_type;
+if ($request->shift_type == 1) {
+             $event->class_session = $request->shift;
+    } else {
+        if($request->has('fullDayCheckbox') && $request->fullDayCheckbox == 1) {
+        $event->full_day = $request->fullDayCheckbox; 
+        }
+        $startTime = Carbon::parse($request->start_time)->format('h:i A');
+        $endTime = Carbon::parse($request->end_time)->format('h:i A');
+        $event->class_session = $startTime . ' - ' . $endTime;
+    }
 $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
 $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
 $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
@@ -115,8 +124,8 @@ public function fullCalendarDetails(Request $request)
     
      $events = DB::table('timetable')
       ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-        ->whereDate('mannual_starttime', '>=', $request->start)
-        ->whereDate('mannual_end_time', '<=', $request->end)
+        ->whereDate('START_DATE', '>=', $request->start)
+        ->whereDate('END_DATE', '<=', $request->end)
          ->select(
             'timetable.*',
             'venue_master.venue_name as venue_name'
@@ -131,8 +140,8 @@ public function fullCalendarDetails(Request $request)
         return [
             'id' => $event->pk,
             'title' => $event->subject_topic,
-            'start' => $event->mannual_starttime,
-            'end'   => $event->mannual_end_time,
+            'start' => $event->START_DATE,
+            'end'   => $event->END_DATE,
             'vanue'   => $event->venue_name,
             'backgroundColor' => $colors[array_rand($colors)],  // background color for event
             'borderColor' => $colors[array_rand($colors)],  // border color for event
@@ -154,8 +163,8 @@ function SingleCalendarDetails(Request $request)
         ->select(
             'timetable.pk',
             'timetable.subject_topic',
-            'timetable.mannual_starttime',
-            'timetable.mannual_end_time',
+            'timetable.START_DATE',
+            'timetable.END_DATE',
             'faculty_master.full_name as faculty_name',
             'venue_master.venue_name as venue_name'
         )
@@ -165,8 +174,8 @@ function SingleCalendarDetails(Request $request)
          return response()->json([
         'id' => $event->pk,
         'topic' => $event->subject_topic ?? '', // if topic exists
-        'start' => $event->mannual_starttime,
-        'end' => $event->mannual_end_time,
+        'start' => $event->START_DATE,
+        // 'end' => $event->END_DATE,
         'faculty_name' => $event->faculty_name ?? '',
             'venue_name' => $event->venue_name ?? '',
     ]);
@@ -223,16 +232,25 @@ function event_edit($id){
     $event->group_name = json_encode($request->type_names ?? []);
     $event->faculty_master = $request->faculty;
     $event->faculty_type = $request->faculty_type;
-    $event->venue_id = $request->vanue;
-    $event->class_session_master_pk = $request->shift;
-    $event->fullday = $request->has('fullDayCheckbox') ? 1 : 0;
-    $event->mannual_starttime = $request->start_datetime;
-    $event->mannual_end_time = $request->end_datetime;
-    $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
-    $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
-    $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
-    $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
-    $event->active_inactive = $request->active_inactive ?? 1;
+   $event->venue_id = $request->vanue;
+$event->START_DATE = $request->start_datetime;
+$event->END_DATE = $request->start_datetime;
+$event->session_type = $request->shift_type;
+
+if ($request->shift_type == 1) {
+    $event->full_day =  0; 
+             $event->class_session = $request->shift;
+    } else {
+        $event->full_day = $request->fullDayCheckbox; 
+        $startTime = Carbon::parse($request->start_time)->format('h:i A');
+        $endTime = Carbon::parse($request->end_time)->format('h:i A');
+        $event->class_session = $startTime . ' - ' . $endTime;
+    }
+$event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
+$event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
+$event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
+$event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
+$event->active_inactive = $request->active_inactive ?? 1;
 
     $event->save();
 CourseGroupTimetableMapping::where('timetable_pk', $event->pk)->delete();
