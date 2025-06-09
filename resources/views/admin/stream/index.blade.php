@@ -4,8 +4,8 @@
 
 @section('content')
 <div class="container-fluid">
-<x-breadcrum title="Stream" />
-<x-session_message />
+    <x-breadcrum title="Stream" />
+    <x-session_message />
 
     <div class="datatables">
         <!-- start Zero Configuration -->
@@ -24,82 +24,67 @@
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
-                        
+
                         <table id="zero_config"
                             class="table table-striped table-bordered text-nowrap align-middle dataTable"
                             aria-describedby="zero_config_info">
                             <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th class="sorting sorting_asc" tabindex="0" aria-controls="zero_config" rowspan="1"
-                                        colspan="1" aria-sort="ascending"
-                                        aria-label="Name: activate to sort column descending" style="width: 224.625px;">
-                                        S.No.</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Position: activate to sort column ascending"
-                                        style="width: 225.875px;">Stream Name</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Salary: activate to sort column ascending"
-                                        style="width: 85.8906px;">Action</th>
-                                    <th class="sorting" tabindex="0" aria-controls="zero_config" rowspan="1" colspan="1"
-                                        aria-label="Salary: activate to sort column ascending"
-                                        style="width: 85.8906px;">Status</th>
-                                   
+                                    <th>S.No.</th>
+                                    <th>Stream Name</th>
+                                    <th>Action</th>
+                                    <th>Status</th>
+
                                 </tr>
                                 <!-- end row -->
                             </thead>
                             <tbody>
-    @foreach($streams as $key => $stream)
-        <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-            <td>{{ $key + 1 }}</td>
-            <td class="sorting_1">
-                <div class="d-flex align-items-center gap-6">
-                    <h6 class="mb-0">{{ $stream->stream_name }}</h6>
-                </div>
-            </td>
-            <td>
-                <div class="d-flex justify-content-start align-items-start gap-2">
-                    <a href="{{ route('stream.edit', $stream->pk) }}"
-                       class="btn btn-success text-white btn-sm">
-                        Edit
-                    </a>
-                    <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST" class="m-0">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                                class="btn btn-danger text-white btn-sm"
-                                onclick="return confirm('Are you sure you want to delete?')">
-                            Delete
-                        </button>
-                    </form>
-                </div>
-            </td>
-            <td>
-    <div class="form-check form-switch">
-        <input class="form-check-input status-toggle" 
-               type="checkbox" 
-               role="switch"
-               data-table="stream_master" 
-               data-column="status" 
-               data-id="{{ $stream->pk }}"
-               {{ $stream->status == 1 ? 'checked' : '' }}>
-    </div>
-</td>
+                                @foreach($streams as $key => $stream)
+                                <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+                                    <td>{{ $key + 1 }}</td>
+                                    <td>
+                                        {{ $stream->stream_name }}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex justify-content-start align-items-start gap-2">
+                                            <a href="{{ route('stream.edit', $stream->pk) }}"
+                                                class="btn btn-success text-white btn-sm">
+                                                Edit
+                                            </a>
+                                            <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST"
+                                                class="m-0">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-danger text-white btn-sm"
+                                                    onclick="return confirm('Are you sure you want to delete?')">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                data-table="stream_master" data-column="status"
+                                                data-id="{{ $stream->pk }}" {{ $stream->status == 1 ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
 
-        </tr>
-    @endforeach
-</tbody>
+                                </tr>
+                                @endforeach
+                            </tbody>
 
-                       
+
                     </div>
                 </div>
             </div>
         </div>
         <!-- end Zero Configuration -->
     </div>
-</div> 
+</div>
 
 <script>
-    window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
+window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
 </script>
 @endsection
