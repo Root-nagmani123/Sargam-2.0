@@ -215,6 +215,7 @@
             placeholder="Photo upload :"
             formLabelClass="form-label"
             labelRequired="true"
+            helperSmallText="Please upload a recent passport-sized photo"
             />
         
             @if(!empty($faculty->photo_uplode_path))
@@ -238,6 +239,7 @@
             label="Document upload :"
             placeholder="Document upload :"
             formLabelClass="form-label"
+            helperSmallText="CV or any other supporting document"
             />
 
             @if(!empty($faculty->Doc_uplode_path))
