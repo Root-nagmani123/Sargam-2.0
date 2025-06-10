@@ -11,12 +11,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\FacultyRequest;
 use App\Http\Requests\FacultyUpdateRequest;
 use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificationMap, FacultyExperienceMap, FacultyExpertiseMaster, FacultyExpertiseMap, FacultyTypeMaster};
+use App\DataTables\FacultyDataTable;
+use Maatwebsite\Excel\Facades\Excel;
 class FacultyController extends Controller
 {
-    public function index()
+    public function index(FacultyDataTable $dataTable)
     {
-        $faculties = FacultyMaster::orderBy('pk', 'desc')->get();
-        return view("admin.faculty.index", compact('faculties'));
+        return $dataTable->render('admin.faculty.index');
     }
 
     public function create()
@@ -423,5 +424,10 @@ class FacultyController extends Controller
             return redirect()->route('faculty.index')->with('error', 'Faculty not found');
         }
         return view('admin.faculty.show', compact('faculty'));
+    }
+
+    function excelExportFaculty()
+    {
+        return Excel::download(new \App\Exports\FacultyExport(), 'faculty_list_'.time().'.xlsx');
     }
 }
