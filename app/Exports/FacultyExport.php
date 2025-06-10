@@ -56,16 +56,13 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
 
     public function styles(Worksheet $sheet)
     {
-        // Total number of rows (including heading)
         $lastRow = $sheet->getHighestRow();
         $lastColumn = $sheet->getHighestColumn();
 
-        // Center-align all cells (heading + content)
         $sheet->getStyle("A1:{$lastColumn}{$lastRow}")
             ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-        // Style header row (row 1)
         return [
             1 => [
                 'font' => ['bold' => true],

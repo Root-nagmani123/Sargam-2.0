@@ -247,6 +247,7 @@
                                     placeholder="Photo Upload:"
                                     formLabelClass="form-label"
                                     labelRequired="true"
+                                    helperSmallText="Please upload a recent passport-sized photo"
                                 />
 
                                 <!-- Preview Container -->
@@ -264,6 +265,7 @@
                                     placeholder="Document upload :"
                                     formLabelClass="form-label"
                                     labelRequired="true"
+                                    helperSmallText="CV or any other supporting document"
                                     />
 
                             </div>
