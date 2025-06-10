@@ -100,14 +100,16 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
 
     public function map($faculty): array
     {
-        $qualifications = $faculty->facultyQualificationMap;
-        $degreeNames     = $qualifications->pluck('Degree_name')->filter()->implode(', ');
-        $specializations = $qualifications->pluck('Specialization')->filter()->implode(', ');
-        $universities    = $qualifications->pluck('University_Institution_Name')->filter()->implode(', ');
-        $passingYears    = $qualifications->pluck('Year_of_Passing')->filter()->implode(', ');
-        $cgpas           = $qualifications->pluck('Percentage_CGPA')->filter()->implode(', ');
+        $qualifications     = $faculty->facultyQualificationMap ?? collect([]);
+        $experience         = $faculty->facultyExperienceMap ?? collect([]);
+        $expertiseMap       = $faculty->facultyExpertiseMap ?? collect([]);
 
-        $experience = $faculty->facultyExperienceMap;
+        $degreeNames        = $qualifications->pluck('Degree_name')->filter()->implode(', ');
+        $specializations    = $qualifications->pluck('Specialization')->filter()->implode(', ');
+        $universities       = $qualifications->pluck('University_Institution_Name')->filter()->implode(', ');
+        $passingYears       = $qualifications->pluck('Year_of_Passing')->filter()->implode(', ');
+        $cgpas              = $qualifications->pluck('Percentage_CGPA')->filter()->implode(', ');
+
         $yearsOfExp        = $experience->pluck('Years_Of_Experience')->filter()->implode(', ');
         $expSpecialization = $experience->pluck('Specialization')->filter()->implode(', ');
         $institutions      = $experience->pluck('pre_Institutions')->filter()->implode(', ');
@@ -115,26 +117,24 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
         $durations         = $experience->pluck('Duration')->filter()->implode(', ');
         $natureOfWork      = $experience->pluck('Nature_of_Work')->filter()->implode(', ');
 
-        $expertiseAreas = $faculty->facultyExpertiseMap
-            ->pluck('facultyExpertise.expertise_name')
-            ->flatten()
-            ->filter()
-            ->implode(', ');
+        $expertiseAreas = $expertiseMap->map(function ($mapItem) {
+            return optional($mapItem->facultyExpertise)->expertise_name;
+        })->filter()->implode(', ');
 
         $sector = $faculty->faculty_sector === 1 ? 'Government Sector' : 'Private Sector';
 
         return [
             ++$this->index,
             optional($faculty->facultyTypeMaster)->faculty_type_name,
-            $faculty->first_name,
-            $faculty->middle_name,
-            $faculty->last_name,
-            $faculty->full_name,
-            $faculty->gender,
-            $faculty->landline_no,
-            $faculty->mobile_no,
-            $faculty->email_id,
-            $faculty->alternate_email_id,
+            $faculty->first_name ?? '',
+            $faculty->middle_name ?? '',
+            $faculty->last_name ?? '',
+            $faculty->full_name ?? '',
+            $faculty->gender ?? '',
+            $faculty->landline_no ?? '',
+            $faculty->mobile_no ?? '',
+            $faculty->email_id ?? '',
+            $faculty->alternate_email_id ?? '',
             optional($faculty->countryMaster)->country_name,
             optional($faculty->stateMaster)->state_name,
             optional($faculty->districtMaster)->district_name,
@@ -153,10 +153,10 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
             $durations,
             $natureOfWork,
 
-            $faculty->bank_name,
-            $faculty->Account_No,
-            $faculty->IFSC_Code,
-            $faculty->PAN_No,
+            $faculty->bank_name ?? '',
+            $faculty->Account_No ?? '',
+            $faculty->IFSC_Code ?? '',
+            $faculty->PAN_No ?? '',
 
             $sector,
             $expertiseAreas,
