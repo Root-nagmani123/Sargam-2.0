@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class FcRegistrationExportMaster extends Model
 {
-    protected $table = 'fc_registration_master1'; // Reference your actual table
+    protected $table = 'fc_registration_master'; // Reference your actual table
 
     public $timestamps = false; // Optional
 
