@@ -121,5 +121,10 @@ Route::prefix('/registration')->group(function () {
     Route::get('/fc_masterlist', [RegistrationImportController::class, 'fc_masterindex'])->name('admin.registration.index');
     Route::get('/fc_masteredit/{id}', [RegistrationImportController::class, 'fc_masteredit'])->name('admin.registration.edit');
     Route::put('/fc_masterupdate/{id}', [RegistrationImportController::class, 'fc_masterupdate'])->name('admin.registration.update');
-    // Route::delete('/fc_masterdelete/{id}', [RegistrationImportController::class, 'fc_masterdestroy'])->name('admin.registration.delete');
+    Route::delete('/fc_masterdelete/{id}', [RegistrationImportController::class, 'fc_masterdestroy'])->name('admin.registration.delete');
 });
+
+//fcmaster export
+
+Route::get('admin/registration/export', [RegistrationImportController::class, 'export'])->name('admin.registration.export');
+

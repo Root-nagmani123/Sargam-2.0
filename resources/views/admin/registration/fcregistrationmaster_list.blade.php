@@ -4,7 +4,6 @@
 
 @section('content')
     <div class="container-fluid">
-
         <x-breadcrum title="Registration List" />
         <x-session_message />
 
@@ -13,6 +12,7 @@
             <div class="card">
                 <div class="card-body">
                     <div class="table-responsive">
+                        <!-- Header Row with Title and Buttons -->
                         <div class="row">
                             <div class="col-6">
                                 <h4>Fc Registration Master</h4>
@@ -22,11 +22,26 @@
                                     <a href="{{ route('admin.registration.import.form') }}" class="btn btn-secondary">
                                         <i class="bi bi-upload me-1"></i> Bulk Upload
                                     </a>
-                                </div>
-                            </div>
 
+                                    <form action="{{ route('admin.registration.export') }}" method="GET"
+                                        class="d-flex align-items-center gap-2">
+                                        <label for="format" class="form-label me-2 mb-0 fw-semibold">Export:</label>
+                                        <select name="format" id="format" class="form-select w-auto" required>
+                                            <option value="">Select Format</option>
+                                            <option value="xlsx">Excel (.xlsx)</option>
+                                            <option value="csv">CSV (.csv)</option>
+                                            <option value="pdf">PDF (.pdf)</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-primary ms-2">Download</button>
+                                    </form>
+                                </div>
+
+                            </div>
                         </div>
+
                         <hr>
+
+                        <!-- Table Section -->
                         <div id="zero_config_wrapper" class="dataTables_wrapper">
                             <table id="zero_config"
                                 class="table table-striped table-bordered text-nowrap align-middle dataTable"
@@ -34,7 +49,7 @@
                                 <caption class="visually-hidden">Registration Data Table</caption>
                                 <thead>
                                     <tr>
-                                        <th scope="col">S no</th>
+                                        <th scope="col">S No</th>
                                         <th scope="col">First Name</th>
                                         <th scope="col">Middle Name</th>
                                         <th scope="col">Last Name</th>
@@ -60,24 +75,23 @@
                                                 <td>
                                                     <a href="{{ route('admin.registration.edit', $reg->pk) }}"
                                                         class="btn btn-sm btn-primary">Edit</a>
-                                                    {{-- <form action="{{ route('admin.registration.delete', $reg->pk) }}"
+                                                    <form action="{{ route('admin.registration.delete', $reg->pk) }}"
                                                         method="POST" style="display:inline;">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button onclick="return confirm('Delete this record?')"
                                                             class="btn btn-sm btn-danger">Delete</button>
-                                                    </form> --}}
+                                                    </form>
                                                 </td>
                                             </tr>
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="10" class="text-center">No registration records found.</td>
+                                            <td colspan="9" class="text-center">No registration records found.</td>
                                         </tr>
                                     @endif
                                 </tbody>
                             </table>
-                           
                         </div>
                     </div>
                 </div>
