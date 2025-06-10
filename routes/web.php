@@ -67,15 +67,15 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Faculty Routes
-    Route::prefix('faculty')->name('faculty.')->group(function () {
+    Route::prefix('faculty')->name('faculty.')->controller(FacultyController::class)->group(function () {
 
-        Route::get('/', [FacultyController::class, 'index'])->name('index');
-        Route::get('create', [FacultyController::class, 'create'])->name('create');
-        Route::post('store', [FacultyController::class, 'store'])->name('store');
-        Route::get('edit/{id}', [FacultyController::class, 'edit'])->name('edit');
-        Route::post('update', [FacultyController::class, 'update'])->name('update');
-        Route::get('show/{id}', [FacultyController::class, 'show'])->name('show');
-
+        Route::get('/',  'index')->name('index');
+        Route::get('create',  'create')->name('create');
+        Route::post('store',  'store')->name('store');
+        Route::get('edit/{id}',  'edit')->name('edit');
+        Route::post('update',  'update')->name('update');
+        Route::get('show/{id}',  'show')->name('show');
+        Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
     });
 
     // Programme Routes
