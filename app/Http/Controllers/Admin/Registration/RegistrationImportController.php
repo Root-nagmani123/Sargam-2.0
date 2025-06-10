@@ -106,7 +106,7 @@ class RegistrationImportController extends Controller
             return Excel::download(new FcRegistrationExport(), 'fc-registrations.csv');
         } elseif ($format === 'pdf') {
             $registrations = ModelsFcRegistrationExportMaster::all();
-            $pdf = Pdf::loadView('admin.forms.export.fcregistrationmaster_pdf', compact('registrations'));
+            $pdf = Pdf::loadView('admin.forms.export.fcregistrationmaster_pdf', compact('registrations'))->setPaper('a4', 'landscape');
             return $pdf->download('fc-registrations.pdf');
         } else {
             return redirect()->back()->with('error', 'Invalid format selected.');

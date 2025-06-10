@@ -22,7 +22,7 @@ class ExemptionDataExport implements FromArray, WithHeadings
             'web_auth',
             'Exemption_short_name',
             'medical_exemption_doc',
-            'created_at',
+            'created_date',
         ];
 
         // Optional: Set readable column headings
@@ -42,10 +42,19 @@ class ExemptionDataExport implements FromArray, WithHeadings
 
         foreach ($this->records as $record) {
             $row = [];
+
             foreach ($this->fields as $field) {
-                $value = $record->$field ?? '';
-                $row[] = !empty($value) ? $value : 'N/A';
+                if ($field === 'medical_exemption_doc') {
+                    $value = !empty($record->$field) ? 'Available' : 'Not Available';
+                } elseif ($field === 'created_date') {
+                    $value = \Carbon\Carbon::parse($record->created_date)->format('d-m-Y');
+                } else {
+                    $value = $record->$field ?? 'N/A';
+                }
+
+                $row[] = $value;
             }
+
             $data[] = $row;
         }
 
