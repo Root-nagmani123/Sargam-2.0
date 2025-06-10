@@ -581,11 +581,11 @@ $(document).ready(function () {
                 $('#upload_import').prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Uploading...');
             },
             success: function (response) {
-                return false;
+                
                 alert('File imported successfully!');
                 $('#importModal').modal('hide');
                 resetImportModal();
-                location.reload(); // Refresh the table/page
+                location.reload();
             },
             error: function (xhr) {
                 console.log('Error response:', xhr);
