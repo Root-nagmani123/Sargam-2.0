@@ -122,7 +122,7 @@ class FcExemptionMasterController extends Controller
                 ->with('captcha_refresh', true);
         }
 
-        // Check against fc_registration_master1
+        // Check against fc_registration_master
         $registration = DB::table('fc_registration_master')
             ->where('contact_no', $request->ex_mobile)
             ->where('web_auth', $request->reg_web_code)
@@ -270,8 +270,8 @@ class FcExemptionMasterController extends Controller
 {
     $format = $request->get('format');
 
-    // Fetch data from fc_registration_master1 with related exemption and user info
-    $submissions = DB::table('fc_registration_master1 as d')
+    // Fetch data from fc_registration_master with related exemption and user info
+    $submissions = DB::table('fc_registration_master as d')
         ->leftJoin('fc_exemption_master as e', 'd.fc_exemption_master_pk', '=', 'e.Pk')
         ->select(
             'd.contact_no',
