@@ -37,7 +37,7 @@
                     <td>
                         {{ $data->medical_exemption_doc ? 'Available' : 'N/A' }}
                     </td>
-                    <td>{{ \Carbon\Carbon::parse($data->created_at)->format('d-m-Y H:i') }}</td>
+                    <td>{{ \Carbon\Carbon::parse($data->created_date)->format('d-m-Y H:i') }}</td>
                 </tr>
             @endforeach
         </tbody>
