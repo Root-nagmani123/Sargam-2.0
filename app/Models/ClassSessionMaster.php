@@ -13,4 +13,8 @@ class ClassSessionMaster extends Model
 
     public $timestamps = false;
 
+    public function scopeActive($query)
+    {
+        return $query->where('active_inactive', 1);
+    }
 }

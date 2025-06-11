@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use Illuminate\Http\Request;
-use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance};
+use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance, Timetable};
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
 use App\DataTables\StudentAttendanceListDataTable;
@@ -16,14 +16,22 @@ class AttendanceController extends Controller
     {
         try {
 
+            $sessions = ClassSessionMaster::get();
+            $maunalSessions = Timetable::select('class_session')
+                ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
+                ->groupBy('class_session')
+                ->select('class_session')
+                ->get();
+
+
             $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
             $courseMasters = CourseMaster::whereIn('pk', $courseMasterPK)->select('course_name', 'pk')->get()->toArray();
 
-            return view('admin.attendance.index', compact('courseMasters'));
+            return view('admin.attendance.index', compact('courseMasters', 'sessions', 'maunalSessions'));
         } catch (\Exception $e) {
-
+            dd($e->getMessage());
             // Handle the exception
-            return redirect()->back()->with('error', 'An error occurred: ' . $e->getMessage());
+            return redirect()->route('attendance.index')->with('error', 'An error occurred: ' . $e->getMessage());
         }
 
     }
@@ -31,10 +39,8 @@ class AttendanceController extends Controller
     function getAttendanceList(Request $request)
     {
         try {
-
             $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
             $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
-            // $viewType = $request->view_type ?? null;
 
             $query = CourseGroupTimetableMapping::with([
                 'group',
@@ -45,44 +51,48 @@ class AttendanceController extends Controller
                 'timetable.faculty:pk,full_name',
             ]);
 
-            if ($fromDate || $toDate) {
-                $query->whereHas('timetable', function ($q) use ($fromDate, $toDate) {
-                    if ($fromDate) {
-                        $q->whereDate('mannual_starttime', '>=', $fromDate);
-                    }
-                    if ($toDate) {
-                        $q->whereDate('mannual_end_time', '<=', $toDate);
-                    }
-                });
-            }
+            $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request) {
 
+                if ($fromDate) {
+                    $q->whereDate('START_DATE', '>=', $fromDate);
+                }
+                if ($toDate) {
+                    $q->whereDate('END_DATE', '<=', $toDate);
+                }
 
-            if ($request->course_master_pk) {
-                $query->where('Programme_pk', $request->course_master_pk);
+                if ($request->attendance_type === 'manual') {
+                    $q->where('session_type', 2)
+                        ->where('class_session', $request->session_value);
+                } elseif ($request->attendance_type === 'normal') {
+                    $q->where('session_type', 1)
+                        ->where('class_session', $request->session_value);
+                } elseif ($request->attendance_type === 'full_day') {
+                    $q->where('full_day', 1);
+                }
+            });
+
+            if (!empty($request->course_master_pk)) {
+                $query->where('course_master_pk', $request->course_master_pk);
             }
 
             return DataTables::of($query)
                 ->addIndexColumn()
                 ->addColumn('programme_name', fn($row) => optional($row->course)->course_name ?? 'N/A')
                 ->addColumn('mannual_starttime', function ($row) {
-                    $startTime = '';
-                    if (optional($row->timetable)->mannual_starttime) {
-                        $startTime = Carbon::parse(optional($row->timetable)->mannual_starttime)->format('Y-m-d');
-                    }
-                    return $startTime;
+                    $startDate = optional($row->timetable)->START_DATE;
+                    $endDate   = optional($row->timetable)->END_DATE;
+
+                    $startTime = $startDate ? format_date($startDate, 'd/m/Y') : '';
+                    $endTime   = $endDate   ? format_date($endDate, 'd/m/Y') : '';
+
+                    return $startTime && $endTime
+                        ? $startTime . ' to ' . $endTime
+                        : $startTime . $endTime;
+
                 })
-                ->addColumn('session_time', function ($row) {
-                    $classSession = optional(optional($row->timetable)->classSession);
-
-                    $startTime = $classSession->start_time
-                        ? Carbon::parse($classSession->start_time)->format('H:i')
-                        : 'N/A';
-
-                    $endTime = $classSession->end_time
-                        ? Carbon::parse($classSession->end_time)->format('H:i')
-                        : 'N/A';
-
-                    return $startTime . ' - ' . $endTime;
+                ->addColumn('session_time', content: function ($row) {
+                    $classSession = optional($row->timetable)->class_session ?? '';
+                    return $classSession;
                 })
 
                 ->addColumn('venue_name', fn($row) => optional($row->timetable)->venue->venue_name ?? 'N/A')
@@ -154,7 +164,7 @@ class AttendanceController extends Controller
             if ($request->student) {
                 foreach ($request->student as $studentPk => $attendanceStatus) {
                     // Validate the attendance status
-                    if (!in_array($attendanceStatus, [0,1, 2, 3, 4, 5, 6, 7])) {
+                    if (!in_array($attendanceStatus, [0, 1, 2, 3, 4, 5, 6, 7])) {
                         return redirect()->back()->with('error', 'Invalid attendance status for student ID: ' . $studentPk);
                     }
 
