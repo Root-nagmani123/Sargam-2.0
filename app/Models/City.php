@@ -15,6 +15,7 @@ class City extends Model
         'state_master_pk',
         'district_master_pk',
         'city_name',
+        'active_inactive',
     ];
 
     public static function getCityList()

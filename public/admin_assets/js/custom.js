@@ -679,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function () {
         removeEvent: function (value) {
 
         },
-        availableTitle: "Available Students",
+        availableTitle: "Defaulter Students",
         selectedTitle: "Selected Students",
         addButtonText: "Move Right",
         removeButtonText: "Move Left",

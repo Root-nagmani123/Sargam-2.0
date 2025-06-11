@@ -14,6 +14,7 @@ class State extends Model
         'Pk',
         'state_name',
         'country_master_pk',
+        'active_inactive',
         'created_by',
         'created_date',
         'modified_by',

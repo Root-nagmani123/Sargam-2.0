@@ -83,30 +83,29 @@ public function gettimetableDetailsBytopic(Request $request)
             't.*',
             'f.full_name as faculty_name',
             'v.venue_name',
-            't.class_session',
-            't.session_type'
+            't.class_session as shift_name'
         );
 
     // If session_type == 1, join class_session_master and get start_time + end_time
     $timetable = $query->first();
 
-    if ($timetable->session_type == '1') {
-        $session = DB::table('class_session_master')
-            ->where('pk', $timetable->class_session)
-            ->first();
+    // if ($timetable->session_type == '1') {
+    //     $session = DB::table('class_session_master')
+    //         ->where('pk', $timetable->class_session)
+    //         ->first();
 
-        if ($session) {
-            // Format time to AM/PM
-            $startTime = date("h:i A", strtotime($session->start_time));
-            $endTime = date("h:i A", strtotime($session->end_time));
-            $timetable->shift_name = $startTime . ' - ' . $endTime;
-        } else {
-            $timetable->shift_name = null;
-        }
-    } else {
-        // If session_type != 1, use the string from class_session
-        $timetable->shift_name = $timetable->class_session;
-    }
+    //     if ($session) {
+    //         // Format time to AM/PM
+    //         $startTime = date("h:i A", strtotime($session->start_time));
+    //         $endTime = date("h:i A", strtotime($session->end_time));
+    //         $timetable->shift_name = $startTime . ' - ' . $endTime;
+    //     } else {
+    //         $timetable->shift_name = null;
+    //     }
+    // } else {
+    //     // If session_type != 1, use the string from class_session
+    //     $timetable->shift_name = $timetable->class_session;
+    // }
 
     return response()->json($timetable);
 }

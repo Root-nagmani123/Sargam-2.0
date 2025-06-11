@@ -12,6 +12,7 @@ class Country extends Model
     protected $fillable = [
         'country_name',
         'created_by',
+        'active_inactive',
         'created_date',
         'updated_by',
         'updated_date',
