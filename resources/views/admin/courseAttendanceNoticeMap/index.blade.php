@@ -81,8 +81,13 @@
                                             <span class="badge bg-info-subtle text-info">Other</span>
                                         @endif
                                     </td>
+<<<<<<< HEAD
                                     <td>{{ $memo->date_}}</td>
                                     <td>{{ $memo->topic_name }}</td>
+=======
+                                    <td>2023-10-01</td>
+                                    <td>Discussion on project progress</td>
+>>>>>>> ae713cf (some chnages in memo)
                                     <td> 
                                         <a href="{{route('memo.notice.management.conversation')}}"
                                             class="btn btn-primary btn-sm">View Conversation</a>
