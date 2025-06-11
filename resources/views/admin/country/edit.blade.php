@@ -50,7 +50,7 @@
                 @csrf
                 @method('PUT')
                 <div class="row">
-                    <div class="col-sm-10">
+                    <div class="col-sm-6">
                         <label for="country_name" class="form-label">Country Name :</label>
                         <div class="mb-3">
                             <input type="text" class="form-control" name="country_name"
@@ -60,8 +60,18 @@
                             @enderror
                         </div>
                     </div>
-                    <div class="col-sm-2">
-                        <label for="Schoolname" class="form-label"></label>
+                   
+                    <div class="col-sm-4">
+                        <div class="mb-3">
+                            <label for="active_inactive" class="form-label">Status <span style="color:red;">*</span></label>
+                            <select name="active_inactive" class="form-select" required>
+                                <option value="1" {{ (old('active_inactive', $country->active_inactive ?? 1) == 1) ? 'selected' : '' }}>Active</option>
+                                <option value="2" {{ (old('active_inactive', $country->active_inactive ?? 1) == 2) ? 'selected' : '' }}>Inactive</option>
+                            </select>
+                            @error('active_inactive')
+                                <small class="text-danger">{{ $message }}</small>
+                            @enderror
+                        </div>
                     </div>
                 </div>
                 <hr>

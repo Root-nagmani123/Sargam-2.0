@@ -23,11 +23,13 @@ class LocationController extends Controller
     {
         $validated = $request->validate([
             'country_name.*' => 'required|string|max:100',
+            'active_inactive' => 'required',
         ]);
 
         foreach ($request->country_name as $name) {
             Country::create([
                 'country_name' => $name,
+                'active_inactive' => $request->active_inactive,
                 'created_by' => auth()->id() ?? 1,  // Use current logged-in user ID or fallback to 1
                 'created_date' => now(),  // Use current timestamp
             ]);
@@ -46,10 +48,12 @@ class LocationController extends Controller
     {
         $request->validate([
             'country_name' => 'required|string|max:255',
+              'active_inactive' => 'required',
         ]);
 
         $country = Country::findOrFail($id);
         $country->country_name = $request->country_name;
+        $country->active_inactive = $request->active_inactive;
         $country->save();
 
         return redirect()->route('master.country.index')->with('success', 'Country updated successfully!');
@@ -79,11 +83,13 @@ class LocationController extends Controller
         $request->validate([
             'state_name' => 'required|string|max:255',
             'country_master_pk' => 'required|exists:country_master,pk',
+            'active_inactive' => 'required',
         ]);
  
         $state = new State();
         $state->state_name = $request->state_name;
         $state->country_master_pk = $request->country_master_pk;
+        $state->active_inactive = $request->active_inactive;
         $state->created_by = auth()->id();
         $state->created_date = now();
         $state->save();
@@ -104,6 +110,7 @@ class LocationController extends Controller
         $request->validate([
             'state_name' => 'required|string|max:255',
             'country_master_pk' => 'required|exists:country_master,pk',  // Validating country
+            'active_inactive' => 'required',
         ]);
 
         
@@ -112,6 +119,7 @@ class LocationController extends Controller
         // Update the state data
         $state->state_name = $request->state_name;
         $state->country_master_pk = $request->country_master_pk;
+        $state->active_inactive = $request->active_inactive;
 
         // Optionally, track who is updating
         $state->modified_by = auth()->id();  // Assuming you're using authentication
@@ -147,12 +155,15 @@ class LocationController extends Controller
         $request->validate([
             'state_master_pk' => 'required|numeric',
             'district_name' => 'required|string|max:100',
+             'active_inactive' => 'required',
         ]);
 
 
         District::create([
             'state_master_pk' => $request->state_master_pk,
             'district_name' => $request->district_name,
+            'active_inactive' => $request->active_inactive,
+            
         ]);
 
         return redirect()->route('master.district.index')->with('success', 'District added successfully.');
@@ -170,12 +181,14 @@ class LocationController extends Controller
         $request->validate([
             'state_master_pk' => 'required|numeric',
             'district_name' => 'required|string|max:100',
+             'active_inactive' => 'required',
         ]);
 
         $district = District::findOrFail($id);
         $district->update([
             'state_master_pk' => $request->state_master_pk,
             'district_name' => $request->district_name,
+             'active_inactive' => $request->active_inactive,
         ]);
 
 
@@ -209,12 +222,14 @@ class LocationController extends Controller
             'state_master_pk' => 'required',
             'district_master_pk' => 'required',
             'city_name' => 'required|string|max:100',
+            'active_inactive' => 'required',
         ]);
 
         City::create([
             'state_master_pk' => $request->state_master_pk,
             'district_master_pk' => $request->district_master_pk,
             'city_name' => $request->city_name,
+            'active_inactive' => $request->active_inactive,
         ]);
 
         return redirect()->route('master.city.index')->with('success', 'City added successfully');
@@ -236,6 +251,7 @@ class LocationController extends Controller
             'state_master_pk' => 'required',
             'district_master_pk' => 'required',
             'city_name' => 'required|string|max:100',
+            'active_inactive' => 'required',
         ]);
 
         $city = City::findOrFail($id);
@@ -245,6 +261,7 @@ class LocationController extends Controller
             'state_master_pk' => $request->state_master_pk,
             'district_master_pk' => $request->district_master_pk,
             'city_name' => $request->city_name,
+            'active_inactive' => $request->active_inactive,
         ]);
 
         return redirect()->route('master.city.index')->with('success', 'City updated successfully');

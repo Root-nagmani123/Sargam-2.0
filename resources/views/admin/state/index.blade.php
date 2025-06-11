@@ -33,7 +33,7 @@
                                     <th class="col">S.No.</th>
                                     <th class="col">State Name</th>
                                     <th class="col">Action</th>
-                                    <!-- <th class="col">Status</th> -->
+                                    <th class="col">Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -44,21 +44,35 @@
                                     <td>
                                         {{ $state->state_name }}
                                     </td>
+                                     <td>
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input status-toggle" type="checkbox"
+                                                role="switch"
+                                                data-table="state_master"
+                                                data-column="active_inactive"
+                                                data-id="{{ $state->Pk }}"
+                                                {{ $state->active_inactive == 1 ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
                                             <a href="{{ route('master.state.edit', $state->Pk) }}"
                                                 class="btn btn-success text-white btn-sm">
                                                 Edit
                                             </a>
-                                            <form action="{{ route('master.state.delete', $state->Pk) }}" method="POST"
-                                                class="m-0">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-danger text-white btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete?')">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                           
+                                             <form action="{{ route('master.state.delete', $state->Pk) }}"
+                                            method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault();
+                                                if(confirm('Are you sure you want to delete this ?')) {
+                                                    this.closest('form').submit();
+                                                }"
+                                                {{ $state->active_inactive == 1 ? 'disabled' : '' }}>
+                                                Delete
+                                            </button>
+                                        </form>
                                         </div>
                                     </td>
                                     <!-- <td>
