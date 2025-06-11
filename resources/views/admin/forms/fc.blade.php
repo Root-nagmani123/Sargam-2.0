@@ -241,24 +241,21 @@
                 <div class="col-md-9 text-end d-flex justify-content-end align-items-center">
                     <ul class="nav justify-content-end align-items-center">
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none"
-                                style="font-family: roboto; font-size: 12px;">Skip to Main Content</a></li>
+                                style=" font-size: 12px;">Skip to Main Content</a></li>
                         <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="asset/images/text_to_speech.png" alt="" height="20"><span class="ms-1"
-                                    style="font-family: roboto; font-size: 12px;">Screen Reader</span></a></li>
+                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><i class="material-icons">text_to_speech</i><span class="ms-1"
+                                    style=" font-size: 12px;">Screen Reader</span></a></li>
                         <span class="text-muted me-3 ms-3">|</span>
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style="font-family: roboto; font-size: 12px;">A+</a></li>
+                                style=" font-size: 12px;">A+</a></li>
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style="font-family: roboto; font-size: 12px;">A</a></li>
+                                style=" font-size: 12px;">A</a></li>
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style="font-family: roboto; font-size: 12px;">A-</a></li>
+                                style=" font-size: 12px;">A-</a></li>
                         <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="asset/images/Group 177.png" alt=""></a></li>
+                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><i class="material-icons fs-5">contrast</i></a></li>
                         <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="asset/images/Regular.png" alt="">
+                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><i class="material-icons fs-5">contrast</i>
                                 <span><select name="lang" id="" class="form-select form-select-sm"
                                         style="width: 100px; display: inline-block; font-size: 14px;  background-color: transparent; border: none;color: #fff;font-family: 'roboto', Courier, monospace;font-size: 12px;">"
                                         <option value="">Language</option>
@@ -267,8 +264,8 @@
                         <span class="text-muted me-3 ">|</span>
                         <li>
                             <a id="uw-widget-custom-trigger" contenteditable="false" style="cursor: pointer;">
-                                <img src="asset/images/accessible.png" alt="" height="20"> <span class="text-white ms-1"
-                                    style="font-family: roboto; font-size: 12px;">
+                                 <span class="text-white ms-1"
+                                    style=" font-size: 12px;">
                                     More
                                 </span>
                             </a>
