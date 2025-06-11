@@ -34,6 +34,7 @@
                                     <th>City Name</th>
                                     <th>District</th>
                                     <th>State</th>
+                                    <th>Status</th>
                                     <th>Action</th>
                                 </tr>
                                 <!-- end row -->
@@ -45,17 +46,32 @@
                                         <td>{{ $city->city_name }}</td>
                                         <td>{{ $city->state->state_name }}</td>
                                         <td>{{ $city->district?->district_name ?? 'N/A' }}</td>
-
+ <td>
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input status-toggle" type="checkbox"
+                                                role="switch"
+                                                data-table="city_master"
+                                                data-column="active_inactive"
+                                                data-id="{{ $city->pk }}"
+                                                {{ $city->active_inactive == 1 ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
                                         <td>
                                             <a href="{{ route('master.city.edit', $city->pk) }}"
                                                 class="btn btn-success btn-sm">Edit</a>
-                                            <form action="{{ route('master.city.delete', $city->pk) }}" method="POST"
-                                                style="display:inline;">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" onclick="return confirm('Delete this city?')"
-                                                    class="btn btn-danger btn-sm">Delete</button>
-                                            </form>
+                                           
+                                              <form action="{{ route('master.city.delete', $city->pk) }}"
+                                            method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault();
+                                                if(confirm('Are you sure you want to delete this ?')) {
+                                                    this.closest('form').submit();
+                                                }"
+                                                {{ $city->active_inactive == 1 ? 'disabled' : '' }}>
+                                                Delete
+                                            </button>
+                                        </form>
                                         </td>
                                     </tr>
                                 @endforeach

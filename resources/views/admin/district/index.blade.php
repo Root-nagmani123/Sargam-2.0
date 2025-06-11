@@ -25,22 +25,7 @@
                 </div>
                 <hr>
                 <div class="dataTables_wrapper">
-                    <div class="row mb-3">
-                        <div class="col-1">
-                            <select name="search" id="" class="form-control">
-                                <option value="">10</option>
-                                <option value="">20</option>
-                                <option value="">50</option>
-                                <option value="">100</option>
-                            </select>
-                        </div>
-                        <div class="col-11">
-                            <div class="float-end">
-                                <input type="search" class="form-control" id="search"
-                                    placeholder="Search by district name">
-                            </div>
-                        </div>
-                    </div>
+                   
                     <div class="table-responsive">
                         <table class="table table-striped table-bordered text-nowrap align-middle dataTable">
                             <thead>
@@ -49,6 +34,7 @@
                                     <th class="col">S.No.</th>
                                     <th class="col">District</th>
                                     <th class="col">Action</th>
+                                    <th class="col">Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -61,23 +47,41 @@
                                             <h6 class="mb-0">{{ $district->district_name }}</h6>
                                         </div>
                                     </td>
+                                      <td>
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input status-toggle" type="checkbox"
+                                                role="switch"
+                                                data-table="state_district_mapping"
+                                                data-column="active_inactive"
+                                                data-id="{{ $district->pk }}"
+                                                {{ $district->active_inactive == 1 ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
+                                    
+
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
                                             <a href="{{ route('master.district.edit', $district->pk) }}"
-                                                class="btn btn-success text-white btn-sm">
-                                                Edit
-                                            </a>
-                                            <form action="{{ route('master.district.delete', $district->pk) }}"
-                                                method="POST" class="m-0">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-danger text-white btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete?')">
-                                                    Delete
-                                                </button>
-                                            </form>
+                                                            class="btn btn-success text-white btn-sm">
+                                                            Edit
+                                                        </a>
+                                           
+                                             <form action="{{ route('master.district.delete', $district->pk) }}"
+                                            method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault();
+                                                if(confirm('Are you sure you want to delete this ?')) {
+                                                    this.closest('form').submit();
+                                                }"
+                                                {{ $district->active_inactive == 1 ? 'disabled' : '' }}>
+                                                Delete
+                                            </button>
+                                        </form>
                                         </div>
                                     </td>
+
+                                    
                                 </tr>
                                 @endforeach
 

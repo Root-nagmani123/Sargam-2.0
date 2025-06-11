@@ -31,7 +31,7 @@ class CalendarController extends Controller
             ->get();
     
         $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
-            ->select('pk', 'shift_name', 'start_time', 'end_time')
+            ->select('pk', 'shift_name','shift_time', 'start_time', 'end_time')
             ->get();
     
         return view('admin.calendar.index', compact(
