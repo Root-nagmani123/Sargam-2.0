@@ -64,7 +64,7 @@
                                                 }"
                                                 {{ $conclusion->active_inactive == 1 ? 'disabled' : '' }}>
                                                 Delete
-                                            </button>
+                                            </button> 
                                         </form>
                                     </td>
                                 </tr>

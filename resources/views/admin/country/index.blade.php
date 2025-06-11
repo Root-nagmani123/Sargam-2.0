@@ -28,26 +28,43 @@
                         <tr>
                             <th>#</th>
                             <th>Country Name</th>
+                            <th>Status</th>
                             <th>Actions</th>
-                            <!-- <th>Status</th> -->
+                            
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($countries as $index => $country)
                             <tr>
-                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $index + 1 }}</td> 
                                 <td>{{ $country->country_name }}</td>
-                                <td>
+                               
+                               <td>
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input status-toggle" type="checkbox"
+                                                role="switch"
+                                                data-table="country_master"
+                                                data-column="active_inactive"
+                                                data-id="{{ $country->pk }}"
+                                                {{ $country->active_inactive == 1 ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
+                                     <td>
                                     <a href="{{ route('master.country.edit', $country->pk) }}" class="btn btn-success btn-sm">Edit</a>
-                                    <form action="{{ route('master.country.delete', $country->pk) }}" method="POST" style="display:inline;">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this?')">Delete</button>
-                                    </form>
+
+                                    <form action="{{ route('master.country.delete', $country->pk) }}"
+                                            method="POST" class="d-inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault();
+                                                if(confirm('Are you sure you want to delete this ?')) {
+                                                    this.closest('form').submit();
+                                                }"
+                                                {{ $country->active_inactive == 1 ? 'disabled' : '' }}>
+                                                Delete
+                                            </button>
+                                        </form>
                                 </td>
-                                <!-- <td>
-                                    <input type="checkbox" class="status-toggle" data-id="{{ $country->pk }}" {{ $country->status ? 'checked' : '' }}>
-                                </td> -->
                             </tr>
                         @endforeach
                     </tbody>
