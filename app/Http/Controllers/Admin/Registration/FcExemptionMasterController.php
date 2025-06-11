@@ -242,9 +242,43 @@ class FcExemptionMasterController extends Controller
     // }
 
     // Exemption listing
-    public function exemption_list()
+    // public function exemption_list()
+    // {
+    //     $submissions = DB::table('fc_registration_master as r')
+    //         ->leftJoin('fc_exemption_master as e', 'r.fc_exemption_master_pk', '=', 'e.Pk')
+    //         ->select(
+    //             'r.pk',
+    //             'r.contact_no',
+    //             'r.web_auth',
+    //             'r.medical_exemption_doc',
+    //             'r.created_date',
+    //             'r.first_name',
+    //             'r.middle_name',
+    //             'r.last_name',
+    //             // 'r.username',
+    //             'e.Exemption_name',
+    //             'e.Exemption_short_name'
+    //         )
+    //         ->where('r.fc_exemption_master_pk', '!=', 0)
+    //         ->get();
+
+    //     return view('admin.forms.exemption_datalist', compact('submissions'));
+    // }
+
+    public function exemption_list(Request $request)
     {
-        $submissions = DB::table('fc_registration_master as r')
+        $filter = $request->get('exemption_category'); // Could be short name or empty
+
+        // Fetch unique exemption short names for the dropdown
+        $categories = DB::table('fc_exemption_master')
+            ->select('Exemption_short_name')
+            ->where('visible', 1)
+            ->distinct()
+            ->orderBy('Exemption_short_name')
+            ->get();
+
+        // Base query
+        $query = DB::table('fc_registration_master as r')
             ->leftJoin('fc_exemption_master as e', 'r.fc_exemption_master_pk', '=', 'e.Pk')
             ->select(
                 'r.pk',
@@ -255,44 +289,58 @@ class FcExemptionMasterController extends Controller
                 'r.first_name',
                 'r.middle_name',
                 'r.last_name',
-                // 'r.username',
                 'e.Exemption_name',
                 'e.Exemption_short_name'
             )
-            ->where('r.fc_exemption_master_pk', '!=', 0)
-            ->get();
+            ->where('r.fc_exemption_master_pk', '!=', 0);
 
-        return view('admin.forms.exemption_datalist', compact('submissions'));
+        // Apply filter only if a category is selected
+        if (!empty($filter)) {
+            $query->where('e.Exemption_short_name', $filter);
+        }
+
+        $submissions = $query->get();
+
+        return view('admin.forms.exemption_datalist', compact('submissions', 'categories', 'filter'));
     }
+
 
 
     public function exemptionexport(Request $request)
-{
-    $format = $request->get('format');
+    {
+        $format = $request->get('format');
+        $filter = $request->get('exemption_category');
 
-    // Fetch data from fc_registration_master with related exemption and user info
-    $submissions = DB::table('fc_registration_master as d')
-        ->leftJoin('fc_exemption_master as e', 'd.fc_exemption_master_pk', '=', 'e.Pk')
-        ->select(
-            'd.contact_no',
-            'd.web_auth',
-            'e.Exemption_short_name',
-            'd.medical_exemption_doc',
-            'd.created_date',
-            DB::raw("COALESCE(CONCAT_WS(' ', d.first_name, d.middle_name, d.last_name)) as user_name")
-        )
-        ->where('d.fc_exemption_master_pk', '!=', 0)
-        ->get();
-// @dd($submissions);
-    if ($format === 'xlsx' || $format === 'csv') {
-        return Excel::download(new ExemptionDataExport($submissions), "exemption_data.$format");
-    } elseif ($format === 'pdf') {
-        $pdf = Pdf::loadView('admin.forms.export.exemption_pdf', compact('submissions'));
-        return $pdf->download('exemption_data.pdf');
-    } else {
-        return back()->with('error', 'Invalid export format selected.');
+        // Fetch data from fc_registration_master with related exemption and user info
+        $submissions = DB::table('fc_registration_master as d')
+            ->leftJoin('fc_exemption_master as e', 'd.fc_exemption_master_pk', '=', 'e.Pk')
+            ->select(
+                'd.contact_no',
+                'd.web_auth',
+                'e.Exemption_short_name',
+                'd.medical_exemption_doc',
+                'd.created_date',
+                DB::raw("COALESCE(CONCAT_WS(' ', d.first_name, d.middle_name, d.last_name)) as user_name")
+            )
+            ->where('d.fc_exemption_master_pk', '!=', 0)
+
+            ->when($filter, function ($query, $filter) {
+                return $query->where('e.Exemption_short_name', $filter);
+            })
+            ->get();
+        // @dd($submissions);
+        if ($format === 'xlsx' || $format === 'csv') {
+            return Excel::download(new ExemptionDataExport($submissions), "exemption_data.$format");
+        } elseif ($format === 'pdf') {
+            // $pdf = Pdf::loadView('admin.forms.export.exemption_pdf', compact('submissions'));
+            $pdf = Pdf::loadView('admin.forms.export.exemption_pdf', compact('submissions', 'filter'));
+            $pdf->setPaper('a4', 'landscape');
+
+            return $pdf->download('exemption_data.pdf');
+        } else {
+            return back()->with('error', 'Invalid export format selected.');
+        }
     }
-}
 
 
     //captcha refresh
