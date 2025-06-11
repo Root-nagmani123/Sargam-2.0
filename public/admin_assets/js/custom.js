@@ -756,7 +756,19 @@ $(document).on('click', '#searchAttendance', function () {
     let programme = $('#programme').val();
     let fromDate = $('#from_date').val();
     let toDate = $('#to_date').val();
-    let viewType = $('#view_type').val();
+    // let viewType = $('#view_type').val();
+
+    let sessionTypeValue = '';
+    let attendanceType = $('input[name="attendance_type"]:checked').val();
+    if(attendanceType === 'normal') {
+        sessionTypeValue = $('#session').val();
+    }
+    if(attendanceType === 'manual') {
+        sessionTypeValue = $('#manual_session').val();
+    }
+    
+
+
     // || !viewType
     // Validate inputs
     // if (!programme || !fromDate || !toDate ) {
@@ -771,7 +783,9 @@ $(document).on('click', '#searchAttendance', function () {
             programme: programme,
             from_date: fromDate,
             to_date: toDate,
-            view_type: viewType
+            session_value: sessionTypeValue,
+            attendance_type: attendanceType,
+            // view_type: viewType
         },
         beforeSend: function () {
             showAjaxLoader(); 
@@ -831,6 +845,31 @@ function drawAttendanceTable() {
     });
 }
 
+
+$(document).ready(function() {
+    
+    $('#normal_session_container').hide();
+    $('#manual_session_container').hide();
+    
+    
+    $('input[name="attendance_type"]').change(function() {
+        $('#normal_session_container').hide();
+        $('#manual_session_container').hide();
+        
+        $('#session').val('').trigger('change');
+        $('#manual_session').val('').trigger('change');
+        
+        if ($(this).val() === 'normal') {
+            $('#normal_session_container').show();
+        } else if ($(this).val() === 'manual') {
+            $('#manual_session_container').show();
+        }
+        // For 'full_day', both remain hidden
+    });
+    
+    // Trigger change on page load to show/hide based on default checked radio
+    $('input[name="attendance_type"]:checked').trigger('change');
+});
 // End of students in attendance
 
 // End Attendance
