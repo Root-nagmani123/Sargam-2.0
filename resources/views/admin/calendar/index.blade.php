@@ -195,7 +195,7 @@
                                     <select name="shift" id="shift" class="form-control">
                                         <option value="">Select Shift</option>
                                         @foreach($classSessionMaster as $shift)
-                                        <option value="{{ $shift->pk }}">{{ $shift->shift_name }}</option>
+                                        <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -880,6 +880,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                         'readonly', true);
                                     $('.btn-add-event').hide();
                                     $('#eventModal').modal('show');
+                                    $('#fullDayCheckbox').off('change').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#start_time').val('08:00');
+                    $('#end_time').val('20:00');
+                } else {
+                    $('#start_time').val('');
+                    $('#end_time').val('');
+                }
+            });
                                 }
                             });
                         });
@@ -912,8 +921,8 @@ document.addEventListener('DOMContentLoaded', function() {
             $('#eventModal').modal('show');
             $('#fullDayCheckbox').off('change').on('change', function() {
                 if ($(this).is(':checked')) {
-                    $('#start_time').val('09:30');
-                    $('#end_time').val('17:30');
+                    $('#start_time').val('08:00');
+                    $('#end_time').val('20:00');
                 } else {
                     $('#start_time').val('');
                     $('#end_time').val('');
@@ -1084,7 +1093,15 @@ $(document).on('click', '#createEventupperButton', function() {
     $('.btn-add-event').show();
     window.selectedGroupNames = 'ALL';
     // Format date to "YYYY-MM-DDTHH:MM" for input[type="datetime-local"]
-
+              $('#fullDayCheckbox').off('change').on('change', function() {
+                if ($(this).is(':checked')) {
+                    $('#start_time').val('08:00');
+                    $('#end_time').val('20:00');
+                } else {
+                    $('#start_time').val('');
+                    $('#end_time').val('');
+                }
+            });
     $('#eventModal').modal('show');
 
 
@@ -1116,7 +1133,9 @@ function makeCheckboxReadonly(selector, isReadonly, isChecked = false) {
         checkbox.removeClass('readonly-checkbox');
     }
 }
-
+  const dateInput = document.getElementById('start_datetime');
+  const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
+  dateInput.setAttribute('min', today);
 </script>
 
 @endsection

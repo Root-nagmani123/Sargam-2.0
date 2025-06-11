@@ -14,6 +14,7 @@ class District extends Model
     protected $fillable = [
         'state_master_pk',
         'district_name',
+        'active_inactive',
     ];
     public function cities()
     {
