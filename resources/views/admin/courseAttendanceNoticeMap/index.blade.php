@@ -78,8 +78,8 @@
                                     </td>
                                     <td>2023-10-01</td>
                                     <td>Discussion on project progress</td>
-                                    <td>
-                                        <a href="{{route('master.memo.conversation')}}"
+                                    <td> 
+                                        <a href="{{route('memo.notice.management.conversation')}}"
                                             class="btn btn-primary btn-sm">View Conversation</a>
                                     </td>
                                     <td>2</td>

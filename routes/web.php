@@ -253,6 +253,7 @@ Route::prefix('admin/course-memo-decision')
     ->controller(CourseAttendanceNoticeMapController::class)
     ->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/conversation', 'conversation')->name('conversation');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/Subject-by-course', 'getSubjectByCourse')->name('getSubjectByCourse'); // <-- New AJAX route
