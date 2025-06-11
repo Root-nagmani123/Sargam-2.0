@@ -11,6 +11,13 @@
             <!-- start Zero Configuration -->
             <div class="card">
                 <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label for="rank_filter" class="form-label fw-semibold">Filter by Rank </label>
+                            <input type="number" id="rank_filter" class="form-control" placeholder="Enter rank">
+                        </div>
+                    </div>
+
                     <div class="table-responsive">
                         <!-- Header Row with Title and Buttons -->
                         <div class="row">
@@ -100,3 +107,19 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(document).ready(function() {
+            var table = $('#zero_config').DataTable();
+
+            $('#rank_filter').on('keyup change', function() {
+                let value = this.value.trim();
+                table
+                    .column(6) // Rank column index (0-based)
+                    .search(value ? '^' + value + '$' : '', true, false)
+                    .draw();
+            });
+        });
+    </script>
+@endpush
