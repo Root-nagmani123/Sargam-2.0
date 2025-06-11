@@ -27,8 +27,7 @@
         <!-- start Table -->
         <div class="card">
             <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row mb-3">
+                <div class="row mb-3">
                         <div class="col-6">
                             <h4>Exemptions</h4>
                         </div>
@@ -41,7 +40,7 @@
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
                         <div class="table-responsive">
                             <table id="zero_config"
-                            class="table table-striped table-bordered align-middle dataTable nowrap"
+                            class="table table-striped table-bordered text-wrap" role="grid"
                             aria-describedby="zero_config_info">
                             <thead>
                                 <tr>
@@ -102,8 +101,6 @@
                         </table>
                         </div>
                     </div>
-
-                </div>
             </div>
         </div>
         <!-- end Table -->
