@@ -104,6 +104,7 @@ function conversation(){
 }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 >>>>>>> fe496a2 (memo index page work)
 public function getStudentAttendanceBytopic(Request $request)
@@ -201,6 +202,8 @@ function store_memo_notice(Request $request){
 >>>>>>> ae713cf (some chnages in memo)
 =======
 >>>>>>> fe496a2 (memo index page work)
+=======
+>>>>>>> ae713cf (some chnages in memo)
 
 
 } 
