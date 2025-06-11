@@ -40,7 +40,7 @@
                             @error('pt_discusion')
                                 <small class="text-danger">{{ $message }}</small>
                             @enderror
-                        </div>
+                        </div> 
                     </div>
                 </div>
 
@@ -50,7 +50,7 @@
                             <label for="active_inactive" class="form-label">Status <span style="color:red;">*</span></label>
                             <select name="active_inactive" class="form-select" required>
                                 <option value="1" {{ (old('active_inactive', $conclusion->active_inactive ?? 1) == 1) ? 'selected' : '' }}>Active</option>
-                                <option value="2" {{ (old('active_inactive', $conclusion->active_inactive ?? 1) == 2) ? 'selected' : '' }}>Inactive</option>
+                                <option value="2" {{ (old('active_inactive', $conclusion->active_inactive ?? 2) == 2) ? 'selected' : '' }}>Inactive</option>
                             </select>
                             @error('active_inactive')
                                 <small class="text-danger">{{ $message }}</small>
