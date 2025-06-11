@@ -1,15 +1,34 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>Exemption Data PDF</title>
     <style>
-        body { font-family: sans-serif; font-size: 12px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #000; padding: 6px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        body {
+            font-family: sans-serif;
+            font-size: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
     </style>
 </head>
+
 <body>
 
     <h2>Exemption Submissions</h2>
@@ -37,11 +56,12 @@
                     <td>
                         {{ $data->medical_exemption_doc ? 'Available' : 'N/A' }}
                     </td>
-                    <td>{{ \Carbon\Carbon::parse($data->created_date)->format('d-m-Y H:i') }}</td>
+                    <td>{{ \Carbon\Carbon::parse($data->created_date)->format('d-m-Y') }}</td>
                 </tr>
             @endforeach
         </tbody>
     </table>
 
 </body>
+
 </html>
