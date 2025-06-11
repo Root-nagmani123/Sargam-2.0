@@ -102,6 +102,7 @@ public function gettimetableDetailsBytopic(Request $request)
 function conversation(){
      return view('admin.courseAttendanceNoticeMap.conversation');
 }
+<<<<<<< HEAD
 public function getStudentAttendanceBytopic(Request $request)
 {
     try {
@@ -192,6 +193,8 @@ function store_memo_notice(Request $request){
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
 }
+=======
+>>>>>>> ae713cf (some chnages in memo)
 
 
 } 
