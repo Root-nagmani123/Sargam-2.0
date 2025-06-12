@@ -488,6 +488,20 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.forms.path') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Path Page</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.forms.exemption_category') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Exemption Category</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('exemption.create') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>

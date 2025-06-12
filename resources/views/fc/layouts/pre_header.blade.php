@@ -192,4 +192,14 @@
         .form-label {
             font-weight: 500;
         }
+        <style>
+    .nav-item a span {
+        font-size: 12px;
+    }
+
+    .nav .nav-item {
+        margin-right: 10px;
+    }
+</style>
+
     </style>
