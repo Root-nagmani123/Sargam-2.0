@@ -267,3 +267,8 @@ Route::prefix('admin/course-memo-decision')
 Route::get('/fc', function () {
     return view('admin.forms.fc');
 })->name('fc');
+
+//fc front page route
+Route::get('/fc-front', function () {
+    return view('fc.front_page');
+})->name('fc.front');
