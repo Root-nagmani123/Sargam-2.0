@@ -638,7 +638,7 @@ class FormController extends Controller
                         // File upload detection
                         if ($request->hasFile($valueKey)) {
                             $filePath = $request->file($valueKey)->store("form-uploads" . $formId . $userId, 'public');
-                            dd($filePath);
+                            // dd($filePath);
                             // $filePath = $request->file($valueKey)->store("form-uploads", 'public');
 
                             $fieldType = 'file';
@@ -928,9 +928,11 @@ class FormController extends Controller
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
         return view('admin.forms.home_page', compact('forms'));
     }
+
      public function home()
     {
-        return view('admin.forms.home_page');
+        $forms = DB::table('local_form')->orderBy('sortorder')->get();
+        return view('admin.forms.home_page', compact('forms'));
     }
     public function main_page()
     {
