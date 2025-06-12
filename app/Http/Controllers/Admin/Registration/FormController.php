@@ -928,6 +928,10 @@ class FormController extends Controller
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
         return view('admin.forms.home_page', compact('forms'));
     }
+     public function home()
+    {
+        return view('admin.forms.home_page');
+    }
     public function main_page()
     {
         $forms = DB::table('local_form')->orderBy('sortorder')->get();
