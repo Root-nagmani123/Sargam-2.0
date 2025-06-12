@@ -54,7 +54,7 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     Route::get('/home', [FormController::class, 'home'])->name('forms.home');
 
     //home page user
-    Route::get('/home', [FormController::class, 'homeUser'])->name('forms.home.user');
+    // Route::get('/home', [FormController::class, 'homeUser'])->name('forms.home.user');
 
     //main page
     Route::get('/main_page', [FormController::class, 'main_page'])->name('forms.main_page');

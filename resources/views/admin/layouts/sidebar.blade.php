@@ -481,10 +481,10 @@
                                 <span class="hide-menu">Forms</span>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="#">
+                                <a class="sidebar-link" href="{{ route('forms.home') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
-                                    <span class="hide-menu">Home Page</span>
+                                    <span class="hide-menu">Front Page</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">

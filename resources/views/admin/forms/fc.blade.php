@@ -243,7 +243,7 @@
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none"
                                 style=" font-size: 12px;">Skip to Main Content</a></li>
                         <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><i class="material-icons">text_to_speech</i><span class="ms-1"
+                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><span class="ms-1"
                                     style=" font-size: 12px;">Screen Reader</span></a></li>
                         <span class="text-muted me-3 ms-3">|</span>
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
