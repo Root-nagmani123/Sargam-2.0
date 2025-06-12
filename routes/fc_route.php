@@ -128,6 +128,58 @@ Route::prefix('/registration')->group(function () {
 
 Route::get('admin/registration/export', [RegistrationImportController::class, 'export'])->name('admin.registration.export');
 
+//nibhash fc route
 
+Route::get('/fc', function () {
+    return view('admin.forms.fc');
+})->name('fc');
 
+//fc front page route
+Route::get('/fc-front', function () {
+    return view('fc.front_page');
+})->name('fc.front');
 
+//fc web login route
+Route::get('/fc-weblogin', function () {
+    return view('fc.login');
+})->name('fc.login');
+
+//fc registartion route
+Route::get('/fc-registration', function () {
+    return view('fc.registration');
+})->name('fc.registration');
+
+//fc login route
+Route::get('/fc-login', function () {
+    return view('fc.fc_login');
+})->name('fc.fc_login');
+
+//fc path route
+Route::get('/fc-choose', function () {
+    return view('fc.path');
+})->name('fc.path');
+
+//fc path damin route
+Route::get('/fc-path', function () {
+    return view('admin.forms.path');
+})->name('admin.forms.path');
+
+//fc registor form route
+Route::get('/fc-register-form', function () {
+    return view('fc.register_form');
+})->name('fc.register_form');
+
+//fc exemption form route
+Route::get('/fc-exemption', function () {
+    return view('fc.exemption_category');
+})->name('fc.exemption_category');
+
+//path admin route
+Route::get('/path', function () {
+    return view('admin.forms.path');
+})->name('admin.forms.path');
+
+//fc exemption admin route
+Route::get('/fc-exemption-category', function () {
+    return view('admin.forms.exemption_category');
+})->name('admin.forms.exemption_category');

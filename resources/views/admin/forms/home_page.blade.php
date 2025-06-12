@@ -143,9 +143,7 @@
                                             </svg></button></span></div>
                                 <div id="editor" class="ql-container ql-snow">
                                     <div class="ql-editor" data-gramm="false" contenteditable="true">
-                                        <p>Hello World!</p>
-                                        <p>Some initial <strong>bold</strong> text</p>
-                                        <p><br></p>
+                                       
                                     </div>
                                     <div class="ql-clipboard" contenteditable="true" tabindex="-1"></div>
                                     <div class="ql-tooltip ql-hidden"><a class="ql-preview" rel="noopener noreferrer"

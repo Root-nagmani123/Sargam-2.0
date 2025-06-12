@@ -152,7 +152,7 @@
         </p>
     </div>
     <div class="text-center mt-4">
-        <a href="#" class="btn btn-primary px-4" style="background-color: #004a93; border: #004a93;">Click Here to
+        <a href="{{ route('fc.login') }}" class="btn btn-primary px-4" style="background-color: #004a93; border: #004a93;">Click Here to
             Proceed</a>
     </div>
     
