@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\Registration\FcExemptionMasterController;
 use Mews\Captcha\Captcha;
 use App\Http\Controllers\Admin\Registration\RegistrationImportController;
 use App\Http\Controllers\Admin\Registration\FcRegistrationMasterController;
+use App\Http\Controllers\Admin\Registration\FrontPageController;
 
 
 
@@ -51,7 +52,7 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     Route::post('/add-column', [ColumnController::class, 'addColumn'])->name('admin.column.add');
 
     //home page
-    Route::get('/home', [FormController::class, 'home'])->name('forms.home');
+    // Route::get('/home', [FormController::class, 'home'])->name('forms.home');
 
     //home page user
     // Route::get('/home', [FormController::class, 'homeUser'])->name('forms.home.user');
@@ -106,8 +107,6 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
 
     //captcha route
     Route::get('captcha', [FcExemptionMasterController::class, 'reloadCaptcha'])->name('reload.captcha');
-
-   
 });
 
 Route::prefix('/registration')->group(function () {
@@ -188,3 +187,9 @@ Route::get('/path', function () {
 Route::get('/fc-exemption-category', function () {
     return view('admin.forms.exemption_category');
 })->name('admin.forms.exemption_category');
+//front page data route
+Route::get('/registration/frontpage', [FrontPageController::class, 'index'])->name('admin.frontpage');
+Route::post('/registration/frontpage', [FrontPageController::class, 'storeOrUpdate'])->name('admin.frontpage.save');
+
+//foundation page route
+Route::get('/registration/foundation-course', [FrontPageController::class, 'foundationIndex'])->name('frontpage.index');
