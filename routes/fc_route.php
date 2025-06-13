@@ -174,6 +174,11 @@ Route::get('/fc-exemption', function () {
     return view('fc.exemption_category');
 })->name('fc.exemption_category');
 
+//fc exemption form route
+Route::get('/fc-exemption-application', function () {
+    return view('fc.exemption_application');
+})->name('fc.exemption_application');
+
 //path admin route
 Route::get('/path', function () {
     return view('admin.forms.path');
