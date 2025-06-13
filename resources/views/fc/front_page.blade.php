@@ -185,7 +185,7 @@
                         style="color: #004a93; font-size: 20px;">Congratulations</a>
                 </h5>
                 <h4 class="fw-semibold mt-2" style="font-size: 20px;">
-                    {{ $data->course_title ?? 'Foundation Course' }}
+                    {{ isset($data) ? ($data->course_title ?? 'Foundation Course') : 'Foundation Course' }}
                 </h4>
             </div>
 
@@ -197,8 +197,9 @@
                         <div>
                             <h6 class="mb-1 fw-semibold">Course Duration</h6>
                             <div class="text-muted">
-                                {{ \Carbon\Carbon::parse($data->course_start_date)->format('F jS, Y') }} –
-                                {{ \Carbon\Carbon::parse($data->course_end_date)->format('F jS, Y') }}
+                                {{ isset($data->course_start_date) ? \Carbon\Carbon::parse($data->course_start_date)->format('F jS, Y') : '' }}
+                                –
+                                {{ isset($data->course_end_date) ? \Carbon\Carbon::parse($data->course_end_date)->format('F jS, Y') : '' }}
                             </div>
                         </div>
                     </div>
@@ -211,8 +212,9 @@
                         <div>
                             <h6 class="mb-1 fw-semibold">Online Registration</h6>
                             <div class="text-muted">
-                                {{ \Carbon\Carbon::parse($data->registration_start_date)->format('F jS, Y') }} –
-                                {{ \Carbon\Carbon::parse($data->registration_end_date)->format('F jS, Y') }}
+                                {{ isset($data->registration_start_date) ? \Carbon\Carbon::parse($data->registration_start_date)->format('F jS, Y') : '' }}
+                                –
+                                {{ isset($data->registration_end_date) ? \Carbon\Carbon::parse($data->registration_end_date)->format('F jS, Y') : '' }}
                             </div>
                         </div>
                     </div>
@@ -244,7 +246,7 @@
 
         <!-- Important Updates -->
         <div class="notice-box mt-4">
-            @if (!empty($data->important_updates))
+            @if (isset($data) && !empty($data->important_updates))
                 <div class="important-updates-content">
                     {!! $data->important_updates !!}
                 </div>
@@ -253,18 +255,17 @@
 
         <!-- Signature Block -->
         <div class="signature mt-5 text-end">
-            @if (!empty($data->coordinator_signature))
+            @if (isset($data) && !empty($data->coordinator_signature))
                 <img src="{{ asset($data->coordinator_signature) }}" alt="Coordinator Signature" height="50"
                     class="mb-2">
             @endif
 
             <p class="text-muted mb-0">
-                {{ $data->coordinator_name ?? 'Coordinator Name' }}<br>
-                {{ $data->coordinator_designation ?? 'Coordinator Designation' }}<br>
-                {{ $data->coordinator_info ?? 'Additional Info' }}
+                {{ isset($data) ? ($data->coordinator_name ?? 'Coordinator Name') : 'Coordinator Name' }}<br>
+                {{ isset($data) ? ($data->coordinator_designation ?? 'Coordinator Designation') : 'Coordinator Designation' }}<br>
+                {{ isset($data) ? ($data->coordinator_info ?? 'Additional Info') : 'Additional Info' }}
             </p>
         </div>
-
 
         <div class="text-center mt-4">
             <a href="#" class="btn btn-primary px-4" style="background-color: #004a93; border: #004a93;">
@@ -273,3 +274,4 @@
         </div>
     </div>
 @endsection
+
