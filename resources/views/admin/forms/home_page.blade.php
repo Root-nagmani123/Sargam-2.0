@@ -36,7 +36,8 @@
                 <h4 class="card-title mb-3">Create Front Page</h4>
                 <hr>
 
-                <form method="POST" action="{{ route('admin.frontpage.save') }}" id="cadreForm" enctype="multipart/form-data">
+                <form method="POST" action="{{ route('admin.frontpage.save') }}" id="cadreForm"
+                    enctype="multipart/form-data">
                     @csrf
                     <div class="row">
                         <!-- Course Duration -->
@@ -44,11 +45,13 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Course Start Date</label>
                                 <input type="date" name="course_start_date" class="form-control"
-                                    value="{{ old('course_start_date', $data->course_start_date ?? '') }}" required>
+                                    value="{{ old('course_start_date', isset($data) ? $data->course_start_date : '') }}"
+                                    required>
 
                                 <label class="form-label mt-3 fw-semibold">Course End Date</label>
                                 <input type="date" name="course_end_date" class="form-control"
-                                    value="{{ old('course_end_date', $data->course_end_date ?? '') }}" required>
+                                    value="{{ old('course_end_date', isset($data) ? $data->course_end_date : '') }}"
+                                    required>
                             </div>
                         </div>
 
@@ -57,11 +60,13 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Registration Start Date</label>
                                 <input type="date" name="registration_start_date" class="form-control"
-                                    value="{{ old('registration_start_date', $data->registration_start_date ?? '') }}" required>
+                                    value="{{ old('registration_start_date', isset($data) ? $data->registration_start_date : '') }}"
+                                    required>
 
                                 <label class="form-label mt-3 fw-semibold">Registration End Date</label>
                                 <input type="date" name="registration_end_date" class="form-control"
-                                    value="{{ old('registration_end_date', $data->registration_end_date ?? '') }}" required>
+                                    value="{{ old('registration_end_date', isset($data) ? $data->registration_end_date : '') }}"
+                                    required>
                             </div>
                         </div>
 
@@ -70,7 +75,7 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Course Title</label>
                                 <input type="text" name="course_title" class="form-control"
-                                    value="{{ old('course_title', $data->course_title ?? '') }}">
+                                    value="{{ old('course_title', isset($data) ? $data->course_title : '') }}">
                             </div>
                         </div>
 
@@ -79,7 +84,7 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Coordinator Name</label>
                                 <input type="text" name="coordinator_name" class="form-control"
-                                    value="{{ old('coordinator_name', $data->coordinator_name ?? '') }}">
+                                    value="{{ old('coordinator_name', isset($data) ? $data->coordinator_name : '') }}">
                             </div>
                         </div>
 
@@ -88,7 +93,7 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Coordinator Designation</label>
                                 <input type="text" name="coordinator_designation" class="form-control"
-                                    value="{{ old('coordinator_designation', $data->coordinator_designation ?? '') }}">
+                                    value="{{ old('coordinator_designation', isset($data) ? $data->coordinator_designation : '') }}">
                             </div>
                         </div>
 
@@ -97,7 +102,7 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Coordinator Info</label>
                                 <input type="text" name="coordinator_info" class="form-control"
-                                    value="{{ old('coordinator_info', $data->coordinator_info ?? '') }}">
+                                    value="{{ old('coordinator_info', isset($data) ? $data->coordinator_info : '') }}">
                             </div>
                         </div>
 
@@ -105,8 +110,9 @@
                         <div class="col-md-6 mt-3">
                             <label class="form-label fw-semibold">Coordinator Signature (Image)</label>
                             <input type="file" name="coordinator_signature" class="form-control">
-                            @if (!empty($data->coordinator_signature))
-                                <img src="{{ asset($data->coordinator_signature) }}" alt="Signature" height="50" class="mt-2">
+                            @if (!empty($data) && !empty($data->coordinator_signature))
+                                <img src="{{ asset($data->coordinator_signature) }}" alt="Signature" height="50"
+                                    class="mt-2">
                             @endif
                         </div>
 
@@ -114,10 +120,10 @@
                         <div class="col-12 mt-4">
                             <div class="mb-4">
                                 <label class="form-label fw-semibold" for="important_updates">Important Updates</label>
-                                <textarea class="form-control text-dark" rows="5" name="important_updates"
-                                    id="important_updates">{!! old('important_updates', $data->important_updates ?? '') !!}</textarea>
+                                <textarea class="form-control text-dark" rows="5" name="important_updates" id="important_updates">{!! old('important_updates', isset($data) ? $data->important_updates : '') !!}</textarea>
                             </div>
                         </div>
+
 
                         <!-- Submit Button -->
                         <div class="col-12 text-end">
@@ -140,7 +146,9 @@
                 height: 300,
                 toolbar: [
                     ['style', ['style']],
-                    ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'clear']],
+                    ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript',
+                        'subscript', 'clear'
+                    ]],
                     ['fontname', ['fontname']],
                     ['fontsize', ['fontsize']],
                     ['color', ['color']],
