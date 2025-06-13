@@ -35,7 +35,7 @@
                             2024</h5>
                         <span class="text-muted">For candidates appearing in Civil Services Mains Examination
                             2024</span>
-                             <a href="" class="btn btn-success custom-btn"
+                             <a href="{{ route('fc.exemption_application')}}" class="btn btn-success custom-btn"
                             style="background-color: #2563eb; border: #2563eb;">Apply for Exemption</a>
                     </div>
                 </div>
@@ -49,7 +49,7 @@
                         <h5 class="fw-bold text-center" style="color: #004a93; font-weight: 600;">Already Attended
                             Foundation Course</h5>
                         <span class="text-muted">For officers who have previously completed the Foundation Course</span>
-                         <a href="" class="btn btn-success custom-btn"
+                         <a href="{{ route('fc.exemption_application')}}" class="btn btn-success custom-btn"
                             style="background-color: #16a32a; border: #16a32a;">Apply for Exemption</a>
                     </div>
                 </div>
@@ -62,7 +62,7 @@
                         </div>
                         <h5 class="fw-bold text-center" style="color: #004a93; font-weight: 600;">Medical Grounds</h5>
                         <span class="text-muted">For candidates unable to attend due to medical reasons</span>
-                        <a href="" class="btn btn-success custom-btn"
+                        <a href="{{ route('fc.exemption_application')}}" class="btn btn-success custom-btn"
                             style="background-color: #dc2626; border: #dc2626;">Apply for Exemption</a>
                     </div>
                 </div>
@@ -75,7 +75,7 @@
                         </div>
                         <h5 class="fw-bold text-center" style="color: #004a93; font-weight: 600;">Opting Out After Registration</h5>
                         <span class="text-muted">For candidates who wish to withdraw after initial registration</span>
-                        <a href="" class="btn btn-success custom-btn"
+                        <a href="{{ route('fc.exemption_application')}}" class="btn btn-success custom-btn"
                             style="background-color: #ea580c; border: #ea580c;">Apply for Exemption</a>
                     </div>
                 </div>
