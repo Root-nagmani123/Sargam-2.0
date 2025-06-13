@@ -480,25 +480,19 @@
                             <li class="nav-small-cap">
                                 <span class="hide-menu">Forms</span>
                             </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('forms.home') }}">
+
+                             <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('frontpage.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Front Page</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.forms.path') }}">
+                                <a class="sidebar-link" href="{{ route('admin.frontpage') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
-                                    <span class="hide-menu">Path Page</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.forms.exemption_category') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Exemption Category</span>
+                                    <span class="hide-menu">Front Page Admin</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
