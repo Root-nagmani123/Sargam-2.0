@@ -95,8 +95,7 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     // user exemption listing 
     Route::get('/exemptions_data', [FcExemptionMasterController::class, 'exemption_list'])->name('exemptions.datalist');
 
-    //verify user 
-    Route::post('/registration/verify', [FcExemptionMasterController::class, 'verify'])->name('registration.verify');
+
 
     //exemption datalist export
     Route::get('/admin/exemption-data/export', [FcExemptionMasterController::class, 'exemptionexport'])->name('admin.exemption.export');
@@ -129,39 +128,39 @@ Route::get('admin/registration/export', [RegistrationImportController::class, 'e
 
 //nibhash fc route
 
-Route::get('/fc', function () {
-    return view('admin.forms.fc');
-})->name('fc');
+// Route::get('/fc', function () {
+//     return view('admin.forms.fc');
+// })->name('fc');
 
-//fc front page route
-Route::get('/fc-front', function () {
-    return view('fc.front_page');
-})->name('fc.front');
+// //fc front page route
+// Route::get('/fc-front', function () {
+//     return view('fc.front_page');
+// })->name('fc.front');
 
-//fc web login route
-Route::get('/fc-weblogin', function () {
-    return view('fc.login');
-})->name('fc.login');
+// //fc web login route
+// Route::get('/fc-weblogin', function () {
+//     return view('fc.login');
+// })->name('fc.login');
 
 //fc registartion route
-Route::get('/fc-registration', function () {
-    return view('fc.registration');
-})->name('fc.registration');
+// Route::get('/fc-registration', function () {
+//     return view('fc.credentials');
+// })->name('fc.credentials');
 
 //fc login route
-Route::get('/fc-login', function () {
-    return view('fc.fc_login');
-})->name('fc.fc_login');
+// Route::get('/fc-login', function () {
+//     return view('fc.fc_login');
+// })->name('fc.fc_login');
 
 //fc path route
-Route::get('/fc-choose', function () {
-    return view('fc.path');
-})->name('fc.path');
+// Route::get('/fc-choose', function () {
+//     return view('fc.path');
+// })->name('fc.path');
 
 //fc path damin route
-Route::get('/fc-path', function () {
-    return view('admin.forms.path');
-})->name('admin.forms.path');
+// Route::get('/fc-path', function () {
+//     return view('admin.forms.path');
+// })->name('admin.forms.path');
 
 //fc registor form route
 Route::get('/fc-register-form', function () {
@@ -179,17 +178,45 @@ Route::get('/fc-exemption-application', function () {
 })->name('fc.exemption_application');
 
 //path admin route
-Route::get('/path', function () {
-    return view('admin.forms.path');
-})->name('admin.forms.path');
+// Route::get('/path', function () {
+//     return view('admin.forms.path');
+// })->name('admin.forms.path');
 
 //fc exemption admin route
 Route::get('/fc-exemption-category', function () {
     return view('admin.forms.exemption_category');
 })->name('admin.forms.exemption_category');
+
 //front page data route
 Route::get('/registration/frontpage', [FrontPageController::class, 'index'])->name('admin.frontpage');
 Route::post('/registration/frontpage', [FrontPageController::class, 'storeOrUpdate'])->name('admin.frontpage.save');
 
 //foundation page route
 Route::get('/registration/foundation-course', [FrontPageController::class, 'foundationIndex'])->name('frontpage.index');
+
+// Auth verify user 
+Route::get('/registration/fc-auth', [FrontPageController::class, 'authindex'])->name('verify.authindex');
+Route::post('/registration/verify', [FrontPageController::class, 'verify'])->name('registration.verify');
+
+// Show the create credentials form
+Route::get('/fc/create-credentials', [FrontPageController::class, 'credential_index'])->name('credential.registration.create');
+
+// Handle form submission
+Route::post('/fc/store-credentials', [FrontPageController::class, 'credential_store'])->name('credential.registration.store');
+
+//login verify user route
+Route::get('/fc/login', [FrontPageController::class, 'showLoginForm'])->name('fc.login');
+Route::post('/fc/login-verify', [FrontPageController::class, 'verifyLogin'])->name('fc.login.verify');
+
+//path choose route
+Route::get('/fc/choose-path', [FrontPageController::class, 'choosePath'])->name('fc.choose.path');
+
+//page path route 
+Route::get('/admin/path-page', [FrontPageController::class, 'pathPageForm'])->name('admin.path.page');
+Route::post('/admin/path-page', [FrontPageController::class, 'pathPageSave'])->name('admin.path.page.save');
+
+//delete path faq
+Route::delete('/fc/faqs/{id}', [FrontPageController::class, 'destroyFaq'])->name('fc.faqs.destroy');
+
+// view all FAQs
+Route::get('/fc/all-faqs', [FrontPageController::class, 'allFaqs'])->name('fc.faqs.all');

@@ -1,6 +1,6 @@
 @extends('fc.layouts.master')
 
-@section('title', 'FC Login - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Registration - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
 
@@ -30,9 +30,9 @@
                                     </ul>
                                 </div>
                             @endif
-                            <form class="row g-3" method="POST" action="{{ route('fc.login.verify') }}">
+                            <form class="row g-3" method="POST" action="{{ route('credential.registration.store') }}">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Login to Foundation Course</h3>
+                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Create Credentials</h3>
                                 <hr>
 
                                 <!-- Username -->
@@ -50,6 +50,20 @@
                                             name="reg_password" id="password" required>
                                         <button type="button" class="btn btn-primary"
                                             onclick="togglePassword('password', this)"
+                                            style="background-color: #004a93;border-color: #004a93;">
+                                            <i class="material-icons menu-icon me-3 fs-3">visibility</i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Confirm Password -->
+                                <div class="col-md-12">
+                                    <label class="form-label">Confirm Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" placeholder="Enter Confirm Password"
+                                            name="reg_confirm_password" id="confirm_password" required>
+                                        <button type="button" class="btn btn-primary"
+                                            onclick="togglePassword('confirm_password', this)"
                                             style="background-color: #004a93;border-color: #004a93;">
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
