@@ -185,7 +185,7 @@
                         style="color: #004a93; font-size: 20px;">Congratulations</a>
                 </h5>
                 <h4 class="fw-semibold mt-2" style="font-size: 20px;">
-                    {{ isset($data) ? ($data->course_title ?? 'Foundation Course') : 'Foundation Course' }}
+                    {{ isset($data) ? $data->course_title ?? 'Foundation Course' : 'Foundation Course' }}
                 </h4>
             </div>
 
@@ -261,17 +261,18 @@
             @endif
 
             <p class="text-muted mb-0">
-                {{ isset($data) ? ($data->coordinator_name ?? 'Coordinator Name') : 'Coordinator Name' }}<br>
-                {{ isset($data) ? ($data->coordinator_designation ?? 'Coordinator Designation') : 'Coordinator Designation' }}<br>
-                {{ isset($data) ? ($data->coordinator_info ?? 'Additional Info') : 'Additional Info' }}
+                {{ isset($data) ? $data->coordinator_name ?? 'Coordinator Name' : 'Coordinator Name' }}<br>
+                {{ isset($data) ? $data->coordinator_designation ?? 'Coordinator Designation' : 'Coordinator Designation' }}<br>
+                {{ isset($data) ? $data->coordinator_info ?? 'Additional Info' : 'Additional Info' }}
             </p>
         </div>
 
         <div class="text-center mt-4">
-            <a href="#" class="btn btn-primary px-4" style="background-color: #004a93; border: #004a93;">
+            <a href="{{ route('verify.authindex') }}" class="btn btn-primary px-4"
+                style="background-color: #004a93; border: #004a93;">
                 Click Here to Proceed
             </a>
         </div>
+
     </div>
 @endsection
-
