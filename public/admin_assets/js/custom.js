@@ -674,7 +674,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize DualListbox on page load
     dualListbox = new DualListbox("#select", {
         addEvent: function (value) {
-
+ 
         },
         removeEvent: function (value) {
 
@@ -724,6 +724,82 @@ document.addEventListener('DOMContentLoaded', function () {
 
                         // Reinitialize the DualListbox
                         dualListbox = new DualListbox("#select", {
+                            addEvent: function (value) { },
+                            removeEvent: function (value) { },
+                            availableTitle: "Available Students",
+                            selectedTitle: "Selected Students",
+                            addButtonText: "Move Right",
+                            removeButtonText: "Move Left",
+                            addAllButtonText: "Move All Right",
+                            removeAllButtonText: "Move All Left",
+                            draggable: true
+                        });
+
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function () {
+                    alert('Error fetching student list');
+                }
+            });
+        }
+    });
+});
+document.addEventListener('DOMContentLoaded', function () {
+    // Initialize DualListbox on page load
+    dualListbox = new DualListbox("#select_memo_student", {
+        addEvent: function (value) {
+ 
+        },
+        removeEvent: function (value) {
+
+        },
+        availableTitle: "Defaulter Students",
+        selectedTitle: "Selected Students",
+        addButtonText: "Move Right",
+        removeButtonText: "Move Left",
+        addAllButtonText: "Move All Right",
+        removeAllButtonText: "Move All Left",
+        draggable: true
+    });
+
+    $('#topic_id').on('change', function () {
+        let topic_id = $(this).val();
+
+        if (topic_id.length > 0) {
+            $.ajax({
+                url: routes.getStudentAttendanceBytopic,
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    topic_id: topic_id
+                },
+                success: function (response) {
+                    if (response.status) {
+                        if (response.students.length === 0) {
+                            alert('No students found for the selected courses.');
+                            return;
+                        }
+
+                        const currentSelected = $('#select_memo_student').val();
+                        $('#select_memo_student').empty();
+
+                        // Append new options
+                        response.students.forEach(student => {
+                            $('#select_memo_student').append(
+                                $('<option>', {
+                                    value: student.pk,
+                                    text: student.display_name
+                                })
+                            );
+                        });
+
+                        // Destroy the old dual listbox wrapper (if needed)
+                        $('.dual-listbox').remove(); // depends on your plugin structure
+
+                        // Reinitialize the DualListbox
+                        dualListbox = new DualListbox("#select_memo_student", {
                             addEvent: function (value) { },
                             removeEvent: function (value) { },
                             availableTitle: "Available Students",
