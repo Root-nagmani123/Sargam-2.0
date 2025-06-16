@@ -82,12 +82,17 @@
                                         @endif
                                     </td>
 <<<<<<< HEAD
+<<<<<<< HEAD
                                     <td>{{ $memo->date_}}</td>
                                     <td>{{ $memo->topic_name }}</td>
 =======
                                     <td>2023-10-01</td>
                                     <td>Discussion on project progress</td>
 >>>>>>> ae713cf (some chnages in memo)
+=======
+                                    <td>{{ $memo->date_}}</td>
+                                    <td>{{ $memo->topic_name }}</td>
+>>>>>>> fe496a2 (memo index page work)
                                     <td> 
                                         <a href="{{route('memo.notice.management.conversation')}}"
                                             class="btn btn-primary btn-sm">View Conversation</a>

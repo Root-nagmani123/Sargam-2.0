@@ -103,6 +103,9 @@ function conversation(){
      return view('admin.courseAttendanceNoticeMap.conversation');
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> fe496a2 (memo index page work)
 public function getStudentAttendanceBytopic(Request $request)
 {
     try {
@@ -193,8 +196,11 @@ function store_memo_notice(Request $request){
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
 }
+<<<<<<< HEAD
 =======
 >>>>>>> ae713cf (some chnages in memo)
+=======
+>>>>>>> fe496a2 (memo index page work)
 
 
 } 
