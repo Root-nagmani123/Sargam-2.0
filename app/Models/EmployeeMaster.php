@@ -55,4 +55,32 @@ class EmployeeMaster extends Model
 
         return $deputationEmployeeList;
     }
+
+    public function assignedRoles()
+    {
+        // dd($this->pk);
+        $userCredential = UserCredential::where('user_name', $this->emp_id)->first();
+        if(!$userCredential) {
+            return collect();
+        }
+
+        $userRoleMaster = EmployeeRoleMapping::where('user_credentials_pk',  $userCredential->pk)->get();
+        if(!$userRoleMaster) {
+            return collect();
+        }
+        
+        $assignedRoles = [];
+        // dd($userRoleMaster);
+        $userRoleMaster->each(function ($role) use (&$assignedRoles) {
+            UserRoleMaster::where('pk', $role->user_role_master_pk)
+                ->get()
+                ->each(function ($role) use (&$assignedRoles) {
+                    $assignedRoles[] = [
+                        'role_name' => $role->USER_ROLE_NAME,
+
+                ];
+            });
+        });
+        return collect($assignedRoles);
+    }
 }

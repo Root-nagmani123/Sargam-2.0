@@ -55,39 +55,55 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 $(document).on('change', 'input[name="styled_max_checkbox"]', function () {
-    let address;
-    let country;
-    let state;
-    let city;
-    let postal;
+    let address  = $('[name="address"]').val();
+    let country  = $('[name="country"]').val();
+    let state    = $('[name="state"]').val();
+    let district = $('[name="district"]').val();
+    let city     = $('[name="city"]').val();
+    let postal   = $('[name="postal"]').val();
+
+    const $permanentFields = {
+        address: $('[name="permanentaddress"]'),
+        country: $('[name="permanentcountry"]'),
+        state: $('[name="permanentstate"]'),
+        district: $('[name="permanentdistrict"]'),
+        city: $('[name="permanentcity"]'),
+        postal: $('[name="permanentpostal"]'),
+    };
 
     if ($(this).is(':checked')) {
-        address = $(document).find('input[name="address"]').val();
-        country = $(document).find('input[name="country"]').val();
-        state = $(document).find('input[name="state"]').val();
-        city = $(document).find('input[name="city"]').val();
-        postal = $(document).find('input[name="postal"]').val();
-
-        if (address == '' || country == '' || state == '' || city == '' || postal == '') {
+        if (!address || !country || !state || !district || !city || !postal) {
             alert('Please fill all the fields');
             $(this).prop('checked', false);
-            return false;
-        } else {
-
-            $(document).find('input[name="permanentaddress"]').val(address);
-            $(document).find('input[name="permanentcountry"]').val(country);
-            $(document).find('input[name="permanentstate"]').val(state);
-            $(document).find('input[name="permanentcity"]').val(city);
-            $(document).find('input[name="permanentpostal"]').val(postal);
+            return;
         }
+
+        // Set values and apply readonly
+        $permanentFields.address.val(address).prop('readonly', true);
+        $permanentFields.postal.val(postal).prop('readonly', true);
+
+        $permanentFields.country.val(country).attr('data-readonly', true);
+        $permanentFields.state.val(state).attr('data-readonly', true);
+        $permanentFields.district.val(district).attr('data-readonly', true);
+        $permanentFields.city.val(city).attr('data-readonly', true);
+
     } else {
-        $(document).find('input[name="permanentaddress"]').val('');
-        $(document).find('input[name="permanentcountry"]').val('');
-        $(document).find('input[name="permanentstate"]').val('');
-        $(document).find('input[name="permanentcity"]').val('');
-        $(document).find('input[name="permanentpostal"]').val('');
+        // Clear values and remove readonly
+        $permanentFields.address.val('').prop('readonly', false);
+        $permanentFields.postal.val('').prop('readonly', false);
+
+        $.each([$permanentFields.country, $permanentFields.state, $permanentFields.district, $permanentFields.city], function (_, $el) {
+            $el.val('').removeAttr('data-readonly');
+        });
     }
 });
+
+// Prevent change on readonly <select>
+$(document).on('mousedown', 'select[data-readonly]', function (e) {
+    e.preventDefault();
+});
+
+
 
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
