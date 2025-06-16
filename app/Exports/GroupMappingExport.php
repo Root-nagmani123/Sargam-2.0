@@ -44,6 +44,6 @@ class GroupMappingExport implements FromCollection, WithHeadings
 
     public function headings(): array
     {
-        return ['Name', 'OT Code', 'Group Name', 'Group Type'];
+        return ['Name', 'OTCode', 'Group Name', 'Group Type'];
     }
 }
