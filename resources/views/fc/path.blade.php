@@ -47,7 +47,7 @@
                                 {!! $pathPage->apply_exemption ?? '' !!}
                             </div>
                             <div class="card-footer bg-white border-top-0">
-                                <a href="{{ route('fc.exemption_category') }}"
+                                <a href="{{ route('fc.exemption_category.index') }}"
                                     class="btn btn-warning custom-btn w-100 text-white"
                                     style="background-color: #ea5803; border-color: #ea5803;">
                                     Apply for Exemption

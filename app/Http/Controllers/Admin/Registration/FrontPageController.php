@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
+use App\Models\ExemptionCategory;
 
 
 class FrontPageController extends Controller
@@ -191,14 +192,14 @@ class FrontPageController extends Controller
     }
 
     //choose path
-   public function choosePath()
-{
-    $pathPage = PathPage::with(['faqs' => function ($query) {
-        $query->take(2); // Load only 2 FAQs
-    }])->first();
+    public function choosePath()
+    {
+        $pathPage = PathPage::with(['faqs' => function ($query) {
+            $query->take(5); // Load only 5 FAQs
+        }])->first();
 
-    return view('fc.path', compact('pathPage'));
-}
+        return view('fc.path', compact('pathPage'));
+    }
 
 
     // path page method
@@ -273,4 +274,58 @@ class FrontPageController extends Controller
         $faqs = PathPageFaq::all(); // Fetch all FAQs
         return view('fc.all-faqs', compact('faqs'));
     }
+
+    // Show exemption category form
+    public function show_exemption_category()
+    {
+        $data = ExemptionCategory::first(); // Assuming only one row exists
+
+        return view('admin.forms.exemption_category', compact('data'));
+    }
+
+
+    //save exemption admin category
+    public function save_exemption_category(Request $request)
+    {
+        $request->validate([
+            'cse_heading' => 'required|string|max:255',
+            'cse_subheading' => 'required|string',
+
+            'attended_heading' => 'required|string|max:255',
+            'attended_subheading' => 'required|string',
+            'medical_heading' => 'required|string|max:255',
+            'medical_subheading' => 'required|string',
+
+            'optout_heading' => 'required|string|max:255',
+            'optout_subheading' => 'required|string',
+
+            'important_notice' => 'nullable|string',
+        ]);
+
+        $data = $request->only([
+            'cse_heading',
+            'cse_subheading',
+            'attended_heading',
+            'attended_subheading',
+            'medical_heading',
+            'medical_subheading',
+            'optout_heading',
+            'optout_subheading',
+            'important_notice',
+        ]);
+
+        ExemptionCategory::updateOrCreate(['pk' => 1], $data);
+
+        return back()->with('success', 'Exemption Category saved successfully.');
+    }
+
+    //exemption category view
+    // app/Http/Controllers/FrontPageController.php
+
+public function showExemptionCategory()
+{
+    $data = DB::table('exemption_categories_data')->where('pk', 1)->first(); // Fetch the only row
+    return view('fc.exemption_category', compact('data'));
+}
+
 }

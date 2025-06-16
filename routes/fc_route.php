@@ -183,9 +183,9 @@ Route::get('/fc-exemption-application', function () {
 // })->name('admin.forms.path');
 
 //fc exemption admin route
-Route::get('/fc-exemption-category', function () {
-    return view('admin.forms.exemption_category');
-})->name('admin.forms.exemption_category');
+// Route::get('/fc-exemption-category', function () {
+//     return view('admin.forms.exemption_category');
+// })->name('admin.forms.exemption_category');
 
 //front page data route
 Route::get('/registration/frontpage', [FrontPageController::class, 'index'])->name('admin.frontpage');
@@ -220,3 +220,14 @@ Route::delete('/fc/faqs/{id}', [FrontPageController::class, 'destroyFaq'])->name
 
 // view all FAQs
 Route::get('/fc/all-faqs', [FrontPageController::class, 'allFaqs'])->name('fc.faqs.all');
+
+//Index for exemption category Admin
+Route::get('/admin/exemption-category', [FrontPageController::class, 'show_exemption_category'])->name('admin.exemption-category.index');
+
+// admin exemption category route
+Route::post('/admin/exemption-category/save', [FrontPageController::class, 'save_exemption_category'])->name('admin.exemption-category.save');
+
+//exemption category  index
+Route::get('/exemption-category', [FrontPageController::class, 'showExemptionCategory'])->name('fc.exemption_category.index');
+
+
