@@ -8,8 +8,7 @@
     <x-breadcrum title="Memo Management" />
     <x-session_message />
 
-    <div class="datatables">
-        <!-- start Zero Configuration -->
+    <!-- start Zero Configuration -->
         <div class="card">
             <div class="card-body">
                  <div class="row">
@@ -44,48 +43,60 @@
                         </div>
                     </div>
                     <hr>
-                    <div id="zero_config_wrapper" class="dataTables_wrapper">
+                    <div class="dataTables_wrapper" id="alt_pagination_wrapper">
                        <div class="table-responsive">
-                         <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable w-100"
-                            aria-describedby="zero_config_info">
+                         <table 
+                            class="table table-striped table-bordered text-nowrap" id="alt_pagination"
+                            data-toggle="data-table">
                             <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th class="col"><input type="checkbox" name="select_all" id=""></th>
                                     <th class="col">S.No.</th>
                                     <th class="col">Participant Name</th>
                                     <th class="col">Memo Type</th>
                                     <th class="col">Session Date</th>
                                     <th class="col">Topic</th>
-                                    <th class="col">Conversation</th>
-                                    <th class="col">Memo Count</th>
-                                    <th class="col">Notice Count</th>
+                                    <th class="col">Conversation Response</th>
                                     <th class="col">Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
                             <tbody>
+                                @if (count($memos) == 0)
+                                    <tr>
+                                        <td colspan="9" class="text-center">No records found</td>
+                                    </tr>
+                                @else
+                                @foreach ($memos as $memo)
+                                       
                                 <tr>
-                                    <td><input type="checkbox" name="select_memo" id=""></td>
-                                    <td>1</td>
-                                    <td>John Doe</td>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $memo->student_name }}</td>
                                     <td>
-                                        <div class="d-flex gap-2">
-                                            <span class="badge text-bg-danger">Memo</span><span
-                                                class="badge text-bg-primary">Notice</span>
-                                        </div>
+                                        @if ($memo->notice_memo == '1')
+                                            <span class="badge bg-primary-subtle text-primary">Notice</span>
+                                        @elseif ($memo->notice_memo == '2')
+                                            <span class="badge bg-secondary-subtle text-secondary">Memo</span>
+                                        @else
+                                            <span class="badge bg-info-subtle text-info">Other</span>
+                                        @endif
                                     </td>
-                                    <td>2023-10-01</td>
-                                    <td>Discussion on project progress</td>
+                                    <td>{{ $memo->date_}}</td>
+                                    <td>{{ $memo->topic_name }}</td>
                                     <td> 
                                         <a href="{{route('memo.notice.management.conversation')}}"
                                             class="btn btn-primary btn-sm">View Conversation</a>
                                     </td>
-                                    <td>2</td>
-                                    <td>3</td>
-                                    <td><span class="badge bg-danger-subtle text-danger">Close</span></td>
+                                    <td>
+                                        @if ($memo->status == 1)
+                                            <span class="badge bg-success-subtle text-success">Open</span>
+                                        @else
+                                            <span class="badge bg-danger-subtle text-danger">Close</span>
+                                        @endif
+                                        </td>
                                 </tr>
+                                @endforeach
+                                @endif
                             </tbody>
                         </table>
                        </div>
@@ -94,6 +105,5 @@
             </div>
         </div>
         <!-- end Zero Configuration -->
-    </div>
 </div>
 @endsection
