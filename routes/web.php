@@ -60,7 +60,8 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('member')->name('member.')->group(function () {
         Route::get('/', [MemberController::class, 'index'])->name('index');
         Route::get('create', [MemberController::class, 'create'])->name('create');
-        Route::get('edit', [MemberController::class, 'edit'])->name('edit');
+        Route::get('edit/{id}', [MemberController::class, 'edit'])->name('edit');
+        Route::get('show/{id}', [MemberController::class, 'show'])->name('show');
         Route::get('/step/{step}', [MemberController::class, 'loadStep'])->name('load-step');
         Route::post('/validate-step/{step}', [MemberController::class, 'validateStep']);
         Route::post('/store', [MemberController::class, 'store'])->name('store');

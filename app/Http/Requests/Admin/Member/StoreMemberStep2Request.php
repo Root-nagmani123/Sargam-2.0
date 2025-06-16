@@ -25,10 +25,10 @@ class StoreMemberStep2Request extends FormRequest
     {
         return [
             'type' => 'required|exists:employee_type_master,pk',
-            'id' => 'required|string|max:50|unique:employees,employee_id',
-            'group' => 'required|exists:employee_groups,id',
-            'designation' => 'required|exists:designations,id',
-            'userid' => 'required|string|max:50|unique:employees,user_id',
+            'id' => 'required|string|max:50', //|unique:employees,employee_id
+            'group' => 'required', // |exists:employee_groups,id
+            'designation' => 'required', // |exists:designations,id
+            'userid' => 'required|string|max:50',//|unique:employees,user_id
             'section' => 'required|exists:department_master,pk',
         ];
     }

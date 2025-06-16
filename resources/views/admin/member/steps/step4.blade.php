@@ -67,7 +67,7 @@
             @php
                 $countryOptions = App\Models\Country::getCountryList();
             @endphp
-            <x-select name="country" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" />
+            <x-select name="permanentcountry" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
@@ -75,7 +75,7 @@
             @php
                 $stateOptions = App\Models\State::getStateList();
             @endphp
-            <x-select name="state" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" />
+            <x-select name="permanentstate" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
@@ -83,7 +83,7 @@
             @php
                 $districtOptions = App\Models\District::getDistrictList();
             @endphp
-            <x-select name="district" label="District :" formLabelClass="form-label" formSelectClass="form-select" :options="$districtOptions ?? []" />
+            <x-select name="permanentdistrict" label="District :" formLabelClass="form-label" formSelectClass="form-select" :options="$districtOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
@@ -91,7 +91,7 @@
             @php
                 $cityOptions = App\Models\City::getCityList();
             @endphp
-            <x-select name="city" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" />
+            <x-select name="permanentcity" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" />
         </div>
     </div>
     <div class="col-md-6">
