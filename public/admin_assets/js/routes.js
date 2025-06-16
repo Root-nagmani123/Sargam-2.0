@@ -11,4 +11,7 @@ const routes = {
     'getStatesByCountry': baseUrl + '/master/country/get-states-by-country',
     'getDistrictsByState': baseUrl + '/master/country/get-districts-by-state',
     'getCitiesByDistrict': baseUrl + '/master/country/get-cities-by-district',
+    
+
+    'getStudentAttendanceBytopic': baseUrl + '/admin/memo-notice-management/get-student-attendance-by-topic',
 };
