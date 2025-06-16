@@ -253,11 +253,14 @@ Route::prefix('admin/course-memo-decision')
     ->controller(CourseAttendanceNoticeMapController::class)
     ->group(function () {
         Route::get('/', 'index')->name('index');
+        Route::get('/conversation', 'conversation')->name('conversation');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/Subject-by-course', 'getSubjectByCourse')->name('getSubjectByCourse'); // <-- New AJAX route
         Route::get('/Topic-by-subject', 'getTopicBysubject')->name('getTopicBysubject'); // <-- New AJAX route
         Route::get('/get-timetable-Details-By-topic', 'gettimetableDetailsBytopic')->name('gettimetableDetailsBytopic'); // <-- New AJAX route
+        Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
+        Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
    
     });
 
