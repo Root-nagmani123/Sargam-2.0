@@ -12,7 +12,8 @@
         <div class="card-body">
             <h4 class="card-title mb-3">Create Memo/Notice Management</h4>
             <hr>
-            <form action="" method="POST">
+            <form action="{{ route('memo.notice.management.store_memo_notice') }}" method="POST">
+                @csrf
                 <div class="row">
                     <div class="col-6">
                         <div class="mb-3">
@@ -20,9 +21,12 @@
                             <select name="course_master_pk" class="form-control" id="courseSelect" required>
                                 <option value="">Select Course</option>
                                 @foreach ($activeCourses as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                    <option value="{{ $course->pk }}" >{{ $course->course_name }}</option>
                                 @endforeach
                             </select>
+                            @error('course_master_pk')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
 
                         </div>
                     </div>
@@ -45,6 +49,9 @@
                                 <!-- Options will be populated dynamically -->
                             </select>
                             </div>
+                            @error('subject_master_id')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
@@ -53,6 +60,9 @@
                                 <option value="">Select Topic</option>
                                 <!-- Options will be populated dynamically -->
                             </select>
+                            @error('topic_id')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
                         </div>
                     </div>
                     <div class="col-6">
@@ -60,7 +70,9 @@
                             <label for="type" class="form-label">Venue <span style="color:#af2910;">*</span></label>
                             <input type="text" id="venue_name" class="form-control" readonly>
                         <input type="hidden" id="venue_id" name="venue_id">
-
+                        @error('venue_id')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
                         </div>
                     </div>
                     <div class="col-6">
@@ -68,7 +80,9 @@
                             <label for="" class="form-label">Session</label>
                           <input type="text" id="session_name" class="form-control" readonly>
                         <input type="hidden" id="class_session_master_pk" name="class_session_master_pk">
-
+                        @error('session_name')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
                         </div>
                     </div>
                     
@@ -77,12 +91,15 @@
                             <label for="" class="form-label">Faculty Name</label>
                            <input type="text" id="faculty_name" class="form-control" readonly>
                         <input type="hidden" id="faculty_master_pk" name="faculty_master_pk">
+                        @error('faculty_name')
+                                <span class="text-danger">{{ $message }}</span>
+                            @enderror
                         </div>
                     </div>
                     
                     <div class="col-12">
                         <label for="selected_student_list" class="form-label">Select Students</label>
-                        <select id="select" class="select1 form-control" name="selected_student_list[]" multiple>
+                        <select id="select_memo_student" class="select1 form-control" name="selected_student_list[]" multiple>
 
                         </select>
                         @error('selected_student_list')
@@ -106,8 +123,9 @@
                 <div class="row">
                     <div class="col-10">
                         <div class="text-center gap-3">
-                            <button type="submit" class="btn btn-danger">Notice</button>
-                            <button type="submit" class="btn btn-warning" style="margin-left: 5%;">Memo</button>
+                            <button type="submit" class="btn btn-danger" name="submission_type" value="1">Notice</button>
+                            <button type="submit" class="btn btn-warning" name="submission_type" value="2" style="margin-left: 5%;">Memo</button>
+
                         </div>
                     </div>
                     <div class="col-2">
@@ -243,9 +261,9 @@
                     $('#venue_name').val(response.venue_name);
                     $('#session_name').val(response.shift_name);
                     $('#faculty_name').val(response.faculty_name);
-                     $('#faculty_master_pk').val(data.faculty_master);
-                        $('#venue_id').val(data.venue_id);
-                        $('#class_session_master_pk').val(data.class_session_master_pk);
+                     $('#faculty_master_pk').val(response.faculty_master);
+                        $('#venue_id').val(response.venue_id);
+                        $('#class_session_master_pk').val(response.shift_name);
                 } else {
                     $('#venue_name, #session_name, #faculty_name ,#faculty_master_pk,#venue_id,#class_session_master_pk').val('');
                 }

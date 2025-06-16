@@ -15,7 +15,20 @@ class CourseAttendanceNoticeMapController extends Controller
     //
     public function index()
     {
-         return view('admin.courseAttendanceNoticeMap.index');
+       $memos =  DB::table('course_attendance_notice')
+                    ->join('course_student_attendance as csa', 'course_attendance_notice.course_student_attendance_pk', '=', 'csa.pk')
+                    ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')  
+                    ->join('timetable as t', 'course_attendance_notice.subject_topic', '=', 't.pk')          
+       ->select(
+            'course_attendance_notice.pk as memo_notice_id',
+            'course_attendance_notice.course_master_pk', 'course_attendance_notice.date_',
+            'course_attendance_notice.subject_master_pk','course_attendance_notice.subject_topic',
+            'course_attendance_notice.venue_id', 'course_attendance_notice.class_session_master_pk','course_attendance_notice.faculty_master_pk','course_attendance_notice.message','course_attendance_notice.notice_memo',
+            'course_attendance_notice.status',
+            'sm.display_name as student_name','t.subject_topic as topic_name',)
+                    ->get();
+                    // print_r($memos);die;
+         return view('admin.courseAttendanceNoticeMap.index', compact('memos'));
     }
 public function create(Request $request)
 {
@@ -73,9 +86,7 @@ $topics = DB::table('timetable as t')
 public function gettimetableDetailsBytopic(Request $request)
 {
     $topicId = $request->topic_id;
-
-    // First get the basic timetable details
-    $query = DB::table('timetable as t')
+     $query = DB::table('timetable as t')
         ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
         ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
         ->where('t.pk', $topicId)
@@ -85,29 +96,101 @@ public function gettimetableDetailsBytopic(Request $request)
             'v.venue_name',
             't.class_session as shift_name'
         );
-
-    // If session_type == 1, join class_session_master and get start_time + end_time
     $timetable = $query->first();
-
-    // if ($timetable->session_type == '1') {
-    //     $session = DB::table('class_session_master')
-    //         ->where('pk', $timetable->class_session)
-    //         ->first();
-
-    //     if ($session) {
-    //         // Format time to AM/PM
-    //         $startTime = date("h:i A", strtotime($session->start_time));
-    //         $endTime = date("h:i A", strtotime($session->end_time));
-    //         $timetable->shift_name = $startTime . ' - ' . $endTime;
-    //     } else {
-    //         $timetable->shift_name = null;
-    //     }
-    // } else {
-    //     // If session_type != 1, use the string from class_session
-    //     $timetable->shift_name = $timetable->class_session;
-    // }
-
     return response()->json($timetable);
+}
+function conversation(){
+     return view('admin.courseAttendanceNoticeMap.conversation');
+}
+public function getStudentAttendanceBytopic(Request $request)
+{
+    try {
+        $topicId = $request->topic_id;
+
+        if (!$topicId) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Topic ID is required.'
+            ]);
+        }
+
+        $attendance = DB::table('course_student_attendance as a')
+            ->leftJoin('student_master as s', 'a.Student_master_pk', '=', 's.pk')
+            ->where('a.timetable_pk', $topicId)
+            ->select(
+                'a.pk as pk',
+                's.display_name as display_name'
+            )
+            ->get();
+
+        if ($attendance->isEmpty()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'No students found for this topic.'
+            ]);
+        }
+
+        // Format the attendance data
+        $students = $attendance->map(function ($student) {
+            return [
+                'pk' => $student->pk,
+                'display_name' => $student->display_name
+            ];
+        });
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Student list fetched successfully.',
+            'students' => $students
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => 'Error occurred while fetching student list.',
+            'error' => $e->getMessage() // optional for debugging
+        ]);
+    }
+}
+function store_memo_notice(Request $request){
+  
+     $validated = $request->validate([
+        'course_master_pk' => 'required|exists:course_master,pk',
+        'date_memo_notice' => 'required|date',
+        'subject_master_id' => 'required|exists:subject_master,pk',
+        'topic_id' => 'required|exists:timetable,pk',
+        'venue_id' => 'required',
+        'class_session_master_pk' => 'required',
+        'faculty_master_pk' => 'required',
+        'selected_student_list' => 'required|array|min:1',
+        'Remark' => 'nullable|string|max:500',
+        'submission_type' => 'required|in:1,2', // Assuming 1 for Memo and 2 for Notice
+    ]);
+   
+
+    $data = [];
+    foreach ($validated['selected_student_list'] as $studentId) {
+        $data[] = [
+            'course_master_pk' => $validated['course_master_pk'],
+            'date_' => $validated['date_memo_notice'],
+            'subject_master_pk' => $validated['subject_master_id'],
+            'subject_topic' => $validated['topic_id'],
+            'venue_id' => $validated['venue_id'],
+            'class_session_master_pk' => $validated['class_session_master_pk'],
+            'faculty_master_pk' => $validated['faculty_master_pk'],
+            'course_student_attendance_pk' => $studentId,
+            'message' => $validated['Remark'],
+            'notice_memo' => $validated['submission_type'],
+        ];
+    }
+
+    $courseAttendanceNotice = DB::table('course_attendance_notice')->insert($data);
+
+    if ($courseAttendanceNotice) {
+        return redirect()->route('memo.notice.management.index')->with('success', 'Memo/Notice created successfully.');
+    } else {
+        return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
+    }
 }
 
 
