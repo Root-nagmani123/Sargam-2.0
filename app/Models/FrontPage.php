@@ -10,7 +10,7 @@ class FrontPage extends Model
 {
     use HasFactory;
 
-    protected $table = 'front_pages';
+    protected $table = 'fc_front_pages';
 
     protected $primaryKey = 'pk';
 

@@ -9,7 +9,7 @@ class PathPageFaq extends Model
 {
     use HasFactory;
 
-    protected $table = 'path_page_faqs';
+    protected $table = 'fc_path_page_faqs';
 
     protected $fillable = [
         'path_page_id',

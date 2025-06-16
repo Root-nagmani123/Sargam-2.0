@@ -9,7 +9,7 @@ class ExemptionCategory extends Model
 {
     use HasFactory;
 
-    protected $table = 'exemption_categories_data'; // your table name
+    protected $table = 'fc_exemption_categories_data'; // your table name
     protected $primaryKey = 'pk';
 
     protected $fillable = [
