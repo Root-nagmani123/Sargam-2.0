@@ -503,6 +503,14 @@
                                     <span class="hide-menu">Path Page Admin</span>
                                 </a>
                             </li>
+
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.exemption-category.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Exemption Category Admin</span>
+                                </a>
+                            </li>
                             
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('verify.authindex') }}">
