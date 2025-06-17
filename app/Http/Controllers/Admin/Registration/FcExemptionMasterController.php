@@ -35,13 +35,13 @@ class FcExemptionMasterController extends Controller
         // Validate input
         $request->validate([
             'Exemption_name' => 'required|string|max:500',
-            'Exemption_short_name' => 'required|string|max:100',
+            'description' => 'required|string',
         ]);
 
         // Insert data into the table
         DB::table('fc_exemption_master')->insert([
             'Exemption_name' => $request->input('Exemption_name'),
-            'Exemption_short_name' => $request->input('Exemption_short_name'),
+            'description' => $request->input('description'),
             'Created_by' => Auth::id(), // Assumes authentication is used
             'Created_date' => now(),
         ]);
@@ -61,13 +61,13 @@ class FcExemptionMasterController extends Controller
     {
         $request->validate([
             'Exemption_name' => 'required|string|max:500',
-            'Exemption_short_name' => 'required|string|max:100',
+            'description' => 'required|string|',
         ]);
 
         $exemption = FcExemptionMaster::findOrFail($id);
         $exemption->update([
             'Exemption_name' => $request->Exemption_name,
-            'Exemption_short_name' => $request->Exemption_short_name,
+            'description' => $request->description,
             'Modified_by' => Auth::id(),
             'Modified_date' => now(),
         ]);
@@ -109,7 +109,7 @@ class FcExemptionMasterController extends Controller
             ->where('Pk', $request->exemption_category)
             ->first();
 
-        if ($exemption && strtolower($exemption->Exemption_short_name) === 'medical') {
+        if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
             $rules['medical_doc'] = 'required|file|mimes:pdf,jpg,jpeg,png|max:2048';
         }
 
@@ -166,10 +166,11 @@ class FcExemptionMasterController extends Controller
 
         // Fetch unique exemption short names for the dropdown
         $categories = DB::table('fc_exemption_master')
-            ->select('Exemption_short_name')
+            ->select('Exemption_name')
             ->where('visible', 1)
+            ->where('is_notice', 0)
             ->distinct()
-            ->orderBy('Exemption_short_name')
+            ->orderBy('Exemption_name')
             ->get();
 
         // Base query
@@ -185,14 +186,15 @@ class FcExemptionMasterController extends Controller
                 'r.middle_name',
                 'r.last_name',
                 'e.Exemption_name',
-                'e.Exemption_short_name'
+                'e.Exemption_name'
             )
             ->where('r.fc_exemption_master_pk', '!=', 0);
 
         // Apply filter only if a category is selected
         if (!empty($filter)) {
-            $query->where('e.Exemption_short_name', $filter);
+            $query->where('e.Exemption_name', $filter);
         }
+        // dd($filter);
 
         $submissions = $query->get();
 
@@ -212,7 +214,7 @@ class FcExemptionMasterController extends Controller
             ->select(
                 'd.contact_no',
                 'd.web_auth',
-                'e.Exemption_short_name',
+                'e.Exemption_name',
                 'd.medical_exemption_doc',
                 'd.created_date',
                 DB::raw("COALESCE(CONCAT_WS(' ', d.first_name, d.middle_name, d.last_name)) as user_name")
@@ -220,7 +222,7 @@ class FcExemptionMasterController extends Controller
             ->where('d.fc_exemption_master_pk', '!=', 0)
 
             ->when($filter, function ($query, $filter) {
-                return $query->where('e.Exemption_short_name', $filter);
+                return $query->where('e.Exemption_name', $filter);
             })
             ->get();
         // @dd($submissions);

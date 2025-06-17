@@ -9,7 +9,7 @@ class ExemptionCategory extends Model
 {
     use HasFactory;
 
-    protected $table = 'fc_exemption_categories_data'; // your table name
+    protected $table = 'fc_exemption_master'; // your table name
     protected $primaryKey = 'pk';
 
     protected $fillable = [
@@ -23,6 +23,14 @@ class ExemptionCategory extends Model
         'optout_subheading',
         'important_notice',
     ];
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
 }
-
-

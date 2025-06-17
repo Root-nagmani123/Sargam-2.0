@@ -1,122 +1,110 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Exemption Category')
-
+@section('title', 'Exemption Master')
 
 @section('content')
-    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
-    {{-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> {{-- jQuery before Summernote --}}
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
 
     <div class="container-fluid">
-        <form method="POST" action="{{ route('admin.exemption-category.save') }}">
-            @csrf
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold">Exemption Master</h4>
+            <a href="{{ route('exemptionCreate') }}" class="btn btn-primary">+ Add Exemption</a>
+        </div>
 
-            <div class="card card-body">
-                @if (session('success'))
-                    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="alert alert-danger mb-3">
-                        <ul class="mb-0">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-                <h5 class="mb-4 fw-bold">Exemption Category Form</h5>
-
-                <div class="row">
-                    <!-- Exemption for CSE -->
-                    <div class="col-md-6 mb-3">
-                        <label for="cse_heading" class="form-label">Exemption for CSE - Heading</label>
-                        <input type="text" name="cse_heading" id="cse_heading"
-                            value="{{ old('cse_heading', $data->cse_heading ?? '') }}" class="form-control">
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label for="cse_subheading" class="form-label">Exemption for CSE - Subheading</label>
-                        <textarea name="cse_subheading" id="cse_subheading" class="form-control">{{ old('cse_subheading', $data->cse_subheading ?? '') }}</textarea>
-                    </div>
-
-                    <!-- Already Attended -->
-                    <div class="col-md-6 mb-3">
-                        <label for="attended_heading" class="form-label">Already Attended - Heading</label>
-                        <input type="text" name="attended_heading" id="attended_heading"
-                            value="{{ old('attended_heading', $data->attended_heading ?? '') }}" class="form-control">
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label for="attended_subheading" class="form-label">Already Attended - Subheading</label>
-                        <textarea name="attended_subheading" id="attended_subheading" class="form-control">{{ old('attended_subheading', $data->attended_subheading ?? '') }}</textarea>
-                    </div>
-
-                    <!-- Medical Grounds -->
-                    <div class="col-md-6 mb-3">
-                        <label for="medical_heading" class="form-label">Medical Grounds - Heading</label>
-                        <input type="text" name="medical_heading" id="medical_heading"
-                            value="{{ old('medical_heading', $data->medical_heading ?? '') }}" class="form-control">
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label for="medical_subheading" class="form-label">Medical Grounds - Subheading</label>
-                        <textarea name="medical_subheading" id="medical_subheading" class="form-control">{{ old('medical_subheading', $data->medical_subheading ?? '') }}</textarea>
-                    </div>
-
-                    <!-- Opting Out -->
-                    <div class="col-md-6 mb-3">
-                        <label for="optout_heading" class="form-label">Opting Out - Heading</label>
-                        <input type="text" name="optout_heading" id="optout_heading"
-                            value="{{ old('optout_heading', $data->optout_heading ?? '') }}" class="form-control">
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label for="optout_subheading" class="form-label">Opting Out - Subheading</label>
-                        <textarea name="optout_subheading" id="optout_subheading" class="form-control">{{ old('optout_subheading', $data->optout_subheading ?? '') }}</textarea>
-                    </div>
-
-                    <!-- Description -->
-                    <!-- Important Notice -->
-                    <div class="col-12 mb-3">
-                        <label for="important_notice" class="form-label">Important Notice</label>
-                        <textarea name="important_notice" id="important_notice" class="form-control summernote">
-                          {{ old('important_notice', $data->important_notice ?? '') }}
-                          </textarea>
-                    </div>
-
-
-                    <!-- Submit -->
-                    <div class="col-12 text-end">
-                        <button type="submit" class="btn btn-primary px-4">Save</button>
-                    </div>
+        <div class="card card-body">
+            @if (session('success'))
+                <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
+            @endif
+
+            <!--display errors if any -->
+            @if ($errors->any())
+                <div class="alert alert-danger mb-3">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+            <h5 class="mb-3">Exemptions</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>S.No</th>
+                            <th>Exemption Name</th>
+                            <th>Description</th>
+                            <th>Created Date</th>
+                            <th>Created By</th>
+                            <th>Modified By</th>
+                            <th>Action</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($headings as $index => $item)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $item->Exemption_name }}</td>
+                                <td>{{ $item->description }}</td>
+                                <td>{{ \Carbon\Carbon::parse($item->created_at)->format('Y-m-d') }}</td>
+                                <td>{{ $item->creator->name ?? 'N/A' }}</td>
+                                <td>{{ $item->updater->name ?? 'N/A' }}</td>
+
+                                <td>
+                                    <a href="{{ route('exemptionEdit', $item->pk) }}" class="btn btn-sm btn-info">Edit</a>
+                                </td>
+                                <td>
+                                    <div class='form-check form-switch d-inline-block'>
+                                        <input class='form-check-input status-toggle' type='checkbox' role='switch'
+                                            data-table='fc_exemption_master' data-column='visible'
+                                            data-id='{{ $item->pk }}' {{ $item->visible == 1 ? 'checked' : '' }}>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center">No exemptions found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
-        </form>
+        </div>
+
+        <div class="card card-body mt-4">
+            <h5 class="mb-3">Important Notice</h5>
+            <form action="{{ route('exemptionUpdateNotice') }}" method="POST">
+                @csrf
+                <textarea class="form-control summernote" name="important_notice" rows="6">
+        {{ old('important_notice', $notice?->description ?? '') }}
+             </textarea>
+                <div class="text-end mt-3">
+                    <button type="submit" class="btn btn-success px-4">Update Notice</button>
+                </div>
+            </form>
+
+        </div>
     </div>
 @endsection
 
 @section('scripts')
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-lite.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <script>
         $(document).ready(function() {
             $('.summernote').summernote({
-                height: 250,
-                tabsize: 2,
+                height: 200,
                 toolbar: [
                     ['style', ['bold', 'italic', 'underline', 'clear']],
-                    ['font', ['strikethrough', 'superscript', 'subscript']],
+                    ['font', ['strikethrough']],
                     ['color', ['color']],
                     ['para', ['ul', 'ol', 'paragraph']],
-                    ['insert', ['link', 'picture', 'video']],
-                    ['view', ['fullscreen', 'codeview']],
-                    ['misc', ['undo', 'redo']]
+                    ['insert', ['link']],
+                    ['view', ['fullscreen', 'codeview']]
                 ]
             });
         });

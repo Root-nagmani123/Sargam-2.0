@@ -505,7 +505,7 @@
                             </li>
 
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.exemption-category.index') }}">
+                                <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Exemption Category Admin</span>

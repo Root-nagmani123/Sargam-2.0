@@ -35,9 +35,9 @@
                             <select name="exemption_category" id="exemption_category" class="form-select">
                                 <option value="">-- All Categories --</option>
                                 @foreach ($categories as $category)
-                                    <option value="{{ $category->Exemption_short_name }}"
-                                        {{ isset($filter) && $filter == $category->Exemption_short_name ? 'selected' : '' }}>
-                                        {{ $category->Exemption_short_name }}
+                                    <option value="{{ $category->Exemption_name }}"
+                                        {{ isset($filter) && $filter == $category->Exemption_name ? 'selected' : '' }}>
+                                        {{ $category->Exemption_name }}
                                     </option>
                                 @endforeach
                             </select>
@@ -95,7 +95,7 @@
                                     </td>
                                     <td>{{ $data->contact_no }}</td>
                                     <td>{{ $data->web_auth }}</td>
-                                    <td>{{ $data->Exemption_short_name ?? 'N/A' }}</td>
+                                    <td>{{ $data->Exemption_name ?? 'N/A' }}</td>
                                     <td>
                                         @if ($data->medical_exemption_doc)
                                             <a href="{{ asset('storage/' . $data->medical_exemption_doc) }}"
