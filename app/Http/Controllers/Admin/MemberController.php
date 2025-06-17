@@ -141,8 +141,8 @@ class MemberController extends Controller
         if ($request->hasFile('picture')) {
             $profile_picture = $request->file('picture')->store('members', 'public');
         }
-        if ($request->hasFile('additional_doc_upload')) {
-            $additional_doc_upload = $request->file('additional_doc_upload')->store('members', 'public');
+        if ($request->hasFile('additionaldocument')) {
+            $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
 
         EmployeeMaster::find($request->emp_id)->update([

@@ -29,13 +29,15 @@ class MemberDataTable extends DataTable
                 return '<label class="text-dark">' . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
             })
             ->addColumn('employee_id', fn($row) => '<label class="text-dark">' . $row->emp_id . '</label>')
+            ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
+            ->addColumn('email', fn($row) => '<label class="text-dark">' . $row->email . '</label>')
             ->addColumn('actions', function($row) {
                 return '<a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
                     <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-secondary">View</a>
                 ';
 
             })
-            ->rawColumns(['employee_name', 'employee_id', 'actions']);
+            ->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email']);
     }
 
     
@@ -70,6 +72,8 @@ class MemberDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('employee_name')->title('Employee Name')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('employee_id')->title('Employee ID')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('email')->title('Email')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
