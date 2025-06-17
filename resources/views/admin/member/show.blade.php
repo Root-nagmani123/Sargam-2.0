@@ -71,9 +71,9 @@
         @endphp
 
         @foreach ($sections as $title => $fields)
-            <div class="card mb-4 shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">{{ $title }}</h5>
+            <div class="card mb-4 shadow-sm" style="border-left: 4px solid #004a93;">
+                <div class="card-header" style="background-color: #fff; border-bottom: 2px solid #004a93;">
+                    <h5 class="mb-0" style="color: #004a93 !important; font-size: 20px;font-weight: 600">{{ $title }}</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -90,9 +90,9 @@
             </div>
         @endforeach
 
-        <div class="card mb-4 shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Assigned Roles</h5>
+        <div class="card mb-4 shadow-sm" style="border-left: 4px solid #004a93;">
+            <div class="card-header" style="background-color: #fff; border-bottom: 2px solid #004a93;">
+                <h5 class="mb-0" style="color: #004a93 !important; font-size: 20px;font-weight: 600">Assigned Roles</h5>
             </div>
             <div class="card-body">
 
