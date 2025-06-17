@@ -63,8 +63,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('edit/{id}', [MemberController::class, 'edit'])->name('edit');
         Route::get('show/{id}', [MemberController::class, 'show'])->name('show');
         Route::get('/step/{step}', [MemberController::class, 'loadStep'])->name('load-step');
+        Route::get('/edit-step/{step}/{id}', [MemberController::class, 'editStep'])->name('edit-step');
         Route::post('/validate-step/{step}', [MemberController::class, 'validateStep']);
+        Route::post('/update-validate-step/{step}/{id}', [MemberController::class, 'updateValidateStep']);
         Route::post('/store', [MemberController::class, 'store'])->name('store');
+        Route::post('update', [MemberController::class, 'update'])->name('update');
     });
 
     // Faculty Routes

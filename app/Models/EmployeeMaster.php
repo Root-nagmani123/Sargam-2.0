@@ -58,8 +58,7 @@ class EmployeeMaster extends Model
 
     public function assignedRoles()
     {
-        // dd($this->pk);
-        $userCredential = UserCredential::where('user_name', $this->emp_id)->first();
+        $userCredential = UserCredential::where('user_id', $this->pk)->first();
         if(!$userCredential) {
             return collect();
         }
@@ -82,5 +81,40 @@ class EmployeeMaster extends Model
             });
         });
         return collect($assignedRoles);
+    }
+
+    public function designation()
+    {
+        return $this->belongsTo(DesignationMaster::class, 'designation_master_pk', 'pk');
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(DepartmentMaster::class, 'department_master_pk', 'pk');
+    }
+
+    public function employeeType()
+    {
+        return $this->belongsTo(EmployeeTypeMaster::class, 'emp_type', 'pk');
+    }
+
+    public function employeeGroup()
+    {
+        return $this->belongsTo(EmployeeGroupMaster::class, 'emp_group_pk', 'pk');
+    }
+
+    public function userCredential()
+    {
+        return $this->hasOne(UserCredential::class, 'user_id', 'pk');
+    }
+
+    public function employeeRoleMapping()
+    {
+        $userCredential = UserCredential::where('user_id', $this->pk)->first();
+        if(!$userCredential) {
+            return collect();
+        }
+
+        return EmployeeRoleMapping::where('user_credentials_pk',  $userCredential->pk)->pluck('user_role_master_pk');
     }
 }

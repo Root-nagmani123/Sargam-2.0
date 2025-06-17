@@ -41,7 +41,7 @@ class MemberDataTable extends DataTable
     
     public function query(EmployeeMaster $model): QueryBuilder
     {
-        return $model->newQuery();
+        return $model->newQuery()->orderBy('pk', 'desc');
     }
 
     public function html(): HtmlBuilder
