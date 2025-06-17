@@ -126,66 +126,11 @@ Route::prefix('/registration')->group(function () {
 
 Route::get('admin/registration/export', [RegistrationImportController::class, 'export'])->name('admin.registration.export');
 
-//nibhash fc route
-
-// Route::get('/fc', function () {
-//     return view('admin.forms.fc');
-// })->name('fc');
-
-// //fc front page route
-// Route::get('/fc-front', function () {
-//     return view('fc.front_page');
-// })->name('fc.front');
-
-// //fc web login route
-// Route::get('/fc-weblogin', function () {
-//     return view('fc.login');
-// })->name('fc.login');
-
-//fc registartion route
-// Route::get('/fc-registration', function () {
-//     return view('fc.credentials');
-// })->name('fc.credentials');
-
-//fc login route
-// Route::get('/fc-login', function () {
-//     return view('fc.fc_login');
-// })->name('fc.fc_login');
-
-//fc path route
-// Route::get('/fc-choose', function () {
-//     return view('fc.path');
-// })->name('fc.path');
-
-//fc path damin route
-// Route::get('/fc-path', function () {
-//     return view('admin.forms.path');
-// })->name('admin.forms.path');
-
 //fc registor form route
-Route::get('/fc-register-form', function () {
-    return view('fc.register_form');
-})->name('fc.register_form');
+// Route::get('/fc-register-form', function () {
+//     return view('fc.register_form');
+// })->name('fc.register_form');
 
-//fc exemption form route
-Route::get('/fc-exemption', function () {
-    return view('fc.exemption_category');
-})->name('fc.exemption_category');
-
-//fc exemption form route
-Route::get('/fc-exemption-application', function () {
-    return view('fc.exemption_application');
-})->name('fc.exemption_application');
-
-//path admin route
-// Route::get('/path', function () {
-//     return view('admin.forms.path');
-// })->name('admin.forms.path');
-
-//fc exemption admin route
-// Route::get('/fc-exemption-category', function () {
-//     return view('admin.forms.exemption_category');
-// })->name('admin.forms.exemption_category');
 
 //front page data route
 Route::get('/registration/frontpage', [FrontPageController::class, 'index'])->name('admin.frontpage');
@@ -221,13 +166,23 @@ Route::delete('/fc/faqs/{id}', [FrontPageController::class, 'destroyFaq'])->name
 // view all FAQs
 Route::get('/fc/all-faqs', [FrontPageController::class, 'allFaqs'])->name('fc.faqs.all');
 
-//Index for exemption category Admin
-Route::get('/admin/exemption-category', [FrontPageController::class, 'show_exemption_category'])->name('admin.exemption-category.index');
-
-// admin exemption category route
-Route::post('/admin/exemption-category/save', [FrontPageController::class, 'save_exemption_category'])->name('admin.exemption-category.save');
-
 //exemption category  index
 Route::get('/exemption-category', [FrontPageController::class, 'showExemptionCategory'])->name('fc.exemption_category.index');
 
+//exemption category index admin
+Route::get('/admin/exemption-category', [FrontPageController::class, 'exemptionIndex'])->name('admin.exemptionIndex');
+Route::get('/admin/exemption/create', [FrontPageController::class, 'exemptionCreate'])->name('exemptionCreate');
+Route::post('/admin/exemption/store', [FrontPageController::class, 'exemptionStore'])->name('exemptionStore');
+Route::get('/admin/exemption/edit/{id}', [FrontPageController::class, 'exemptionEdit'])->name('exemptionEdit');
+Route::post('/admin/exemption/update/{id}', [FrontPageController::class, 'exemptionUpdate'])->name('exemptionUpdate');
+Route::post('/admin/exemption/notice/update', [FrontPageController::class, 'exemptionUpdateNotice'])->name('exemptionUpdateNotice');
 
+// show exemption application form
+Route::get('/fc/exemption-application/{id}', [FrontPageController::class, 'exemptionApplication'])->name('fc.exemption_application');
+// apply exemption store 
+Route::post('/fc/exemption-apply/{id}', [FrontPageController::class, 'apply_exemptionstore'])->name('fc.exemption.apply');
+
+//thanks page route
+Route::get('/fc/thank-you', function () {
+    return view('fc.thank_you');
+})->name('fc.thank_you');

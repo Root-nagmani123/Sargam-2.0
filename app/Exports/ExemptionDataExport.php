@@ -20,7 +20,7 @@ class ExemptionDataExport implements FromArray, WithHeadings
             'user_name',
             'contact_no',
             'web_auth',
-            'Exemption_short_name',
+            'Exemption_name',
             'medical_exemption_doc',
             'created_date',
         ];

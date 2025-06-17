@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
+use Illuminate\Support\Facades\Validator;
 
 
 class FrontPageController extends Controller
@@ -18,7 +19,6 @@ class FrontPageController extends Controller
     public function index()
     {
         $data = FrontPage::first(); // fetch latest/only record
-        // dd($frontPage);
         return view('admin.forms.home_page', compact('data'));
     }
 
@@ -275,57 +275,220 @@ class FrontPageController extends Controller
         return view('fc.all-faqs', compact('faqs'));
     }
 
-    // Show exemption category form
-    public function show_exemption_category()
-    {
-        $data = ExemptionCategory::first(); // Assuming only one row exists
 
-        return view('admin.forms.exemption_category', compact('data'));
+    // Show exemption categories and important notice
+    public function showExemptionCategory()
+    {
+        // Fetch all exemption categories except the notice
+        $exemptions = DB::table('fc_exemption_master')
+            ->where('is_notice', false)
+            ->where('visible', true) // Assuming you have an is_active column to filter active categories
+            ->orderBy('pk')
+            ->get();
+
+        // Fetch the important notice if it exists
+        $notice = DB::table('fc_exemption_master')
+            ->where('is_notice', true)
+            ->first();
+
+        return view('fc.exemption_category', compact('exemptions', 'notice'));
     }
 
+    public function exemptionIndex()
+    {
+        $headings = ExemptionCategory::with(['creator', 'updater'])
+            ->where('is_notice', 0) //  Exclude important notice
+            ->get();
 
-    //save exemption admin category
-    public function save_exemption_category(Request $request)
+        $notice = DB::table('fc_exemption_master')
+            ->where('is_notice', true)
+            ->first();
+
+        return view('admin.forms.exemption_category', compact('headings', 'notice'));
+    }
+
+    public function exemptionCreate()
+    {
+        return view('admin.forms.exemption.exemption_cat_create');
+    }
+
+    // Store new heading and subheading
+    public function exemptionStore(Request $request)
     {
         $request->validate([
-            'cse_heading' => 'required|string|max:255',
-            'cse_subheading' => 'required|string',
-
-            'attended_heading' => 'required|string|max:255',
-            'attended_subheading' => 'required|string',
-            'medical_heading' => 'required|string|max:255',
-            'medical_subheading' => 'required|string',
-
-            'optout_heading' => 'required|string|max:255',
-            'optout_subheading' => 'required|string',
-
-            'important_notice' => 'nullable|string',
+            'Exemption_name' => 'required|string|max:255',
+            'description' => 'required|string',
         ]);
 
-        $data = $request->only([
-            'cse_heading',
-            'cse_subheading',
-            'attended_heading',
-            'attended_subheading',
-            'medical_heading',
-            'medical_subheading',
-            'optout_heading',
-            'optout_subheading',
-            'important_notice',
+
+        DB::table('fc_exemption_master')->insert([
+            'Exemption_name' => $request->Exemption_name,
+            'description' => $request->description,
+            'is_notice' => false,
+            'created_by' => auth()->user()->id ?? '',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
 
-        ExemptionCategory::updateOrCreate(['pk' => 1], $data);
-
-        return back()->with('success', 'Exemption Category saved successfully.');
+        return redirect()->route('admin.exemptionIndex')->with('success', 'Exemption category added successfully.');
     }
 
-    //exemption category view
-    // app/Http/Controllers/FrontPageController.php
+    // Show form to edit heading/description
+    public function exemptionEdit($id)
+    {
 
-public function showExemptionCategory()
-{
-    $data = DB::table('exemption_categories_data')->where('pk', 1)->first(); // Fetch the only row
-    return view('fc.exemption_category', compact('data'));
-}
+        $item = DB::table('fc_exemption_master')
+            ->where('pk', $id)
+            ->where('is_notice', false)
+            ->first();
 
+        if (!$item) {
+            return redirect()->route('admin.exemptionIndex')->with('error', 'Entry not found.');
+        }
+
+        return view('admin.forms.exemption.exemption_cat_edit', compact('item'));
+    }
+
+    // Update heading/description
+    public function exemptionUpdate(Request $request, $id)
+    {
+        $request->validate([
+            'Exemption_name' => 'required|string|max:255',
+            'description' => 'required|string'
+        ]);
+
+        DB::table('fc_exemption_master')->where('pk', $id)->update([
+            'Exemption_name' => $request->Exemption_name,
+            'description' => $request->description,
+            'updated_by' => auth()->user()->id ?? '',
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->route('admin.exemptionIndex')->with('success', 'Exemption category updated successfully.');
+    }
+
+    // Update or create the important notice
+    public function exemptionUpdateNotice(Request $request)
+    {
+        $request->validate([
+            'important_notice' => 'required|string',
+        ]);
+
+        $existingNotice = DB::table('fc_exemption_master')->where('is_notice', true)->first();
+
+        if ($existingNotice) {
+            // Update the existing record
+            DB::table('fc_exemption_master')->where('pk', $existingNotice->pk)->update([
+                'description' => $request->important_notice,
+                'updated_by' => auth()->user()->id ?? '',
+                'updated_at' => now(),
+            ]);
+        } else {
+            // Insert a new notice row
+            DB::table('fc_exemption_master')->insert([
+                'heading' => 'Important Notice',
+                'description' => $request->important_notice,
+                'is_notice' => true,
+                'created_by' => auth()->user()->id ?? '',
+                'created_at' => now(),
+            ]);
+        }
+
+        return redirect()->route('admin.exemptionIndex')->with('success', 'Important notice updated successfully.');
+    }
+
+    //show exemption application form
+    public function exemptionApplication($id)
+    {
+        $exemption = DB::table('fc_exemption_master')
+            ->where('pk', $id)
+            ->where('visible', 1)
+            ->first();
+
+        if (!$exemption) {
+            abort(404, 'Exemption category not found.');
+        }
+
+        return view('fc.exemption_application', compact('exemption'));
+    }
+
+    // apply exemption store
+    public function apply_exemptionstore(Request $request)
+    {
+        // dd($request->all());
+        $rules = [
+            'ex_mobile' => 'required|digits_between:7,15',
+            'reg_web_code' => 'required|string',
+            'exemption_category' => 'required|exists:fc_exemption_master,Pk',
+            'captcha' => 'required|captcha',
+        ];
+
+        // Custom error messages
+        $messages = [
+            'ex_mobile.required' => 'Mobile number is required.',
+            'ex_mobile.digits_between' => 'Mobile number must be between 7 and 15 digits.',
+
+            'reg_web_code.required' => 'Web authentication code is required.',
+            'reg_web_code.string' => 'Web authentication code must be a valid string.',
+
+            'exemption_category.required' => 'Please select an exemption category.',
+            'exemption_category.exists' => 'The selected exemption category is invalid.',
+
+            'captcha.required' => 'Captcha is required.',
+            'captcha.captcha' => 'The captcha you entered is incorrect. Please try again.',
+        ];
+
+        $exemption = DB::table('fc_exemption_master')
+            ->where('Pk', $request->exemption_category)
+            ->first();
+
+        if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
+            $rules['medical_doc'] = 'required|file|mimes:pdf,jpg,jpeg,png|max:2048';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
+
+        if ($validator->fails()) {
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('captcha_refresh', true);
+        }
+
+        // Check against fc_registration_master
+        $registration = DB::table('fc_registration_master')
+            ->where('contact_no', $request->ex_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->first();
+
+        if (!$registration) {
+            return redirect()->back()
+                ->withErrors(['reg_web_code' => 'Invalid Web Code or Mobile Number.'])
+                ->withInput();
+        }
+
+        $username = $registration->user_id ?? null;
+
+        $medicalDocPath = null;
+        if ($request->hasFile('medical_doc') && $request->file('medical_doc')->isValid()) {
+            $medicalDocPath = $request->file('medical_doc')->store('medical_docs', 'public');
+        }
+
+        // Update if exists, otherwise insert
+        DB::table('fc_registration_master')->updateOrInsert(
+            [
+                'contact_no' => $request->ex_mobile,
+                'web_auth' => $request->reg_web_code
+            ],
+            [
+                'user_id' => $username,
+                'fc_exemption_master_pk' => $request->exemption_category,
+                'medical_exemption_doc' => $medicalDocPath,
+                // 'updated_at' => now(),
+                // 'created_at' => now(), // This won't update if already exists
+            ]
+        );
+
+        return redirect()->route('fc.thank_you')->with('success', 'Exemption form submitted successfully.');
+    }
 }
