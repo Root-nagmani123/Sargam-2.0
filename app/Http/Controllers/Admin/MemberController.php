@@ -35,22 +35,32 @@ class MemberController extends Controller
 
     private function saveStep1Data(Request $request)
     {
-        return EmployeeMaster::create($request->only([
-            'title', 'first_name', 'middle_name', 'last_name',
-            'father_husband_name as father_name', 'marital_status',
-            'gender', 'caste_category_pk as caste_category',
-            'height', 'dob as date_of_birth'
-        ]));
+        return EmployeeMaster::create([
+            'title' => $request->title,
+            'first_name' => $request->first_name,
+            'middle_name' => $request->middle_name,
+            'last_name' => $request->last_name,
+            'father_name' => $request->father_husband_name,
+            'marital_status' => $request->marital_status,
+            'gender' => $request->gender,
+            'caste_category_pk' => $request->caste_category,
+            'height' => $request->height,
+            'dob' => $request->date_of_birth,
+        ]);
     }
 
     private function saveStep2Data(Request $request)
     {
+
         $this->validateEmpId($request);
 
-        EmployeeMaster::where('pk', $request->emp_id)->update($request->only([
-            'type as emp_type', 'id as emp_id', 'group as emp_group_pk',
-            'designation as designation_master_pk', 'section as department_master_pk'
-        ]));
+        EmployeeMaster::where('pk', (int) $request->emp_id)->update([
+            'emp_type' => $request->type, // Employee Type
+            'emp_id' => $request->id, // Employee ID
+            'emp_group_pk' => $request->group, // Employee Group
+            'designation_master_pk' => $request->designation, // Designation
+            'department_master_pk' => $request->section // department
+        ]);
 
         return EmployeeMaster::find($request->emp_id);
     }
@@ -64,19 +74,32 @@ class MemberController extends Controller
 
     private function saveStep4Data(Request $request)
     {
-        $this->validateEmpId($request);
+        if (!$request->has('emp_id')) {
+            return response()->json(['error' => 'Employee ID is required'], 422);
+        }
 
-        $address = $request->only([
-            'address as current_address', 'country as country_master_pk',
-            'state as state_master_pk', 'city', 'postal as zipcode',
-            'permanentaddress', 'permanentcountry as pcountry_master_pk',
-            'permanentstate as pstate_master_pk', 'permanentcity as pcity',
-            'permanentpostal as pzipcode', 'personalemail as email',
-            'officialemail as officalemail', 'mnumber as mobile'
-        ]);
+        $address = [
+            'current_address' => $request->address,
+            'country_master_pk' => $request->country,
+            'state_master_pk' => $request->state,
+            'state_district_mapping_pk' => $request->district,
+            'city' => $request->city,
+            'zipcode' => $request->postal,
 
+            'permanent_address' => $request->permanentaddress,
+            'pcountry_master_pk' => $request->permanentcountry,
+            'pstate_master_pk' => $request->permanentstate,
+            'pstate_district_mapping_pk' => $request->permanentdistrict,
+            'pcity' => $request->permanentcity,
+            'pzipcode' => $request->permanentpostal,
+
+            'email' => $request->personalemail,
+            'officalemail' => $request->officialemail,
+            'mobile' => $request->mnumber,
+            'emergency_contact_no' => $request->emergencycontact,
+            'landline_contact_no' => $request->landlinenumber,
+        ];
         EmployeeMaster::find($request->emp_id)->update($address);
-
         return EmployeeMaster::find($request->emp_id);
     }
 
@@ -114,20 +137,20 @@ class MemberController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $data = [];
+        $profile_picture = $additional_doc_upload = null;
         if ($request->hasFile('picture')) {
-            $data['picture'] = $request->file('picture')->store('members', 'public');
+            $profile_picture = $request->file('picture')->store('members', 'public');
         }
-        if ($request->hasFile('signature')) {
-            $data['signature'] = $request->file('signature')->store('members', 'public');
-        }
-
-        if (!empty($data)) {
-            EmployeeMaster::find($request->emp_id)->update($data);
+        if ($request->hasFile('additional_doc_upload')) {
+            $additional_doc_upload = $request->file('additional_doc_upload')->store('members', 'public');
         }
 
         EmployeeMaster::find($request->emp_id)->update([
             'residence_no' => $request->residencenumber,
+            'home_town_details' => $request->homeaddress,
+            'other_miscellaneous_fields' => $request->miscellaneous,
+            'additional_doc_upload' => $additional_doc_upload,
+            'profile_picture' => $profile_picture,
         ]);
 
         $userCredential = UserCredential::create([
@@ -153,6 +176,54 @@ class MemberController extends Controller
         return response()->json(['message' => 'Member successfully created']);
     }
 
+    public function update(Request $request) {
+        $validator = Validator::make($request->all(), (new StoreMemberStep5Request())->rules());
+        
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $profile_picture = $additional_doc_upload = null;
+        if ($request->hasFile('picture')) {
+            $profile_picture = $request->file('picture')->store('members', 'public');
+        }
+        if ($request->hasFile('additionaldocument')) {
+            $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
+        }
+
+        EmployeeMaster::find($request->emp_id)->update([
+            'residence_no' => $request->residencenumber,
+            'home_town_details' => $request->homeaddress,
+            'other_miscellaneous_fields' => $request->miscellaneous,
+            'additional_doc_upload' => $additional_doc_upload,
+            'profile_picture' => $profile_picture,
+        ]);
+
+        UserCredential::where('user_id', $request->emp_id)->update([
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'email_id' => $request->personalemail,
+            'mobile_no' => $request->mnumber,
+            // 'user_name' => $request->userid
+        ]);
+        $userCredential = UserCredential::where('user_id', $request->emp_id)->first();
+
+        if ($userCredential) {
+            $roles = is_array($request->userrole) ? $request->userrole : [$request->userrole];
+
+            EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)->delete();
+
+            foreach ($roles as $role) {
+                EmployeeRoleMapping::create([
+                    'user_credentials_pk' => $userCredential->pk,
+                    'user_role_master_pk' => $role,
+                ]);
+            }
+        }
+
+        return response()->json(['message' => 'Member successfully updated']);
+    }
+
     public function loadStep($step)
     {
         return view("admin.member.steps.step{$step}");
@@ -163,16 +234,117 @@ class MemberController extends Controller
         $member = EmployeeMaster::findOrFail(decrypt($id));
         return view('admin.member.show', compact('member'));
     }
+
+    public function edit($id) {
+        $member = EmployeeMaster::findOrFail($id);
+        return view('admin.member.edit', compact('member'));
+    }
+
+    function editStep($step, $id)
+    {
+        $member = EmployeeMaster::findOrFail($id);
+        return view("admin.member.edit_steps.step{$step}", compact('member'));
+    }
+
+    public function updateValidateStep(Request $request, $step, $id)
+    {
+        $request->merge(['emp_id' => ($id)]);
+        $validatorClass = "App\\Http\\Requests\\Admin\\Member\\StoreMemberStep{$step}Request";
+        if (!class_exists($validatorClass)) {
+            return response()->json(['error' => 'Invalid step'], 400);
+        }
+
+        $validator = Validator::make($request->all(), (new $validatorClass())->rules());
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $method = "updatedStep{$step}Data";
+        $responseData = method_exists($this, $method) ? $this->{$method}($request) : null;
+
+        if (!$responseData) {
+            return response()->json(['error' => 'Failed to save data'], 500);
+        }
+
+        return response()->json([
+            'message' => "Step $step validated and data saved.",
+            'pk' => $responseData->pk
+        ], 200);
+    }
+
+    function updatedStep1Data(Request $request)
+    {
+        EmployeeMaster::where('pk', (int) $request->emp_id)->update([
+            'title' => $request->title,
+            'first_name' => $request->first_name,
+            'middle_name' => $request->middle_name,
+            'last_name' => $request->last_name,
+            'father_name' => $request->father_husband_name,
+            'marital_status' => $request->marital_status,
+            'gender' => $request->gender,
+            'caste_category_pk' => $request->caste_category,
+            'height' => $request->height,
+            'dob' => $request->date_of_birth
+        ]);
+        return EmployeeMaster::where('pk', (int) $request->emp_id)->first();
+    }
+
+    function updatedStep2Data(Request $request)
+    {
+        EmployeeMaster::where('pk', (int) $request->emp_id)->update([  
+            'emp_type' => $request->type, // Employee Type
+            'emp_id' => $request->id, // Employee ID
+            'emp_group_pk' => $request->group, // Employee Group
+            'designation_master_pk' => $request->designation, // Designation
+            'department_master_pk' => $request->section // department
+        ]);
+        return EmployeeMaster::where('pk', (int) $request->emp_id)->first();
+    }
+
+    function updatedStep3Data(Request $request)
+    {
+        $this->validateEmpId($request);
+        \Log::info('Saving Step 3 Data', $request->all());
+        return EmployeeMaster::find($request->emp_id);
+    }
+
+    function updatedStep4Data(Request $request)
+    {
+        $address = [
+            'current_address' => $request->address,
+            'country_master_pk' => $request->country,
+            'state_master_pk' => $request->state,
+            'state_district_mapping_pk' => $request->district,
+            'city' => $request->city,
+            'zipcode' => $request->postal,
+
+            'permanent_address' => $request->permanentaddress,
+            'pcountry_master_pk' => $request->permanentcountry,
+            'pstate_master_pk' => $request->permanentstate,
+            'pstate_district_mapping_pk' => $request->permanentdistrict,
+            'pcity' => $request->permanentcity,
+            'pzipcode' => $request->permanentpostal,
+
+            'email' => $request->personalemail,
+            'officalemail' => $request->officialemail,
+            'mobile' => $request->mnumber,
+            'emergency_contact_no' => $request->emergencynumber,
+            'landline_contact_no' => $request->landlinenumber,
+        ];
+        EmployeeMaster::find($request->emp_id)->update($address);
+        return EmployeeMaster::find($request->emp_id);
+    }
 }
 
-// namespace App\Http\Controllers\Admin;
+    // namespace App\Http\Controllers\Admin;
 
-// use App\Http\Controllers\Controller;
-// use Illuminate\Http\Request;
-// use App\Http\Requests\Admin\Member\{
-//     StoreMemberStep1Request,
-//     StoreMemberStep2Request,
-//     StoreMemberStep3Request,
+    // use App\Http\Controllers\Controller;
+    // use Illuminate\Http\Request;
+    // use App\Http\Requests\Admin\Member\{
+    //     StoreMemberStep1Request,
+    //     StoreMemberStep2Request,
+    //     StoreMemberStep3Request,
 //     StoreMemberStep4Request,
 //     StoreMemberStep5Request,
 // };
