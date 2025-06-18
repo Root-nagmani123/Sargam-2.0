@@ -7,7 +7,9 @@
     <div class="card shadow p-4 text-center">
         <h2 class="text-success fw-bold">Thank you!</h2>
         <p class="mt-3">Your exemption application has been submitted successfully.</p>
-        <a href="{{ route('fc.choose.path') }}" class="btn btn-primary mt-4" style="background-color: #004a93; border-color: #004a93;">Go to Home</a>
+        <div class="mb-3 d-flex justify-content-center">
+         <a href="{{ route('fc.choose.path') }}" class="btn btn-primary mt-4 text-center" style="background-color: #004a93; border-color: #004a93;">Go to Home</a>
+       </div>
     </div>
 </div>
 @endsection
