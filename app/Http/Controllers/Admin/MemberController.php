@@ -13,7 +13,8 @@ use App\Http\Requests\Admin\Member\{
 };
 use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential};
 use App\DataTables\MemberDataTable;
-
+use App\Exports\MemberExport;
+use Maatwebsite\Excel\Facades\Excel;
 class MemberController extends Controller
 {
     public function index(MemberDataTable $dataTable)
@@ -334,6 +335,12 @@ class MemberController extends Controller
         ];
         EmployeeMaster::find($request->emp_id)->update($address);
         return EmployeeMaster::find($request->emp_id);
+    }
+
+    public function excelExport(Request $request)
+    {
+        $fileName = 'members-'.date('d-m-Y').'.xlsx';
+        return Excel::download(new MemberExport, $fileName);
     }
 }
 

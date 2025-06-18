@@ -52,7 +52,7 @@ class MemberDataTable extends DataTable
                     ->setTableId('member-table')
                     ->columns($this->getColumns())
                     ->minifiedAjax()
-                    //->dom('Bfrtip')
+                    // ->dom('Bfrtip')
                     ->orderBy(1)
                     ->selectStyleSingle()
                     ->buttons([
@@ -60,8 +60,12 @@ class MemberDataTable extends DataTable
                         Button::make('csv'),
                         Button::make('pdf'),
                         Button::make('print'),
-                        Button::make('reset'),
-                        Button::make('reload')
+                        [
+                            'text' => 'Reload',
+                            'action' => 'function ( e, dt, node, config ) {
+                                dt.ajax.reload();
+                            }'
+                        ]
                     ]);
     }
 

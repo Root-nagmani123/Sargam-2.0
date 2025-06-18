@@ -68,6 +68,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update-validate-step/{step}/{id}', [MemberController::class, 'updateValidateStep']);
         Route::post('/store', [MemberController::class, 'store'])->name('store');
         Route::post('update', [MemberController::class, 'update'])->name('update');
+        Route::get('excel-export', [MemberController::class, 'excelExport'])->name('excel.export');
     });
 
     // Faculty Routes
