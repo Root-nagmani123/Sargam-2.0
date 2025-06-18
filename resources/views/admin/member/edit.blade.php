@@ -109,8 +109,15 @@
                                 canProceed = true;
                             },
                             error: function (xhr) {
-                                const errors = xhr.responseJSON.errors || {};
-                                showErrors(currentStep, errors);
+                                const status = xhr.status;
+                                const errors = xhr.responseJSON?.errors || {};
+
+                                if (status === 422) {
+                                    showErrors(currentStep, errors);
+                                } else {
+                                    toastr.error(xhr.responseJSON?.message || `Unexpected error (${status}) occurred.`);
+                                }
+
                                 canProceed = false;
                             }
                         });
@@ -144,9 +151,15 @@
                                 window.location.href = "/member";
                             },
                             error: function (xhr) {
-                                const errors = xhr.responseJSON.errors || {};
-                                const lastStep = $(".wizard .step-section").last();
-                                showErrors(lastStep, errors);
+                                const status = xhr.status;
+                                const errors = xhr.responseJSON?.errors || {};
+
+                                if (status === 422) {
+                                    const lastStep = $(".wizard .step-section").last();
+                                    showErrors(lastStep, errors);
+                                } else {
+                                    toastr.error(xhr.responseJSON?.message || `Unexpected error (${status}) occurred.`);
+                                }
                             }
                         });
                     }
@@ -170,7 +183,8 @@
 
                             loadedSteps[stepNumber] = true;
                         },
-                        error: function () {
+                        error: function (xhr) {
+                            toastr.error(`Failed to load step ${stepNumber} (HTTP ${xhr.status})`);
                             stepSection.html(`<div class="alert alert-danger">Failed to load step ${stepNumber}</div>`);
                         }
                     });

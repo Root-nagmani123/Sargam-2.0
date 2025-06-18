@@ -45,7 +45,7 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-
+            {{-- @dd($member) --}}
             <x-input name="userid" label="User ID :" type="text" value="{{ $member->userCredential->user_name ?? old('userid') }}" formLabelClass="form-label" formInputClass="form-control" />
 
         </div>
