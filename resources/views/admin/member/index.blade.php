@@ -9,10 +9,9 @@
 
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
+                <div class="row">
                         <div class="col-6">
                             <h4>Member</h4>
                         </div>
@@ -58,8 +57,9 @@
                         </div>
                     </div>
                     <hr>
-                    {{ $dataTable->table() }}
-                </div>
+                    <div class="table-responsive">
+                        {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
+                    </div>
             </div>
         </div>
         <!-- end Zero Configuration -->

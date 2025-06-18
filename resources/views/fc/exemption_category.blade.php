@@ -45,12 +45,14 @@
                                     {{ $item->Exemption_name }}
                                 </h5>
                                 <span class="text-muted">{!! $item->description !!}</span>
+                                
+                            </div>
+                            <div class="card-footer">
                                 <a href="{{ route('fc.exemption_application', $item->pk) }}"
                                     class="btn btn-success custom-btn mt-2"
                                     style="background-color: {{ $color['icon'] }}; border: {{ $color['icon'] }};">
                                     Apply for Exemption
                                 </a>
-
                             </div>
                         </div>
                     </div>

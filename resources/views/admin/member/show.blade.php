@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member Details')
+@section('title', 'Member Details - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
     <div class="container py-4">
