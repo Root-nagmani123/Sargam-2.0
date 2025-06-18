@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin\Member;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreMemberStep2Request extends FormRequest
 {
@@ -23,12 +24,19 @@ class StoreMemberStep2Request extends FormRequest
      */
     public function rules()
     {
+        $empID = request()->emp_id ?? '';
+        
         return [
             'type' => 'required|exists:employee_type_master,pk',
             'id' => 'required|string|max:50', //|unique:employees,employee_id
             'group' => 'required', // |exists:employee_groups,id
             'designation' => 'required', // |exists:designations,id
-            'userid' => 'required|string|max:50',//|unique:employees,user_id
+            'userid'     => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('user_credentials', 'user_name')->ignore($empID, 'user_id'),
+            ],
             'section' => 'required|exists:department_master,pk',
         ];
     }
