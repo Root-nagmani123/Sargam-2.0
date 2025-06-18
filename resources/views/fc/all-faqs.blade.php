@@ -5,12 +5,14 @@
 @section('content')
     <div class="container my-5">
         <!-- Back Button -->
-        <div class="mb-4">
-            <a href="{{ route('fc.choose.path') }}" class="btn btn-secondary">
-                ← Back to FAQs
+        <div class="mb-4 d-flex justify-content-between align-items-center">
+            <h3 class="mb-4" style="color: #004a93;">All Frequently Asked Questions</h3>
+            <div class="mb-3 ms-3 justify-content-end">
+                <a href="{{ route('fc.choose.path') }}" class="btn btn-outline-secondary">
+                Back to FAQs
             </a>
+            </div>
         </div>
-        <h3 class="mb-4" style="color: #004a93;">All Frequently Asked Questions</h3>
 
         <div class="accordion" id="faqAccordionAll">
             @foreach ($faqs as $key => $faq)
