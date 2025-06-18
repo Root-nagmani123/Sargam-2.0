@@ -325,10 +325,11 @@ class FrontPageController extends Controller
             'Exemption_name' => $request->Exemption_name,
             'description' => $request->description,
             'is_notice' => false,
-            'created_by' => auth()->user()->id ?? '',
-            'created_at' => now(),
-            'updated_at' => now(),
+            'created_by' => auth()->check() ? auth()->user()->id : null,
+            'Created_date' => now(),
         ]);
+
+
 
         return redirect()->route('admin.exemptionIndex')->with('success', 'Exemption category added successfully.');
     }
@@ -360,9 +361,10 @@ class FrontPageController extends Controller
         DB::table('fc_exemption_master')->where('pk', $id)->update([
             'Exemption_name' => $request->Exemption_name,
             'description' => $request->description,
-            'updated_by' => auth()->user()->id ?? '',
-            'updated_at' => now(),
+            'Modified_by' => auth()->check() ? auth()->user()->id : null,
+            'Modified_date' => now(),
         ]);
+
 
         return redirect()->route('admin.exemptionIndex')->with('success', 'Exemption category updated successfully.');
     }
@@ -377,20 +379,20 @@ class FrontPageController extends Controller
         $existingNotice = DB::table('fc_exemption_master')->where('is_notice', true)->first();
 
         if ($existingNotice) {
-            // Update the existing record
+            // Update existing notice
             DB::table('fc_exemption_master')->where('pk', $existingNotice->pk)->update([
                 'description' => $request->important_notice,
-                'updated_by' => auth()->user()->id ?? '',
-                'updated_at' => now(),
+                'Modified_by' => auth()->check() ? auth()->user()->id : null,
+                'Modified_date' => now(),
             ]);
         } else {
-            // Insert a new notice row
+            // Insert new notice
             DB::table('fc_exemption_master')->insert([
-                'heading' => 'Important Notice',
+                'Exemption_name' => 'Important Notice',
                 'description' => $request->important_notice,
                 'is_notice' => true,
-                'created_by' => auth()->user()->id ?? '',
-                'created_at' => now(),
+                'created_by' => auth()->check() ? auth()->user()->id : null,
+                'Created_date' => now(),
             ]);
         }
 

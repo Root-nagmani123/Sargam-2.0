@@ -127,9 +127,9 @@ Route::prefix('/registration')->group(function () {
 Route::get('admin/registration/export', [RegistrationImportController::class, 'export'])->name('admin.registration.export');
 
 //fc registor form route
-// Route::get('/fc-register-form', function () {
-//     return view('fc.register_form');
-// })->name('fc.register_form');
+Route::get('/fc-register-form', function () {
+    return view('fc.register_form');
+})->name('fc.register_form');
 
 
 //front page data route
