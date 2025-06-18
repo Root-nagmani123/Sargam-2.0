@@ -65,12 +65,12 @@
                                     <td>{{ $exemption->modifiedByUser->name ?? 'N/A' }}</td>
                                     <td>
                                         <div class="d-flex gap-2">
-                                            <a href="{{ route('admin.fc_exemption.edit', $exemption->Pk) }}"
+                                            <a href="{{ route('admin.fc_exemption.edit', $exemption->pk) }}"
                                                 class="btn btn-sm btn-info">
                                                 Edit
                                             </a>
 
-                                            <form action="{{ route('admin.fc_exemption.destroy', $exemption->Pk) }}"
+                                            <form action="{{ route('admin.fc_exemption.destroy', $exemption->pk) }}"
                                                 method="POST" class="d-inline"
                                                 onsubmit="return confirm('Are you sure you want to delete this exemption?');">
                                                 @csrf
@@ -87,7 +87,7 @@
                                         <div class="form-check form-switch d-inline-block">
                                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                 data-table="fc_exemption_master" data-column="visible"
-                                                data-id="{{ $exemption->Pk }}"
+                                                data-id="{{ $exemption->pk }}"
                                                 {{ $exemption->visible == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
