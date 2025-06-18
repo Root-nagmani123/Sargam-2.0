@@ -188,6 +188,7 @@ class FcExemptionMasterController extends Controller
                 'e.Exemption_name',
                 'e.Exemption_name'
             )
+            ->orderBy('r.created_date')
             ->where('r.fc_exemption_master_pk', '!=', 0);
 
         // Apply filter only if a category is selected

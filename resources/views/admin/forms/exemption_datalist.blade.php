@@ -18,7 +18,7 @@
 
             <!-- Export Options -->
             <div class="row mb-3">
-                <div class="col-md-6">
+                <div class="col-md-8">
                     <form method="GET" action="{{ url()->current() }}" class="mb-4">
                         <div class="row align-items-end g-3">
                             <div class="col-md-9">
@@ -40,7 +40,7 @@
                         </div>
                     </form>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <form action="{{ route('admin.exemption.export') }}" method="GET"
                         class="d-flex justify-content-end align-items-center gap-2">
                         <input type="hidden" name="exemption_category" value="{{ request('exemption_category') }}">
