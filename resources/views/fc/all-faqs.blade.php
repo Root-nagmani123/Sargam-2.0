@@ -3,7 +3,7 @@
 @section('title', 'All FAQs - Foundation Course')
 
 @section('content')
-    <div class="container my-5">
+    <div class="container my-5" style="flex: 1;">
         <!-- Back Button -->
         <div class="mb-4 d-flex justify-content-between align-items-center">
             <h3 class="mb-4" style="color: #004a93;">All Frequently Asked Questions</h3>
