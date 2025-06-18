@@ -18,8 +18,8 @@
                         <div class="col-6">
                             <div class="float-end gap-2">
                                 <a href="{{ route('member.create') }}" class="btn btn-primary">+ Add Member</a>
-                                <a href="#" class="btn btn-success" data-bs-toggle="modal"
-                                    data-bs-target="#vertical-center-scroll-modal">Bulk Upload</a>
+                                {{-- <a href="#" class="btn btn-success" data-bs-toggle="modal"
+                                    data-bs-target="#vertical-center-scroll-modal">Bulk Upload</a> --}}
 
                             </div>
                         </div>
