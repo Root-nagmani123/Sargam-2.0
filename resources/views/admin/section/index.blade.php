@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid">
-    <div class="card card-body py-3">
+    <div class="card card-body py-3" style="border-left:4px solid #004a93;">
         <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
@@ -31,7 +31,7 @@
         <div class="datatables">
             
             <!-- start Zero Configuration -->
-            <div class="card">
+            <div class="card" style="border-left:4px solid #004a93;">
                 <div class="card-body">
                     <div class="row">
                 <div class="col-md-4 col-xl-3">
