@@ -125,13 +125,13 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="emergencynumber ">Emergency Contact Number :</label>
-            <input type="number" class="form-control" id="emergencynumber">
+            <input type="number" class="form-control" id="emergencynumber" name="emergencycontact">
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="landlinenumber">Landline Number :</label>
-            <input type="number" class="form-control" id="landlinenumber">
+            <input type="number" class="form-control" id="landlinenumber" name="landlinenumber">
         </div>
     </div>
 </div>

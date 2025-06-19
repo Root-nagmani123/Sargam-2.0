@@ -14,23 +14,23 @@ class EmployeeMaster extends Model
     protected $primaryKey = 'pk';
 
     public const title = [
-        1 => 'Mr',
-        2 => 'Mrs'
+        'Mr' => 'Mr',
+        'Mrs' => 'Mrs',
+        'Ms' => 'Ms',
+        'Dr' => 'Dr',
     ];
 
     public const gender = [
-        1 => 'Male',
-        2 => 'Female',
-        3 => 'Other'
+        'Male' => 'Male',
+        'Female' => 'Female',
+        'Other' => 'Other'
     ];
 
     public const maritalStatus = [
-        1 => 'Single',
-        2 => 'Married',
-        3 => 'Other'
+        'Married' => 'Married',
+        'Unmarried' => 'Unmarried'
     ];
 
-    
     
     public static function getDeputationEmployeeList()
     {

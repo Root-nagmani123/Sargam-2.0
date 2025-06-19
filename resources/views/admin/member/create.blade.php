@@ -149,7 +149,7 @@ $(document).ready(function () {
                 processData: false,
                 success: function () {
                     toastr.success("Member created successfully!");
-                    window.location.href = "/admin/member";
+                    window.location.href = "/member";
                 },
                 error: function (xhr) {
                     const status = xhr.status;
