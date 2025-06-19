@@ -162,6 +162,7 @@ class UserController extends Controller
     DB::table($request->table)
         ->where($idColumn, $request->id)
         ->update([$request->column => $request->status]);
+        
 
     return response()->json(['message' => 'Status updated successfully']);
 }

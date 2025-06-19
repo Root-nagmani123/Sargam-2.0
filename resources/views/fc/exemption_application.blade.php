@@ -51,8 +51,8 @@
 
 
                         <!-- <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Already Attended Foundation Course</h4>
-                                                    <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Medical Grounds</h4>
-                                                    <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Opting Out After Registration</h4> -->
+                                                                <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Medical Grounds</h4>
+                                                                <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Opting Out After Registration</h4> -->
                         <p class="text-muted mb-4">Please fill in all required information for your exemption application.
                         </p>
 
@@ -77,18 +77,19 @@
 
                                 @if (stripos($exemption->Exemption_name, 'medical') !== false)
                                     <div class="col-12">
-                                        <label for="medical_doc" class="form-label">Upload Medical Exemption Document <span
-                                                class="text-danger">*</span></label>
+                                        <label for="medical_doc" class="form-label">
+                                            Upload Medical Exemption Document <span class="text-danger">*</span>
+                                        </label>
                                         <input type="file" class="form-control" id="medical_doc" name="medical_doc"
-                                            required>
-                                        <small class="text-muted">Only upload documents related to medical
-                                            exemption.</small>
+                                            accept=".pdf" required>
+                                        <small class="text-muted">Supported format: PDF only. Upload documents related to
+                                            medical exemption.</small>
                                     </div>
                                 @endif
 
 
                                 <div class="col-12">
-                                    <label class="form-label">Verification (Optional)</label>
+                                    <label class="form-label">Verification <span class="text-danger">*</span></label>
                                     <div class="d-flex align-items-center gap-3 mb-2">
                                         <img src="{{ captcha_src() }}" alt="captcha" id="captchaImage"
                                             class="border rounded" height="40">
@@ -96,7 +97,7 @@
                                             onclick="refreshCaptcha()">Refresh</button>
                                     </div>
                                     <input type="text" class="form-control" name="captcha"
-                                        placeholder="Enter captcha code">
+                                        placeholder="Enter captcha code" required>
                                 </div>
 
                                 <div class="col-12 form-check mt-3">

@@ -256,9 +256,10 @@
         <!-- Signature Block -->
         <div class="signature mt-5 text-end">
             @if (isset($data) && !empty($data->coordinator_signature))
-                <img src="{{ asset($data->coordinator_signature) }}" alt="Coordinator Signature" height="50"
+                <img src="{{ asset('storage/' . $data->coordinator_signature) }}" alt="Coordinator Signature" height="50"
                     class="mb-2">
             @endif
+
 
             <p class="text-muted mb-0">
                 {{ isset($data) ? $data->coordinator_name ?? 'Coordinator Name' : 'Coordinator Name' }}<br>
