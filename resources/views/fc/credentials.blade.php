@@ -39,8 +39,9 @@
                                 <div class="col-md-12">
                                     <label class="form-label">User Name</label>
                                     <input type="text" class="form-control" placeholder="Enter your User Name"
-                                        name="reg_name" required>
+                                        name="reg_name" value="{{ old('reg_name') }}" required>
                                 </div>
+
 
                                 <!-- Password -->
                                 <div class="col-md-12">
