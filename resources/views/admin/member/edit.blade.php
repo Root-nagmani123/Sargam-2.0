@@ -205,8 +205,10 @@
                     stepElement.find(".is-invalid").removeClass("is-invalid");
                 }
 
-                // Initial step loadss
+                // Initial step loads
                 loadStepContent(1);
+                $("#wizard .steps li").removeClass('disabled').addClass("done");
+                $("#wizard .steps li:nth-child(1)").removeClass('done');
             });
         </script>
 
