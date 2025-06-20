@@ -34,9 +34,26 @@ class MemberController extends Controller
         }
     }
 
-    private function saveStep1Data(Request $request)
+    // private function saveStep1Data(Request $request)
+    // {
+        
+    //     return EmployeeMaster::create([
+    //         'title' => $request->title,
+    //         'first_name' => $request->first_name,
+    //         'middle_name' => $request->middle_name,
+    //         'last_name' => $request->last_name,
+    //         'father_name' => $request->father_husband_name,
+    //         'marital_status' => $request->marital_status,
+    //         'gender' => $request->gender,
+    //         'caste_category_pk' => $request->caste_category,
+    //         'height' => $request->height,
+    //         'dob' => $request->date_of_birth,
+    //     ]);
+    // }
+
+    private function saveOrUpdateStep1Data(Request $request)
     {
-        return EmployeeMaster::create([
+        $data = [
             'title' => $request->title,
             'first_name' => $request->first_name,
             'middle_name' => $request->middle_name,
@@ -47,33 +64,103 @@ class MemberController extends Controller
             'caste_category_pk' => $request->caste_category,
             'height' => $request->height,
             'dob' => $request->date_of_birth,
-        ]);
+        ];
+
+        if ($request->filled('emp_id')) {
+            // Update
+            EmployeeMaster::where('pk', (int) $request->emp_id)->update($data);
+            return EmployeeMaster::where('pk', (int) $request->emp_id)->first();
+        } else {
+            // Create
+            return EmployeeMaster::create($data);
+        }
     }
 
-    private function saveStep2Data(Request $request)
-    {
 
+    // private function saveStep2Data(Request $request)
+    // {
+
+    //     $this->validateEmpId($request);
+
+    //     EmployeeMaster::where('pk', (int) $request->emp_id)->update([
+    //         'emp_type' => $request->type, // Employee Type
+    //         'emp_id' => $request->id, // Employee ID
+    //         'emp_group_pk' => $request->group, // Employee Group
+    //         'designation_master_pk' => $request->designation, // Designation
+    //         'department_master_pk' => $request->section // department
+    //     ]);
+
+    //     return EmployeeMaster::find($request->emp_id);
+    // }
+
+    private function saveOrUpdateStep2Data(Request $request)
+    {
         $this->validateEmpId($request);
 
-        EmployeeMaster::where('pk', (int) $request->emp_id)->update([
-            'emp_type' => $request->type, // Employee Type
-            'emp_id' => $request->id, // Employee ID
-            'emp_group_pk' => $request->group, // Employee Group
-            'designation_master_pk' => $request->designation, // Designation
-            'department_master_pk' => $request->section // department
-        ]);
+        $data = [
+            'emp_type' => $request->type,
+            'emp_id' => $request->id,
+            'emp_group_pk' => $request->group,
+            'designation_master_pk' => $request->designation,
+            'department_master_pk' => $request->section,
+        ];
 
-        return EmployeeMaster::find($request->emp_id);
+        EmployeeMaster::where('pk', (int) $request->emp_id)->update($data);
+
+        return EmployeeMaster::find((int) $request->emp_id);
     }
 
-    private function saveStep3Data(Request $request)
+
+    // private function saveStep3Data(Request $request)
+    // {
+    //     $this->validateEmpId($request);
+    //     \Log::info('Saving Step 3 Data', $request->all());
+    //     return EmployeeMaster::find($request->emp_id);
+    // }
+
+
+    private function saveOrUpdateStep3Data(Request $request)
     {
         $this->validateEmpId($request);
+
         \Log::info('Saving Step 3 Data', $request->all());
-        return EmployeeMaster::find($request->emp_id);
+
+        return EmployeeMaster::find((int) $request->emp_id);
     }
 
-    private function saveStep4Data(Request $request)
+
+    // private function saveStep4Data(Request $request)
+    // {
+    //     if (!$request->has('emp_id')) {
+    //         return response()->json(['error' => 'Employee ID is required'], 422);
+    //     }
+
+    //     $address = [
+    //         'current_address' => $request->address,
+    //         'country_master_pk' => $request->country,
+    //         'state_master_pk' => $request->state,
+    //         'state_district_mapping_pk' => $request->district,
+    //         'city' => $request->city,
+    //         'zipcode' => $request->postal,
+
+    //         'permanent_address' => $request->permanentaddress,
+    //         'pcountry_master_pk' => $request->permanentcountry,
+    //         'pstate_master_pk' => $request->permanentstate,
+    //         'pstate_district_mapping_pk' => $request->permanentdistrict,
+    //         'pcity' => $request->permanentcity,
+    //         'pzipcode' => $request->permanentpostal,
+
+    //         'email' => $request->personalemail,
+    //         'officalemail' => $request->officialemail,
+    //         'mobile' => $request->mnumber,
+    //         'emergency_contact_no' => $request->emergencycontact,
+    //         'landline_contact_no' => $request->landlinenumber,
+    //     ];
+    //     EmployeeMaster::find($request->emp_id)->update($address);
+    //     return EmployeeMaster::find($request->emp_id);
+    // }
+
+    private function saveOrUpdateStep4Data(Request $request)
     {
         if (!$request->has('emp_id')) {
             return response()->json(['error' => 'Employee ID is required'], 422);
@@ -97,12 +184,15 @@ class MemberController extends Controller
             'email' => $request->personalemail,
             'officalemail' => $request->officialemail,
             'mobile' => $request->mnumber,
-            'emergency_contact_no' => $request->emergencycontact,
+            'emergency_contact_no' => $request->emergencycontact ?? $request->emergencynumber,
             'landline_contact_no' => $request->landlinenumber,
         ];
-        EmployeeMaster::find($request->emp_id)->update($address);
+
+        EmployeeMaster::where('pk', $request->emp_id)->update($address);
+
         return EmployeeMaster::find($request->emp_id);
     }
+
 
     public function validateStep(Request $request, $step)
     {
@@ -117,7 +207,7 @@ class MemberController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $method = "saveStep{$step}Data";
+        $method = "saveOrUpdateStep{$step}Data";
         $responseData = method_exists($this, $method) ? $this->{$method}($request) : null;
 
         if (!$responseData) {
@@ -264,7 +354,7 @@ class MemberController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $method = "updatedStep{$step}Data";
+        $method = "saveOrUpdateStep{$step}Data";
         $responseData = method_exists($this, $method) ? $this->{$method}($request) : null;
 
         if (!$responseData) {
@@ -277,66 +367,66 @@ class MemberController extends Controller
         ], 200);
     }
 
-    function updatedStep1Data(Request $request)
-    {
-        EmployeeMaster::where('pk', (int) $request->emp_id)->update([
-            'title' => $request->title,
-            'first_name' => $request->first_name,
-            'middle_name' => $request->middle_name,
-            'last_name' => $request->last_name,
-            'father_name' => $request->father_husband_name,
-            'marital_status' => $request->marital_status,
-            'gender' => $request->gender,
-            'caste_category_pk' => $request->caste_category,
-            'height' => $request->height,
-            'dob' => $request->date_of_birth
-        ]);
-        return EmployeeMaster::where('pk', (int) $request->emp_id)->first();
-    }
+    // function updatedStep1Data(Request $request)
+    // {
+    //     EmployeeMaster::where('pk', (int) $request->emp_id)->update([
+    //         'title' => $request->title,
+    //         'first_name' => $request->first_name,
+    //         'middle_name' => $request->middle_name,
+    //         'last_name' => $request->last_name,
+    //         'father_name' => $request->father_husband_name,
+    //         'marital_status' => $request->marital_status,
+    //         'gender' => $request->gender,
+    //         'caste_category_pk' => $request->caste_category,
+    //         'height' => $request->height,
+    //         'dob' => $request->date_of_birth
+    //     ]);
+    //     return EmployeeMaster::where('pk', (int) $request->emp_id)->first();
+    // }
 
-    function updatedStep2Data(Request $request)
-    {
-        EmployeeMaster::where('pk', (int) $request->emp_id)->update([  
-            'emp_type' => $request->type, // Employee Type
-            'emp_id' => $request->id, // Employee ID
-            'emp_group_pk' => $request->group, // Employee Group
-            'designation_master_pk' => $request->designation, // Designation
-            'department_master_pk' => $request->section // department
-        ]);
-        return EmployeeMaster::where('pk', (int) $request->emp_id)->first();
-    }
+    // function updatedStep2Data(Request $request)
+    // {
+    //     EmployeeMaster::where('pk', (int) $request->emp_id)->update([  
+    //         'emp_type' => $request->type, // Employee Type
+    //         'emp_id' => $request->id, // Employee ID
+    //         'emp_group_pk' => $request->group, // Employee Group
+    //         'designation_master_pk' => $request->designation, // Designation
+    //         'department_master_pk' => $request->section // department
+    //     ]);
+    //     return EmployeeMaster::where('pk', (int) $request->emp_id)->first();
+    // }
 
-    function updatedStep3Data(Request $request)
-    {
-        return EmployeeMaster::find($request->emp_id);
-    }
+    // function updatedStep3Data(Request $request)
+    // {
+    //     return EmployeeMaster::find($request->emp_id);
+    // }
 
-    function updatedStep4Data(Request $request)
-    {
-        $address = [
-            'current_address' => $request->address,
-            'country_master_pk' => $request->country,
-            'state_master_pk' => $request->state,
-            'state_district_mapping_pk' => $request->district,
-            'city' => $request->city,
-            'zipcode' => $request->postal,
+    // function updatedStep4Data(Request $request)
+    // {
+    //     $address = [
+    //         'current_address' => $request->address,
+    //         'country_master_pk' => $request->country,
+    //         'state_master_pk' => $request->state,
+    //         'state_district_mapping_pk' => $request->district,
+    //         'city' => $request->city,
+    //         'zipcode' => $request->postal,
 
-            'permanent_address' => $request->permanentaddress,
-            'pcountry_master_pk' => $request->permanentcountry,
-            'pstate_master_pk' => $request->permanentstate,
-            'pstate_district_mapping_pk' => $request->permanentdistrict,
-            'pcity' => $request->permanentcity,
-            'pzipcode' => $request->permanentpostal,
+    //         'permanent_address' => $request->permanentaddress,
+    //         'pcountry_master_pk' => $request->permanentcountry,
+    //         'pstate_master_pk' => $request->permanentstate,
+    //         'pstate_district_mapping_pk' => $request->permanentdistrict,
+    //         'pcity' => $request->permanentcity,
+    //         'pzipcode' => $request->permanentpostal,
 
-            'email' => $request->personalemail,
-            'officalemail' => $request->officialemail,
-            'mobile' => $request->mnumber,
-            'emergency_contact_no' => $request->emergencynumber,
-            'landline_contact_no' => $request->landlinenumber,
-        ];
-        EmployeeMaster::find($request->emp_id)->update($address);
-        return EmployeeMaster::find($request->emp_id);
-    }
+    //         'email' => $request->personalemail,
+    //         'officalemail' => $request->officialemail,
+    //         'mobile' => $request->mnumber,
+    //         'emergency_contact_no' => $request->emergencynumber,
+    //         'landline_contact_no' => $request->landlinenumber,
+    //     ];
+    //     EmployeeMaster::find($request->emp_id)->update($address);
+    //     return EmployeeMaster::find($request->emp_id);
+    // }
 
     public function excelExport(Request $request)
     {

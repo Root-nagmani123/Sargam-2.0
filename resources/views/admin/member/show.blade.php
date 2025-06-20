@@ -67,6 +67,10 @@
                     'Modified By' => $member->modified_by,
                     'Modified Date' => $member->modified_date,
                 ],
+                'Uploaded Documents' => [
+                    'Picture' => $member->profile_picture ? '<a href="' . asset('storage/' . $member->profile_picture) . '" target="_blank" class="btn btn-primary">View Picture</a>' : '—',
+                    'Additional Document' => $member->additional_doc_upload ? '<a href="' . asset('storage/' . $member->additional_doc_upload) . '" target="_blank" class="btn btn-primary">View Document</a>' : '—',
+                ],
             ];
         @endphp
 
@@ -81,7 +85,7 @@
                             <div class="col-md-4 mb-3">
                                 <label class="form-label text-muted small">{{ $label }}</label>
                                 <div class="fw-semibold text-dark">
-                                    {{ $value ?: '—' }}
+                                    {!! $value ?: '—' !!}
                                 </div>
                             </div>
                         @endforeach
