@@ -173,9 +173,12 @@ class FrontPageController extends Controller
             'reg_password' => 'required|string',
         ]);
 
+        //trim extra spaces
+        $regName = trim($request->reg_name);
+
         // Fetch user record from user_credentials
         $user = DB::table('user_credentials')
-            ->where('user_name', $request->reg_name)
+            ->where('user_name', $regName)
             ->where('Active_inactive', 1)
             ->first();
 
@@ -447,7 +450,8 @@ class FrontPageController extends Controller
 
         if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
             $rules['medical_doc'] = 'required|file|mimes:pdf|max:2048'; // 2048 KB = 2 MB
-            $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';}
+            $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';
+        }
 
         $validator = Validator::make($request->all(), $rules);
 
