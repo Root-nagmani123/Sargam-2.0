@@ -183,7 +183,7 @@ class MemberController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-
+        
         $profile_picture = $additional_doc_upload = null;
         if ($request->hasFile('picture')) {
             $profile_picture = $request->file('picture')->store('members', 'public');
@@ -191,7 +191,7 @@ class MemberController extends Controller
         if ($request->hasFile('additionaldocument')) {
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
-
+        
         EmployeeMaster::find($request->emp_id)->update([
             'residence_no' => $request->residencenumber,
             'home_town_details' => $request->homeaddress,
