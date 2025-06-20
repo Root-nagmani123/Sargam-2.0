@@ -22,7 +22,7 @@
                                     <i class="material-icons menu-icon fs-3"
                                         style="color: #16a32a; transform: rotateY(180deg);">person_add</i>
                                 </div>
-                                <h5 class="fw-bold" style="color: #004a93;">Register for Foundation Course</h5>
+                                <h5 class="fw-bold text-center" style="color: #004a93;">Register for Foundation Course</h5>
 
                                 {!! $pathPage->register_course ?? '' !!}
                             </div>
@@ -38,11 +38,11 @@
                     <!-- Exemption Card -->
                     <div class="col-md-4">
                         <div class="card h-100">
-                            <div class="card-body text-center">
+                            <div class="card-body">
                                 <div class="icon-circle mb-3" style="background-color: #fff4e5;">
                                     <i class="material-icons menu-icon fs-3" style="color: #ea5803;">article</i>
                                 </div>
-                                <h5 class="fw-bold" style="color: #004a93;">Apply for Exemption</h5>
+                                <h5 class="fw-bold text-center" style="color: #004a93;">Apply for Exemption</h5>
 
                                 {!! $pathPage->apply_exemption ?? '' !!}
                             </div>
@@ -59,11 +59,11 @@
                     <!-- Login Card -->
                     <div class="col-md-4">
                         <div class="card h-100">
-                            <div class="card-body text-center">
+                            <div class="card-body">
                                 <div class="icon-circle mb-3" style="background-color: #e5f2ff;">
                                     <i class="material-icons menu-icon fs-3" style="color: #2563eb;">login</i>
                                 </div>
-                                <h5 class="fw-bold" style="color: #004a93;">Already Registered?</h5>
+                                <h5 class="fw-bold text-center" style="color: #004a93;">Already Registered?</h5>
 
                                 {!! $pathPage->already_registered ?? '' !!}
                             </div>
