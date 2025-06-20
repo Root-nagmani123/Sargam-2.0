@@ -34,18 +34,19 @@ class FrontPageController extends Controller
             'coordinator_name' => 'nullable|string|max:255',
             'coordinator_designation' => 'nullable|string|max:255',
             'coordinator_info' => 'nullable|string|max:255',
-            'coordinator_signature' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'coordinator_signature' => 'nullable|mimes:jpeg,png,jpg,gif,pdf|max:5120',
         ]);
 
         $data = $request->except(['important_updates', 'coordinator_signature']);
         $data['important_updates'] = html_entity_decode($request->input('important_updates'));
 
+        // File Upload
         if ($request->hasFile('coordinator_signature')) {
             $file = $request->file('coordinator_signature');
-            $filename = 'signatures/' . time() . '_' . $file->getClientOriginalName();
-            $file->move(public_path('signatures'), $filename);
-            $data['coordinator_signature'] = 'signatures/' . basename($filename);
+            $filePath = $file->store('signatures', 'public'); // stored in storage/app/public/signatures
+            $data['coordinator_signature'] = $filePath;
         }
+
 
         $frontPage = FrontPage::first();
 
@@ -172,9 +173,12 @@ class FrontPageController extends Controller
             'reg_password' => 'required|string',
         ]);
 
+        //trim extra spaces
+        $regName = trim($request->reg_name);
+
         // Fetch user record from user_credentials
         $user = DB::table('user_credentials')
-            ->where('user_name', $request->reg_name)
+            ->where('user_name', $regName)
             ->where('Active_inactive', 1)
             ->first();
 
@@ -297,15 +301,16 @@ class FrontPageController extends Controller
     public function exemptionIndex()
     {
         $headings = ExemptionCategory::with(['creator', 'updater'])
-            ->where('is_notice', 0) //  Exclude important notice
+            ->where('is_notice', 0)
             ->get();
 
-        $notice = DB::table('fc_exemption_master')
+        $notice = ExemptionCategory::with(['creator', 'updater'])
             ->where('is_notice', true)
             ->first();
 
         return view('admin.forms.exemption_category', compact('headings', 'notice'));
     }
+
 
     public function exemptionCreate()
     {
@@ -325,11 +330,10 @@ class FrontPageController extends Controller
             'Exemption_name' => $request->Exemption_name,
             'description' => $request->description,
             'is_notice' => false,
-            'created_by' => auth()->check() ? auth()->user()->id : null,
+            'created_by' => auth()->check() ? auth()->id() : null,
+            // 'modified_by' => auth()->check() ? auth()->id() : null,
             'Created_date' => now(),
         ]);
-
-
 
         return redirect()->route('admin.exemptionIndex')->with('success', 'Exemption category added successfully.');
     }
@@ -361,7 +365,7 @@ class FrontPageController extends Controller
         DB::table('fc_exemption_master')->where('pk', $id)->update([
             'Exemption_name' => $request->Exemption_name,
             'description' => $request->description,
-            'Modified_by' => auth()->check() ? auth()->user()->id : null,
+            'modified_by' => auth()->check() ? auth()->user()->id : null,
             'Modified_date' => now(),
         ]);
 
@@ -445,7 +449,8 @@ class FrontPageController extends Controller
             ->first();
 
         if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
-            $rules['medical_doc'] = 'required|file|mimes:pdf,jpg,jpeg,png|max:2048';
+            $rules['medical_doc'] = 'required|file|mimes:pdf|max:2048'; // 2048 KB = 2 MB
+            $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';
         }
 
         $validator = Validator::make($request->all(), $rules);

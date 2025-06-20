@@ -22,6 +22,10 @@ class ExemptionCategory extends Model
         'optout_heading',
         'optout_subheading',
         'important_notice',
+        'created_by',
+        'modified_by',
+        'created_at',
+        'updated_at',
     ];
 
     public function creator()
@@ -31,6 +35,6 @@ class ExemptionCategory extends Model
 
     public function updater()
     {
-        return $this->belongsTo(User::class, 'updated_by');
+        return $this->belongsTo(User::class, 'modified_by');
     }
 }
