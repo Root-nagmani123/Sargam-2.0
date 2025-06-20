@@ -17,3 +17,11 @@ function view_file_link($path) {
 function format_date($date, $format = 'd-m-Y') {
     return \Carbon\Carbon::parse($date)->format($format);
 }
+
+function createDirectory($path)
+{
+    $directory = public_path('storage/'. $path);
+    if (!file_exists($directory)) {
+        mkdir($directory, 0755, true);
+    }
+}

@@ -227,7 +227,7 @@ class MemberController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-
+        createDirectory('members');
         $profile_picture = $additional_doc_upload = null;
         if ($request->hasFile('picture')) {
             $profile_picture = $request->file('picture')->store('members', 'public');
@@ -273,7 +273,9 @@ class MemberController extends Controller
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
-        
+
+        createDirectory('members');
+
         $profile_picture = $additional_doc_upload = null;
         if ($request->hasFile('picture')) {
             $profile_picture = $request->file('picture')->store('members', 'public');
