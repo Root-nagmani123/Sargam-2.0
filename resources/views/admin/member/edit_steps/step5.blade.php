@@ -1,13 +1,13 @@
 <div class="row">
     <div class="col-md-6">
         <div class="mb-3">
-            <x-input name="homeaddress" formLabelClass="form-label" label="Home Address Data : (Optional)" id="homeaddress" value="{{ $member->residence_no ?? old('homeaddress') }}" />
+            <x-input name="homeaddress" formLabelClass="form-label" label="Home Address Data : (Optional)" id="homeaddress" value="{{ $member->home_town_details ?? old('homeaddress') }}" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number :" id="residencenumber" value="{{ $member->home_town_details ?? old('residencenumber') }}" />
+            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number :" id="residencenumber" value="{{ $member->residence_no ?? old('residencenumber') }}" />
 
         </div>
     </div>
