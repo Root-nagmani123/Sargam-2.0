@@ -54,7 +54,7 @@
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
                                     </div>
-                                    <small class="form-text text-muted mt-2"><a href="{{route('fc.forget')}}" class="text-primary">Forget Password</a></small>
+                                    <small class="form-text text-muted mt-2"><a href="{{route('fc.password.forgot')}}" class="text-primary">Forget Password</a></small>
                                 </div>
 
                                 <!-- Submit -->

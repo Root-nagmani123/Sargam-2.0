@@ -498,4 +498,44 @@ class FrontPageController extends Controller
 
         return redirect()->route('fc.thank_you')->with('success', 'Exemption form submitted successfully.');
     }
+
+
+    //show reset password form
+    public function showForgotPasswordForm()
+    {
+        return view('fc.forgot_password');
+    }
+
+    //reset password method
+    public function resetPassword(Request $request)
+    {
+        // @dd($request->all());
+        $request->validate([
+            'mobile_number' => 'required|digits:10',
+            'new_password' => [
+                'required',
+                'string',
+                'min:6',
+                'regex:/^(?=.*[\W_]).+$/'
+            ],
+            'confirm_password' => 'required|same:new_password',
+        ]);
+
+        // Check user exists by mobile number
+        $user = DB::table('user_credentials')
+            ->where('mobile_no', $request->mobile_number)
+            ->first();
+        if (!$user) {
+            return back()->withErrors(['mobile_number' => 'Mobile number not found.'])->withInput();
+        }
+
+        // Update password
+        DB::table('user_credentials')
+            ->where('mobile_no', $request->mobile_number)
+            ->update([
+                'jbp_password' => Hash::make($request->new_password),
+            ]);
+
+        return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
+    }
 }

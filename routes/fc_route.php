@@ -191,3 +191,11 @@ Route::get('/fc/thank-you', function () {
 Route::get('/fc/forget-password', function () {
     return view('fc.forget');
 })->name('fc.forget');
+
+//reset passowrd index
+Route::get('/fc/forgot-password', [FrontPageController::class, 'showForgotPasswordForm'])->name('fc.password.forgot');
+
+
+//reset password 
+Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])->name('fc.password.reset');
+
