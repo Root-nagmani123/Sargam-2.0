@@ -1,10 +1,9 @@
 @extends('fc.layouts.master')
 
-@section('title', 'FC Login - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
-
-    <!-- Main Content Box -->
+   <!-- Main Content Box -->
     <main style="flex: 1;">
         <div class="container mt-5">
             <div class="row">
@@ -32,21 +31,23 @@
                             @endif
                             <form class="row g-3" method="POST" action="{{ route('fc.login.verify') }}">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Login to Foundation Course</h3>
+                                <h3 class="text-center fw-bold" style="color: #004a93;">Forget Password</h3>
+                                <small class="text-muted text-center">Please enter your User Name and Password</small>
                                 <hr>
 
                                 <!-- Username -->
                                 <div class="col-md-12">
-                                    <label class="form-label">User Name</label>
-                                    <input type="text" class="form-control" placeholder="Enter your User Name"
+                                    <label class="form-label">Mobile No.</label>
+                                    <input type="number" class="form-control" placeholder="Enter your Mobile No."
                                         name="reg_name" required>
                                 </div>
 
+                                
                                 <!-- Password -->
                                 <div class="col-md-12">
-                                    <label class="form-label">Password</label>
+                                    <label class="form-label">Enter New Password</label>
                                     <div class="input-group">
-                                        <input type="password" class="form-control" placeholder="Enter Password"
+                                        <input type="password" class="form-control" placeholder="Enter New Password"
                                             name="reg_password" id="password" required>
                                         <button type="button" class="btn btn-primary"
                                             onclick="togglePassword('password', this)"
@@ -54,7 +55,19 @@
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
                                     </div>
-                                    <small class="form-text text-muted mt-2"><a href="{{route('fc.forget')}}" class="text-primary">Forget Password</a></small>
+                                </div>
+                                <!-- Confirm Password -->
+                                <div class="col-md-12">
+                                    <label class="form-label">Enter Confirm Password</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" placeholder="Enter Confirm Password"
+                                            name="reg_password" id="password" required>
+                                        <button type="button" class="btn btn-primary"
+                                            onclick="togglePassword('password', this)"
+                                            style="background-color: #004a93;border-color: #004a93;">
+                                            <i class="material-icons menu-icon me-3 fs-3">visibility</i>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <!-- Submit -->
@@ -82,5 +95,17 @@
                 icon.textContent = "visibility";
             }
         }
+          function togglePassword(id, btn) {
+            const input = document.getElementById(id);
+            const icon = btn.querySelector('i');
+            if (input.type === "password") {
+                input.type = "text";
+                icon.textContent = "visibility_off";
+            } else {
+                input.type = "password";
+                icon.textContent = "visibility";
+            }
+        }
     </script>
+
 @endsection
