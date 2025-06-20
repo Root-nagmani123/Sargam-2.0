@@ -54,6 +54,7 @@
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
                                     </div>
+                                    <small class="form-text text-muted mt-2"><a href="#" class="text-primary">Forget Password</a></small>
                                 </div>
 
                                 <!-- Submit -->
