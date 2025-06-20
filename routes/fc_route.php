@@ -186,3 +186,8 @@ Route::post('/fc/exemption-apply/{id}', [FrontPageController::class, 'apply_exem
 Route::get('/fc/thank-you', function () {
     return view('fc.thank_you');
 })->name('fc.thank_you');
+
+//forget password page
+Route::get('/fc/forget-password', function () {
+    return view('fc.forget');
+})->name('fc.forget');
