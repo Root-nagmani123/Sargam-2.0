@@ -61,8 +61,8 @@ class StoreMemberStep2Request extends FormRequest
             'userid.max' => 'User ID must not exceed 50 characters',
             'userid.unique' => 'This user ID already exists',
             
-            'section.required' => 'Please select section',
-            'section.exists' => 'Selected section is invalid',
+            'section.required' => 'Please select department',
+            'section.exists' => 'Selected department is invalid',
         ];
     }
 }
