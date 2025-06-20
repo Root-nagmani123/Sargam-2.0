@@ -3,7 +3,7 @@
 @section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
-   <!-- Main Content Box -->
+    <!-- Main Content Box -->
     <main style="flex: 1;">
         <div class="container mt-5">
             <div class="row">
@@ -29,41 +29,42 @@
                                     </ul>
                                 </div>
                             @endif
-                            <form class="row g-3" method="POST" action="{{ route('fc.login.verify') }}">
+                            <form class="row g-3" method="POST" action="{{ route('fc.password.reset') }}">
                                 @csrf
                                 <h3 class="text-center fw-bold" style="color: #004a93;">Forget Password</h3>
-                                <small class="text-muted text-center">Please enter your User Name and Password</small>
+                                <small class="text-muted text-center">Please enter your Mobile Number and New
+                                    Password</small>
                                 <hr>
 
-                                <!-- Username -->
+                                <!-- Mobile No. -->
                                 <div class="col-md-12">
                                     <label class="form-label">Mobile No.</label>
                                     <input type="number" class="form-control" placeholder="Enter your Mobile No."
-                                        name="reg_name" required>
+                                        name="mobile_number" required>
                                 </div>
 
-                                
-                                <!-- Password -->
+                                <!-- New Password -->
                                 <div class="col-md-12">
                                     <label class="form-label">Enter New Password</label>
                                     <div class="input-group">
                                         <input type="password" class="form-control" placeholder="Enter New Password"
-                                            name="reg_password" id="password" required>
+                                            name="new_password" id="new_password" required>
                                         <button type="button" class="btn btn-primary"
-                                            onclick="togglePassword('password', this)"
+                                            onclick="togglePassword('new_password', this)"
                                             style="background-color: #004a93;border-color: #004a93;">
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
                                     </div>
                                 </div>
+
                                 <!-- Confirm Password -->
                                 <div class="col-md-12">
                                     <label class="form-label">Enter Confirm Password</label>
                                     <div class="input-group">
                                         <input type="password" class="form-control" placeholder="Enter Confirm Password"
-                                            name="reg_password" id="password" required>
+                                            name="confirm_password" id="confirm_password" required>
                                         <button type="button" class="btn btn-primary"
-                                            onclick="togglePassword('password', this)"
+                                            onclick="togglePassword('confirm_password', this)"
                                             style="background-color: #004a93;border-color: #004a93;">
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
@@ -76,6 +77,7 @@
                                         style="background-color: #004a93;border-color: #004a93;">Submit</button>
                                 </div>
                             </form>
+
                         </div>
                     </div>
                 </div>
@@ -95,7 +97,8 @@
                 icon.textContent = "visibility";
             }
         }
-          function togglePassword(id, btn) {
+
+        function togglePassword(id, btn) {
             const input = document.getElementById(id);
             const icon = btn.querySelector('i');
             if (input.type === "password") {
