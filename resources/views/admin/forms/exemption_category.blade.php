@@ -6,6 +6,7 @@
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
 
     <div class="container-fluid">
+        <x-session_message />
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="fw-bold">Exemption Master</h4>
             <a href="{{ route('exemptionCreate') }}" class="btn btn-primary">+ Add Exemption</a>
