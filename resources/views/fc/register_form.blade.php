@@ -317,8 +317,8 @@
                                     <i class="material-icons" style="color: #004a93;">account_circle</i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
-                                    <li><a class="dropdown-item" href="#">Profile</a></li>
-                                    <li><a class="dropdown-item" href="#">Settings</a></li>
+                                    {{-- <li><a class="dropdown-item" href="#">Profile</a></li> --}}
+                                    {{-- <li><a class="dropdown-item" href="#">Settings</a></li> --}}
                                     <li>
                                         <form action="#" method="POST">
                                             @csrf
