@@ -308,12 +308,11 @@ class FrontPageController extends Controller
     {
         $userMobile = session('fc_user_mobile');
         $webAuth = session('fc_user_web_auth');
-
         // Check if user has already applied for exemption
         $hasApplied = DB::table('fc_registration_master')
             ->where('contact_no', $userMobile)
             ->where('web_auth', $webAuth)
-            ->whereNotNull('fc_exemption_master_pk')
+            ->where('fc_exemption_master_pk', '!=', 0) // Check if exemption is applied
             ->exists();
 
         $hasApplied = $hasApplied ? true : false; // Convert to boolean
@@ -486,7 +485,7 @@ class FrontPageController extends Controller
             ->first();
 
         if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
-            $rules['medical_doc'] = 'required|file|mimes:pdf|max:2048'; // 2048 KB = 2 MB
+            $rules['medical_doc'] = 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120';
             $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';
         }
 

@@ -51,8 +51,8 @@
 
 
                         <!-- <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Already Attended Foundation Course</h4>
-                                                                <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Medical Grounds</h4>
-                                                                <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Opting Out After Registration</h4> -->
+                                                                        <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Medical Grounds</h4>
+                                                                        <h4 class="mb-1 fw-bold " style="color: #004a93; font-weight: 600; font-size: 24px;">Opting Out After Registration</h4> -->
                         <p class="text-muted mb-4">Please fill in all required information for your exemption application.
                         </p>
 
@@ -82,8 +82,9 @@
                                         </label>
                                         <input type="file" class="form-control" id="medical_doc" name="medical_doc"
                                             accept=".pdf" required>
-                                        <small class="text-muted">Supported format: PDF only. Upload documents related to
-                                            medical exemption.</small>
+                                        <small class="text-muted">
+                                            Supported formats: PDF, Word (.doc, .docx), JPG, JPEG, PNG. Max file size: 5 MB.
+                                        </small>
                                     </div>
                                 @endif
 
@@ -112,7 +113,8 @@
                                 <div class="col-12 d-flex justify-content-center gap-2 mt-4">
                                     <button type="submit" class="btn btn-primary"
                                         style="background-color: #004a93;border-color: #004a93;">Submit Application</button>
-                                    <button type="reset" class="btn btn-danger">Cancel Application</button>
+                                    <a href="{{ route('fc.exemption_category.index', $exemption->pk) }}"
+                                        class="btn btn-danger">Cancel Application</a>
                                 </div>
                             </div>
                         </form>
