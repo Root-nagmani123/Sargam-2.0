@@ -15,15 +15,16 @@
             <div class="text-center mt-5">
                 <h4 style="color: #004a93; font-size: 30px; font-weight: 700;">Select Exemption Category</h4>
                 <div class="col-8 mx-auto">
-                    <p class="text-muted" style="font-size: 16px;">Choose the appropriate exemption category based on your
-                        circumstances. Each category has specific requirements and documentation needs.</p>
+                    <p class="text-muted" style="font-size: 16px;">
+                        Choose the appropriate exemption category based on your circumstances. Each category has specific
+                        requirements and documentation needs.
+                    </p>
                 </div>
             </div>
 
             <div class="row mt-5 g-4">
                 @foreach ($exemptions as $index => $item)
                     @php
-                        // Assign background/icon colors based on index
                         $colors = [
                             ['bg' => '#e5f2ff', 'icon' => '#2563eb', 'iconName' => 'school'],
                             ['bg' => '#dcfce7', 'icon' => '#16a32a', 'iconName' => 'article'],
@@ -34,7 +35,7 @@
                     @endphp
 
                     <div class="col-6">
-                        <div class="card">
+                        <div class="card {{ $hasApplied ? 'opacity-50' : '' }}">
                             <div class="card-body text-center">
                                 <div class="icon-circle" style="background-color: {{ $color['bg'] }};">
                                     <i class="material-icons menu-icon fs-2" style="color: {{ $color['icon'] }};">
@@ -45,14 +46,11 @@
                                     {{ $item->Exemption_name }}
                                 </h5>
                                 <span class="text-muted">{!! $item->description !!}</span>
-                                
                             </div>
+
                             <div class="card-footer">
-                                <a href="{{ route('fc.exemption_application', $item->pk) }}"
-                                    class="btn btn-success custom-btn mt-2"
-                                    style="background-color: {{ $color['icon'] }}; border: {{ $color['icon'] }};">
-                                    Apply for Exemption
-                                </a>
+                                <a href="#" class="btn btn-secondary custom-btn mt-2 w-100 disabled">Already
+                                    Applied</a>
                             </div>
                         </div>
                     </div>
@@ -68,5 +66,49 @@
                 </div>
             @endif
         </div>
+
+        <!-- Already Applied Modal -->
+        <!-- Modal HTML -->
+        @if ($hasApplied)
+            <div class="modal fade" id="alreadyAppliedModal" tabindex="-1" aria-labelledby="alreadyAppliedModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="alreadyAppliedModalLabel">Already Applied</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            You have already applied for an exemption. Only one exemption request is allowed.
+                        </div>
+                        <div class="modal-footer">
+                            <a href="{{ url()->previous() }}" class="btn btn-primary">Go Back</a>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+        <!-- Bootstrap JS -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"></script>
+
+        <!-- Auto-show modal on page load -->
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                var alreadyAppliedModal = new bootstrap.Modal(document.getElementById('alreadyAppliedModal'));
+                alreadyAppliedModal.show();
+            });
+        </script>
+
     </main>
 @endsection
+
+{{-- @if ($hasApplied)   
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var alreadyAppliedModal = new bootstrap.Modal(document.getElementById('alreadyAppliedModal'));
+        alreadyAppliedModal.show();
+    });
+</script>
+    @endif
+@endsection --}}

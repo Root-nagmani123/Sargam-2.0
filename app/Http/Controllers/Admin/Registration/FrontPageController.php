@@ -110,6 +110,7 @@ class FrontPageController extends Controller
         session([
             'fc_user_id' => $registration->pk,
             'fc_user_mobile' => $registration->contact_no,
+            'fc_user_web_auth' => $registration->web_auth,
             'fc_user_name' => $registration->name ?? null,
         ]);
 
@@ -130,6 +131,8 @@ class FrontPageController extends Controller
     {
         $request->validate([
             'reg_name' => 'required|string|max:100|unique:user_credentials,user_name',
+            'reg_mobile' => 'required|digits:10|unique:user_credentials,mobile_no',
+
             'reg_password' => [
                 'required',
                 'string',
@@ -139,6 +142,9 @@ class FrontPageController extends Controller
             'reg_confirm_password' => 'required|same:reg_password',
         ], [
             'reg_name.unique' => 'The username has already been taken.',
+            'reg_mobile.required' => 'Mobile number is required.',
+            'reg_mobile.digits' => 'Mobile number must be 10 digits.',
+            'reg_mobile.unique' => 'The mobile number has already been used.',
             'reg_password.min' => 'The password must be at least 6 characters.',
             'reg_password.regex' => 'The password must contain at least one special character.',
             'reg_confirm_password.same' => 'The confirm password and password must match.',
@@ -148,6 +154,7 @@ class FrontPageController extends Controller
 
         DB::table('user_credentials')->insert([
             'user_name' => $request->reg_name,
+            'mobile_no' => $request->reg_mobile, // <-- store mobile
             'jbp_password' => Hash::make($request->reg_password), // Store hashed password
             'reg_date' => now(),
             'last_login' => now(),
@@ -280,22 +287,53 @@ class FrontPageController extends Controller
 
 
     // Show exemption categories and important notice
-    public function showExemptionCategory()
+    // public function showExemptionCategory()
+    // {
+    //     // Fetch all exemption categories except the notice
+    //     $exemptions = DB::table('fc_exemption_master')
+    //         ->where('is_notice', false)
+    //         ->where('visible', true) // Assuming you have an is_active column to filter active categories
+    //         ->orderBy('pk')
+    //         ->get();
+
+    //     // Fetch the important notice if it exists
+    //     $notice = DB::table('fc_exemption_master')
+    //         ->where('is_notice', true)
+    //         ->first();
+
+    //     return view('fc.exemption_category', compact('exemptions', 'notice'));
+    // }
+
+    public function showExemptionCategory(Request $request)
     {
-        // Fetch all exemption categories except the notice
+        $userMobile = session('fc_user_mobile');
+        $webAuth = session('fc_user_web_auth');
+
+        // Check if user has already applied for exemption
+        $hasApplied = DB::table('fc_registration_master')
+            ->where('contact_no', $userMobile)
+            ->where('web_auth', $webAuth)
+            ->whereNotNull('fc_exemption_master_pk')
+            ->exists();
+
+        $hasApplied = $hasApplied ? true : false; // Convert to boolean
+        // Fetch exemption categories
         $exemptions = DB::table('fc_exemption_master')
             ->where('is_notice', false)
-            ->where('visible', true) // Assuming you have an is_active column to filter active categories
+            ->where('visible', true)
             ->orderBy('pk')
             ->get();
 
-        // Fetch the important notice if it exists
+        // Fetch the important notice
         $notice = DB::table('fc_exemption_master')
             ->where('is_notice', true)
             ->first();
 
-        return view('fc.exemption_category', compact('exemptions', 'notice'));
+        return view('fc.exemption_category', compact('exemptions', 'notice', 'hasApplied'));
     }
+
+
+
 
     public function exemptionIndex()
     {
