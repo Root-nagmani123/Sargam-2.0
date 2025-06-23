@@ -35,7 +35,7 @@
                     @endphp
 
                     <div class="col-6">
-                        <div class="card {{ $hasApplied ? 'opacity-50' : '' }}">
+                        <div class="card {{ $hasApplied ? '' : 'opacity-100' }}">
                             <div class="card-body text-center">
                                 <div class="icon-circle" style="background-color: {{ $color['bg'] }};">
                                     <i class="material-icons menu-icon fs-2" style="color: {{ $color['icon'] }};">
@@ -49,9 +49,18 @@
                             </div>
 
                             <div class="card-footer">
-                                <a href="#" class="btn btn-secondary custom-btn mt-2 w-100 disabled">Already
-                                    Applied</a>
+                                @if (!$hasApplied)
+                                    <a href="{{ route('fc.exemption_application', $item->pk) }}"
+                                        class="btn btn-success custom-btn mt-2"
+                                        style="background-color: {{ $color['icon'] }}; border: {{ $color['icon'] }};">
+                                        Apply for Exemption
+                                    </a>
+                                @else
+                                    <button class="btn btn-secondary custom-btn mt-2 w-100" disabled>Already
+                                        Applied</button>
+                                @endif
                             </div>
+
                         </div>
                     </div>
                 @endforeach
