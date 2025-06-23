@@ -72,7 +72,7 @@
                 <div class="sidebarmenu">
                     <div class="brand-logo d-flex align-items-center nav-logo">
                         <a href="#" class="text-nowrap logo-img">
-                            <img src="{{asset('admin_assets/images/logos/logo.svg')}}" alt="Logo">
+                            <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Logo">
                         </a>
 
                     </div>
@@ -101,8 +101,8 @@
                                                 <!-- Dashboard -->
                                                 <!-- ---------------------------------- -->
                                                 <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('dashboard') }}" id="get-url"
-                                                        aria-expanded="false">
+                                                    <a class="sidebar-link" href="{{ route('dashboard') }}"
+                                                        id="get-url" aria-expanded="false">
                                                         <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
                                                         <span class="hide-menu">Dashboard</span>
                                                     </a>
@@ -163,7 +163,7 @@
                                                         <span class="hide-menu">Faculty</span>
                                                     </a>
                                                 </li>
-                                               
+
                                                 <!-- <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('batch.index') }}"
                                                         id="get-url" aria-expanded="false">
@@ -172,118 +172,120 @@
                                                         <span class="hide-menu">Batch</span>
                                                     </a>
                                                 </li> -->
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('stream.index') }}" id="get-url"
-                                                    aria-expanded="false">
-                                                    <iconify-icon icon="solar:widget-4-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Stream</span>
-                                                </a>
-                                            </li>
-                                            
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('subject.index') }}" id="get-url"
-                                                    aria-expanded="false">
-                                                    <iconify-icon icon="solar:speaker-minimalistic-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Subject</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('curriculum.index') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:iphone-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Course Curriculum</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('mapping.index') }}" id="get-url"
-                                                    aria-expanded="false">
-                                                    <iconify-icon icon="solar:map-arrow-up-bold-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Faculty Topic Mapping</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('calendar.index') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Calendar</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('section.index') }}" id="get-url"
-                                                    aria-expanded="false">
-                                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Section</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:feed-bold-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Feedback</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link"
-                                                    href="{{ route('feedback.get.studentFeedback') }}" id="get-url"
-                                                    aria-expanded="false">
-                                                    <iconify-icon icon="solar:feed-bold-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Student Feedback</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link"
-                                                    href="{{ route('student.medical.exemption.index') }}" id="get-url"
-                                                    aria-expanded="false">
-                                                    <iconify-icon icon="solar:feed-bold-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Student Medical Exemption</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link"
-                                                    href="{{ route('memo.notice.management.index') }}" id="get-url"
-                                                    aria-expanded="false">
-                                                    <iconify-icon icon="solar:feed-bold-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Memo Notice Management</span>
-                                                </a>
-                                            </li>
-                                            <li>
-                                                <span class="sidebar-divider"></span>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link"
-                                                    href="{{ route('course.memo.decision.index') }}">
-                                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Memo Course Mapping</span>
-                                                </a>
-                                            </li>
-                                          
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('mdo-escrot-exemption.index') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">MDO Escrot Exemption</span>
-                                                </a>
-                                            </li>
-                                            <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('attendance.index') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Attendance</span>
-                                                </a>
-                                            </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('stream.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:widget-4-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Stream</span>
+                                                    </a>
+                                                </li>
+
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('subject.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:speaker-minimalistic-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Subject</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('curriculum.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:iphone-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Course Curriculum</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('mapping.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:map-arrow-up-bold-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Faculty Topic Mapping</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('calendar.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Calendar</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('section.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Section</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link"
+                                                        href="{{ route('feedback.get.feedbackList') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:feed-bold-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Feedback</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link"
+                                                        href="{{ route('feedback.get.studentFeedback') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:feed-bold-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Student Feedback</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link"
+                                                        href="{{ route('student.medical.exemption.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:feed-bold-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Student Medical Exemption</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link"
+                                                        href="{{ route('memo.notice.management.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:feed-bold-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Memo Notice Management</span>
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <span class="sidebar-divider"></span>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link"
+                                                        href="{{ route('course.memo.decision.index') }}">
+                                                        <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Memo Course Mapping</span>
+                                                    </a>
+                                                </li>
+
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link"
+                                                        href="{{ route('mdo-escrot-exemption.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">MDO Escrot Exemption</span>
+                                                    </a>
+                                                </li>
+                                                <li class="sidebar-item">
+                                                    <a class="sidebar-link" href="{{ route('attendance.index') }}"
+                                                        id="get-url" aria-expanded="false">
+                                                        <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                                        </iconify-icon>
+                                                        <span class="hide-menu">Attendance</span>
+                                                    </a>
+                                                </li>
 
                                             </ul>
                                         </div>
@@ -355,46 +357,46 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('master.class.session.index') }}" id="get-url"
-                                    aria-expanded="false">
+                                <a class="sidebar-link" href="{{ route('master.class.session.index') }}"
+                                    id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
                                     <span class="hide-menu">Class Session</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('subject-module.index') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:widget-4-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Subject Module</span>
-                                                </a>
-                                            </li>
-                              <li class="sidebar-item">
-                                                <a class="sidebar-link" href="{{ route('group.mapping.index') }}"
-                                                    id="get-url" aria-expanded="false">
-                                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
-                                                    </iconify-icon>
-                                                    <span class="hide-menu">Group Mapping</span>
-                                                </a>
-                                            </li>
+                                <a class="sidebar-link" href="{{ route('subject-module.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:widget-4-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Subject Module</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('group.mapping.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Group Mapping</span>
+                                </a>
+                            </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('master.course.group.type.index') }}"
                                     id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
                                     <span class="hide-menu">Course Group Type</span>
-                                </a> 
+                                </a>
                             </li>
-                             <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('programme.index') }}"
-                                                        id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:mask-happly-line-duotone">
-                                                        </iconify-icon>
-                                                        <span class="hide-menu">Course Master</span>
-                                                    </a>
-                                                </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('master.mdo_duty_type.index') }}" id="get-url"
+                                <a class="sidebar-link" href="{{ route('programme.index') }}" id="get-url"
                                     aria-expanded="false">
+                                    <iconify-icon icon="solar:mask-happly-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Course Master</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('master.mdo_duty_type.index') }}"
+                                    id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
                                     <span class="hide-menu">MDO Duty Type</span>
                                 </a>
@@ -414,8 +416,9 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('master.exemption.medical.speciality.index') }}"
-                                    id="get-url" aria-expanded="false">
+                                <a class="sidebar-link"
+                                    href="{{ route('master.exemption.medical.speciality.index') }}" id="get-url"
+                                    aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
                                     <span class="hide-menu">Exemption Medical Speciality</span>
                                 </a>
@@ -427,7 +430,7 @@
                                     <span class="hide-menu">Fc Exemption Master</span>
                                 </a>
                             </li>
-                            
+
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('master.memo.type.master.index') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
@@ -483,130 +486,135 @@
                     <!-- ---------------------------------- -->
                     <nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-4" data-simplebar="">
                         <ul class="sidebar-menu" id="sidebarnav">
-                            <!-- ---------------------------------- -->
-                            <!-- Home -->
-                            <!-- ---------------------------------- -->
-                            <li class="nav-small-cap">
-                                <span class="hide-menu">Forms</span>
-                            </li>
 
-                             <li class="sidebar-item">
+                            <!-- ======= GENERAL SECTION ======= -->
+                            <li class="nav-small-cap"><span class="hide-menu">General</span></li>
+
+                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('frontpage.index') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Front Page</span>
+                                    <iconify-icon icon="material-symbols:home-outline-rounded"></iconify-icon>
+                                    <span class="hide-menu">User Landing Page</span>
                                 </a>
                             </li>
+
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.frontpage') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Front Page Admin</span>
+                                    <iconify-icon icon="mdi:view-dashboard-outline"></iconify-icon>
+                                    <span class="hide-menu">Landing Page (Admin)</span>
                                 </a>
                             </li>
 
-                              <li class="sidebar-item">
+                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.path.page') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Path Page Admin</span>
+                                    <iconify-icon icon="mdi:map-marker-path"></iconify-icon>
+                                    <span class="hide-menu">Path Page (Admin)</span>
                                 </a>
                             </li>
 
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Exemption Category Admin</span>
-                                </a>
-                            </li>
-                            
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('verify.authindex') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Landing Page</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('registration-page.create') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu"> Manage Logo</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.column.form') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Manage DB</span>
-                                </a>
-                            </li>
+                          
+
+                            <!-- Divider -->
+                            <span class="sidebar-divider"></span>
+
+                            <!-- ======= REGISTRATION SECTION ======= -->
+                            <li class="nav-small-cap"><span class="hide-menu">Registration Management</span></li>
+
                             <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
                                 <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
                                     href="{{ route('forms.index') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Registartion</span>
+                                    <iconify-icon icon="mdi:form-textbox"></iconify-icon>
+                                    <span class="hide-menu">Registration Form</span>
+                                </a>
+                            </li>
+
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
+                                    <iconify-icon icon="mdi:database-outline"></iconify-icon>
+                                    <span class="hide-menu">Registration Master</span>
+                                </a>
+                            </li>
+
+                            <!-- Divider -->
+                            <span class="sidebar-divider"></span>
+
+                            <!-- ======= EXEMPTION SECTION ======= -->
+                            <li class="nav-small-cap"><span class="hide-menu">Exemption</span></li>
+
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
+                                    <iconify-icon icon="mdi:shield-check-outline"></iconify-icon>
+                                    <span class="hide-menu">Exemption Categories (Master)</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('exemptions.datalist') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu"> Fc Exemption data</span>
+                                    <iconify-icon icon="mdi:file-document-multiple-outline"></iconify-icon>
+                                    <span class="hide-menu">Exemption Applications</span>
                                 </a>
                             </li>
-                            
-                            <!--import Fcregistration-->
+
+                            <!-- Divider -->
+                            <span class="sidebar-divider"></span>
+
+                            <!-- ======= DATABASE MANAGEMENT ======= -->
+                            <li class="nav-small-cap"><span class="hide-menu">Database Tools</span></li>
+
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.column.form') }}">
+                                    <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
+                                    <span class="hide-menu">Manage DB Columns</span>
+                                </a>
+                            </li>
+
                               <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu"> Fc Registration Master</span>
+                                <a class="sidebar-link" href="{{ route('registration-page.create') }}">
+                                    <iconify-icon icon="mdi:image-outline"></iconify-icon>
+                                    <span class="hide-menu">Manage Logo</span>
                                 </a>
                             </li>
+
                         </ul>
                     </nav>
+
                 </div>
             </div>
         </div>
     </div>
 </aside>
 <script>
-const sidebar = document.querySelector('.sidebarmenu .simplebar-content-wrapper');
+    const sidebar = document.querySelector('.sidebarmenu .simplebar-content-wrapper');
 
-// Restore scroll position on load
-document.addEventListener('DOMContentLoaded', function() {
-    const scrollPos = localStorage.getItem('sidebar-scroll');
-    if (scrollPos && sidebar) {
-        sidebar.scrollTop = parseInt(scrollPos, 10);
-    }
-});
-
-// Save scroll position before unload
-window.addEventListener('beforeunload', function() {
-    if (sidebar) {
-        localStorage.setItem('sidebar-scroll', sidebar.scrollTop);
-    }
-});
-// Add on click
-document.querySelectorAll('.mini-nav-item').forEach(item => {
-    item.addEventListener('click', function() {
-        localStorage.setItem('active-mini-nav', this.id);
+    // Restore scroll position on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const scrollPos = localStorage.getItem('sidebar-scroll');
+        if (scrollPos && sidebar) {
+            sidebar.scrollTop = parseInt(scrollPos, 10);
+        }
     });
-});
 
-// On load
-document.addEventListener('DOMContentLoaded', () => {
-    const activeId = localStorage.getItem('active-mini-nav');
-    if (activeId) {
-        document.querySelectorAll('.mini-nav-item').forEach(item => item.classList.remove('selected'));
-        const activeEl = document.getElementById(activeId);
-        if (activeEl) activeEl.classList.add('selected');
-    }
-});
+    // Save scroll position before unload
+    window.addEventListener('beforeunload', function() {
+        if (sidebar) {
+            localStorage.setItem('sidebar-scroll', sidebar.scrollTop);
+        }
+    });
+    // Add on click
+    document.querySelectorAll('.mini-nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            localStorage.setItem('active-mini-nav', this.id);
+        });
+    });
+
+    // On load
+    document.addEventListener('DOMContentLoaded', () => {
+        const activeId = localStorage.getItem('active-mini-nav');
+        if (activeId) {
+            document.querySelectorAll('.mini-nav-item').forEach(item => item.classList.remove('selected'));
+            const activeEl = document.getElementById(activeId);
+            if (activeEl) activeEl.classList.add('selected');
+        }
+    });
 </script>
 
 <!--  Sidebar End -->
