@@ -191,11 +191,28 @@ class FrontPageController extends Controller
         // Check if user exists and password matches
         if ($user && Hash::check($request->reg_password, $user->jbp_password)) {
             // You may store user session here (optional)
-            session(['fc_user_id' => $user->pk, 'fc_user_name' => $user->user_name]);
+            $form = DB::table('local_form')
+                ->where('visible', 1)
+                ->orderBy('id')
+                ->first();
 
-            // Redirect to dashboard or form page
-            return redirect()->route('fc.register_form')->with('success', 'Login successful!');
+            if (!$form) {
+                return back()->withErrors(['form_error' => 'No active form available.'])->withInput();
+            }
+
+            // Step 5: Store user session (optional)
+            session([
+                'fc_user_id' => $user->pk,
+                'fc_user_name' => $user->user_name
+            ]);
+
+            // Step 6: Redirect with form id
+            // return redirect()->route('forms.show', $form->id) // Assuming you have a route named 'forms.show'
+            //     ->with('success', 'Login successful!');
+                        return redirect()->route('fc.register_form')->with('success', 'Login successful!');
+
         }
+
 
         // If invalid credentials
         return back()->withErrors(['login' => 'Invalid username or password.'])->withInput();
