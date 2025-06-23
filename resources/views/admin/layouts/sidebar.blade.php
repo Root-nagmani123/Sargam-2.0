@@ -247,6 +247,15 @@
                                                     <span class="hide-menu">Student Medical Exemption</span>
                                                 </a>
                                             </li>
+                                            <li class="sidebar-item">
+                                                <a class="sidebar-link"
+                                                    href="{{ route('memo.notice.management.index') }}" id="get-url"
+                                                    aria-expanded="false">
+                                                    <iconify-icon icon="solar:feed-bold-duotone">
+                                                    </iconify-icon>
+                                                    <span class="hide-menu">Memo Notice Management</span>
+                                                </a>
+                                            </li>
                                             <li>
                                                 <span class="sidebar-divider"></span>
                                             </li>
@@ -373,7 +382,7 @@
                                     id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
                                     <span class="hide-menu">Course Group Type</span>
-                                </a>
+                                </a> 
                             </li>
                              <li class="sidebar-item">
                                                     <a class="sidebar-link" href="{{ route('programme.index') }}"
