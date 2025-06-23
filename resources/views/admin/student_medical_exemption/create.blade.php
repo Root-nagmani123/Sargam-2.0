@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid">
     <x-session_message />
-    <div class="card card-body py-3">
+    <div class="card card-body py-3" style="border-left:4px solid #004a93;">
         <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
@@ -29,7 +29,7 @@
         </div>
     </div>
 
-    <div class="card mt-3">
+    <div class="card mt-3" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">Student Medical Exemption</h4>
             <hr>

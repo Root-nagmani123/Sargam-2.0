@@ -35,13 +35,13 @@ class FcExemptionMasterController extends Controller
         // Validate input
         $request->validate([
             'Exemption_name' => 'required|string|max:500',
-            'Exemption_short_name' => 'required|string|max:100',
+            'description' => 'required|string',
         ]);
 
         // Insert data into the table
         DB::table('fc_exemption_master')->insert([
             'Exemption_name' => $request->input('Exemption_name'),
-            'Exemption_short_name' => $request->input('Exemption_short_name'),
+            'description' => $request->input('description'),
             'Created_by' => Auth::id(), // Assumes authentication is used
             'Created_date' => now(),
         ]);
@@ -61,13 +61,13 @@ class FcExemptionMasterController extends Controller
     {
         $request->validate([
             'Exemption_name' => 'required|string|max:500',
-            'Exemption_short_name' => 'required|string|max:100',
+            'description' => 'required|string|',
         ]);
 
         $exemption = FcExemptionMaster::findOrFail($id);
         $exemption->update([
             'Exemption_name' => $request->Exemption_name,
-            'Exemption_short_name' => $request->Exemption_short_name,
+            'description' => $request->description,
             'Modified_by' => Auth::id(),
             'Modified_date' => now(),
         ]);
@@ -109,7 +109,7 @@ class FcExemptionMasterController extends Controller
             ->where('Pk', $request->exemption_category)
             ->first();
 
-        if ($exemption && strtolower($exemption->Exemption_short_name) === 'medical') {
+        if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
             $rules['medical_doc'] = 'required|file|mimes:pdf,jpg,jpeg,png|max:2048';
         }
 
@@ -160,121 +160,17 @@ class FcExemptionMasterController extends Controller
     }
 
 
-
-
-    //validates user exists 
-
-    public function verify(Request $request)
-    {
-        // Validate input including captcha
-        $request->validate([
-            'reg_mobile' => 'required',
-            'reg_web_code' => 'required|string',
-            'captcha' => 'required|captcha',  // Add captcha validation rule
-
-        ], [
-            'captcha.captcha' => 'Invalid captcha.',
-        ]);
-
-        // Check in fc_registration_master table
-        $registration = DB::table('fc_registration_master')
-            ->where('contact_no', $request->reg_mobile)
-            ->where('web_auth', $request->reg_web_code)
-            ->first();
-
-        if ($registration) {
-            // Get the first visible form ID from local_form
-            $form = DB::table('local_form')
-                ->where('visible', 1)
-                ->orderBy('id')
-                ->first();
-
-            if ($form) {
-                // Redirect using formid from local_form
-                return redirect()->route('forms.show', $form->id);
-            } else {
-                return redirect()->back()
-                    ->withErrors(['formid' => 'No visible form found.']);
-            }
-        } else {
-            return redirect()->back()
-                ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
-                ->withInput();
-        }
-    }
-
-
-
-    // public function verify(Request $request)
-    // {
-    //     // Validate input
-    //     $request->validate([
-    //         // 'reg_mobile' => 'required|digits_between:7,15',
-    //         'reg_mobile' => 'required',
-    //         'reg_web_code' => 'required|string',
-    //     ]);
-
-    //     // Check in fc_registration_master table
-    //     $registration = DB::table('fc_registration_master')
-    //         ->where('contact_no', $request->reg_mobile)
-    //         ->where('web_auth', $request->reg_web_code)
-    //         ->first();
-
-    //     if ($registration) {
-    //         // Get the first visible form ID from local_form
-    //         $form = DB::table('local_form')
-    //             ->where('visible', 1)
-    //             ->orderBy('id') // Optional: ensure consistent ordering
-    //             ->first();
-
-    //         if ($form) {
-    //             // Redirect using formid from local_form
-    //             return redirect()->route('forms.show', $form->id);
-    //         } else {
-    //             return redirect()->back()
-    //                 ->withErrors(['formid' => 'No visible form found.']);
-    //         }
-    //     } else {
-    //         return redirect()->back()
-    //             ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
-    //             ->withInput();
-    //     }
-    // }
-
-    // Exemption listing
-    // public function exemption_list()
-    // {
-    //     $submissions = DB::table('fc_registration_master as r')
-    //         ->leftJoin('fc_exemption_master as e', 'r.fc_exemption_master_pk', '=', 'e.Pk')
-    //         ->select(
-    //             'r.pk',
-    //             'r.contact_no',
-    //             'r.web_auth',
-    //             'r.medical_exemption_doc',
-    //             'r.created_date',
-    //             'r.first_name',
-    //             'r.middle_name',
-    //             'r.last_name',
-    //             // 'r.username',
-    //             'e.Exemption_name',
-    //             'e.Exemption_short_name'
-    //         )
-    //         ->where('r.fc_exemption_master_pk', '!=', 0)
-    //         ->get();
-
-    //     return view('admin.forms.exemption_datalist', compact('submissions'));
-    // }
-
     public function exemption_list(Request $request)
     {
         $filter = $request->get('exemption_category'); // Could be short name or empty
 
         // Fetch unique exemption short names for the dropdown
         $categories = DB::table('fc_exemption_master')
-            ->select('Exemption_short_name')
+            ->select('Exemption_name')
             ->where('visible', 1)
+            ->where('is_notice', 0)
             ->distinct()
-            ->orderBy('Exemption_short_name')
+            ->orderBy('Exemption_name')
             ->get();
 
         // Base query
@@ -290,14 +186,17 @@ class FcExemptionMasterController extends Controller
                 'r.middle_name',
                 'r.last_name',
                 'e.Exemption_name',
-                'e.Exemption_short_name'
+                'e.Exemption_name'
             )
+            ->orderBy('r.created_date')
+            ->where('e.visible', 1)
             ->where('r.fc_exemption_master_pk', '!=', 0);
 
         // Apply filter only if a category is selected
         if (!empty($filter)) {
-            $query->where('e.Exemption_short_name', $filter);
+            $query->where('e.Exemption_name', $filter);
         }
+        // dd($filter);
 
         $submissions = $query->get();
 
@@ -317,7 +216,7 @@ class FcExemptionMasterController extends Controller
             ->select(
                 'd.contact_no',
                 'd.web_auth',
-                'e.Exemption_short_name',
+                'e.Exemption_name',
                 'd.medical_exemption_doc',
                 'd.created_date',
                 DB::raw("COALESCE(CONCAT_WS(' ', d.first_name, d.middle_name, d.last_name)) as user_name")
@@ -325,7 +224,7 @@ class FcExemptionMasterController extends Controller
             ->where('d.fc_exemption_master_pk', '!=', 0)
 
             ->when($filter, function ($query, $filter) {
-                return $query->where('e.Exemption_short_name', $filter);
+                return $query->where('e.Exemption_name', $filter);
             })
             ->get();
         // @dd($submissions);

@@ -16,7 +16,8 @@ use App\Http\Controllers\Admin\Master\{
     EmployeeTypeMasterController,
     EmployeeGroupMasterController,
     CasteCategoryMasterController,
-    MemoConclusionMasterController
+    MemoConclusionMasterController,
+    HostelBuildingMasterController
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -203,6 +204,14 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'destroy')->name('delete');
+    });
+
+    // Hostel Building Master
+    Route::prefix('hostel-building-master')->name('hostel.building.')->controller(HostelBuildingMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
     });
 
     //memo management

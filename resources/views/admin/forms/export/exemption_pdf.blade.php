@@ -52,7 +52,7 @@
                     <td>{{ $data->user_name ?? 'N/A' }}</td>
                     <td>{{ $data->contact_no ?? 'N/A' }}</td>
                     <td>{{ $data->web_auth ?? 'N/A' }}</td>
-                    <td>{{ $data->Exemption_short_name ?? 'N/A' }}</td>
+                    <td>{{ $data->Exemption_name ?? 'N/A' }}</td>
                     <td>
                         {{ $data->medical_exemption_doc ? 'Available' : 'N/A' }}
                     </td>

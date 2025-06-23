@@ -1,4 +1,5 @@
 <div class="row">
+    <input type="hidden" name="employeePK" id="employeePK" >
     <div class="col-md-6">
         <div class="mb-3">
 

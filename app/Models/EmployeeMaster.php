@@ -14,23 +14,23 @@ class EmployeeMaster extends Model
     protected $primaryKey = 'pk';
 
     public const title = [
-        1 => 'Mr',
-        2 => 'Mrs'
+        'Mr' => 'Mr',
+        'Mrs' => 'Mrs',
+        'Ms' => 'Ms',
+        'Dr' => 'Dr',
     ];
 
     public const gender = [
-        1 => 'Male',
-        2 => 'Female',
-        3 => 'Other'
+        'Male' => 'Male',
+        'Female' => 'Female',
+        'Other' => 'Other'
     ];
 
     public const maritalStatus = [
-        1 => 'Single',
-        2 => 'Married',
-        3 => 'Other'
+        'Married' => 'Married',
+        'Unmarried' => 'Unmarried'
     ];
 
-    
     
     public static function getDeputationEmployeeList()
     {
@@ -54,5 +54,67 @@ class EmployeeMaster extends Model
         $deputationEmployeeList = array_column($deputationEmployeeList, 'name', 'pk');
 
         return $deputationEmployeeList;
+    }
+
+    public function assignedRoles()
+    {
+        $userCredential = UserCredential::where('user_id', $this->pk)->first();
+        if(!$userCredential) {
+            return collect();
+        }
+
+        $userRoleMaster = EmployeeRoleMapping::where('user_credentials_pk',  $userCredential->pk)->get();
+        if(!$userRoleMaster) {
+            return collect();
+        }
+        
+        $assignedRoles = [];
+        // dd($userRoleMaster);
+        $userRoleMaster->each(function ($role) use (&$assignedRoles) {
+            UserRoleMaster::where('pk', $role->user_role_master_pk)
+                ->get()
+                ->each(function ($role) use (&$assignedRoles) {
+                    $assignedRoles[] = [
+                        'role_name' => $role->USER_ROLE_NAME,
+
+                ];
+            });
+        });
+        return collect($assignedRoles);
+    }
+
+    public function designation()
+    {
+        return $this->belongsTo(DesignationMaster::class, 'designation_master_pk', 'pk');
+    }
+
+    public function department()
+    {
+        return $this->belongsTo(DepartmentMaster::class, 'department_master_pk', 'pk');
+    }
+
+    public function employeeType()
+    {
+        return $this->belongsTo(EmployeeTypeMaster::class, 'emp_type', 'pk');
+    }
+
+    public function employeeGroup()
+    {
+        return $this->belongsTo(EmployeeGroupMaster::class, 'emp_group_pk', 'pk');
+    }
+
+    public function userCredential()
+    {
+        return $this->hasOne(UserCredential::class, 'user_id', 'pk');
+    }
+
+    public function employeeRoleMapping()
+    {
+        $userCredential = UserCredential::where('user_id', $this->pk)->first();
+        if(!$userCredential) {
+            return collect();
+        }
+
+        return EmployeeRoleMapping::where('user_credentials_pk',  $userCredential->pk)->pluck('user_role_master_pk');
     }
 }

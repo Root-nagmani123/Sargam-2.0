@@ -57,13 +57,18 @@ Route::middleware(['auth'])->group(function () {
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
 
     // Member Routes
-    Route::prefix('member')->name('member.')->group(function () {
-        Route::get('/', [MemberController::class, 'index'])->name('index');
-        Route::get('create', [MemberController::class, 'create'])->name('create');
-        Route::get('edit', [MemberController::class, 'edit'])->name('edit');
-        Route::get('/step/{step}', [MemberController::class, 'loadStep'])->name('load-step');
-        Route::post('/validate-step/{step}', [MemberController::class, 'validateStep']);
-        Route::post('/store', [MemberController::class, 'store'])->name('store');
+    Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::get('edit/{id}', 'edit')->name('edit');
+        Route::get('show/{id}', 'show')->name('show');
+        Route::get('/step/{step}', 'loadStep')->name('load-step');
+        Route::get('/edit-step/{step}/{id}', 'editStep')->name('edit-step');
+        Route::post('/validate-step/{step}', 'validateStep');
+        Route::post('/update-validate-step/{step}/{id}', 'updateValidateStep');
+        Route::post('/store', 'store')->name('store');
+        Route::post('update', 'update')->name('update');
+        Route::get('excel-export', 'excelExport')->name('excel.export');
     });
 
     // Faculty Routes

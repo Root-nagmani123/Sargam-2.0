@@ -22,7 +22,7 @@ class RegistrationImportController extends Controller
     public function preview(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv'
+            'file' => 'required|mimes:,xls,csv,xlsx'
         ]);
 
         $path = $request->file('file')->store('temp');
