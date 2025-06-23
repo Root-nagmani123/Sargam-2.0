@@ -27,7 +27,7 @@
                                 {!! $pathPage->register_course ?? '' !!}
                             </div>
                             <div class="card-footer bg-white border-top-0">
-                                <a href="{{ route('fc.register_form') }}" class="btn btn-success custom-btn w-100"
+                                <a href="{{ route('credential.registration.create') }}" class="btn btn-success custom-btn w-100"
                                     style="background-color: #16a32a; border-color: #16a32a;">
                                     Start Registration
                                 </a>

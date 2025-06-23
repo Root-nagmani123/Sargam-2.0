@@ -114,7 +114,7 @@ class FrontPageController extends Controller
         ]);
 
         // Step 5: Redirect to form
-        return redirect()->route('credential.registration.create')->with([
+        return redirect()->route('fc.choose.path')->with([
             'success' => 'Login successful. You can now create your credentials.'
         ]);
     }
@@ -145,7 +145,6 @@ class FrontPageController extends Controller
         ]);
 
 
-        // @dd($request->all());
 
         DB::table('user_credentials')->insert([
             'user_name' => $request->reg_name,
@@ -188,7 +187,7 @@ class FrontPageController extends Controller
             session(['fc_user_id' => $user->pk, 'fc_user_name' => $user->user_name]);
 
             // Redirect to dashboard or form page
-            return redirect()->route('fc.choose.path')->with('success', 'Login successful!');
+            return redirect()->route('fc.register_form')->with('success', 'Login successful!');
         }
 
         // If invalid credentials
