@@ -495,8 +495,25 @@
                                     <span class="hide-menu">Front Page Admin</span>
                                 </a>
                             </li>
+
+                              <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.path.page') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Path Page Admin</span>
+                                </a>
+                            </li>
+
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('exemption.create') }}">
+                                <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Exemption Category Admin</span>
+                                </a>
+                            </li>
+                            
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('verify.authindex') }}">
                                     <iconify-icon icon="solar:airbuds-case-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Landing Page</span>

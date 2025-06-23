@@ -27,7 +27,7 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="additionaldocument">Additional Document Upload :</label>
-            <input type="file" class="form-control" id="additionaldocument">
+            <input type="file" class="form-control" id="additionaldocument" name="additionaldocument">
         </div>
     </div>
 </div>

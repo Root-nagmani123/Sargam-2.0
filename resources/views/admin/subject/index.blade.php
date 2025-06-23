@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Subject module" />
     <x-session_message />
-    <div class="card dataTables_wrapper" id="alt_pagination_wrapper">
+    <div class="card dataTables_wrapper" id="alt_pagination_wrapper" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row">
                 <div class="col-6">
