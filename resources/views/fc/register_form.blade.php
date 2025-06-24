@@ -320,7 +320,7 @@
                                     {{-- <li><a class="dropdown-item" href="#">Profile</a></li> --}}
                                     {{-- <li><a class="dropdown-item" href="#">Settings</a></li> --}}
                                     <li>
-                                        <form action="#" method="POST">
+                                        <form action="{{ route('logout') }}" method="POST">
                                             @csrf
                                             <button class="dropdown-item" type="submit">Logout</button>
                                         </form>

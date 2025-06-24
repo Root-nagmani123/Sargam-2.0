@@ -129,7 +129,7 @@ Route::get('admin/registration/export', [RegistrationImportController::class, 'e
 //fc registor form route
 Route::get('/fc-register-form', function () {
     return view('fc.register_form');
-})->name('fc.register_form');
+})->name('fc.register_form')->middleware('auth');
 
 
 //front page data route
