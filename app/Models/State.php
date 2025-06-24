@@ -7,11 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 class State extends Model
 {
     protected $table = 'state_master';
-    protected $primaryKey = 'Pk';
+    protected $primaryKey = 'pk';
     public $timestamps = false;
 
     protected $fillable = [
-        'Pk',
+        'pk',
         'state_name',
         'country_master_pk',
         'active_inactive',
@@ -23,7 +23,7 @@ class State extends Model
 
     public static function getStateList()
     {
-        return self::select('Pk', 'state_name')->get()->pluck('state_name', 'Pk');
+        return self::select('pk', 'state_name')->get()->pluck('state_name', 'pk');
     }
     public function cities()
     {

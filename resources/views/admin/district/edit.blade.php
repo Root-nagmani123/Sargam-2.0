@@ -24,7 +24,7 @@
                                 <select class="form-select" id="state" name="state_master_pk" required>
                                     <option value="">Select State</option>
                                     @foreach($states as $state)
-                                        <option value="{{ $state->Pk }}" {{ $state->Pk == old('state_master_pk', $district->state_master_pk) ? 'selected' : '' }}>
+                                        <option value="{{ $state->pk }}" {{ $state->pk == old('state_master_pk', $district->state_master_pk) ? 'selected' : '' }}>
                                             {{ $state->state_name }}
                                         </option>
                                     @endforeach

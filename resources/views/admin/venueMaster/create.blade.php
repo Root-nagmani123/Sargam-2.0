@@ -50,7 +50,7 @@
                         <div class="mb-3">
                             <label for="venue_short_name" class="form-label">Short Name</label>
                             <input type="text" class="form-control @error('venue_short_name') is-invalid @enderror"
-                                id="venue_short_name" name="venue_short_name" value="{{ old('venue_short_name') }}">
+                                id="venue_short_name" name="venue_short_name" value="{{ old('venue_short_name') }}" required>
                             @error('venue_short_name')
                             <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

@@ -50,18 +50,18 @@
                                                 role="switch"
                                                 data-table="state_master"
                                                 data-column="active_inactive"
-                                                data-id="{{ $state->Pk }}"
+                                                data-id="{{ $state->pk }}"
                                                 {{ $state->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
-                                            <a href="{{ route('master.state.edit', $state->Pk) }}"
+                                            <a href="{{ route('master.state.edit', $state->pk) }}"
                                                 class="btn btn-success text-white btn-sm">
                                                 Edit
                                             </a>
-                                           
-                                             <form action="{{ route('master.state.delete', $state->Pk) }}"
+                                            
+                                             <form action="{{ route('master.state.delete', $state->pk) }}"
                                             method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
