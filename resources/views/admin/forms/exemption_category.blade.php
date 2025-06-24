@@ -12,13 +12,13 @@
             <a href="{{ route('exemptionCreate') }}" class="btn btn-primary">+ Add Exemption</a>
         </div>
 
-        <div class="card card-body">
+        {{-- <div class="card card-body">
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
                     {{ session('success') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-            @endif
+            @endif --}}
 
             <!--display errors if any -->
             @if ($errors->any())
