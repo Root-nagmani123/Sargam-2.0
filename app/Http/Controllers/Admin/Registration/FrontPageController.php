@@ -353,6 +353,8 @@ class FrontPageController extends Controller
 
     public function exemptionIndex()
     {
+       dd( auth()->check() ? auth()->id() : null);
+
         $headings = ExemptionCategory::with(['creator', 'updater'])
             ->where('is_notice', 0)
             ->get();
