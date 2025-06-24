@@ -102,14 +102,7 @@ public function gettimetableDetailsBytopic(Request $request)
 function conversation(){
      return view('admin.courseAttendanceNoticeMap.conversation');
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> fe496a2 (memo index page work)
-=======
->>>>>>> fe496a2 (memo index page work)
+
 public function getStudentAttendanceBytopic(Request $request)
 {
     try {
@@ -200,16 +193,5 @@ function store_memo_notice(Request $request){
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> ae713cf (some chnages in memo)
-=======
->>>>>>> fe496a2 (memo index page work)
-=======
->>>>>>> ae713cf (some chnages in memo)
-=======
->>>>>>> fe496a2 (memo index page work)
-
 
 } 
