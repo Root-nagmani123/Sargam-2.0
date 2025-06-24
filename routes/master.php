@@ -17,7 +17,9 @@ use App\Http\Controllers\Admin\Master\{
     EmployeeGroupMasterController,
     CasteCategoryMasterController,
     MemoConclusionMasterController,
-    HostelBuildingMasterController
+    HostelBuildingMasterController,
+    HostelFloorMasterController,
+    HostelRoomMasterController
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -208,6 +210,22 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
 
     // Hostel Building Master
     Route::prefix('hostel-building-master')->name('hostel.building.')->controller(HostelBuildingMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+    });
+
+    // Hostel Floor Master
+    Route::prefix('hostel-floor-master')->name('hostel.floor.')->controller(HostelFloorMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+    });
+
+    // Hostel Room Master
+    Route::prefix('hostel-room-master')->name('hostel.room.')->controller(HostelRoomMasterController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
