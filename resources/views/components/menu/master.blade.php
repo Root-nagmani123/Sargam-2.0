@@ -165,5 +165,32 @@
                 <span class="hide-menu">Caste Category</span>
             </a>
         </li>
+
+        <hr class="sidebar-divider"></hr>
+        <li class="nav-small-cap">
+            <span class="hide-menu">Hostel Masters</span>
+        </li>
+
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Hostel Building</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Hostel Room</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.hostel.floor.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Hostel Floor</span>
+            </a>
+        </li>
     </ul>
 </nav>
