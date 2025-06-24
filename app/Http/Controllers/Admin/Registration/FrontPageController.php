@@ -500,6 +500,15 @@ class FrontPageController extends Controller
             ->where('Pk', $request->exemption_category)
             ->first();
 
+        if ($request->hasFile('medical_doc')) {
+            $ext = strtolower($request->file('medical_doc')->getClientOriginalExtension());
+            if (in_array($ext, ['xls', 'xlsx'])) {
+                return redirect()->back()
+                    ->withErrors(['medical_doc' => 'Excel files are not allowed.'])
+                    ->withInput();
+            }
+        }
+
         if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
             $rules['medical_doc'] = 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120';
             $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';
