@@ -22,7 +22,7 @@ class VenueMasterController extends Controller
     public function store(Request $request) {
         $request->validate([
             'venue_name' => 'required|string|max:255',
-            'venue_short_name' => 'nullable|string|max:100',
+            'venue_short_name' => 'required|string|max:100',
             'description' => 'nullable|string',
         ]);
         VenueMaster::create([
@@ -42,7 +42,7 @@ class VenueMasterController extends Controller
     public function update(Request $request, $id) {
         $request->validate([
             'venue_name' => 'required|string|max:255',
-            'venue_short_name' => 'nullable|string|max:100',
+            'venue_short_name' => 'required|string|max:100',
             'description' => 'nullable|string',
         ]);
         VenueMaster::where('venue_id', $id)->update([
