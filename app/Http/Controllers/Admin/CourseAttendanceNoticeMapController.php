@@ -15,16 +15,16 @@ class CourseAttendanceNoticeMapController extends Controller
     //
     public function index()
     {
-       $memos =  DB::table('course_attendance_notice')
-                    ->join('course_student_attendance as csa', 'course_attendance_notice.course_student_attendance_pk', '=', 'csa.pk')
+       $memos =  DB::table('student_notice_status')
+                    ->join('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk')
                     ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')  
-                    ->join('timetable as t', 'course_attendance_notice.subject_topic', '=', 't.pk')          
+                    ->join('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')          
        ->select(
-            'course_attendance_notice.pk as memo_notice_id',
-            'course_attendance_notice.course_master_pk', 'course_attendance_notice.date_',
-            'course_attendance_notice.subject_master_pk','course_attendance_notice.subject_topic',
-            'course_attendance_notice.venue_id', 'course_attendance_notice.class_session_master_pk','course_attendance_notice.faculty_master_pk','course_attendance_notice.message','course_attendance_notice.notice_memo',
-            'course_attendance_notice.status',
+            'student_notice_status.pk as memo_notice_id',
+            'student_notice_status.course_master_pk', 'student_notice_status.date_',
+            'student_notice_status.subject_master_pk','student_notice_status.subject_topic',
+            'student_notice_status.venue_id', 'student_notice_status.class_session_master_pk','student_notice_status.faculty_master_pk','student_notice_status.message','student_notice_status.notice_memo',
+            'student_notice_status.status',
             'sm.display_name as student_name','t.subject_topic as topic_name',)
                     ->get();
                     // print_r($memos);die;
@@ -184,7 +184,7 @@ function store_memo_notice(Request $request){
         ];
     }
 
-    $courseAttendanceNotice = DB::table('course_attendance_notice')->insert($data);
+    $courseAttendanceNotice = DB::table('student_notice_status')->insert($data);
 
     if ($courseAttendanceNotice) {
         return redirect()->route('memo.notice.management.index')->with('success', 'Memo/Notice created successfully.');

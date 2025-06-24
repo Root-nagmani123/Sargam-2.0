@@ -13,7 +13,7 @@
         <div class="card-body">
             <h4 class="card-title mb-3">Edit State</h4>
             <hr>
-            <form action="{{ route('master.state.update', $state->Pk) }}" method="POST">
+            <form action="{{ route('master.state.update', $state->pk) }}" method="POST">
                 @csrf
                 @method('POST')
                 <div class="row">
