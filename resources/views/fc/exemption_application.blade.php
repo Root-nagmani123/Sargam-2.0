@@ -113,7 +113,7 @@
                                 <div class="col-12 d-flex justify-content-center gap-2 mt-4">
                                     <button type="submit" class="btn btn-primary"
                                         style="background-color: #004a93;border-color: #004a93;">Submit Application</button>
-                                    <a href="{{ route('fc.exemption_category.index', $exemption->pk) }}"
+                                    <a href="{{ route('fc.choose.path') }}" onclick="return confirm('Are you sure you want to cancel your application? This action cannot be undone.')"    
                                         class="btn btn-danger">Cancel Application</a>
                                 </div>
                             </div>
