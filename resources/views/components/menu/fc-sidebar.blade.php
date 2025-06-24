@@ -5,11 +5,12 @@
         <li class="nav-small-cap"><span class="hide-menu">General</span></li>
 
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('frontpage.index') }}">
+            <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
                 <iconify-icon icon="material-symbols:home-outline-rounded"></iconify-icon>
                 <span class="hide-menu">User Landing Page</span>
             </a>
         </li>
+
 
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('admin.frontpage') }}">
