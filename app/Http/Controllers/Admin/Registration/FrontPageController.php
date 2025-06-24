@@ -131,7 +131,7 @@ class FrontPageController extends Controller
     {
         $request->validate([
             'reg_name' => 'required|string|max:100|unique:user_credentials,user_name',
-            'reg_mobile' => 'required|digits:10|unique:user_credentials,mobile_no',
+            'reg_mobile' => 'required|digits:10',
 
             'reg_password' => [
                 'required',
@@ -144,7 +144,6 @@ class FrontPageController extends Controller
             'reg_name.unique' => 'The username has already been taken.',
             'reg_mobile.required' => 'Mobile number is required.',
             'reg_mobile.digits' => 'Mobile number must be 10 digits.',
-            'reg_mobile.unique' => 'The mobile number has already been used.',
             'reg_password.min' => 'The password must be at least 6 characters.',
             'reg_password.regex' => 'The password must contain at least one special character.',
             'reg_confirm_password.same' => 'The confirm password and password must match.',
@@ -209,8 +208,7 @@ class FrontPageController extends Controller
             // Step 6: Redirect with form id
             // return redirect()->route('forms.show', $form->id) // Assuming you have a route named 'forms.show'
             //     ->with('success', 'Login successful!');
-                        return redirect()->route('fc.register_form')->with('success', 'Login successful!');
-
+            return redirect()->route('fc.register_form')->with('success', 'Login successful!');
         }
 
 
