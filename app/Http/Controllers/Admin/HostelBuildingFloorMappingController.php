@@ -20,8 +20,8 @@ class HostelBuildingFloorMappingController extends Controller
 
     public function create()
     {
-        $hostelBuilding = HostelBuildingMaster::get()->pluck('hostel_building_name', 'pk')->toArray();
-        $hostelFloor = HostelFloorMaster::get()->pluck('hostel_floor_name', 'pk')->toArray();
+        $hostelBuilding = HostelBuildingMaster::active()->get()->pluck('hostel_building_name', 'pk')->toArray();
+        $hostelFloor = HostelFloorMaster::active()->get()->pluck('hostel_floor_name', 'pk')->toArray();
         return view('admin.building_floor_mapping.create', compact('hostelBuilding', 'hostelFloor'));
     }
 
@@ -52,8 +52,8 @@ class HostelBuildingFloorMappingController extends Controller
     public function edit($id){
         $id = decrypt($id);
         $hostelFloorMapping = HostelBuildingFloorMapping::findOrFail($id);
-        $hostelBuilding = HostelBuildingMaster::get()->pluck('hostel_building_name', 'pk')->toArray();
-        $hostelFloor = HostelFloorMaster::get()->pluck('hostel_floor_name', 'pk')->toArray();
+        $hostelBuilding = HostelBuildingMaster::active()->get()->pluck('hostel_building_name', 'pk')->toArray();
+        $hostelFloor = HostelFloorMaster::active()->get()->pluck('hostel_floor_name', 'pk')->toArray();
         // dd($hostelBuilding);
         return view('admin.building_floor_mapping.create', compact('hostelFloorMapping', 'hostelBuilding', 'hostelFloor'));
     }
