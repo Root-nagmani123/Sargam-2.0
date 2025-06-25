@@ -7,32 +7,33 @@
             <span class="hide-menu">Master</span>
         </li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.country.index') }}">
+            <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
                 </iconify-icon>
-                <span class="hide-menu">Country</span>
+                <span class="hide-menu">Address</span>
             </a>
-        </li>
-        <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.state.index') }}">
-                <iconify-icon icon="material-symbols:distance">
-                </iconify-icon>
-                <span class="hide-menu">State</span>
-            </a>
-        </li>
-        <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.district.index') }}">
-                <iconify-icon icon="arcticons:district">
-                </iconify-icon>
-                <span class="hide-menu">District</span>
-            </a>
-        </li>
-        <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.city.index') }}" id="get-url" aria-expanded="false">
-                <iconify-icon icon="solar:city-bold-duotone">
-                </iconify-icon>
-                <span class="hide-menu">City</span>
-            </a>
+            <ul aria-expanded="false" class="collapse first-level">
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('master.country.index') }}">
+                        <span class="icon-small"></span> Country
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('master.state.index') }}">
+                        <span class="icon-small"></span>State
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('master.district.index') }}">
+                        <span class="icon-small"></span>District
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('master.city.index') }}">
+                        <span class="icon-small"></span>City
+                    </a>
+                </li>
+            </ul>
         </li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.faculty.expertise.index') }}" id="get-url"
@@ -166,31 +167,34 @@
             </a>
         </li>
 
-        <hr class="sidebar-divider"></hr>
+        <hr class="sidebar-divider">
+        </hr>
         <li class="nav-small-cap">
             <span class="hide-menu">Hostel Masters</span>
         </li>
-
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
+            <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
                 </iconify-icon>
-                <span class="hide-menu">Hostel Building</span>
+                <span class="hide-menu">Hostel Master</span>
             </a>
-        </li>
-        <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
-                <iconify-icon icon="solar:airbuds-case-line-duotone">
-                </iconify-icon>
-                <span class="hide-menu">Hostel Room</span>
-            </a>
-        </li>
-        <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.hostel.floor.index') }}">
-                <iconify-icon icon="solar:airbuds-case-line-duotone">
-                </iconify-icon>
-                <span class="hide-menu">Hostel Floor</span>
-            </a>
+            <ul aria-expanded="false" class="collapse first-level">
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
+                        <span class="icon-small"></span> Hostel Building
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
+                        <span class="icon-small"></span>Hostel Room
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('master.hostel.floor.index') }}">
+                        <span class="icon-small"></span>Hostel Floor
+                    </a>
+                </li>
+            </ul>
         </li>
     </ul>
 </nav>
