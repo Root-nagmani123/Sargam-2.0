@@ -169,9 +169,6 @@
 
         <hr class="sidebar-divider">
         </hr>
-        <li class="nav-small-cap">
-            <span class="hide-menu">Hostel Masters</span>
-        </li>
         <li class="sidebar-item">
             <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
