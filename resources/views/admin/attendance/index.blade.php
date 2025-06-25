@@ -8,7 +8,7 @@
     <x-breadcrum title="Attendance" />
     <x-session_message />
 
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-header">
             <div class="row">
                 <div class="col-6">
