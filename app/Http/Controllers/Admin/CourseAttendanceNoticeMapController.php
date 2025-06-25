@@ -102,14 +102,7 @@ public function gettimetableDetailsBytopic(Request $request)
 function conversation(){
      return view('admin.courseAttendanceNoticeMap.conversation');
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> fe496a2 (memo index page work)
-=======
->>>>>>> fe496a2 (memo index page work)
+
 public function getStudentAttendanceBytopic(Request $request)
 {
     try {
@@ -200,16 +193,20 @@ function store_memo_notice(Request $request){
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> ae713cf (some chnages in memo)
-=======
->>>>>>> fe496a2 (memo index page work)
-=======
->>>>>>> ae713cf (some chnages in memo)
-=======
->>>>>>> fe496a2 (memo index page work)
+public function deleteMemoNotice($id)
+{
+    try {
+        $memoNotice = DB::table('student_notice_status')->where('pk', $id)->first();
 
+        if (!$memoNotice) {
+            return redirect()->back()->with('error', 'Memo/Notice not found.');
+        }
 
-} 
+        DB::table('student_notice_status')->where('pk', $id)->delete();
+
+        return redirect()->route('memo.notice.management.index')->with('success', 'Memo/Notice deleted successfully.');
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Failed to delete Memo/Notice. Please try again.');
+    }
+}
+}
