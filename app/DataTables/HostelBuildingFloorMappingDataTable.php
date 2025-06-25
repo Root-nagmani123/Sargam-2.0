@@ -34,7 +34,14 @@ class HostelBuildingFloorMappingDataTable extends DataTable
                 ';
 
             })
-            ->rawColumns(['hostel_building_name', 'hostel_floor_name', 'actions']);
+            ->addColumn('status', function ($row) {
+                $checked = $row->active_inactive == 1 ? 'checked' : '';
+                return '<div class="form-check form-switch d-inline-block ms-2">
+                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                    data-table="hostel_building_floor_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+            </div>';
+            })
+            ->rawColumns(['hostel_building_name', 'hostel_floor_name', 'actions', 'status']);
     }
 
     /**
@@ -84,6 +91,7 @@ class HostelBuildingFloorMappingDataTable extends DataTable
             Column::make('hostel_building_name')->title('Hostel Building Name')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('hostel_floor_name')->title('Hostel Floor Name')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
 

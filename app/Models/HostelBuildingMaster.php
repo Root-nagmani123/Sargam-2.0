@@ -11,4 +11,9 @@ class HostelBuildingMaster extends Model
     public $timestamps = false;
 
     public $guarded = [];
+
+    public function scopeActive()
+    {
+        return $this->where('active_inactive', 1);
+    }
 }
