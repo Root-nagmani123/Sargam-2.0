@@ -8,16 +8,11 @@
     <!-- Header Card -->
     <x-breadcrum title="Exemption Data" />
     <x-session_message />
-
-    <!-- Main Card -->
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-
-            <!-- Filter Form -->
-
-
-            <!-- Export Options -->
-            <div class="row mb-3">
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
+                 <div class="row mb-3">
                 <div class="col-md-8">
                     <form method="GET" action="{{ url()->current() }}" class="mb-4">
                         <div class="row align-items-end g-3">
@@ -55,14 +50,13 @@
                     </form>
                 </div>
             </div>
-
-            <hr>
-
-            <!-- Data Table -->
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered text-nowrap align-middle">
-                    <thead class="table-light">
-                        <tr>
+                <div class="table-responsive">
+                    <div id="zero_config_wrapper" class="dataTables_wrapper">
+                        <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
+                            <thead>
+                               <tr>
                             <th>S.No</th>
                             <th>User Name</th>
                             <th>Mobile No</th>
@@ -71,8 +65,8 @@
                             <th>Medical Document</th>
                             <th>Submitted On</th>
                         </tr>
-                    </thead>
-                    <tbody>
+                            </thead>
+                             <tbody>
                         @forelse ($submissions as $index => $data)
                         <tr>
                             <td>{{ $index + 1 }}</td>
@@ -98,11 +92,13 @@
                         </tr>
                         @endforelse
                     </tbody>
-                </table>
+                        </table>
+                    </div>
+                </div>
             </div>
-
         </div>
+        <!-- end Zero Configuration -->
     </div>
-
 </div>
+
 @endsection

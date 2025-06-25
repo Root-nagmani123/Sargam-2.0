@@ -193,5 +193,20 @@ function store_memo_notice(Request $request){
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
 }
+public function deleteMemoNotice($id)
+{
+    try {
+        $memoNotice = DB::table('student_notice_status')->where('pk', $id)->first();
 
-} 
+        if (!$memoNotice) {
+            return redirect()->back()->with('error', 'Memo/Notice not found.');
+        }
+
+        DB::table('student_notice_status')->where('pk', $id)->delete();
+
+        return redirect()->route('memo.notice.management.index')->with('success', 'Memo/Notice deleted successfully.');
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Failed to delete Memo/Notice. Please try again.');
+    }
+}
+}
