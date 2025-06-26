@@ -199,3 +199,7 @@ Route::get('/fc/forgot-password', [FrontPageController::class, 'showForgotPasswo
 //reset password 
 Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])->name('fc.password.reset');
 
+//reset web-auth form verify
+Route::post('/fc/verify-web-auth', [FrontPageController::class, 'verifyWebAuth'])->name('fc.verify_web_auth');
+//
+

@@ -32,7 +32,8 @@
                             @endif
                             <form class="row g-3" method="POST" action="{{ route('credential.registration.store') }}">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Create Credentials</h3>
+                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Create Your Login Credentials
+                                </h3>
                                 <hr>
 
                                 <!-- Username -->
@@ -99,11 +100,12 @@
             const icon = btn.querySelector('i');
             if (input.type === "password") {
                 input.type = "text";
-                icon.textContent = "visibility_off";
+                icon.textContent = "visibility"; //  Eye icon means 'Now visible'
             } else {
                 input.type = "password";
-                icon.textContent = "visibility";
+                icon.textContent = "visibility_off"; //  Eye-off icon means 'Now hidden'
             }
         }
     </script>
+
 @endsection
