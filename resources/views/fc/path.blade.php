@@ -3,6 +3,15 @@
 @section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
+    @php
+
+        $regStart = $pathPage->registration_start_date ? \Carbon\Carbon::parse($pathPage->registration_start_date) : null;
+        $regEnd = $pathPage->registration_end_date ? \Carbon\Carbon::parse($pathPage->registration_end_date) : null;
+   
+        $exStart = $pathPage->exemption_start_date ? \Carbon\Carbon::parse($pathPage->exemption_start_date) : null;
+        $exEnd = $pathPage->exemption_end_date ? \Carbon\Carbon::parse($pathPage->exemption_end_date) : null;
+        
+    @endphp
     <main style="flex: 1;">
         <div class="container mt-5">
             <div class="text-center">
@@ -26,12 +35,19 @@
 
                                 {!! $pathPage->register_course ?? '' !!}
                             </div>
+                            
                             <div class="card-footer bg-white border-top-0">
-                                <a href="{{ route('credential.registration.create') }}" class="btn btn-success custom-btn w-100"
-                                    style="background-color: #16a32a; border-color: #16a32a;">
-                                    Start Registration
-                                </a>
+                                @if (\Carbon\Carbon::today()->between($regStart, $regEnd))
+                                    <a href="{{ route('credential.registration.create') }}"
+                                        class="btn btn-success custom-btn w-100"
+                                        style="background-color: #16a32a; border-color: #16a32a;">
+                                        Start Registration
+                                    </a>
+                                @else
+                                    <button class="btn btn-secondary w-100" disabled>Registration Closed</button>
+                                @endif
                             </div>
+
                         </div>
                     </div>
 
@@ -45,13 +61,20 @@
                                 <h5 class="fw-bold text-center" style="color: #004a93;">Apply for Exemption</h5>
 
                                 {!! $pathPage->apply_exemption ?? '' !!}
+                                
                             </div>
                             <div class="card-footer bg-white border-top-0">
-                                <a href="{{ route('fc.exemption_category.index') }}"
-                                    class="btn btn-warning custom-btn w-100 text-white"
-                                    style="background-color: #ea5803; border-color: #ea5803;">
-                                    Apply for Exemption
-                                </a>
+                                @if (\Carbon\Carbon::today()->between($exStart, $exEnd) )
+                                    <a href="{{ route('fc.exemption_category.index') }}"
+                                        class="btn btn-warning custom-btn w-100 text-white"
+                                        style="background-color: #ea5803; border-color: #ea5803;">
+                                        Apply for Exemption
+                                    </a>
+                                @else
+                                    <button class="btn btn-secondary custom-btn w-100" disabled>
+                                        Exemption Closed
+                                    </button>
+                                @endif
                             </div>
                         </div>
                     </div>

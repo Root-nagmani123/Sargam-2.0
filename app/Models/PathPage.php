@@ -8,9 +8,8 @@ use App\Models\PathPageFaq;
 
 class PathPage extends Model
 {
-    use HasFactory;
     protected $table = 'fc_path_pages';
-    protected $fillable = ['register_course', 'apply_exemption', 'already_registered'];
+    protected $guarded = [];
 
     public function faqs()
     {
