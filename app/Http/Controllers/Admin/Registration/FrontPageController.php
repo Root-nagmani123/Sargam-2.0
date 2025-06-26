@@ -12,6 +12,7 @@ use App\Models\PathPage;
 use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 
 class FrontPageController extends Controller
@@ -151,7 +152,7 @@ class FrontPageController extends Controller
 
 
 
-        DB::table('user_credentials')->insert([
+        DB::table('user_credentials')->create([
             'user_name' => $request->reg_name,
             'mobile_no' => $request->reg_mobile, // <-- store mobile
             'jbp_password' => Hash::make($request->reg_password), // Store hashed password
@@ -241,38 +242,46 @@ class FrontPageController extends Controller
             'register_course' => 'required|string',
             'apply_exemption' => 'required|string',
             'already_registered' => 'required|string',
+            'registration_start_date' => 'nullable|date',
+            'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
+            'exemption_start_date' => 'nullable|date',
+            'exemption_end_date' => 'nullable|date|after_or_equal:exemption_start_date',
             'faq_header.*' => 'nullable|string',
             'faq_content.*' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
+
         try {
-            $pathPage = PathPage::first();
+            // Check if record exists
+            $existingPage = PathPage::first();
 
-            if ($pathPage) {
-                $pathPage->update([
+            // Update or create the Path Page
+            $pathPage = PathPage::updateOrCreate(
+                ['id' => $existingPage?->id], // use null-safe operator
+                [
                     'register_course' => $request->register_course,
                     'apply_exemption' => $request->apply_exemption,
                     'already_registered' => $request->already_registered,
-                ]);
+                    'registration_start_date' => $request->registration_start_date ? Carbon::parse($request->registration_start_date)->format('Y-m-d') : null,
+                    'registration_end_date' => $request->registration_end_date ? Carbon::parse($request->registration_end_date)->format('Y-m-d') : null,
+                    'exemption_start_date' => $request->exemption_start_date ? Carbon::parse($request->exemption_start_date)->format('Y-m-d') : null,
+                    'exemption_end_date' => $request->exemption_end_date ? Carbon::parse($request->exemption_end_date)->format('Y-m-d') : null,
+                ]
+            );
 
-                // Delete old FAQs
-                $pathPage->faqs()->delete();
-            } else {
-                $pathPage = PathPage::create([
-                    'register_course' => $request->register_course,
-                    'apply_exemption' => $request->apply_exemption,
-                    'already_registered' => $request->already_registered,
-                ]);
-            }
+            // Remove old FAQs
+            $pathPage->faqs()->delete();
 
-            // Insert new FAQs
+            // Re-insert FAQs
             foreach ($request->faq_header ?? [] as $index => $header) {
-                if ($header || ($request->faq_content[$index] ?? null)) {
+                $content = $request->faq_content[$index] ?? null;
+
+                if ($header || $content) {
                     PathPageFaq::create([
                         'path_page_id' => $pathPage->id,
                         'header' => $header,
-                        'content' => $request->faq_content[$index] ?? '',
+                        'content' => $content,
                     ]);
                 }
             }
@@ -281,14 +290,18 @@ class FrontPageController extends Controller
             return back()->with('success', 'Path Page saved successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Error occurred while saving.');
+
+            // Optional: log the error for debugging
+            \Log::error('PathPage Save Error: ' . $e->getMessage());
+
+            return back()->with('error', 'An error occurred while saving the Path Page.');
         }
     }
 
     //destroy method for path page faq
     public function destroyFaq($id)
     {
-        DB::table('path_page_faqs')->where('id', $id)->delete();
+        DB::table('fc_path_page_faqs')->where('id', $id)->delete();
 
         return back()->with('success', 'FAQ deleted successfully.');
     }
