@@ -269,7 +269,7 @@
         </div>
 
         <div class="text-center mt-4">
-            <a href="{{ route('verify.authindex') }}" class="btn btn-primary px-4"
+            <a href="{{ route('fc.choose.path') }}" class="btn btn-primary px-4"
                 style="background-color: #004a93; border: #004a93;">
                 Click Here to Proceed
             </a>

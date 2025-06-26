@@ -38,7 +38,7 @@
                             
                             <div class="card-footer bg-white border-top-0">
                                 @if (\Carbon\Carbon::today()->between($regStart, $regEnd))
-                                    <a href="{{ route('credential.registration.create') }}"
+                                    <a href="{{ route('verify.authindex') }}"
                                         class="btn btn-success custom-btn w-100"
                                         style="background-color: #16a32a; border-color: #16a32a;">
                                         Start Registration

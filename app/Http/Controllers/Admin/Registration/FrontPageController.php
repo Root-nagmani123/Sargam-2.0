@@ -116,8 +116,8 @@ class FrontPageController extends Controller
         ]);
 
         // Step 5: Redirect to form
-        return redirect()->route('fc.choose.path')->with([
-            'success' => 'Login successful. You can now create your credentials.'
+        return redirect()->route('credential.registration.create')->with([
+            'success' => 'You have been successfully authenticated. Please create your credentials.'
         ]);
     }
 
@@ -152,7 +152,7 @@ class FrontPageController extends Controller
 
 
 
-        DB::table('user_credentials')->create([
+        DB::table('user_credentials')->insert([
             'user_name' => $request->reg_name,
             'mobile_no' => $request->reg_mobile, // <-- store mobile
             'jbp_password' => Hash::make($request->reg_password), // Store hashed password
@@ -611,5 +611,40 @@ class FrontPageController extends Controller
             ]);
 
         return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
+    }
+
+    //verify web auth forgot password
+    public function verifyWebAuth(Request $request)
+    {
+
+        // @dd($request->all());
+        $request->validate([
+            'mobile_number' => 'required|digits:10',
+            'web_auth' => 'required|string',
+        ]);
+
+        // Step 1: Check if the mobile number and web_auth exist in fc_registration_master
+        $user = DB::table('fc_registration_master')
+            ->where('contact_no', $request->mobile_number)
+            ->where('web_auth', $request->web_auth)
+            ->first();
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Invalid credentials.']);
+        }
+
+        // Step 2: Get the corresponding username from user_credentials
+        $credentials = DB::table('user_credentials')
+            ->where('mobile_no', $request->mobile_number)
+            ->first();
+
+        if (!$credentials) {
+            return response()->json(['success' => false, 'message' => 'User credentials not found.']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'user_name' => $credentials->user_name,
+        ]);
     }
 }
