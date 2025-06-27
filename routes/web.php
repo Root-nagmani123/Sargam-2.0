@@ -23,7 +23,8 @@ use App\Http\Controllers\Admin\{
     StudentMedicalExemptionController,
     CourseMemoDecisionMappController,
     CourseAttendanceNoticeMapController,
-    HostelBuildingFloorMappingController
+    HostelBuildingFloorMappingController,
+    HostelBuildingFloorRoomMappingController
 };
 
 Route::get('clear-cache', function () {
@@ -271,6 +272,13 @@ Route::prefix('admin/course-memo-decision')
     });
 
     Route::prefix('hostel-building-map')->name('hostel.building.map.')->controller(HostelBuildingFloorMappingController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+    });
+
+    Route::prefix('hostel-building-floor-room-map')->name('hostel.building.floor.room.map.')->controller(HostelBuildingFloorRoomMappingController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');

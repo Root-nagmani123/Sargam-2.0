@@ -191,6 +191,16 @@
                         <span class="icon-small"></span>Hostel Floor
                     </a>
                 </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+                        <span class="icon-small"></span>Building Floor Mapping
+                    </a>
+                </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+                        <span class="icon-small"></span>Building Floor Room Mapping
+                    </a>
+                </li>
             </ul>
         </li>
     </ul>
