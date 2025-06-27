@@ -11,6 +11,9 @@ class HostelBuildingFloorMapping extends Model
     public $timestamps = false;
     protected $primaryKey = "pk";
 
+    public function scopeActive($query) {
+        return $query->where('active_inactive', 1);
+    }
     public function building() {
         return $this->belongsTo(HostelBuildingMaster::class, 'hostel_building_master_pk', 'pk');
     }
