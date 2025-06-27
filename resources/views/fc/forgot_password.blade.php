@@ -3,6 +3,7 @@
 @section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <main style="flex: 1;">
         <div class="container mt-5">
             <div class="row">
@@ -30,7 +31,8 @@
                             <form class="row g-3" method="POST" action="{{ route('fc.password.reset') }}">
                                 @csrf
                                 <h3 class="text-center fw-bold" style="color: #004a93;">Begin Secure Password Reset </h3>
-                                <small class="text-muted text-center d-block fw-bold">Please enter your Mobile Number and Web Auth Code to
+                                <small class="text-muted text-center d-block fw-bold">Please enter your Mobile Number and
+                                    Web Auth Code to
                                     reset your password</small>
                                 <hr>
 
@@ -54,7 +56,7 @@
                                 <!-- Username (shown after verification) -->
                                 <div class="col-md-12 d-none" id="usernameContainer">
                                     <label class="form-label">Username</label>
-                                    <input type="text" class="form-control" id="verified_username" readonly>
+                                    <input type="text" class="form-control" id="verified_username" disabled>
                                     <small class="text-muted d-block fw-bold">
                                         This is your login username. Please keep it safe for future use.
                                     </small>
@@ -121,7 +123,13 @@
             const auth = document.getElementById('web_auth').value.trim();
 
             if (!mobile || !auth) {
-                alert("Please enter both mobile number and Web Auth code.");
+                // alert("Please enter both mobile number and Web Auth code.");
+                Swal.fire({
+                    title: 'Input Required',
+                    text: 'Please enter both mobile number and Web Auth code.',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
                 return;
             }
 
@@ -149,14 +157,35 @@
                         document.getElementById('confirm_password').disabled = false;
                         document.getElementById('submitBtn').disabled = false;
 
-                        alert("Verification successful!");
+                        // Make verified fields readonly
+                        document.getElementById('mobile_number').readOnly = true;
+                        document.getElementById('web_auth').readOnly = true;
+
+                        // alert("Verification successful. Please proceed to set your new login password.");
+                        Swal.fire({
+                            title: 'Verification Successful',
+                            text: 'Please proceed to set your new login password.',
+                            icon: 'success',
+                            confirmButtonText: 'OK'
+                        });
                     } else {
-                        alert("Invalid mobile number or Web Auth code.");
+                        // alert("Invalid mobile number or Web Auth code.");
+                        Swal.fire({
+                            title: 'Verification Failed',
+                            text: 'Invalid mobile number or Web Auth code.',
+                            icon: 'error',
+                            confirmButtonText: 'Try Again'
+                        });
                     }
                 })
                 .catch(err => {
                     console.error('Verification error:', err);
-                    alert("Something went wrong. Please try again later.");
+                    Swal.fire({
+                        title: 'Error',
+                        text: 'Something went wrong. Please try again later.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
                 });
         });
     </script>
