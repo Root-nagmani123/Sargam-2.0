@@ -56,18 +56,25 @@
 
                         <!-- Registration Section -->
 
+                        @php
+                            $today = date('Y-m-d');
+                        @endphp
+
                         <div class="row mb-4">
                             <div class="col-md-6">
                                 <label for="registration_start_date" class="form-label fw-semibold">Registration Start
                                     Date</label>
-                                <input type="date" name="registration_start_date" class="form-control"
+                                <input type="date" name="registration_start_date" id="registration_start_date"
+                                    class="form-control" min="{{ $today }}"
                                     value="{{ old('registration_start_date', $pathPage->registration_start_date ?? '') }}">
                             </div>
 
                             <div class="col-md-6">
                                 <label for="registration_end_date" class="form-label fw-semibold">Registration End
                                     Date</label>
-                                <input type="date" name="registration_end_date" class="form-control"
+                                <input type="date" name="registration_end_date" id="registration_end_date"
+                                    class="form-control"
+                                    min="{{ old('registration_start_date', $pathPage->registration_start_date ?? $today) }}"
                                     value="{{ old('registration_end_date', $pathPage->registration_end_date ?? '') }}">
                             </div>
                         </div>
@@ -76,16 +83,18 @@
                             <div class="col-md-6">
                                 <label for="exemption_start_date" class="form-label fw-semibold">Exemption Start
                                     Date</label>
-                                <input type="date" name="exemption_start_date" class="form-control"
+                                <input type="date" name="exemption_start_date" id="exemption_start_date"
+                                    class="form-control" min="{{ $today }}"
                                     value="{{ old('exemption_start_date', $pathPage->exemption_start_date ?? '') }}">
                             </div>
 
                             <div class="col-md-6">
                                 <label for="exemption_end_date" class="form-label fw-semibold">Exemption End Date</label>
-                                <input type="date" name="exemption_end_date" class="form-control"
+                                <input type="date" name="exemption_end_date" id="exemption_end_date" class="form-control"
+                                    min="{{ old('exemption_start_date', $pathPage->exemption_start_date ?? $today) }}"
                                     value="{{ old('exemption_end_date', $pathPage->exemption_end_date ?? '') }}">
                             </div>
-                        </div>  
+                        </div>
                         <div class="mb-4">
                             <label class="form-label fw-semibold">Register for Foundation Course <span
                                     class="text-danger">*</span></label>
@@ -131,15 +140,15 @@
                                 @endforeach
                             @else
                                 <!-- <div class="row faq-item align-items-end">
-                                <div class="col-md-5 mb-3">
-                                    <label class="form-label fw-semibold">Accordion Header</label>
-                                    <input type="text" name="faq_header[]" class="form-control">
-                                </div>
-                                <div class="col-md-5 mb-3">
-                                    <label class="form-label fw-semibold">Accordion Content</label>
-                                    <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
-                                </div>
-                            </div> -->
+                                        <div class="col-md-5 mb-3">
+                                            <label class="form-label fw-semibold">Accordion Header</label>
+                                            <input type="text" name="faq_header[]" class="form-control">
+                                        </div>
+                                        <div class="col-md-5 mb-3">
+                                            <label class="form-label fw-semibold">Accordion Content</label>
+                                            <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                                        </div>
+                                    </div> -->
                                 <div class="row mb-3">
                                     <div class="col-md-5">
                                         <label class="form-label">Accordion Header</label>
