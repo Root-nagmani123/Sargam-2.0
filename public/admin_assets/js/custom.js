@@ -965,3 +965,66 @@ $(document).ready(function() {
 // End of students in attendance
 
 // End Attendance
+
+$('#upload_import_hostel_mapping_to_student').on('click', function (e) {
+    e.preventDefault();
+
+    const fileInput = $('#importFile')[0];
+    if (fileInput.files.length === 0) {
+        alert('Please select a file to upload.');
+        return;
+    }
+
+    const fileName = fileInput.files[0].name;
+    const allowedExtensions = /\.(xlsx|xls|csv)$/i;
+    if (!allowedExtensions.test(fileName)) {
+        alert('Invalid file type. Please upload a .xlsx, .xls, or .csv file.');
+        fileInput.value = '';
+        return;
+    }
+
+    const formData = new FormData($('#importExcelForm')[0]);
+
+    $.ajax({
+        url: routes.assignHostelToStudent,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        beforeSend: function () {
+            $('#upload_import_hostel_mapping_to_student').prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Uploading...');
+        },
+        success: function (response) {
+            
+            alert('File imported successfully!');
+            $('#importModal').modal('hide');
+            resetImportModal();
+            location.reload();
+        },
+        error: function (xhr) {
+            console.log('Error response:', xhr);
+            $('#importErrorTableBody').empty();
+
+            if (xhr.status === 422 && xhr.responseJSON.failures) {
+                let failures = xhr.responseJSON.failures;
+                failures.forEach(function (failure) {
+                    let errorRow = `
+                        <tr>
+                            <td><p class="text-danger">${failure.row}</p></td>
+                            <td><p class="text-danger">${failure.errors.join('<br>')}</p></td>
+                        </tr>
+                    `;
+                    $('#importErrorTableBody').append(errorRow);
+                });
+                $('#importErrors').removeClass('d-none').addClass('');
+            } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                alert(xhr.responseJSON.message);
+            } else {
+                alert('An unexpected error occurred.');
+            }
+        },
+        complete: function () {
+            $('#upload_import_hostel_mapping_to_student').prop('disabled', false).html('<i class="mdi mdi-upload"></i> Upload & Import');
+        }
+    });
+});
