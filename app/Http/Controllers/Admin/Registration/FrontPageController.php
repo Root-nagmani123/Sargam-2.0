@@ -137,6 +137,7 @@ class FrontPageController extends Controller
     // Store user credentials
     public function credential_store(Request $request)
     {
+        // @dd($request->all());
         $request->validate([
             'reg_name' => 'required|string|max:100|unique:user_credentials,user_name',
             'reg_mobile' => 'required|digits:10',
@@ -167,6 +168,26 @@ class FrontPageController extends Controller
             'last_login' => now(),
             'Active_inactive' => 1,
         ]);
+
+        $currentAppType = DB::table('fc_registration_master')
+            ->where('contact_no', $request->ex_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->value('application_type');
+
+        // Treat null as 0
+        $currentAppType = $currentAppType ?? 0;
+
+        // Set to 1 only if current is 0 or 2
+        $newAppType = ($currentAppType == 0 || $currentAppType == 2) ? 1 : $currentAppType;
+        // dd($newAppType);
+
+        // Update only if needed
+        if ($newAppType != $currentAppType) {
+            DB::table('fc_registration_master')
+                ->where('contact_no', $request->reg_mobile)
+                // ->where('web_auth', $request->reg_web_code)
+                ->update(['application_type' => $newAppType]);
+        }
 
         // return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
         return redirect()->route('fc.login')->with('sweet_success', 'Credentials created successfully.');
@@ -595,6 +616,15 @@ class FrontPageController extends Controller
                 // 'created_at' => now(), // This won't update if already exists
             ]
         );
+        // Determine and update application_type if needed
+        $currentAppType = $registration->application_type ?? null;
+
+        if ($currentAppType === 0 || $currentAppType === '0' || $currentAppType === 1 || $currentAppType === '1') {
+            DB::table('fc_registration_master')
+                ->where('contact_no', $request->ex_mobile)
+                ->where('web_auth', $request->reg_web_code)
+                ->update(['application_type' => 2]);
+        }
 
         return redirect()->route('fc.thank_you')->with('success', 'Exemption form submitted successfully.');
     }
