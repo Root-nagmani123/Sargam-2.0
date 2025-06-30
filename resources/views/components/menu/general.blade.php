@@ -18,39 +18,20 @@
                             <!-- ---------------------------------- -->
                             <!-- Dashboard -->
                             <!-- ---------------------------------- -->
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('dashboard') }}" id="get-url"
+                            <li class="sidebar-item d-none">
+                                <a class="sidebar-link" href="{{ route('admin.dashboard') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:shield-user-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Dashboard</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item {{ request()->routeIs('admin.dashboard') ? 'selected' : '' }}">
+                                <a class="sidebar-link" href="{{ route('admin.dashboard') }}" id="get-url"
                                     aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
                                     <span class="hide-menu">Dashboard</span>
                                 </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
-                                    <iconify-icon icon="solar:home-angle-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">User Management</span>
-                                </a>
-                                <ul aria-expanded="false" class="collapse first-level">
-                                    <li class="sidebar-item">
-                                        <a class="sidebar-link" href="{{ route('admin.users.index') }}">
-                                            <span class="icon-small"></span>
-                                            Users
-                                        </a>
-                                    </li>
-                                    <li class="sidebar-item">
-                                        <a class="sidebar-link" href="{{ route('admin.roles.index') }}">
-                                            <span class="icon-small"></span>
-                                            Roles
-                                        </a>
-                                    </li>
-                                    {{-- <li class="sidebar-item">
-                                        <a class="sidebar-link" href="{{ route('admin.permissions.index') }}">
-                                            <span class="icon-small"></span>
-                                            Permissions
-                                        </a>
-                                    </li> --}}
-                                </ul>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('member.index') }}" id="get-url"
@@ -68,23 +49,6 @@
                                     <span class="hide-menu">Area of Expertise</span>
                                 </a>
                             </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('faculty.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:document-text-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Faculty</span>
-                                </a>
-                            </li>
-
-                            <!-- <li class="sidebar-item">
-                                                    <a class="sidebar-link" href="{{ route('batch.index') }}"
-                                                        id="get-url" aria-expanded="false">
-                                                        <iconify-icon icon="solar:file-text-line-duotone">
-                                                        </iconify-icon>
-                                                        <span class="hide-menu">Batch</span>
-                                                    </a>
-                                                </li> -->
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('stream.index') }}" id="get-url"
                                     aria-expanded="false">
@@ -110,14 +74,7 @@
                                     <span class="hide-menu">Course Curriculum</span>
                                 </a>
                             </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('mapping.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:map-arrow-up-bold-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Faculty Topic Mapping</span>
-                                </a>
-                            </li>
+
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('calendar.index') }}" id="get-url"
                                     aria-expanded="false">
@@ -135,22 +92,6 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:feed-bold-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Feedback</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('feedback.get.studentFeedback') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:feed-bold-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Student Feedback</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('student.medical.exemption.index') }}"
                                     id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:feed-bold-duotone">
@@ -158,26 +99,7 @@
                                     <span class="hide-menu">Student Medical Exemption</span>
                                 </a>
                             </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('memo.notice.management.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:feed-bold-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Memo Notice Management</span>
-                                </a>
-                            </li>
-                            <li>
-                                <span class="sidebar-divider"></span>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('course.memo.decision.index') }}">
-                                    <iconify-icon icon="solar:airbuds-case-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Memo Course Mapping</span>
-                                </a>
-                            </li>
-
-                            <li class="sidebar-item">
+                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('mdo-escrot-exemption.index') }}" id="get-url"
                                     aria-expanded="false">
                                     <iconify-icon icon="solar:calendar-mark-line-duotone">
@@ -193,6 +115,55 @@
                                     <span class="hide-menu">Attendance</span>
                                 </a>
                             </li>
+                            <!-- Divider -->
+                            <span class="sidebar-divider"></span>
+                            <!-- ======= Feedback SECTION ======= -->
+                            <li class="nav-small-cap"><span class="hide-menu">Feedback</span></li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:feed-bold-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Feedback</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('feedback.get.studentFeedback') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:feed-bold-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Student Feedback</span>
+                                </a>
+                            </li>
+
+                           
+                            <!-- Divider -->
+                            <span class="sidebar-divider"></span>
+                            <!-- ======= User Management SECTION ======= -->
+                            <li class="nav-small-cap"><span class="hide-menu">User Management</span></li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.users.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
+                                    <span class="hide-menu">Users</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.roles.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
+                                    <span class="hide-menu">Roles</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('admin.permissions.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
+                                    <span class="hide-menu">Permissions</span>
+                                </a>
+                            </li>
+                            </li>
+
 
                         </ul>
                     </div>

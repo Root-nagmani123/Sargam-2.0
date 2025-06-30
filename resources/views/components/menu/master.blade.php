@@ -4,43 +4,7 @@
         <!-- Home -->
         <!-- ---------------------------------- -->
         <li class="nav-small-cap">
-            <span class="hide-menu">Master</span>
-        </li>
-        <li class="sidebar-item">
-            <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
-                <iconify-icon icon="solar:airbuds-case-line-duotone">
-                </iconify-icon>
-                <span class="hide-menu">Address</span>
-            </a>
-            <ul aria-expanded="false" class="collapse first-level">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('master.country.index') }}">
-                        <span class="icon-small"></span> Country
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('master.state.index') }}">
-                        <span class="icon-small"></span>State
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('master.district.index') }}">
-                        <span class="icon-small"></span>District
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('master.city.index') }}">
-                        <span class="icon-small"></span>City
-                    </a>
-                </li>
-            </ul>
-        </li>
-        <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.faculty.expertise.index') }}" id="get-url"
-                aria-expanded="false">
-                <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
-                <span class="hide-menu">Faculty Expertise</span>
-            </a>
+            <span class="hide-menu">General</span>
         </li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('Venue-Master.index') }}" id="get-url" aria-expanded="false">
@@ -89,12 +53,30 @@
             </a>
         </li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.faculty.type.master.index') }}" id="get-url"
-                aria-expanded="false">
-                <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
-                <span class="hide-menu">Faculty Type</span>
+            <a class="sidebar-link" href="{{ route('master.department.master.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Department Master</span>
             </a>
         </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.designation.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Designation Master</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.caste.category.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Caste Category</span>
+            </a>
+        </li>
+        <!-- Divider -->
+        <span class="sidebar-divider"></span>
+        <!-- ======= Exemption SECTION ======= -->
+        <li class="nav-small-cap"><span class="hide-menu">Exemption</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.exemption.category.master.index') }}" id="get-url"
                 aria-expanded="false">
@@ -109,14 +91,10 @@
                 <span class="hide-menu">Exemption Medical Speciality</span>
             </a>
         </li>
-        <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('admin.fc_exemption.index') }}">
-                <iconify-icon icon="solar:airbuds-case-line-duotone">
-                </iconify-icon>
-                <span class="hide-menu">Fc Exemption Master</span>
-            </a>
-        </li>
-
+        <!-- Divider -->
+        <span class="sidebar-divider"></span>
+        <!-- ======= REGISTRATION SECTION ======= -->
+        <li class="nav-small-cap"><span class="hide-menu">Memo</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.memo.type.master.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
@@ -132,19 +110,25 @@
             </a>
         </li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.department.master.index') }}">
-                <iconify-icon icon="solar:airbuds-case-line-duotone">
+            <a class="sidebar-link" href="{{ route('memo.notice.management.index') }}" id="get-url"
+                aria-expanded="false">
+                <iconify-icon icon="solar:feed-bold-duotone">
                 </iconify-icon>
-                <span class="hide-menu">Department Master</span>
+                <span class="hide-menu">Memo Notice Management</span>
             </a>
         </li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.designation.index') }}">
+            <a class="sidebar-link" href="{{ route('course.memo.decision.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
                 </iconify-icon>
-                <span class="hide-menu">Designation Master</span>
+                <span class="hide-menu">Memo Course Mapping</span>
             </a>
         </li>
+
+        <!-- Divider -->
+        <span class="sidebar-divider"></span>
+        <!-- ======= REGISTRATION SECTION ======= -->
+        <li class="nav-small-cap"><span class="hide-menu">Employee</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.employee.type.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
@@ -159,49 +143,113 @@
                 <span class="hide-menu">Employee Group</span>
             </a>
         </li>
+
+
+        <!-- Divider -->
+        <span class="sidebar-divider"></span>
+        <!-- ======= REGISTRATION SECTION ======= -->
+        <li class="nav-small-cap"><span class="hide-menu">Faculty</span></li>
+
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.caste.category.index') }}">
-                <iconify-icon icon="solar:airbuds-case-line-duotone">
-                </iconify-icon>
-                <span class="hide-menu">Caste Category</span>
+            <a class="sidebar-link" href="{{ route('master.faculty.expertise.index') }}" id="get-url"
+                aria-expanded="false">
+                <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
+                <span class="hide-menu">Faculty Expertise</span>
             </a>
         </li>
-
-        <hr class="sidebar-divider">
-        </hr>
         <li class="sidebar-item">
-            <a class="sidebar-link has-arrow" href="javascript:void(0)" aria-expanded="false">
+            <a class="sidebar-link" href="{{ route('master.faculty.type.master.index') }}" id="get-url"
+                aria-expanded="false">
+                <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
+                <span class="hide-menu">Faculty Type</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('faculty.index') }}" id="get-url" aria-expanded="false">
+                <iconify-icon icon="solar:document-text-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Faculty</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('mapping.index') }}" id="get-url" aria-expanded="false">
+                <iconify-icon icon="solar:map-arrow-up-bold-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Faculty Topic Mapping</span>
+            </a>
+        </li>
+        <!-- Divider -->
+        <span class="sidebar-divider"></span>
+
+        <!-- ======= REGISTRATION SECTION ======= -->
+        <li class="nav-small-cap"><span class="hide-menu">Hostel</span></li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
                 </iconify-icon>
-                <span class="hide-menu">Hostel Master</span>
+                <span class="hide-menu">Hostel Building</span>
             </a>
-            <ul aria-expanded="false" class="collapse first-level">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
-                        <span class="icon-small"></span> Hostel Building
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
-                        <span class="icon-small"></span>Hostel Room
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('master.hostel.floor.index') }}">
-                        <span class="icon-small"></span>Hostel Floor
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
-                        <span class="icon-small"></span>Building Floor Mapping
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
-                        <span class="icon-small"></span>Building Floor Room Mapping
-                    </a>
-                </li>
-            </ul>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.hostel.floor.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Hostel Room</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Hostel Floor</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Hostel Floor Mapping</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Building Floor Room Mapping</span>
+            </a>
+        </li>
+        <!-- Divider -->
+        <span class="sidebar-divider"></span>
+
+        <!-- ======= REGISTRATION SECTION ======= -->
+        <li class="nav-small-cap"><span class="hide-menu">Address</span></li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.country.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Country</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.state.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">State</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.district.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">District</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.city.index') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">City</span>
+            </a>
         </li>
     </ul>
 </nav>

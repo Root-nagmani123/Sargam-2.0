@@ -53,8 +53,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+        return view('admin.dashboard');
+    })->name('admin.dashboard');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
 
