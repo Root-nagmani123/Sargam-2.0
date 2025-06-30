@@ -91,8 +91,11 @@ class FrontPageController extends Controller
             ->first();
         // @dd($registration);
         if (!$registration) {
+            // return back()
+            //     ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
+            //     ->withInput();
             return back()
-                ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
+                ->withErrors(['web_auth' => 'Invalid contact number or web auth codee.'])
                 ->withInput();
         }
 
@@ -116,8 +119,12 @@ class FrontPageController extends Controller
         ]);
 
         // Step 5: Redirect to form
+        // return redirect()->route('credential.registration.create')->with([
+        //     'success' => 'You have been successfully authenticated. Please create your credentials.'
+        // ]);
+
         return redirect()->route('credential.registration.create')->with([
-            'success' => 'You have been successfully authenticated. Please create your credentials.'
+            'sweet_success' => 'You have been successfully authenticated. Please create your credentials.'
         ]);
     }
 
@@ -161,7 +168,8 @@ class FrontPageController extends Controller
             'Active_inactive' => 1,
         ]);
 
-        return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
+        // return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
+        return redirect()->route('fc.login')->with('sweet_success', 'Credentials created successfully.');
     }
 
     // Show the login form
@@ -486,7 +494,6 @@ class FrontPageController extends Controller
     // apply exemption store
     public function apply_exemptionstore(Request $request)
     {
-        // dd($request->all());
         $rules = [
             'ex_mobile' => 'required|digits_between:7,15',
             'reg_web_code' => 'required|string',
@@ -548,6 +555,25 @@ class FrontPageController extends Controller
                 ->withInput();
         }
 
+        // Check if exemption already applied
+        $hasApplied = DB::table('fc_registration_master')
+            ->where('contact_no', $request->ex_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->where('fc_exemption_master_pk', '!=', 0)
+            ->exists();
+
+
+        if ($hasApplied) {
+            // return redirect()->back()
+            //     ->withInput()
+            //     ->with('has_applied', true); // This session value will trigger the modal
+            if ($hasApplied) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('already_applied', 'You have already applied for an exemption.');
+            }
+        }
+
         $username = $registration->user_id ?? null;
 
         $medicalDocPath = null;
@@ -600,7 +626,10 @@ class FrontPageController extends Controller
             ->where('mobile_no', $request->mobile_number)
             ->first();
         if (!$user) {
-            return back()->withErrors(['mobile_number' => 'Mobile number not found.'])->withInput();
+            // return back()->withErrors(['mobile_number' => 'Mobile number not found.'])->withInput();
+            return back()
+                ->withErrors(['mobile_number' => 'Mobile number not found.'])
+                ->withInput();
         }
 
         // Update password
@@ -610,7 +639,9 @@ class FrontPageController extends Controller
                 'jbp_password' => Hash::make($request->new_password),
             ]);
 
-        return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
+        // return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
+        return redirect()->route('fc.login')
+            ->with('sweet_success', 'Password reset successful. Please login with new credentials.');
     }
 
     //verify web auth forgot password

@@ -1,13 +1,12 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Exemption Master')
+@section('title', 'Exemption Master | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
 <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet" />
 
 <div class="container-fluid">
      <x-breadcrum title="Exemption Master" />
-    <x-session_message />
     <x-session_message />
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">

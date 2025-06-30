@@ -12,16 +12,17 @@
                 <div class="col-md-6 col-lg-6 offset-md-2 offset-lg-1 mx-auto">
                     <div class="card">
                         <div class="card-body">
-                            @if (session('success'))
+
+                            {{-- @if (session('success'))
                                 <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
                                     {{ session('success') }}
                                     <button type="button" class="btn-close" data-bs-dismiss="alert"
                                         aria-label="Close"></button>
                                 </div>
-                            @endif
+                            @endif --}}
 
                             <!--display errors if any -->
-                            @if ($errors->any())
+                            {{-- @if ($errors->any())
                                 <div class="alert alert-danger mb-3">
                                     <ul class="mb-0">
                                         @foreach ($errors->all() as $error)
@@ -29,7 +30,7 @@
                                         @endforeach
                                     </ul>
                                 </div>
-                            @endif
+                            @endif --}}
                             <form class="row g-3" method="POST" action="{{ route('credential.registration.store') }}">
                                 @csrf
                                 <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Create Your Login Credentials
@@ -109,3 +110,37 @@
     </script>
 
 @endsection
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    @if (session('sweet_success'))
+        <script>
+            Swal.fire({
+                title: 'Success!',
+                text: '{{ session('sweet_success') }}',
+                icon: 'success',
+                confirmButtonColor: '#004a93',
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+
+    @if ($errors->any())
+        <script>
+            let errorMessages = '';
+            @foreach ($errors->all() as $error)
+                errorMessages += `{{ $error }}\n`;
+            @endforeach
+
+            Swal.fire({
+                title: 'Validation Error',
+                text: errorMessages.trim(),
+                icon: 'error',
+                confirmButtonColor: '#004a93',
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+
+@endpush
