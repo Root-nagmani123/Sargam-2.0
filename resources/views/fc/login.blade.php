@@ -74,3 +74,23 @@
         }
     </script>
 @endsection
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+     @if ($errors->any())
+        <script>
+            let errorMessages = '';
+            @foreach ($errors->all() as $error)
+                errorMessages += `{{ $error }}\n`;
+            @endforeach
+
+            Swal.fire({
+                title: 'Validation Error',
+                text: errorMessages.trim(),
+                icon: 'error',
+                confirmButtonColor: '#004a93',
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+@endpush

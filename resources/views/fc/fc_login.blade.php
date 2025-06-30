@@ -54,7 +54,8 @@
                                             <i class="material-icons menu-icon me-3 fs-3">visibility</i>
                                         </button>
                                     </div>
-                                    <small class="form-text text-muted mt-2"><a href="{{route('fc.password.forgot')}}" class="text-primary">Forget Password</a></small>
+                                    <small class="form-text text-muted mt-2"><a href="{{ route('fc.password.forgot') }}"
+                                            class="text-primary">Forget Password</a></small>
                                 </div>
 
                                 <!-- Submit -->
@@ -84,3 +85,35 @@
         }
     </script>
 @endsection
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    @if (session('sweet_success'))
+        <script>
+            Swal.fire({
+                title: 'Success!',
+                text: '{{ session('sweet_success') }}',
+                icon: 'success',
+                confirmButtonColor: '#004a93',
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+    @if ($errors->any())
+        <script>
+            let errorMessages = '';
+            @foreach ($errors->all() as $error)
+                errorMessages += `{{ $error }}\n`;
+            @endforeach
+
+            Swal.fire({
+                title: 'Validation Error',
+                text: errorMessages.trim(),
+                icon: 'error',
+                confirmButtonColor: '#004a93',
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+@endpush
