@@ -115,6 +115,14 @@
                                     <span class="hide-menu">Attendance</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('attendance.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Assign Hostel</span>
+                                </a>
+                            </li>
                             <!-- Divider -->
                             <span class="sidebar-divider"></span>
                             <!-- ======= Feedback SECTION ======= -->
