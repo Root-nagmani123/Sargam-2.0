@@ -42,6 +42,7 @@
                 <th>Web Code</th>
                 <th>Exemption Category</th>
                 <th>Medical Document</th>
+                <th>Application Type</th>
                 <th>Submitted On</th>
             </tr>
         </thead>
@@ -55,6 +56,15 @@
                     <td>{{ $data->Exemption_name ?? 'N/A' }}</td>
                     <td>
                         {{ $data->medical_exemption_doc ? 'Available' : 'N/A' }}
+                    </td>
+                    <td>
+                        @if ($data->application_type == 1)
+                            Registration
+                        @elseif($data->application_type == 2)
+                            Exemption
+                        @else
+                            N/A
+                        @endif
                     </td>
                     <td>{{ \Carbon\Carbon::parse($data->created_date)->format('d-m-Y') }}</td>
                 </tr>
