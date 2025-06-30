@@ -191,14 +191,14 @@
             </a>
         </li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.hostel.floor.index') }}">
+            <a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
                 </iconify-icon>
                 <span class="hide-menu">Hostel Room</span>
             </a>
         </li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
+            <a class="sidebar-link" href="{{ route('master.hostel.floor.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
                 </iconify-icon>
                 <span class="hide-menu">Hostel Floor</span>
@@ -212,7 +212,7 @@
             </a>
         </li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+            <a class="sidebar-link" href="{{ route('hostel.building.floor.room.map.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
                 </iconify-icon>
                 <span class="hide-menu">Building Floor Room Mapping</span>
