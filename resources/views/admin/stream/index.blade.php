@@ -49,15 +49,18 @@
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
                                             <a href="{{ route('stream.edit', $stream->pk) }}"
-                                                class="btn btn-success text-white btn-sm">
+                                                class="btn btn-primary text-white btn-sm">
                                                 Edit
                                             </a>
                                             <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST"
                                                 class="m-0">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-danger text-white btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete?')">
+                                                <button type="submit" class="btn btn-danger text-white btn-sm" onclick="event.preventDefault();
+                                                if(confirm('Are you sure you want to delete this stream?')) {
+                                                    this.closest('form').submit();
+                                                }"
+                                                {{ $stream->status == 1 ? 'disabled' : '' }}>
                                                     Delete
                                                 </button>
                                             </form>
