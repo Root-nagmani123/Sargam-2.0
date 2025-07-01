@@ -81,7 +81,7 @@ class GroupMappingDataTable extends DataTable
         return $model->newQuery()
                 ->withCount('studentCourseGroupMap')
                 ->with(['courseGroup', 'courseGroupType'])
-                ->orderBy('pk');
+                ->orderBy('pk', 'desc');
     }
 
     public function html(): HtmlBuilder
