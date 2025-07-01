@@ -218,6 +218,13 @@
                 <span class="hide-menu">Building Floor Room Mapping</span>
             </a>
         </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('hostel.building.map.assign.student') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Assign Hostel</span>
+            </a>
+        </li>
         <!-- Divider -->
         <span class="sidebar-divider"></span>
 
