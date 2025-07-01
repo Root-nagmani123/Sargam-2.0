@@ -22,7 +22,8 @@
                             @endif
                             <form class="row g-3" method="POST" action="{{ route('registration.verify') }}">
                                 @csrf
-                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Login to Foundation Course</h3>
+                                <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication -
+                                    Foundation Course Registration</h3>
                                 <hr>
                                 <!-- Mobile -->
                                 <div class="col-md-12">
@@ -73,3 +74,23 @@
         }
     </script>
 @endsection
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+     @if ($errors->any())
+        <script>
+            let errorMessages = '';
+            @foreach ($errors->all() as $error)
+                errorMessages += `{{ $error }}\n`;
+            @endforeach
+
+            Swal.fire({
+                title: 'Validation Error',
+                text: errorMessages.trim(),
+                icon: 'error',
+                confirmButtonColor: '#004a93',
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+@endpush

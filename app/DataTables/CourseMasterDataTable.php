@@ -58,7 +58,7 @@ class CourseMasterDataTable extends DataTable
      */
     public function query(CourseMaster $model): QueryBuilder
     {
-        return $model->newQuery();
+        return $model->orderBy('pk', 'desc')->newQuery();
     }
 
     /**

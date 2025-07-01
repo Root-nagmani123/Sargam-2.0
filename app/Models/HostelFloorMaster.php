@@ -12,4 +12,9 @@ class HostelFloorMaster extends Model
     protected $gurded = [];
     
     public $timestamps = false;
+
+    public function scopeActive()
+    {
+        return $this->where('active_inactive', 1);
+    }
 }

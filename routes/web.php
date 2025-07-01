@@ -22,7 +22,9 @@ use App\Http\Controllers\Admin\{
     AttendanceController,
     StudentMedicalExemptionController,
     CourseMemoDecisionMappController,
-    CourseAttendanceNoticeMapController
+    CourseAttendanceNoticeMapController,
+    HostelBuildingFloorMappingController,
+    HostelBuildingFloorRoomMappingController
 };
 
 Route::get('clear-cache', function () {
@@ -51,8 +53,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
+        return view('admin.dashboard');
+    })->name('admin.dashboard');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
 
@@ -269,7 +271,22 @@ Route::prefix('admin/course-memo-decision')
    
     });
 
+    Route::prefix('hostel-building-map')->name('hostel.building.map.')->controller(HostelBuildingFloorMappingController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
 
+        Route::get('assign-student', 'assignStudent')->name('assign.student');
+        Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
+    });
+
+    Route::prefix('hostel-building-floor-room-map')->name('hostel.building.floor.room.map.')->controller(HostelBuildingFloorRoomMappingController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+    });
 });
 
 // Route::get('/fc', function () {

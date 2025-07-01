@@ -197,12 +197,12 @@ $(document).ready(function () {
             const input = stepElement.find(`[name="${field}"]`);
             const message = messages[0];
             const errorDiv = $('<div class="text-danger mt-1"></div>').text(message);
-            input.addClass("is-invalid").after(errorDiv);
+            input.addClass("is-invalid").after(errorDiv);            
         });
     }
 
     function clearErrors(stepElement) {
-        stepElement.find(".text-danger").remove();
+        stepElement.find("div.validation-error").remove();
         stepElement.find(".is-invalid").removeClass("is-invalid");
     }
 

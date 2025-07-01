@@ -163,6 +163,8 @@ class FcExemptionMasterController extends Controller
     public function exemption_list(Request $request)
     {
         $filter = $request->get('exemption_category'); // Could be short name or empty
+        $typeFilter = $request->get('application_type'); // 1 = Registration, 2 = Exemption
+
 
         // Fetch unique exemption short names for the dropdown
         $categories = DB::table('fc_exemption_master')
@@ -186,21 +188,36 @@ class FcExemptionMasterController extends Controller
                 'r.middle_name',
                 'r.last_name',
                 'e.Exemption_name',
+                'r.application_type',
                 'e.Exemption_name'
             )
             ->orderBy('r.created_date')
-            ->where('e.visible', 1)
-            ->where('r.fc_exemption_master_pk', '!=', 0);
+            ->whereIn('r.application_type', [1, 2]);  // Only show records with either registration or exemption
+        // ->where('e.visible', 1);
+        // ->where('r.fc_exemption_master_pk', '!=', 0);
 
         // Apply filter only if a category is selected
         if (!empty($filter)) {
             $query->where('e.Exemption_name', $filter);
         }
-        // dd($filter);
+
+        // Type Filter Logic
+        if (!empty($typeFilter)) {
+            $query->where('r.application_type', intval($typeFilter));
+
+            if ($typeFilter == 2) {
+                $query->where('e.visible', 1)
+                    ->where('r.fc_exemption_master_pk', '!=', 0);
+            }
+        }
+
+        if (!empty($typeFilter)) {
+            $query->where('r.application_type', intval($typeFilter));
+        }
 
         $submissions = $query->get();
 
-        return view('admin.forms.exemption_datalist', compact('submissions', 'categories', 'filter'));
+        return view('admin.forms.exemption_datalist', compact('submissions', 'categories', 'filter', 'typeFilter'));
     }
 
 
@@ -209,8 +226,9 @@ class FcExemptionMasterController extends Controller
     {
         $format = $request->get('format');
         $filter = $request->get('exemption_category');
+        $appType = $request->get('application_type'); // ✅ new input
 
-        // Fetch data from fc_registration_master with related exemption and user info
+        // Fetch data from registration with optional filters
         $submissions = DB::table('fc_registration_master as d')
             ->leftJoin('fc_exemption_master as e', 'd.fc_exemption_master_pk', '=', 'e.Pk')
             ->select(
@@ -219,20 +237,24 @@ class FcExemptionMasterController extends Controller
                 'e.Exemption_name',
                 'd.medical_exemption_doc',
                 'd.created_date',
+                'd.application_type',
                 DB::raw("COALESCE(CONCAT_WS(' ', d.first_name, d.middle_name, d.last_name)) as user_name")
             )
-            ->where('d.fc_exemption_master_pk', '!=', 0)
-
+            // ->where('d.fc_exemption_master_pk', '!=', 0)
+            ->whereIn('d.application_type', [1, 2]) // Always restrict to valid types
             ->when($filter, function ($query, $filter) {
                 return $query->where('e.Exemption_name', $filter);
             })
+            ->when($appType, function ($query, $appType) {
+                return $query->where('d.application_type', $appType);
+            })
             ->get();
-        // @dd($submissions);
+
+
         if ($format === 'xlsx' || $format === 'csv') {
             return Excel::download(new ExemptionDataExport($submissions), "exemption_data.$format");
         } elseif ($format === 'pdf') {
-            // $pdf = Pdf::loadView('admin.forms.export.exemption_pdf', compact('submissions'));
-            $pdf = Pdf::loadView('admin.forms.export.exemption_pdf', compact('submissions', 'filter'));
+            $pdf = Pdf::loadView('admin.forms.export.exemption_pdf', compact('submissions', 'filter', 'appType'));
             $pdf->setPaper('a4', 'landscape');
 
             return $pdf->download('exemption_data.pdf');
@@ -240,6 +262,7 @@ class FcExemptionMasterController extends Controller
             return back()->with('error', 'Invalid export format selected.');
         }
     }
+
 
 
     //captcha refresh

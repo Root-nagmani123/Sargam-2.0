@@ -35,8 +35,9 @@
 <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 <div class="container-fluid">
-    <div class="card card-body py-3">
-        <div class="row align-items-center">
+    <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card-body py-3">
+            <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
                     <h4 class="mb-4 mb-sm-0 card-title">Calendar</h4>
@@ -56,6 +57,7 @@
                     </nav>
                 </div>
             </div>
+        </div>
         </div>
     </div>
     <button type="button" class="btn btn-primary" id="createEventupperButton">
