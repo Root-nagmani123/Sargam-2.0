@@ -197,18 +197,49 @@ class MemberController extends Controller
     public function validateStep(Request $request, $step)
     {
         $validatorClass = "App\\Http\\Requests\\Admin\\Member\\StoreMemberStep{$step}Request";
+
         if (!class_exists($validatorClass)) {
             return response()->json(['error' => 'Invalid step'], 400);
         }
 
-        $validator = Validator::make($request->all(), (new $validatorClass())->rules());
+        // Instantiate the FormRequest dynamically
+        $formRequest = new $validatorClass;
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+        // Inject the container and initialize with current request data (no redirector)
+        $formRequest->setContainer(app())->initialize(
+            $request->query->all(),     // GET params
+            $request->post(),           // POST data
+            [], [],                     // attributes, cookies
+            $request->files->all(),     // uploaded files
+            $request->server->all(),    // server info
+            $request->getContent()      // raw body
+        );
+
+        // Provide user resolver (for authorize() method)
+        $formRequest->setUserResolver(fn () => $request->user());
+
+        // Run authorization logic
+        if (! $formRequest->authorize()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // Run validation using FormRequest's rules & messages
+        $validator = Validator::make(
+            $formRequest->all(),
+            $formRequest->rules(),
+            $formRequest->messages(),
+            $formRequest->attributes()
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Call step-specific save/update method if it exists
         $method = "saveOrUpdateStep{$step}Data";
-        $responseData = method_exists($this, $method) ? $this->{$method}($request) : null;
+        $responseData = method_exists($this, $method) ? $this->{$method}($formRequest) : null;
 
         if (!$responseData) {
             return response()->json(['error' => 'Failed to save data'], 500);
@@ -219,6 +250,7 @@ class MemberController extends Controller
             'pk' => $responseData->pk
         ], 200);
     }
+
 
     public function store(Request $request)
     {
@@ -344,20 +376,74 @@ class MemberController extends Controller
 
     public function updateValidateStep(Request $request, $step, $id)
     {
-        $request->merge(['emp_id' => ($id)]);
+        // $request->merge(['emp_id' => ($id)]);
+        // $validatorClass = "App\\Http\\Requests\\Admin\\Member\\StoreMemberStep{$step}Request";
+        // if (!class_exists($validatorClass)) {
+        //     return response()->json(['error' => 'Invalid step'], 400);
+        // }
+
+        // $validator = Validator::make($request->all(), (new $validatorClass())->rules());
+
+        // if ($validator->fails()) {
+        //     return response()->json(['errors' => $validator->errors()], 422);
+        // }
+
+        // $method = "saveOrUpdateStep{$step}Data";
+        // $responseData = method_exists($this, $method) ? $this->{$method}($request) : null;
+
+        // if (!$responseData) {
+        //     return response()->json(['error' => 'Failed to save data'], 500);
+        // }
+
+        // return response()->json([
+        //     'message' => "Step $step validated and data saved.",
+        //     'pk' => $responseData->pk
+        // ], 200);
+
+        $request->merge(['emp_id' => $id]);
+
         $validatorClass = "App\\Http\\Requests\\Admin\\Member\\StoreMemberStep{$step}Request";
         if (!class_exists($validatorClass)) {
             return response()->json(['error' => 'Invalid step'], 400);
         }
 
-        $validator = Validator::make($request->all(), (new $validatorClass())->rules());
+        // Dynamically instantiate the FormRequest
+        $formRequest = new $validatorClass;
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+        // Manually initialize it without redirector
+        $formRequest->setContainer(app())->initialize(
+            $request->query->all(),
+            $request->post(),
+            [], [], $request->files->all(),
+            $request->server->all(),
+            $request->getContent()
+        );
+
+        // Resolve the user (for authorize())
+        $formRequest->setUserResolver(fn () => $request->user());
+
+        // Run authorization
+        if (! $formRequest->authorize()) {
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
+        // Run validation with rules & messages from FormRequest
+        $validator = Validator::make(
+            $formRequest->all(),
+            $formRequest->rules(),
+            $formRequest->messages(),
+            $formRequest->attributes()
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        // Call the step handler
         $method = "saveOrUpdateStep{$step}Data";
-        $responseData = method_exists($this, $method) ? $this->{$method}($request) : null;
+        $responseData = method_exists($this, $method) ? $this->{$method}($formRequest) : null;
 
         if (!$responseData) {
             return response()->json(['error' => 'Failed to save data'], 500);

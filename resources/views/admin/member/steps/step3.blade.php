@@ -19,7 +19,7 @@
     @endphp
     <div class="col-md-12">
         <div class="mb-3">
-            <label class="form-label" for="role">Role Options :</label>
+            <label class="form-label" for="role">Role Options : <span class="text-danger">*</span></label>
             <div class="controls">
                 <div class="row">
                     @foreach ($userRoleOptions as $key => $value)
