@@ -1,4 +1,4 @@
-@extends('admin.layouts.master')
+ class="col"@extends('admin.layouts.master')
 
 @section('title', 'Member - Sargam | Lal Bahadur')
 @section('content')
@@ -31,13 +31,13 @@
                             <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th>S.No.</th>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Roles</th>
-                                    <th>Created At</th>
-                                    <th>Action</th>
-                                    <th>Status</th>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Name</th>
+                                    <th class="col">Email</th>
+                                    <th class="col">Roles</th>
+                                    <th class="col">Created At</th>
+                                    <th class="col">Action</th>
+                                    <!-- <th class="col">Status</th> -->
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -64,16 +64,14 @@
                                                     value="7m53OwU7KaFp1PPyJcyUuVMXW7xvrGr12yL6QycA"> <input
                                                     type="hidden" name="_method" value="DELETE"> <button type="submit"
                                                     class="btn btn-danger text-white btn-sm"
-                                                    onclick="return confirm('Are you sure you want to delete?')">
+                                                    onclick="event.preventDefault();
+                                                if(confirm('Are you sure you want to delete this user?')) {
+                                                    this.closest('form').submit();
+                                                }"
+                                                {{ $user->active_inactive == 1 ? 'disabled' : '' }}>
                                                     Delete
                                                 </button>
                                             </form>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="news" data-column="status" data-id="21" checked="">
                                         </div>
                                     </td>
                                 </tr>
