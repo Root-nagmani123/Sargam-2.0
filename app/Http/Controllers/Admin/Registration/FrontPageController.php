@@ -267,32 +267,32 @@ class FrontPageController extends Controller
 
     public function pathPageSave(Request $request)
     {
-        // $request->validate([
-        //     'register_course' => 'required|string',
-        //     'apply_exemption' => 'required|string',
-        //     'already_registered' => 'required|string',
-        //     'registration_start_date' => 'nullable|date',
-        //     'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
-        //     'exemption_start_date' => 'nullable|date',
-        //     'exemption_end_date' => 'nullable|date|after_or_equal:exemption_start_date',
-        //     'faq_header.*' => 'nullable|string',
-        //     'faq_content.*' => 'nullable|string',
-        // ]);
-
         $request->validate([
             'register_course' => 'required|string',
             'apply_exemption' => 'required|string',
             'already_registered' => 'required|string',
-
-            'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
-            'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
-
-            'exemption_start_date' => ['nullable', 'date', 'after_or_equal:today'],
-            'exemption_end_date' => ['nullable', 'date', 'after_or_equal:exemption_start_date'],
-
+            'registration_start_date' => 'nullable|date',
+            'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
+            'exemption_start_date' => 'nullable|date',
+            'exemption_end_date' => 'nullable|date|after_or_equal:exemption_start_date',
             'faq_header.*' => 'nullable|string',
             'faq_content.*' => 'nullable|string',
         ]);
+
+        // $request->validate([
+        //     'register_course' => 'required|string',
+        //     'apply_exemption' => 'required|string',
+        //     'already_registered' => 'required|string',
+
+        //     'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+        //     'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
+
+        //     'exemption_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+        //     'exemption_end_date' => ['nullable', 'date', 'after_or_equal:exemption_start_date'],
+
+        //     'faq_header.*' => 'nullable|string',
+        //     'faq_content.*' => 'nullable|string',
+        // ]);
         DB::beginTransaction();
 
         try {
