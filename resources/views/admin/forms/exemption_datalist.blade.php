@@ -42,18 +42,6 @@
                                 </select>
                             </div>
 
-                            <!-- Export Format -->
-                            <div class="col-md-2 col-sm-6 mb-2">
-                                <label for="format" class="form-label">Export Format</label>
-                                <select name="format" id="format" class="form-select">
-                                    <option value="">-- All Formats --</option>
-                                    <option value="pdf" {{ request('format') == 'pdf' ? 'selected' : '' }}>PDF</option>
-                                    <option value="xlsx" {{ request('format') == 'xlsx' ? 'selected' : '' }}>Excel
-                                    </option>
-                                    <option value="csv" {{ request('format') == 'csv' ? 'selected' : '' }}>CSV</option>
-                                </select>
-                            </div>
-
                             <!-- Filter Button -->
                             <div class="col-md-1 col-sm-6 mb-2">
                                 <button type="submit" formaction="{{ route('exemptions.datalist') }}"
@@ -66,6 +54,18 @@
                             <div class="col-md-1 col-sm-6 mb-2">
                                 <a href="{{ route('exemptions.datalist') }}"
                                     class="btn btn-outline-secondary w-100">Reset</a>
+                            </div>
+
+                            <!-- Export Format -->
+                            <div class="col-md-2 col-sm-6 mb-2">
+                                <label for="format" class="form-label">Export Format</label>
+                                <select name="format" id="format" class="form-select">
+                                    <option value="">-- All Formats --</option>
+                                    <option value="pdf" {{ request('format') == 'pdf' ? 'selected' : '' }}>PDF</option>
+                                    <option value="xlsx" {{ request('format') == 'xlsx' ? 'selected' : '' }}>Excel
+                                    </option>
+                                    <option value="csv" {{ request('format') == 'csv' ? 'selected' : '' }}>CSV</option>
+                                </select>
                             </div>
 
                             <!-- Export Button -->
@@ -89,6 +89,7 @@
                                         <th>Exemption Category</th>
                                         <th>Medical Document</th>
                                         <th>Type</th>
+                                        <th>Exemption Count</th>
                                         <th>Submitted On</th>
                                     </tr>
                                 </thead>
@@ -128,6 +129,13 @@
                                                     Exemption
                                                 @else
                                                     N/A
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if ($data->exemption_count)
+                                                    {{ $data->exemption_count }}
+                                                @else
+                                                    <span class="text-muted">0</span>
                                                 @endif
                                             </td>
                                             <td>{{ \Carbon\Carbon::parse($data->created_date)->format('d-m-Y') }}</td>

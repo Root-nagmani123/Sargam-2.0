@@ -43,6 +43,7 @@
                 <th>Exemption Category</th>
                 <th>Medical Document</th>
                 <th>Application Type</th>
+                <th>Exemption Count</th>
                 <th>Submitted On</th>
             </tr>
         </thead>
@@ -65,6 +66,9 @@
                         @else
                             N/A
                         @endif
+                    </td>
+                    <td>
+                        {{ $data->exemption_count ?? 0 }}
                     </td>
                     <td>{{ \Carbon\Carbon::parse($data->created_date)->format('d-m-Y') }}</td>
                 </tr>

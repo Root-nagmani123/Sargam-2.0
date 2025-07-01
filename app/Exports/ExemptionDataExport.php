@@ -24,6 +24,7 @@ class ExemptionDataExport implements FromArray, WithHeadings
             'Exemption_name',
             'medical_exemption_doc',
             'application_type',
+            'exemption_count',
             'created_date',
         ];
 
@@ -35,6 +36,7 @@ class ExemptionDataExport implements FromArray, WithHeadings
             'Exemption Category',
             'Medical Document',
             'Application Type',
+            'Exemption Count',
             'Submitted On',
         ];
     }

@@ -141,7 +141,7 @@ class FcExemptionMasterController extends Controller
             $medicalDocPath = $request->file('medical_doc')->store('medical_docs', 'public');
         }
 
-        // ✅ Update if exists, otherwise insert
+        //  Update if exists, otherwise insert
         DB::table('fc_registration_master')->updateOrInsert(
             [
                 'contact_no' => $request->ex_mobile,
@@ -189,7 +189,8 @@ class FcExemptionMasterController extends Controller
                 'r.last_name',
                 'e.Exemption_name',
                 'r.application_type',
-                'e.Exemption_name'
+                'e.Exemption_name',
+                'r.exemption_count'
             )
             ->orderBy('r.created_date')
             ->whereIn('r.application_type', [1, 2]);  // Only show records with either registration or exemption
@@ -238,6 +239,7 @@ class FcExemptionMasterController extends Controller
                 'd.medical_exemption_doc',
                 'd.created_date',
                 'd.application_type',
+                'd.exemption_count',
                 DB::raw("COALESCE(CONCAT_WS(' ', d.first_name, d.middle_name, d.last_name)) as user_name")
             )
             // ->where('d.fc_exemption_master_pk', '!=', 0)

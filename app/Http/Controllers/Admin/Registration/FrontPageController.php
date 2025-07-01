@@ -95,11 +95,24 @@ class FrontPageController extends Controller
             //     ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
             //     ->withInput();
             return back()
-                ->withErrors(['web_auth' => 'Invalid contact number or web auth codee.'])
+                ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
                 ->withInput();
         }
 
-        // Step 3: Find the first visible form
+        // Step 3: Check if already registered (application_type = 1)
+        $alreadyRegistered = DB::table('fc_registration_master')
+            ->where('application_type', 1) // 1 = Registered
+            ->exists();
+        // dd($alreadyRegistered);
+
+        if ($alreadyRegistered) {
+            return redirect()->route('fc.choose.path')->with([
+                'warning' => 'You have already registered. Please proceed with exemption or contact support.'
+            ]);
+        }
+
+
+        // Step 4: Find the first visible form
         $form = DB::table('local_form')
             ->where('visible', 1)
             ->orderBy('id')
@@ -267,32 +280,32 @@ class FrontPageController extends Controller
 
     public function pathPageSave(Request $request)
     {
-        $request->validate([
-            'register_course' => 'required|string',
-            'apply_exemption' => 'required|string',
-            'already_registered' => 'required|string',
-            'registration_start_date' => 'nullable|date',
-            'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
-            'exemption_start_date' => 'nullable|date',
-            'exemption_end_date' => 'nullable|date|after_or_equal:exemption_start_date',
-            'faq_header.*' => 'nullable|string',
-            'faq_content.*' => 'nullable|string',
-        ]);
-
         // $request->validate([
         //     'register_course' => 'required|string',
         //     'apply_exemption' => 'required|string',
         //     'already_registered' => 'required|string',
-
-        //     'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
-        //     'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
-
-        //     'exemption_start_date' => ['nullable', 'date', 'after_or_equal:today'],
-        //     'exemption_end_date' => ['nullable', 'date', 'after_or_equal:exemption_start_date'],
-
+        //     'registration_start_date' => 'nullable|date',
+        //     'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
+        //     'exemption_start_date' => 'nullable|date',
+        //     'exemption_end_date' => 'nullable|date|after_or_equal:exemption_start_date',
         //     'faq_header.*' => 'nullable|string',
         //     'faq_content.*' => 'nullable|string',
         // ]);
+
+        $request->validate([
+            'register_course' => 'required|string',
+            'apply_exemption' => 'required|string',
+            'already_registered' => 'required|string',
+
+            'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
+
+            'exemption_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'exemption_end_date' => ['nullable', 'date', 'after_or_equal:exemption_start_date'],
+
+            'faq_header.*' => 'nullable|string',
+            'faq_content.*' => 'nullable|string',
+        ]);
         DB::beginTransaction();
 
         try {
@@ -380,13 +393,13 @@ class FrontPageController extends Controller
         $userMobile = session('fc_user_mobile');
         $webAuth = session('fc_user_web_auth');
         // Check if user has already applied for exemption
-        $hasApplied = DB::table('fc_registration_master')
-            ->where('contact_no', $userMobile)
-            ->where('web_auth', $webAuth)
-            ->where('fc_exemption_master_pk', '!=', 0) // Check if exemption is applied
-            ->exists();
+        // $hasApplied = DB::table('fc_registration_master')
+        //     ->where('contact_no', $userMobile)
+        //     ->where('web_auth', $webAuth)
+        //     ->where('fc_exemption_master_pk', '!=', 0) // Check if exemption is applied
+        //     ->exists();
 
-        $hasApplied = $hasApplied ? true : false; // Convert to boolean
+        // $hasApplied = $hasApplied ? true : false; // Convert to boolean
         // Fetch exemption categories
         $exemptions = DB::table('fc_exemption_master')
             ->where('is_notice', false)
@@ -399,7 +412,7 @@ class FrontPageController extends Controller
             ->where('is_notice', true)
             ->first();
 
-        return view('fc.exemption_category', compact('exemptions', 'notice', 'hasApplied'));
+        return view('fc.exemption_category', compact('exemptions', 'notice'));
     }
 
 
@@ -591,23 +604,23 @@ class FrontPageController extends Controller
         }
 
         // Check if exemption already applied
-        $hasApplied = DB::table('fc_registration_master')
-            ->where('contact_no', $request->ex_mobile)
-            ->where('web_auth', $request->reg_web_code)
-            ->where('fc_exemption_master_pk', '!=', 0)
-            ->exists();
+        // $hasApplied = DB::table('fc_registration_master')
+        //     ->where('contact_no', $request->ex_mobile)
+        //     ->where('web_auth', $request->reg_web_code)
+        //     ->where('fc_exemption_master_pk', '!=', 0)
+        //     ->exists();
 
 
-        if ($hasApplied) {
-            // return redirect()->back()
-            //     ->withInput()
-            //     ->with('has_applied', true); // This session value will trigger the modal
-            if ($hasApplied) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('already_applied', 'You have already applied for an exemption.');
-            }
-        }
+        // if ($hasApplied) {
+        // return redirect()->back()
+        //     ->withInput()
+        //     ->with('has_applied', true); // This session value will trigger the modal
+        //     if ($hasApplied) {
+        //         return redirect()->back()
+        //             ->withInput()
+        //             ->with('already_applied', 'You have already applied for an exemption.');
+        //     }
+        // }
 
         $username = $registration->user_id ?? null;
 
@@ -630,6 +643,15 @@ class FrontPageController extends Controller
                 // 'created_at' => now(), // This won't update if already exists
             ]
         );
+
+        //  Safely increment exemption_count if registration found
+        if ($registration && $registration->pk) {
+            DB::table('fc_registration_master')
+                ->where('pk', $registration->pk)
+                ->update([
+                    'exemption_count' => DB::raw('COALESCE(exemption_count, 0) + 1'),
+                ]);
+        }
         // Determine and update application_type if needed
         $currentAppType = $registration->application_type ?? null;
 
