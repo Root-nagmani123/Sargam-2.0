@@ -11,7 +11,7 @@
                     <div class="card">
                         <div class="card-body">
                             <!--display errors if any -->
-                            @if ($errors->any())
+                            {{-- @if ($errors->any())
                                 <div class="alert alert-danger mb-3">
                                     <ul class="mb-0">
                                         @foreach ($errors->all() as $error)
@@ -19,7 +19,7 @@
                                         @endforeach
                                     </ul>
                                 </div>
-                            @endif
+                            @endif --}}
                             <form class="row g-3" method="POST" action="{{ route('registration.verify') }}">
                                 @csrf
                                 <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">User Authentication -
@@ -77,7 +77,7 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-     @if ($errors->any())
+    @if ($errors->any())
         <script>
             let errorMessages = '';
             @foreach ($errors->all() as $error)
