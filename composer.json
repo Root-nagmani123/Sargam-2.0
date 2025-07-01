@@ -19,8 +19,7 @@
         "mpdf/mpdf": "^8.2",
         "spatie/laravel-permission": "^6.16",
         "yajra/laravel-datatables-export": "^1.2",
-        "yajra/laravel-datatables-fractal": "^10.0",
-        "yajra/laravel-datatables-oracle": "^10.11"
+        "yajra/laravel-datatables-fractal": "^10.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
