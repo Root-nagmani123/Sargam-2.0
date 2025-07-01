@@ -47,7 +47,11 @@
                                         class="m-0 delete-form" data-status="{{ $subject->active_inactive }}">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-danger text-white btn-sm">
+                                        <button type="submit" class="btn btn-danger text-white btn-sm" onclick="event.preventDefault();
+                                                if(confirm('Are you sure you want to delete this subject?')) {
+                                                    this.closest('form').submit();
+                                                }"
+                                                {{ $subject->active_inactive == 1 ? 'disabled' : '' }}>
                                             Delete
                                         </button>
                                     </form>

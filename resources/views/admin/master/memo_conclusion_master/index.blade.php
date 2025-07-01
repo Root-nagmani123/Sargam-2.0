@@ -24,7 +24,7 @@
                     </div>
                     <hr>
 
-                    <table class="table table-bordered" style="width: 100%;">
+                    <table class="table table-bordered" id="zero_config" style="width: 100%;">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -52,7 +52,7 @@
                                     </td>
                                     <td>
                                         <a href="{{ route('master.memo.conclusion.master.edit', encrypt($conclusion->pk)) }}"
-                                            class="btn btn-warning btn-sm">Edit</a>
+                                            class="btn btn-primary btn-sm">Edit</a>
 
                                         <form action="{{ route('master.memo.conclusion.master.delete', encrypt($conclusion->pk)) }}"
                                             method="POST" class="d-inline">

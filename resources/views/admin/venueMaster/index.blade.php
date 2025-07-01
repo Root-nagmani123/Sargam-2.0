@@ -42,25 +42,19 @@
                                 @foreach($venues as $key =>$venue)
                                 <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
                                     <td>{{ $key + 1 }}</td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">{{ $venue->venue_name  }}</h6>
-                                        </div>
+                                    <td>
+                                       {{ $venue->venue_name  }}
                                     </td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">{{ $venue->venue_short_name   }}</h6>
-                                        </div>
+                                    <td>
+                                      {{ $venue->venue_short_name   }}
                                     </td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">{{ $venue->description   }}</h6>
-                                        </div>
+                                    <td>
+                                       {{ $venue->description   }}
                                     </td>
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
                                             <a href="{{ route('Venue-Master.edit', $venue->venue_id) }}"
-                                                class="btn btn-success text-white btn-sm">
+                                                class="btn btn-primary text-white btn-sm">
                                                 Edit
                                             </a>
                                             <form action="{{ route('Venue-Master.destroy', $venue->venue_id) }}"
@@ -68,7 +62,11 @@
                                                     data-status="{{ $venue->active_inactive }}">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-danger text-white btn-sm">
+                                                    <button type="submit" class="btn btn-danger text-white btn-sm" onclick="event.preventDefault();
+                                                if(confirm('Are you sure you want to delete this venue?')) {
+                                                    this.closest('form').submit();
+                                                }"
+                                                {{ $venue->active_inactive == 1 ? 'disabled' : '' }}>
                                                         Delete
                                                     </button>
                                                 </form>
