@@ -7,14 +7,14 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number :" id="residencenumber" value="{{ $member->residence_no ?? old('residencenumber') }}" />
+            <x-input name="residencenumber" formLabelClass="form-label" label="Residence Number :" id="residencenumber" value="{{ $member->residence_no ?? old('residencenumber') }}" labelRequired="true" />
 
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="miscellaneous" formLabelClass="form-label" label="Other Miscellaneous Fields :" id="miscellaneous" value="{{ $member->other_miscellaneous_fields ?? old('miscellaneous') }}" />
+            <x-input name="miscellaneous" formLabelClass="form-label" label="Other Miscellaneous Fields :" id="miscellaneous" value="{{ $member->other_miscellaneous_fields ?? old('miscellaneous') }}" labelRequired="true" />
 
         </div>
     </div>

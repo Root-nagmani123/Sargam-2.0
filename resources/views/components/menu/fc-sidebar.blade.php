@@ -38,7 +38,7 @@
             <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
                 href="{{ route('forms.index') }}">
                 <iconify-icon icon="mdi:form-textbox"></iconify-icon>
-                <span class="hide-menu">Registration Form</span>
+                <span class="hide-menu">Registration Forms</span>
             </a>
         </li>
 

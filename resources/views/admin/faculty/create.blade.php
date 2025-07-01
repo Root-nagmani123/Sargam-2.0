@@ -26,6 +26,7 @@
                                         formLabelClass="form-label"
                                         :options="$facultyTypeList"
                                         required="true"
+                                        value="{{ $hostelFloorMapping->hostel_building_master_pk ?? '' }}"
                                         />
                                 </div>
                             </div>
@@ -37,6 +38,7 @@
                                         placeholder="First Name" 
                                         formLabelClass="form-label"
                                         required="true"
+                                        value="{{ $hostelFloorMapping->hostel_floor_master_pk ?? '' }}"
                                         labelRequired="true"
                                         />
                                 </div>

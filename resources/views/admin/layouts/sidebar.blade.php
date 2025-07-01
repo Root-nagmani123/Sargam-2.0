@@ -47,7 +47,7 @@
                                                 id="mini-4">
                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                    data-bs-title="Forms">
+                                                    data-bs-title="FC Forms">
                                                     <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
                                                     </iconify-icon>
                                                 </a>

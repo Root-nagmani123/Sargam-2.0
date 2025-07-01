@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
+use Carbon\Carbon;
 
 class ExemptionDataExport implements FromArray, WithHeadings
 {
@@ -15,23 +16,25 @@ class ExemptionDataExport implements FromArray, WithHeadings
     {
         $this->records = $records;
 
-        // Set the fields you want to export (these should match your DB column names or aliases)
+        // Fields to extract from each record
         $this->fields = [
             'user_name',
             'contact_no',
             'web_auth',
             'Exemption_name',
             'medical_exemption_doc',
+            'application_type',
             'created_date',
         ];
 
-        // Optional: Set readable column headings
+        // Column headings for Excel export
         $this->headings = [
             'User Name',
             'Contact No',
             'Web Code',
             'Exemption Category',
             'Medical Document',
+            'Application Type',
             'Submitted On',
         ];
     }
@@ -46,8 +49,17 @@ class ExemptionDataExport implements FromArray, WithHeadings
             foreach ($this->fields as $field) {
                 if ($field === 'medical_exemption_doc') {
                     $value = !empty($record->$field) ? 'Available' : 'Not Available';
+
                 } elseif ($field === 'created_date') {
-                    $value = \Carbon\Carbon::parse($record->created_date)->format('d-m-Y');
+                    $value = Carbon::parse($record->created_date)->format('d-m-Y');
+
+                } elseif ($field === 'application_type') {
+                    $value = match ((int) $record->application_type) {
+                        1 => 'Registration',
+                        2 => 'Exemption',
+                        default => 'Unknown',
+                    };
+
                 } else {
                     $value = $record->$field ?? 'N/A';
                 }

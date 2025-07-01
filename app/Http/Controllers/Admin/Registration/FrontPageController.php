@@ -12,6 +12,7 @@ use App\Models\PathPage;
 use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
 use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 
 class FrontPageController extends Controller
@@ -90,8 +91,11 @@ class FrontPageController extends Controller
             ->first();
         // @dd($registration);
         if (!$registration) {
+            // return back()
+            //     ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
+            //     ->withInput();
             return back()
-                ->withErrors(['web_auth' => 'Invalid contact number or web auth code.'])
+                ->withErrors(['web_auth' => 'Invalid contact number or web auth codee.'])
                 ->withInput();
         }
 
@@ -115,8 +119,12 @@ class FrontPageController extends Controller
         ]);
 
         // Step 5: Redirect to form
-        return redirect()->route('fc.choose.path')->with([
-            'success' => 'Login successful. You can now create your credentials.'
+        // return redirect()->route('credential.registration.create')->with([
+        //     'success' => 'You have been successfully authenticated. Please create your credentials.'
+        // ]);
+
+        return redirect()->route('credential.registration.create')->with([
+            'sweet_success' => 'You have been successfully authenticated. Please create your credentials.'
         ]);
     }
 
@@ -129,6 +137,7 @@ class FrontPageController extends Controller
     // Store user credentials
     public function credential_store(Request $request)
     {
+        // @dd($request->all());
         $request->validate([
             'reg_name' => 'required|string|max:100|unique:user_credentials,user_name',
             'reg_mobile' => 'required|digits:10',
@@ -160,7 +169,28 @@ class FrontPageController extends Controller
             'Active_inactive' => 1,
         ]);
 
-        return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
+        $currentAppType = DB::table('fc_registration_master')
+            ->where('contact_no', $request->ex_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->value('application_type');
+
+        // Treat null as 0
+        $currentAppType = $currentAppType ?? 0;
+
+        // Set to 1 only if current is 0 or 2
+        $newAppType = ($currentAppType == 0 || $currentAppType == 2) ? 1 : $currentAppType;
+        // dd($newAppType);
+
+        // Update only if needed
+        if ($newAppType != $currentAppType) {
+            DB::table('fc_registration_master')
+                ->where('contact_no', $request->reg_mobile)
+                // ->where('web_auth', $request->reg_web_code)
+                ->update(['application_type' => $newAppType]);
+        }
+
+        // return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
+        return redirect()->route('fc.login')->with('sweet_success', 'Credentials created successfully.');
     }
 
     // Show the login form
@@ -241,38 +271,60 @@ class FrontPageController extends Controller
             'register_course' => 'required|string',
             'apply_exemption' => 'required|string',
             'already_registered' => 'required|string',
+            'registration_start_date' => 'nullable|date',
+            'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
+            'exemption_start_date' => 'nullable|date',
+            'exemption_end_date' => 'nullable|date|after_or_equal:exemption_start_date',
             'faq_header.*' => 'nullable|string',
             'faq_content.*' => 'nullable|string',
         ]);
 
+        // $request->validate([
+        //     'register_course' => 'required|string',
+        //     'apply_exemption' => 'required|string',
+        //     'already_registered' => 'required|string',
+
+        //     'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+        //     'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
+
+        //     'exemption_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+        //     'exemption_end_date' => ['nullable', 'date', 'after_or_equal:exemption_start_date'],
+
+        //     'faq_header.*' => 'nullable|string',
+        //     'faq_content.*' => 'nullable|string',
+        // ]);
         DB::beginTransaction();
+
         try {
-            $pathPage = PathPage::first();
+            // Check if record exists
+            $existingPage = PathPage::first();
 
-            if ($pathPage) {
-                $pathPage->update([
+            // Update or create the Path Page
+            $pathPage = PathPage::updateOrCreate(
+                ['id' => $existingPage?->id], // use null-safe operator
+                [
                     'register_course' => $request->register_course,
                     'apply_exemption' => $request->apply_exemption,
                     'already_registered' => $request->already_registered,
-                ]);
+                    'registration_start_date' => $request->registration_start_date ? Carbon::parse($request->registration_start_date)->format('Y-m-d') : null,
+                    'registration_end_date' => $request->registration_end_date ? Carbon::parse($request->registration_end_date)->format('Y-m-d') : null,
+                    'exemption_start_date' => $request->exemption_start_date ? Carbon::parse($request->exemption_start_date)->format('Y-m-d') : null,
+                    'exemption_end_date' => $request->exemption_end_date ? Carbon::parse($request->exemption_end_date)->format('Y-m-d') : null,
+                ]
+            );
 
-                // Delete old FAQs
-                $pathPage->faqs()->delete();
-            } else {
-                $pathPage = PathPage::create([
-                    'register_course' => $request->register_course,
-                    'apply_exemption' => $request->apply_exemption,
-                    'already_registered' => $request->already_registered,
-                ]);
-            }
+            // Remove old FAQs
+            $pathPage->faqs()->delete();
 
-            // Insert new FAQs
+            // Re-insert FAQs
             foreach ($request->faq_header ?? [] as $index => $header) {
-                if ($header || ($request->faq_content[$index] ?? null)) {
+                $content = $request->faq_content[$index] ?? null;
+
+                if ($header || $content) {
                     PathPageFaq::create([
                         'path_page_id' => $pathPage->id,
                         'header' => $header,
-                        'content' => $request->faq_content[$index] ?? '',
+                        'content' => $content,
                     ]);
                 }
             }
@@ -281,14 +333,18 @@ class FrontPageController extends Controller
             return back()->with('success', 'Path Page saved successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Error occurred while saving.');
+
+            // Optional: log the error for debugging
+            \Log::error('PathPage Save Error: ' . $e->getMessage());
+
+            return back()->with('error', 'An error occurred while saving the Path Page.');
         }
     }
 
     //destroy method for path page faq
     public function destroyFaq($id)
     {
-        DB::table('path_page_faqs')->where('id', $id)->delete();
+        DB::table('fc_path_page_faqs')->where('id', $id)->delete();
 
         return back()->with('success', 'FAQ deleted successfully.');
     }
@@ -473,7 +529,6 @@ class FrontPageController extends Controller
     // apply exemption store
     public function apply_exemptionstore(Request $request)
     {
-        // dd($request->all());
         $rules = [
             'ex_mobile' => 'required|digits_between:7,15',
             'reg_web_code' => 'required|string',
@@ -535,6 +590,25 @@ class FrontPageController extends Controller
                 ->withInput();
         }
 
+        // Check if exemption already applied
+        $hasApplied = DB::table('fc_registration_master')
+            ->where('contact_no', $request->ex_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->where('fc_exemption_master_pk', '!=', 0)
+            ->exists();
+
+
+        if ($hasApplied) {
+            // return redirect()->back()
+            //     ->withInput()
+            //     ->with('has_applied', true); // This session value will trigger the modal
+            if ($hasApplied) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('already_applied', 'You have already applied for an exemption.');
+            }
+        }
+
         $username = $registration->user_id ?? null;
 
         $medicalDocPath = null;
@@ -556,6 +630,15 @@ class FrontPageController extends Controller
                 // 'created_at' => now(), // This won't update if already exists
             ]
         );
+        // Determine and update application_type if needed
+        $currentAppType = $registration->application_type ?? null;
+
+        if ($currentAppType === 0 || $currentAppType === '0' || $currentAppType === 1 || $currentAppType === '1') {
+            DB::table('fc_registration_master')
+                ->where('contact_no', $request->ex_mobile)
+                ->where('web_auth', $request->reg_web_code)
+                ->update(['application_type' => 2]);
+        }
 
         return redirect()->route('fc.thank_you')->with('success', 'Exemption form submitted successfully.');
     }
@@ -587,7 +670,10 @@ class FrontPageController extends Controller
             ->where('mobile_no', $request->mobile_number)
             ->first();
         if (!$user) {
-            return back()->withErrors(['mobile_number' => 'Mobile number not found.'])->withInput();
+            // return back()->withErrors(['mobile_number' => 'Mobile number not found.'])->withInput();
+            return back()
+                ->withErrors(['mobile_number' => 'Mobile number not found.'])
+                ->withInput();
         }
 
         // Update password
@@ -597,6 +683,43 @@ class FrontPageController extends Controller
                 'jbp_password' => Hash::make($request->new_password),
             ]);
 
-        return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
+        // return redirect()->route('fc.login')->with('success', 'Password reset successful. Please login with new credentials.');
+        return redirect()->route('fc.login')
+            ->with('sweet_success', 'Password reset successful. Please login with new credentials.');
+    }
+
+    //verify web auth forgot password
+    public function verifyWebAuth(Request $request)
+    {
+
+        // @dd($request->all());
+        $request->validate([
+            'mobile_number' => 'required|digits:10',
+            'web_auth' => 'required|string',
+        ]);
+
+        // Step 1: Check if the mobile number and web_auth exist in fc_registration_master
+        $user = DB::table('fc_registration_master')
+            ->where('contact_no', $request->mobile_number)
+            ->where('web_auth', $request->web_auth)
+            ->first();
+
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Invalid credentials.']);
+        }
+
+        // Step 2: Get the corresponding username from user_credentials
+        $credentials = DB::table('user_credentials')
+            ->where('mobile_no', $request->mobile_number)
+            ->first();
+
+        if (!$credentials) {
+            return response()->json(['success' => false, 'message' => 'User credentials not found.']);
+        }
+
+        return response()->json([
+            'success' => true,
+            'user_name' => $credentials->user_name,
+        ]);
     }
 }

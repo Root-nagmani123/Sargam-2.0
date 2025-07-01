@@ -8,7 +8,8 @@
             label="Address :" 
             formLabelClass="form-label" 
             formInputClass="form-control" 
-            value="{{ $member->current_address ?? '' }}"/>
+            value="{{ $member->current_address ?? '' }}"
+            labelRequired="true" />
         </div>
     </div>
     <div class="col-md-6">
@@ -16,7 +17,7 @@
             @php
                 $countryOptions = App\Models\Country::getCountryList();
             @endphp
-            <x-select name="country" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" :value="$member->country_master_pk" />
+            <x-select name="country" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" :value="$member->country_master_pk" labelRequired="true" />
 
         </div>
     </div>
@@ -25,7 +26,7 @@
             @php
                 $stateOptions = App\Models\State::getStateList();
             @endphp
-            <x-select name="state" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" :value="$member->state_master_pk" />
+            <x-select name="state" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" :value="$member->state_master_pk" labelRequired="true" />
         </div>
     </div>
     <div class="col-md-6">
@@ -41,12 +42,12 @@
             @php
                 $cityOptions = App\Models\City::getCityList();
             @endphp
-            <x-select name="city" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" :value="$member->city ?? ''" />
+            <x-select name="city" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" :value="$member->city ?? ''" labelRequired="true" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <x-input name="postal" label="Postal Code :" formLabelClass="form-label" formInputClass="form-control" value="{{ $member->zipcode ?? '' }}" />
+            <x-input name="postal" label="Postal Code :" formLabelClass="form-label" formInputClass="form-control" value="{{ $member->zipcode ?? '' }}" labelRequired="true" />
         </div>
     </div>
 </div>
@@ -63,7 +64,7 @@
 <div class="row">
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="permanentaddress">Address :</label>
+            <label class="form-label" for="permanentaddress">Address : <span class="text-danger">*</span></label>
             <input type="text" name="permanentaddress" id="permanentaddress" class="form-control" value="{{ $member->permanent_address ?? '' }}">
         </div>
     </div>
@@ -72,7 +73,7 @@
             @php
                 $countryOptions = App\Models\Country::getCountryList();
             @endphp
-            <x-select name="permanentcountry" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" :value="$member->pcountry_master_pk ?? ''" />
+            <x-select name="permanentcountry" label="Country :" formLabelClass="form-label" formSelectClass="form-select" :options="$countryOptions ?? []" :value="$member->pcountry_master_pk ?? ''" labelRequired="true" />
         </div>
     </div>
     <div class="col-md-6">
@@ -80,7 +81,7 @@
             @php
                 $stateOptions = App\Models\State::getStateList();
             @endphp
-            <x-select name="permanentstate" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" :value="$member->pstate_master_pk ?? ''" />
+            <x-select name="permanentstate" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" :value="$member->pstate_master_pk ?? ''" labelRequired="true" />
         </div>
     </div>
     <div class="col-md-6">
@@ -96,12 +97,12 @@
             @php
                 $cityOptions = App\Models\City::getCityList();
             @endphp
-            <x-select name="permanentcity" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" :value="$member->pcity ?? ''" />
+            <x-select name="permanentcity" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" :value="$member->pcity ?? ''" labelRequired="true" />
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="permanentpostal">Postal Code :</label>
+            <label class="form-label" for="permanentpostal">Postal Code : <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="permanentpostal" name="permanentpostal" value="{{ $member->pzipcode ?? '' }}">
         </div>
     </div>
@@ -111,19 +112,19 @@
 <div class="row">
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="personalemail">Personal Email :</label>
+            <label class="form-label" for="personalemail">Personal Email : <span class="text-danger">*</span></label>
             <input type="email" name="personalemail" id="personalemail" class="form-control" value="{{ $member->email ?? '' }}">
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="officialemail">Official Email :</label>
+            <label class="form-label" for="officialemail">Official Email : <span class="text-danger">*</span></label>
            <input type="email" name="officialemail" id="officialemail" class="form-control" value="{{ $member->officalemail ?? '' }}">
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <label class="form-label" for="mnumber">Mobile Number :</label>
+            <label class="form-label" for="mnumber">Mobile Number : <span class="text-danger">*</span></label>
             <input type="number" name="mnumber" id="mnumber" class="form-control" value="{{ $member->mobile ?? '' }}">
         </div>
     </div>
