@@ -240,7 +240,7 @@ class FcExemptionMasterController extends Controller
                 'd.application_type',
                 DB::raw("COALESCE(CONCAT_WS(' ', d.first_name, d.middle_name, d.last_name)) as user_name")
             )
-            ->where('d.fc_exemption_master_pk', '!=', 0)
+            // ->where('d.fc_exemption_master_pk', '!=', 0)
             ->whereIn('d.application_type', [1, 2]) // Always restrict to valid types
             ->when($filter, function ($query, $filter) {
                 return $query->where('e.Exemption_name', $filter);
