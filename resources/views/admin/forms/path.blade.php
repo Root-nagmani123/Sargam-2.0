@@ -10,27 +10,13 @@
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
-    <div class="container-fluid">
         <div class="container-fluid">
             <!-- Page Header -->
-            <div class="card card-body py-3">
-                <div class="row align-items-center">
-                    <div class="col-12 d-flex justify-content-between">
-                        <h4 class="mb-0 card-title">Path Page</h4>
-                        <nav aria-label="breadcrumb">
-                            <ol class="breadcrumb mb-0">
-                                <li class="breadcrumb-item">
-                                    <a href="{{ url('/') }}" class="text-muted">Home</a>
-                                </li>
-                                <li class="breadcrumb-item active">Path Page</li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
-            </div>
+            <x-breadcrum title="Path Page" />
+        <x-session_message />
 
             <!-- Form Card -->
-            <div class="card mt-3">
+            <div class="card" style="border-left: 4px solid #004a93;">
                 <div class="card-body">
                     <h4 class="card-title mb-3">Create Path Page</h4>
                     <hr>
