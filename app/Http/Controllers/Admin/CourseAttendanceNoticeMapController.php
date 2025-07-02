@@ -193,7 +193,6 @@ function store_memo_notice(Request $request){
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
 }
-<<<<<<< HEAD
 public function deleteMemoNotice($id)
 {
     try {
@@ -202,8 +201,6 @@ public function deleteMemoNotice($id)
         if (!$memoNotice) {
             return redirect()->back()->with('error', 'Memo/Notice not found.');
         }
-=======
->>>>>>> 182e6952 (memo bug solve)
 
         DB::table('student_notice_status')->where('pk', $id)->delete();
 
