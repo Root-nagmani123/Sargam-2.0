@@ -1,12 +1,12 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Exemption Data - Sargam | Lal Bahadur')
+@section('title', 'User Registration and Exemption Summary - Sargam | Lal Bahadur')
 
 @section('content')
     <div class="container-fluid">
 
         <!-- Header Card -->
-        <x-breadcrum title="Exemption Data" />
+        <x-breadcrum title="User Registration and Exemption Summary" />
         <x-session_message />
         <div class="datatables">
             <!-- start Zero Configuration -->

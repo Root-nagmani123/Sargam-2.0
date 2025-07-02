@@ -152,7 +152,16 @@ class FrontPageController extends Controller
     {
         // @dd($request->all());
         $request->validate([
-            'reg_name' => 'required|string|max:100|unique:user_credentials,user_name',
+            // 'reg_name' => 'required|string|max:100|unique:user_credentials,user_name',
+            'reg_name' => [
+                'required',
+                'string',
+                'min:6',
+                'max:20',
+                'regex:/^(?=.{6,20}$)(?!.*[_.]{2})[a-zA-Z][a-zA-Z0-9._]*[a-zA-Z0-9]$/',
+                'unique:user_credentials,user_name',
+            ],
+
             'reg_mobile' => 'required|digits:10',
 
             'reg_password' => [
@@ -163,12 +172,20 @@ class FrontPageController extends Controller
             ],
             'reg_confirm_password' => 'required|same:reg_password',
         ], [
+            'reg_name.regex' => 'username must start with a letter and can contain letters, numbers, dots, and underscores. 
+            No consecutive dots/underscores or ending with special characters.',
             'reg_name.unique' => 'The username has already been taken.',
             'reg_mobile.required' => 'Mobile number is required.',
             'reg_mobile.digits' => 'Mobile number must be 10 digits.',
             'reg_password.min' => 'The password must be at least 6 characters.',
             'reg_password.regex' => 'The password must contain at least one special character.',
             'reg_confirm_password.same' => 'The confirm password and password must match.',
+        ], [
+            // Define custom field labels
+            'reg_name' => 'Username',
+            'reg_mobile' => 'Mobile number',
+            'reg_password' => 'Password',
+            'reg_confirm_password' => 'Confirm password',
         ]);
 
 
