@@ -10,7 +10,7 @@
 
     <div class="row justify-content-center">
         <div class="col-md-12">
-            <div class="card">
+            <div class="card" style="border-left: 4px solid #004a93;">
                 <div class="card-header">Create New User</div>
                 @foreach ($errors->all() as $error)
                 <p class="text-danger">{{ $error }}</p>

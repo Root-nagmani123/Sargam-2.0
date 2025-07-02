@@ -8,7 +8,7 @@
     <x-breadcrum title="Group Mapping" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">
                 {{ !empty($groupMapping) ? 'Edit Group Mapping' : 'Add Group Mapping' }}

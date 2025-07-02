@@ -5,31 +5,10 @@
 @section('content')
 
 <div class="container-fluid">
-    <div class="card card-body py-3">
-        <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Edit Module</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="index.html">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    Module
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
-        </div>
-    </div>
+     <x-breadcrum title="Subject module" />
+    <x-session_message />
     <!-- start Vertical Steps Example -->
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">Edit Module</h4>
             <hr>
@@ -38,7 +17,7 @@
                 @method('PUT')
                 
                 <div class="row">
-                    <div class="col-sm-10">
+                    <div class="col-6">
                         <label for="module_name" class="form-label">Module Name :</label>
                         <div class="mb-3">
                             <input type="text" 
@@ -53,7 +32,7 @@
                         </div>
                     </div>
 
-                    <div class="col-sm-10">
+                    <div class="col-6">
                         <label for="active_inactive" class="form-label">Status :</label>
                         <div class="mb-3">
                             <select class="form-select" id="active_inactive" name="active_inactive" required>
@@ -68,10 +47,9 @@
                 </div>
 
                 <hr>
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                        <i class="material-icons menu-icon">send</i> Update
-                    </button>
+                <div class="mb-3 text-end gap-3">
+                    <button class="btn btn-primary" type="submit">Update</button>
+                    <a href="{{ route('subject-module.index') }}" class="btn btn-secondary">Back</a>
                 </div>
             </form>
         </div>
