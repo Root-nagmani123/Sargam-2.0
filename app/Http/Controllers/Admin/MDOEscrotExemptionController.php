@@ -30,7 +30,11 @@ class MDOEscrotExemptionController extends Controller
 
     public function edit($id)
     {
-        return view('admin.mdo_escrot_exemption.edit', compact('id'));
+        $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
+
+        $mdoDutyType = MDOEscotDutyMap::findOrFail($id);
+
+        return view('admin.mdo_escrot_exemption.edit', compact('id', 'MDODutyTypeMaster', 'mdoDutyType'));
     }
 
     function store(MDOEscrotExemptionRequest $request)
@@ -88,5 +92,16 @@ class MDOEscrotExemptionController extends Controller
             return response()->json(['status' => false, 'message' => 'Error occurred while fetching student list.']);
         }
     }
+
+    function update(Request $request) {
+        try{
+            
+            $mdoDutyType = MDOEscotDutyMap::findOrFail(decrypt($request->pk));
+            $mdoDutyType->update($request->only('mdo_duty_type_master_pk', 'mdo_date', 'Time_from', 'Time_to'));
+
+            return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO Escrot Exemption updated successfully.');
+        } catch (\Exception $e) {
+            return response()->json(['status' => false, 'message' => 'Error occurred while updating MDO Escrot Exemption.']);
+        }
+    }
 }
-//

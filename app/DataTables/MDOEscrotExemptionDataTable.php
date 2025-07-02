@@ -37,12 +37,24 @@ class MDOEscrotExemptionDataTable extends DataTable
                     $q->where('mdo_duty_type_name', 'like', "%{$keyword}%");
                 });
             })
-            ->rawColumns(['student_name', 'course_name', 'mdo_name']);
+            ->addColumn('actions', function ($row) {
+                $editUrl = route('mdo-escrot-exemption.edit', $row->pk);
+                $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
+                return '
+                    <a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>
+                    <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
+                        ' . csrf_field() . '
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                ';
+            })
+            ->rawColumns(['student_name', 'course_name', 'mdo_name', 'actions']);
     }
 
     public function query(): QueryBuilder
     {
-        return MDOEscotDutyMap::with(['courseMaster', 'mdoDutyTypeMaster', 'studentMaster'])->newQuery();
+        return MDOEscotDutyMap::with(['courseMaster', 'mdoDutyTypeMaster', 'studentMaster'])->orderBy('pk', 'desc')->newQuery();
     }
 
     public function html(): HtmlBuilder
@@ -72,6 +84,7 @@ class MDOEscrotExemptionDataTable extends DataTable
             Column::make('course_name')->title('Programme Name')->addClass('text-center'),
             Column::make('mdo_name')->title('MDO Name')->addClass('text-center'),
             Column::make('Remark')->title('Remarks')->addClass('text-center'),
+            Column::computed('actions')->title('Actions')->addClass('text-center'),
         ];
     }
 
