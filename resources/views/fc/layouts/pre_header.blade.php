@@ -22,6 +22,10 @@
             margin: 0;
             padding: 0;
             background: linear-gradient(to bottom, #f1f7fd 25%, #fff 75%);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-height: 100vh;
         }
 
         .top-header {
