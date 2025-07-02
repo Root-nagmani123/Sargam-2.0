@@ -75,7 +75,7 @@
                                <a class="nav-link ms-4 me-4" href="#">About Us</a>
                            </li>
                            <li class="nav-item">
-                               <a class="nav-link ms-4 me-4" href="#">FAQs</a>
+                               <a class="nav-link ms-4 me-4" href="#">Contact</a>
                            </li>
                            <li class="nav-item">
                                <a class="btn btn-outline-primary ms-4" href="{{ route('fc.login') }}">Login</a>
