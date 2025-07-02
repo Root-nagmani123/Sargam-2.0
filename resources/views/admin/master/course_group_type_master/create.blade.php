@@ -8,7 +8,7 @@
     <x-breadcrum title="Course Group Type" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">
                 {{ !empty($courseGroupTypeMaster) ? 'Edit Course Group Type' : 'Add Course Group Type' }}
@@ -35,6 +35,7 @@
                     </div>
                     
                 </div>
+                <hr>
                 <div class="mb-3">
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit" id="saveClassSessionForm">
                         <i class="material-icons menu-icon">save</i>
