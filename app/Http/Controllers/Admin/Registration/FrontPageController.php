@@ -101,9 +101,11 @@ class FrontPageController extends Controller
 
         // Step 3: Check if already registered (application_type = 1)
         $alreadyRegistered = DB::table('fc_registration_master')
-            ->where('application_type', 1) // 1 = Registered
+            ->where('contact_no', $request->reg_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->where('is_registered', 1) // Only block if truly registered
             ->exists();
-        // dd($alreadyRegistered);
+
 
         if ($alreadyRegistered) {
             return redirect()->route('fc.choose.path')->with([
@@ -189,34 +191,32 @@ class FrontPageController extends Controller
         ]);
 
 
-
-        DB::table('user_credentials')->insert([
-            'user_name' => $request->reg_name,
-            'mobile_no' => $request->reg_mobile, // <-- store mobile
-            'jbp_password' => Hash::make($request->reg_password), // Store hashed password
-            'reg_date' => now(),
-            'last_login' => now(),
-            'Active_inactive' => 1,
-        ]);
-
-        $currentAppType = DB::table('fc_registration_master')
+        $registration = DB::table('fc_registration_master')
             ->where('contact_no', $request->ex_mobile)
             ->where('web_auth', $request->reg_web_code)
-            ->value('application_type');
+            ->first();
 
-        // Treat null as 0
-        $currentAppType = $currentAppType ?? 0;
+        $currentAppType = $registration->application_type ?? 0;
+        $isRegistered   = $registration->is_registered ?? 0;
 
-        // Set to 1 only if current is 0 or 2
+        // Prevent duplicate registration
+        if ($isRegistered == 1) {
+            return back()->withErrors(['reg_mobile' => 'This mobile number is already registered.'])->withInput();
+        }
+
+        // Determine if we need to update the type to "registered"
         $newAppType = ($currentAppType == 0 || $currentAppType == 2) ? 1 : $currentAppType;
-        // dd($newAppType);
 
-        // Update only if needed
-        if ($newAppType != $currentAppType) {
+        // Update only if necessary
+        if ($newAppType != $currentAppType || $isRegistered == 0) {
+
             DB::table('fc_registration_master')
                 ->where('contact_no', $request->reg_mobile)
                 // ->where('web_auth', $request->reg_web_code)
-                ->update(['application_type' => $newAppType]);
+                ->update([
+                    'application_type' => $newAppType,
+                    'is_registered' => 1, //  mark registration
+                ]);
         }
 
         // return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
@@ -297,18 +297,6 @@ class FrontPageController extends Controller
 
     public function pathPageSave(Request $request)
     {
-        // $request->validate([
-        //     'register_course' => 'required|string',
-        //     'apply_exemption' => 'required|string',
-        //     'already_registered' => 'required|string',
-        //     'registration_start_date' => 'nullable|date',
-        //     'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
-        //     'exemption_start_date' => 'nullable|date',
-        //     'exemption_end_date' => 'nullable|date|after_or_equal:exemption_start_date',
-        //     'faq_header.*' => 'nullable|string',
-        //     'faq_content.*' => 'nullable|string',
-        // ]);
-
         $request->validate([
             'register_course' => 'required|string',
             'apply_exemption' => 'required|string',
@@ -386,24 +374,6 @@ class FrontPageController extends Controller
         return view('fc.all-faqs', compact('faqs'));
     }
 
-
-    // Show exemption categories and important notice
-    // public function showExemptionCategory()
-    // {
-    //     // Fetch all exemption categories except the notice
-    //     $exemptions = DB::table('fc_exemption_master')
-    //         ->where('is_notice', false)
-    //         ->where('visible', true) // Assuming you have an is_active column to filter active categories
-    //         ->orderBy('pk')
-    //         ->get();
-
-    //     // Fetch the important notice if it exists
-    //     $notice = DB::table('fc_exemption_master')
-    //         ->where('is_notice', true)
-    //         ->first();
-
-    //     return view('fc.exemption_category', compact('exemptions', 'notice'));
-    // }
 
     public function showExemptionCategory(Request $request)
     {
