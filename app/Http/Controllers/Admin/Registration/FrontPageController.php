@@ -219,6 +219,19 @@ class FrontPageController extends Controller
                 ]);
         }
 
+        $hashedPassword = Hash::make($request->reg_password);
+
+        DB::table('user_credentials')->updateOrInsert(
+            ['mobile_no' => $request->reg_mobile], // Condition to find existing user by mobile
+            [
+                'user_name' => $request->reg_name,
+                'jbp_password' => $hashedPassword,
+                'reg_date' => now(),
+                'Active_inactive' => 1,
+                'last_login' => now(), // Optional: include this if needed
+            ]
+        );
+
         // return redirect()->route('fc.login')->with('success', 'Credentials created successfully.');
         return redirect()->route('fc.login')->with('sweet_success', 'Credentials created successfully.');
     }
