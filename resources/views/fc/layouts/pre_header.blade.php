@@ -11,7 +11,6 @@
     href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
     rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
 
 <style>
 body {
@@ -24,6 +23,9 @@ body {
     background-position: center;
     background-repeat: no-repeat;
     background-size: cover;
+    display: flex;
+        flex-direction: column;
+        min-height: 100vh;
 }
 
 .top-header {

@@ -289,9 +289,9 @@ Route::prefix('admin/course-memo-decision')
     });
 });
 
-// Route::get('/fc', function () {
-//     return view('admin.forms.fc');
-// })->name('fc');
+Route::get('/user/chat', function () {
+    return view('admin.courseAttendanceNoticeMap.chat');
+})->name('admin.courseAttendanceNoticeMap.chat');
 
 // //fc front page route
 // Route::get('/fc-front', function () {
