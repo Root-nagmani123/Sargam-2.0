@@ -108,12 +108,12 @@
                                 @foreach ($pathPage->faqs as $faq)
                                     <div class="row mb-3" data-id="{{ $faq->id }}">
                                         <div class="col-5">
-                                            <label for="" class="form-label">Accordian Header</label>
+                                            <label for="" class="form-label">Question</label>
                                             <input type="text" name="faq_header[]" class="form-control"
                                                 value="{{ $faq->header }}">
                                         </div>
                                         <div class="col-6">
-                                            <label for="" class="form-label">Accordian Content</label>
+                                            <label for="" class="form-label">Answer</label>
                                             <textarea name="faq_content[]" class="form-control" rows="2">{{ $faq->content }}</textarea>
                                         </div>
                                         <div class="col-1 text-end align-self-end">
@@ -127,21 +127,21 @@
                             @else
                                 <!-- <div class="row faq-item align-items-end">
                                             <div class="col-md-5 mb-3">
-                                                <label class="form-label fw-semibold">Accordion Header</label>
+                                                <label class="form-label fw-semibold">Question</label>
                                                 <input type="text" name="faq_header[]" class="form-control">
                                             </div>
                                             <div class="col-md-5 mb-3">
-                                                <label class="form-label fw-semibold">Accordion Content</label>
+                                                <label class="form-label fw-semibold">Answer</label>
                                                 <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
                                             </div>
                                         </div> -->
                                 <div class="row mb-3">
                                     <div class="col-md-5">
-                                        <label class="form-label">Accordion Header</label>
+                                        <label class="form-label">Question</label>
                                         <input type="text" name="faq_header[]" class="form-control">
                                     </div>
                                     <div class="col-md-5 ">
-                                        <label class="form-label">Accordion Content</label>
+                                        <label class="form-label">Answer</label>
                                         <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
                                     </div>
                                 </div>
@@ -189,11 +189,11 @@
                     const newFaq = `
                     <div class="row faq-item mb-3">
                         <div class="col-md-5">
-                            <label class="form-label fw-semibold">Accordion Header</label>
+                            <label class="form-label fw-semibold">Question</label>
                             <input type="text" name="faq_header[]" class="form-control">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Accordion Content</label>
+                            <label class="form-label fw-semibold">Answer</label>
                             <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
                         </div>
                         <div class="col-md-1 text-end align-self-end">
