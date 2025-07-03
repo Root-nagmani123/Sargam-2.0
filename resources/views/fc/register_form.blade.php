@@ -10,7 +10,6 @@
         integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
     <!-- Icon library (Bootstrap Icons or Lucide) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="asset/css/accesibility-style_v1.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -305,20 +304,21 @@
 
                     <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                         <ul class="navbar-nav align-items-center">
-                            <li class="nav-item">
+                            <!-- <li class="nav-item">
                                 <a class="nav-link ms-4 me-4" href="#">About Us</a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link ms-4 me-4" href="#">FAQs</a>
-                            </li>
+                            </li> -->
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
                                     id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="material-icons" style="color: #004a93;">account_circle</i>
+                                    <i class="material-icons" style="color: #004a93;">account_circle</i> 
+                                    <span class="ms-2">{{ Auth::user()->name }}</span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
-                                    {{-- <li><a class="dropdown-item" href="#">Profile</a></li> --}}
-                                    {{-- <li><a class="dropdown-item" href="#">Settings</a></li> --}}
+                                    <!-- <li><a class="dropdown-item" href="#">Profile</a></li> -->
+                                    <!-- <li><a class="dropdown-item" href="#">Settings</a></li> -->
                                     <li>
                                         <form action="{{ route('logout') }}" method="POST">
                                             @csrf

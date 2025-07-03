@@ -118,6 +118,14 @@
             </a>
         </li>
         <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('admin.courseAttendanceNoticeMap.chat') }}" id="get-url"
+                aria-expanded="false">
+                <iconify-icon icon="solar:feed-bold-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Memo Notice Chat (User)</span>
+            </a>
+        </li>
+        <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('course.memo.decision.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
                 </iconify-icon>
