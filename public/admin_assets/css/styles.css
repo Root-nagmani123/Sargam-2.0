@@ -13540,7 +13540,7 @@
     --bs-light-gray: #f4f7fb;
     --bs-purple: #6f42c1;
     --bs-cyan: #539bff;
-    --bs-primary-rgb: 99, 91, 255;
+    --bs-primary-rgb: 0, 74, 147;
     --bs-secondary-rgb: 22, 205, 199;
     --bs-success-rgb: 54, 199, 108;
     --bs-info-rgb: 70, 202, 235;
@@ -13563,7 +13563,7 @@
     --bs-danger-text-emphasis: shade-color(#ff6692, 60%);
     --bs-light-text-emphasis: #f6f7f9;
     --bs-dark-text-emphasis: #29343d;
-    --bs-primary-bg-subtle: #dddbff;
+    --bs-primary-bg-subtle: #b3d5f7;
     --bs-secondary-bg-subtle: #a6f7f5;
     --bs-success-bg-subtle: #ebfaf0;
     --bs-info-bg-subtle: rgba(70, 202, 235, 0.2);
@@ -13663,7 +13663,7 @@
     --bs-danger-text-emphasis: #ffa3be;
     --bs-light-text-emphasis: #f6f7f9;
     --bs-dark-text-emphasis: #dfe5ef;
-    --bs-primary-bg-subtle: rgba(99, 91, 255, 0.2);
+    --bs-primary-bg-subtle: rgba(0, 74, 147, 0.2);
     --bs-secondary-bg-subtle: rgba(22, 205, 199, 0.2);
     --bs-success-bg-subtle: rgba(54, 199, 108, 0.2);
     --bs-info-bg-subtle: rgba(70, 202, 235, 0.2);
@@ -40991,7 +40991,7 @@ body pre[class*="language-"] {
     width: 100% !important;
 }
 .chat-box {
-    width: calc(100% - 300px);
+    width: calc(100%);
 }
 .chat-box .chat-box-inner {
     height: 650px;

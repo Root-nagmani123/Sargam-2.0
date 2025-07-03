@@ -25,7 +25,7 @@ class CourseAttendanceNoticeMapController extends Controller
             'student_notice_status.subject_master_pk','student_notice_status.subject_topic',
             'student_notice_status.venue_id', 'student_notice_status.class_session_master_pk','student_notice_status.faculty_master_pk','student_notice_status.message','student_notice_status.notice_memo',
             'student_notice_status.status',
-            'sm.display_name as student_name','t.subject_topic as topic_name',)
+            'sm.display_name as student_name','sm.pk as student_id','t.subject_topic as topic_name',)
                     ->get();
                     // print_r($memos);die;
          return view('admin.courseAttendanceNoticeMap.index', compact('memos'));
