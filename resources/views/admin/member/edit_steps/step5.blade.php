@@ -23,11 +23,13 @@
             <label class="form-label" for="picture">Upload Picture :</label>
             <input type="file" class="form-control" id="picture" name="picture">
         </div>
+        {!! $member->profile_picture ? '<a href="' . asset('storage/' . $member->profile_picture) . '" target="_blank" class="btn btn-primary">View Picture</a>' : '' !!}
     </div>
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="additionaldocument">Additional Document Upload :</label>
             <input type="file" class="form-control" id="additionaldocument" name="additionaldocument">
         </div>
+        {!! $member->additional_doc_upload ? '<a href="' . asset('storage/' . $member->additional_doc_upload) . '" target="_blank" class="btn btn-primary">View Document</a>' : '' !!}
     </div>
 </div>
