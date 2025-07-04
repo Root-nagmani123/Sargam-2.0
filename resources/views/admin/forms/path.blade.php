@@ -129,15 +129,15 @@
                             @endforeach
                         @else
                             <!-- <div class="row faq-item align-items-end">
-                                                        <div class="col-md-5 mb-3">
-                                                            <label class="form-label fw-semibold">Accordion Header</label>
-                                                            <input type="text" name="faq_header[]" class="form-control">
-                                                        </div>
-                                                        <div class="col-md-5 mb-3">
-                                                            <label class="form-label fw-semibold">Accordion Content</label>
-                                                            <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
-                                                        </div>
-                                                    </div> -->
+                                                            <div class="col-md-5 mb-3">
+                                                                <label class="form-label fw-semibold">Accordion Header</label>
+                                                                <input type="text" name="faq_header[]" class="form-control">
+                                                            </div>
+                                                            <div class="col-md-5 mb-3">
+                                                                <label class="form-label fw-semibold">Accordion Content</label>
+                                                                <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                                                            </div>
+                                                        </div> -->
                             <div class="row mb-3">
                                 <div class="col-md-5">
                                     <label class="form-label">Accordion Header</label>
@@ -178,13 +178,19 @@
                 height: 250,
                 tabsize: 2,
                 toolbar: [
-                    ['style', ['bold', 'italic', 'underline', 'clear']],
-                    ['font', ['strikethrough', 'superscript', 'subscript']],
+                    ['style', ['style']],
+                    ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript',
+                        'subscript', 'clear'
+                    ]],
+                    ['fontname', ['fontname']],
                     ['fontsize', ['fontsize']],
                     ['color', ['color']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['insert', ['link', 'picture', 'video']],
-                    ['view', ['fullscreen', 'codeview']],
+                    ['color', ['forecolor']], // Changed from 'color' to 'forecolor'
+                    ['para', ['ul', 'ol', 'paragraph', 'align']],
+                    ['height', ['height']],
+                    ['table', ['table']],
+                    ['insert', ['link', 'picture', 'video', 'pdf']],
+                    ['view', ['fullscreen', 'codeview', 'help']],
                     ['misc', ['undo', 'redo']]
                 ],
                 fontSizes: ['8', '9', '10', '11', '12', '14', '16', '18', '20', '24', '28', '32', '36',
