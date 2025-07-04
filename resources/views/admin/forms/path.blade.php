@@ -13,7 +13,7 @@
     <div class="container-fluid">
         <!-- Page Header -->
         <x-breadcrum title="Path Page" />
-        <x-session_message />
+        {{-- <x-session_message /> --}}
 
         <!-- Form Card -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -97,6 +97,11 @@
                         <textarea name="already_registered" class="form-control summernote" required>{{ old('already_registered', $pathPage->already_registered ?? '') }}</textarea>
                     </div>
 
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Guidelines <span class="text-danger">*</span></label>
+                        <textarea name="guidelines" class="form-control summernote" required>{{ old('guidelines', $pathPage->guidelines ?? '') }}</textarea>
+                    </div>
+
                     <!-- FAQs Section -->
                     <hr>
                     <h5 class="fw-bold mt-4 mb-3">FAQs Section</h5>
@@ -124,15 +129,15 @@
                             @endforeach
                         @else
                             <!-- <div class="row faq-item align-items-end">
-                                                    <div class="col-md-5 mb-3">
-                                                        <label class="form-label fw-semibold">Accordion Header</label>
-                                                        <input type="text" name="faq_header[]" class="form-control">
-                                                    </div>
-                                                    <div class="col-md-5 mb-3">
-                                                        <label class="form-label fw-semibold">Accordion Content</label>
-                                                        <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
-                                                    </div>
-                                                </div> -->
+                                                        <div class="col-md-5 mb-3">
+                                                            <label class="form-label fw-semibold">Accordion Header</label>
+                                                            <input type="text" name="faq_header[]" class="form-control">
+                                                        </div>
+                                                        <div class="col-md-5 mb-3">
+                                                            <label class="form-label fw-semibold">Accordion Content</label>
+                                                            <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                                                        </div>
+                                                    </div> -->
                             <div class="row mb-3">
                                 <div class="col-md-5">
                                     <label class="form-label">Accordion Header</label>

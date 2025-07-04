@@ -5,12 +5,14 @@
 @section('content')
     @php
 
-        $regStart = $pathPage->registration_start_date ? \Carbon\Carbon::parse($pathPage->registration_start_date) : null;
+        $regStart = $pathPage->registration_start_date
+            ? \Carbon\Carbon::parse($pathPage->registration_start_date)
+            : null;
         $regEnd = $pathPage->registration_end_date ? \Carbon\Carbon::parse($pathPage->registration_end_date) : null;
-   
+
         $exStart = $pathPage->exemption_start_date ? \Carbon\Carbon::parse($pathPage->exemption_start_date) : null;
         $exEnd = $pathPage->exemption_end_date ? \Carbon\Carbon::parse($pathPage->exemption_end_date) : null;
-        
+
     @endphp
     <main style="flex: 1;">
         <div class="container mt-5">
@@ -35,11 +37,10 @@
 
                                 {!! $pathPage->register_course ?? '' !!}
                             </div>
-                            
+
                             <div class="card-footer bg-white border-top-0">
                                 @if (\Carbon\Carbon::today()->between($regStart, $regEnd))
-                                    <a href="{{ route('verify.authindex') }}"
-                                        class="btn btn-success custom-btn w-100"
+                                    <a href="{{ route('verify.authindex') }}" class="btn btn-success custom-btn w-100"
                                         style="background-color: #16a32a; border-color: #16a32a;">
                                         Start Registration
                                     </a>
@@ -61,10 +62,10 @@
                                 <h5 class="fw-bold text-center" style="color: #004a93;">Apply for Exemption</h5>
 
                                 {!! $pathPage->apply_exemption ?? '' !!}
-                                
+
                             </div>
                             <div class="card-footer bg-white border-top-0">
-                                @if (\Carbon\Carbon::today()->between($exStart, $exEnd) )
+                                @if (\Carbon\Carbon::today()->between($exStart, $exEnd))
                                     <a href="{{ route('fc.exemption_category.index') }}"
                                         class="btn btn-warning custom-btn w-100 text-white"
                                         style="background-color: #ea5803; border-color: #ea5803;">
@@ -95,6 +96,19 @@
                                     style="background-color: #2563eb; border-color: #2563eb;">
                                     Login to Dashboard
                                 </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Guidelines Card -->
+                    <div class="col-md-12 md-4">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="icon-circle mb-3" style="background-color: #e6fffa;">
+                                    <i class="material-icons menu-icon fs-3" style="color: #14b8a6;">info</i>
+                                </div>
+                                {{-- <h5 class="fw-bold text-center" style="color: #004a93;">Guidelines</h5> --}}
+                                {!! $pathPage->guidelines ?? '' !!}
                             </div>
                         </div>
                     </div>

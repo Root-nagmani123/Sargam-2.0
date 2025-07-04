@@ -314,6 +314,7 @@ class FrontPageController extends Controller
             'register_course' => 'required|string',
             'apply_exemption' => 'required|string',
             'already_registered' => 'required|string',
+            'guidelines' => 'required|string',
 
             'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
             'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
@@ -337,6 +338,7 @@ class FrontPageController extends Controller
                     'register_course' => $request->register_course,
                     'apply_exemption' => $request->apply_exemption,
                     'already_registered' => $request->already_registered,
+                    'guidelines' => $request->guidelines,
                     'registration_start_date' => $request->registration_start_date ? Carbon::parse($request->registration_start_date)->format('Y-m-d') : null,
                     'registration_end_date' => $request->registration_end_date ? Carbon::parse($request->registration_end_date)->format('Y-m-d') : null,
                     'exemption_start_date' => $request->exemption_start_date ? Carbon::parse($request->exemption_start_date)->format('Y-m-d') : null,
