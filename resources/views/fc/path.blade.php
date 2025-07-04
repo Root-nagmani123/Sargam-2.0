@@ -98,26 +98,22 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Guidelines Card -->
-                    <div class="col-md-12 mb-4">
+                </div>
+                <!-- Guidelines Card -->
+                    <div class="mt-4">
                         <h4 style="color: #004a93; font-size: 30px; font-weight: 700; margin-bottom: 1.5rem;">
                             Guidelines for Registration & Exemption
                         </h4>
 
-                        <div class="card h-100">
+                        <div class="card" style="border-left: 4px solid #004a93; border-radius: 0.5rem;background-color:rgba(181, 216, 250, 0.2);">
                             <div class="card-body">
-                                <div class="icon-circle mb-3" style="background-color: #e6fffa;">
-                                    <i class="material-icons menu-icon fs-3" style="color: #14b8a6;">info</i>
-                                </div>
-                                {{-- <h5 class="fw-bold text-center" style="color: #004a93;">Guidelines</h5> --}}
+                                
                                 {!! $pathPage->guidelines ?? '' !!}
                             </div>
                         </div>
                     </div>
-                </div>
             <!-- FAQ Section -->
-            <div class="row  g-3 mt-5">
+            <div class="row mt-4">
                 <div class="col-9">
                     <h4 style="color: #004a93; font-size: 30px; font-weight: 700;">Frequently Asked Questions</h4>
                     <span class="text-muted">Find your query from this list of frequently asked questions</span>
