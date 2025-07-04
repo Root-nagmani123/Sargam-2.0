@@ -121,7 +121,7 @@
                                         class="btn btn-primary btn-sm">View Conversation</a>
                                     <a href="" class="text-primary btn btn-sm" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas"><i
-                                            class="material-icons md-18">circle_notifications</i></a>
+                                            class="material-icons md-18">crisis_alert</i></a>
                                     <a href="" class="btn-outline-primary btn btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#memo_generate">Generate Memo</a>
                                 </td>
