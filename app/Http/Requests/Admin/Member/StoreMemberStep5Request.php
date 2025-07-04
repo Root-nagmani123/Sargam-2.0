@@ -29,8 +29,8 @@ class StoreMemberStep5Request extends FormRequest
             'miscellaneous'       => ['required', 'string', 'max:255'],
 
             // Validate uploaded image and documents
-            'picture'             => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'], // max 2MB
-            'additionaldocument'  => ['nullable', 'file', 'mimes:pdf,doc,docx,jpg,jpeg,png', 'max:4096'], // max 4MB
+            'picture'             => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:500'], // max 500KB
+            'additionaldocument'  => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:1024'], // max 1MB
         ];
     }
 

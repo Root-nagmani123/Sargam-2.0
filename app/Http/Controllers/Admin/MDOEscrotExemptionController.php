@@ -76,11 +76,15 @@ class MDOEscrotExemptionController extends Controller
                 return response()->json(['status' => false, 'message' => 'Course not found.']);
             }
 
-            if ($course->studentMaster) {
+            if (!empty($course->studentMasterCourseMap)) {
                 $students = [];
-                $students = $course->studentMaster->map(function ($student) {
+                $students = $course->studentMasterCourseMap->map(function ($student) {
+                    $studentMaster = StudentMaster::where('pk', $student['student_master_pk'])->first();
+                    if( !$studentMaster ) {
+                        return null; 
+                    }
                     $students['pk'] = $student['pk'];
-                    $students['display_name'] = $student['display_name'];
+                    $students['display_name'] = $studentMaster ? $studentMaster->display_name : null;
                     return $students;
                 });
 

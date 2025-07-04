@@ -25,5 +25,10 @@ class CourseMaster extends Model
     {
         return $this->hasMany(StudentMaster::class, 'course_master_pk', 'pk');
     }
+
+    public function studentMasterCourseMap()
+    {
+        return $this->hasMany(StudentMasterCourseMap::class, 'course_master_pk', 'pk');
+    }
     
 }
