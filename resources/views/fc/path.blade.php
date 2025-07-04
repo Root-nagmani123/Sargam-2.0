@@ -101,7 +101,11 @@
                     </div>
 
                     <!-- Guidelines Card -->
-                    <div class="col-md-12 md-4">
+                    <div class="col-md-12 mb-4">
+                        <h4 style="color: #004a93; font-size: 30px; font-weight: 700; margin-bottom: 1.5rem;">
+                            Guidelines for Registration & Exemption
+                        </h4>
+
                         <div class="card h-100">
                             <div class="card-body">
                                 <div class="icon-circle mb-3" style="background-color: #e6fffa;">
