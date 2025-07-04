@@ -6,6 +6,52 @@
         <!-- Start Vertical Layout Header -->
         <!-- ---------------------------------- -->
         <nav class="navbar navbar-expand-lg p-0">
+            <ul class="navbar-nav w-100 justify-content-center text-center">
+                <!-- Hamburger (mobile only) -->
+                <li class="nav-item d-flex d-xl-none justify-content-center align-items-center">
+                    <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
+                        href="javascript:void(0)">
+                        <iconify-icon icon="solar:hamburger-menu-line-duotone" class="fs-6"></iconify-icon>
+                    </a>
+                </li>
+
+                <!-- Home -->
+                <li class="nav-item d-none d-xl-flex flex-column align-items-center justify-content-center mx-3">
+                    <a href="../main/app-chat.html" class="text-decoration-none text-dark text-center">
+                        <iconify-icon icon="solar:home-angle-bold-duotone" class="mb-1" style="color:#af2910;font-size: 1.5rem;">
+                        </iconify-icon>
+                        <h6 class="mb-0">Home</h6>
+                    </a>
+                </li>
+
+                <!-- Setup -->
+                <li class="nav-item d-none d-xl-flex flex-column align-items-center justify-content-center mx-3">
+                    <a href="../main/app-chat.html" class="text-decoration-none text-dark text-center">
+                        <iconify-icon icon="solar:settings-minimalistic-bold-duotone" class="mb-1"
+                            style="color:#af2910; font-size: 1.5rem;"></iconify-icon>
+                        <h6 class="mb-0">Setup</h6>
+                    </a>
+                </li>
+
+                <!-- Communication -->
+                <li class="nav-item d-none d-xl-flex flex-column align-items-center justify-content-center mx-3">
+                    <a href="../main/app-chat.html" class="text-decoration-none text-dark text-center">
+                        <iconify-icon icon="solar:circle-bottom-up-bold-duotone" class="mb-1"
+                            style="color:#af2910; font-size: 1.5rem;"></iconify-icon>
+                        <h6 class="mb-0">Communication</h6>
+                    </a>
+                </li>
+
+                <!-- Academics -->
+                <li class="nav-item d-none d-xl-flex flex-column align-items-center justify-content-center mx-3">
+                    <a href="../main/app-chat.html" class="text-decoration-none text-dark text-center">
+                        <iconify-icon icon="solar:square-academic-cap-2-bold-duotone" class="mb-1"
+                            style="color:#af2910; font-size: 1.5rem;"></iconify-icon>
+                        <h6 class="mb-0">Academics</h6>
+                    </a>
+                </li>
+            </ul>
+
             <ul class="navbar-nav">
                 <li class="nav-item d-flex d-xl-none">
                     <a class="nav-link nav-icon-hover-bg rounded-circle  sidebartoggler " id="headerCollapse"
@@ -24,7 +70,9 @@
                 <iconify-icon icon="solar:menu-dots-bold-duotone" class="fs-6"></iconify-icon>
             </a>
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+
                 <div class="d-flex align-items-center justify-content-between">
+
                     <ul class="navbar-nav flex-row mx-auto ms-lg-auto align-items-center justify-content-center">
                         <li class="nav-item dropdown">
                             <a href="javascript:void(0)"
@@ -42,8 +90,8 @@
                         <li class="nav-item dropdown">
                             <a class="nav-link" href="javascript:void(0)" id="drop1" aria-expanded="false">
                                 <div class="d-flex align-items-center gap-2 lh-base">
-                                    <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}" class="rounded-circle" width="35"
-                                        height="35" alt="matdash-img">
+                                    <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
+                                        class="rounded-circle" width="35" height="35" alt="matdash-img">
                                     <iconify-icon icon="solar:alt-arrow-down-bold" class="fs-2"></iconify-icon>
                                 </div>
                             </a>
@@ -51,8 +99,8 @@
                                 aria-labelledby="drop1">
                                 <div class="position-relative px-4 pt-3 pb-2">
                                     <div class="d-flex align-items-center mb-3 pb-3 border-bottom gap-6">
-                                        <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}" class="rounded-circle" width="56"
-                                            height="56" alt="matdash-img">
+                                        <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
+                                            class="rounded-circle" width="56" height="56" alt="matdash-img">
                                         <div>
                                             <h5 class="mb-0 fs-12">David McMichael <span
                                                     class="text-success fs-11">Pro</span>
