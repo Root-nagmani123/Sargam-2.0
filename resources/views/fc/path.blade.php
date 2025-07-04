@@ -23,8 +23,7 @@
                 </p>
             </div>
 
-            <div class="container my-5">
-                <div class="row g-4 mt-5">
+            <div class="row g-4 mt-5">
                     <!-- Register Card -->
                     <div class="col-md-4">
                         <div class="card h-100">
@@ -117,9 +116,8 @@
                         </div>
                     </div>
                 </div>
-            </div>
             <!-- FAQ Section -->
-            <div class="row g-4 mt-5">
+            <div class="row  g-3 mt-5">
                 <div class="col-9">
                     <h4 style="color: #004a93; font-size: 30px; font-weight: 700;">Frequently Asked Questions</h4>
                     <span class="text-muted">Find your query from this list of frequently asked questions</span>
