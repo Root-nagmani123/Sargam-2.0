@@ -289,27 +289,15 @@
                                         <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
                                             class="rounded-circle" width="56" height="56" alt="matdash-img">
                                         <div>
-                                            <h5 class="mb-0 fs-12">David McMichael <span
-                                                    class="text-success fs-11">Pro</span>
-                                            </h5>
+                                            <h5 class="mb-0 fs-12">{{Auth::user()->name}}</h5>
                                             <p class="mb-0 text-dark">
-                                                david@wrappixel.com
+                                                {{Auth::user()->email}}
                                             </p>
                                         </div>
                                     </div>
                                     <div class="message-body">
-                                        <a href="page-user-profile.html" class="p-2 dropdown-item h6 rounded-1">
+                                        <a href="#" class="p-2 dropdown-item h6 rounded-1">
                                             My Profile
-                                        </a>
-                                        <a href="page-pricing.html" class="p-2 dropdown-item h6 rounded-1">
-                                            My Subscription
-                                        </a>
-                                        <a href="app-invoice.html" class="p-2 dropdown-item h6 rounded-1">
-                                            My Invoice <span
-                                                class="badge bg-danger-subtle text-danger rounded ms-8">4</span>
-                                        </a>
-                                        <a href="page-account-settings.html" class="p-2 dropdown-item h6 rounded-1">
-                                            Account Settings
                                         </a>
                                         <form action="{{route('logout')}}" method="POST">
                                             @csrf

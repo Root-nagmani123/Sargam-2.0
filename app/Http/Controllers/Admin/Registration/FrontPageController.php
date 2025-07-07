@@ -70,6 +70,7 @@ class FrontPageController extends Controller
     public function authindex()
     {
         return view('fc.login');
+
     }
 
     //validates user exists 
