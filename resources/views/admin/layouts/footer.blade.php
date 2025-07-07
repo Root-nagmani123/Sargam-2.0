@@ -30,9 +30,9 @@
   <script src="{{asset('admin_assets/js/datatable/datatable-basic.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/repeater-init.js')}}"></script>
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
-  <script src="{{asset('admin_assets/js/pages/calendar.init.js')}}"></script>
+  <!-- <script src="{{asset('admin_assets/js/pages/calendar.init.js')}}"></script> -->
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
-  <script src="{{asset('admin_assets/js/apps/contact.js')}}"></script>
+  <!-- <script src="{{asset('admin_assets/js/apps/contact.js')}}"></script> -->
   <script src="{{asset('admin_assets/js/plugins/toastr-init.js')}}"></script>
   <script src="{{asset('admin_assets/js/routes.js')}}"></script>
   <script src="{{asset('admin_assets/js/custom.js')}}"></script>
@@ -40,6 +40,6 @@
   <script src="{{asset('admin_assets/libs/jquery-steps/build/jquery.steps.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/jquery-validation/dist/jquery.validate.min.js')}}"></script>
   <script src="{{ asset('admin_assets/js/prism.min.js') }}"></script>
-  <script src="{{ asset('admin_assets/js/dual-listbox.js') }}"></script>
+  <!-- <script src="{{ asset('admin_assets/js/dual-listbox.js') }}"></script> -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   @yield('scripts')

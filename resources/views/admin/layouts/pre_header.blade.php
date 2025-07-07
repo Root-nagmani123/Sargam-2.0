@@ -24,4 +24,3 @@
 <link rel="stylesheet" href="{{asset('admin_assets/libs/select2/dist/css/select2.min.css')}}">
 
 @yield('css')
-    

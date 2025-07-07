@@ -30,9 +30,9 @@
     }
 }
 </style>
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
+<!-- <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js'></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> -->
 
 <div class="container-fluid">
     <div class="card" style="border-left: 4px solid #004a93;">
@@ -60,8 +60,10 @@
         </div>
         </div>
     </div>
-    <button type="button" class="btn btn-primary" id="createEventupperButton">
+    <div class="text-end mb-3">
+        <button type="button" class="btn btn-primary" id="createEventupperButton">
         <i class="bi bi-plus"></i> Add Event</button>
+    </div>
     <div class="card">
         <div class="card-body calender-sidebar app-calendar">
             <div id='calendar'></div>
@@ -78,7 +80,8 @@
                         <h5 class="modal-title" id="eventModalLabel">
                             {{ $modalTitle ?? __('Add / Edit Calendar Event') }}
                         </h5>
-                        <input type="date" name="start_datetime" id="start_datetime">
+                        <input type="date" name="start_datetime" id="start_datetime" class="form-control w-50 me-5"
+                            placeholder="Select Date" required>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
