@@ -906,6 +906,88 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="tab-pane fade" id="tab-9" role="tabpanel" aria-labelledby="tab-9-tab">
+                            <!-- Reports (Admin Only) -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-3">Reports</h5>
+                                    <p class="text-muted mb-4">This section is for administrative use only.</p>
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered align-middle text-center table-hover table-striped text-nowrap">
+                                            <thead class="table-light text-center">
+                                                <tr>
+                                                    <th class="col">Sr. No.</th>
+                                                    <th class="col">OT Name</th>
+                                                    <th class="col">Programme Structure</th>
+                                                    <th class="col">Family Details DOC</th>
+                                                    <th class="col">Close Relation Doc</th>
+                                                    <th class="col">Dowry Declaration</th>
+                                                    <th class="col">Marital Declaration</th>
+                                                    <th class="col">Hometown Doc</th>
+                                                    <th class="col">Immovable Property</th>
+                                                    <th class="col">Debts And Liabilities</th>
+                                                    <th class="col">Surety Bond (IAS/IPS)</th>
+                                                    <th class="col">Surety Bond (Other Services)</th>
+                                                    <th class="col">Oath Affirmation</th>
+                                                    <th class="col">Certificate Assumption</th>
+                                                    <th class="col">Married/Unmarried</th>
+                                                    <th class="col">NPS Form</th>
+                                                    <th class="col">Employee Information</th>
+                                                    <th class="col">Status</th>
+                                                    <th class="col">Remarks</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Example Row -->
+                                                <tr>
+                                                    <td>1</td>
+                                                    <td>Pratik Ashok Dhumal</td>
+                                                    <td>1601339565</td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0 text-danger">Pending</a></td>
+                                                    <td><a href="#" class="btn btn-success py-3 btn-sm">Success</a></td>
+                                                    <td><textarea name="" id=""></textarea></td>
+                                                </tr>
+                                                 <tr>
+                                                    <td>1</td>
+                                                    <td>Aditya Srivastava</td>
+                                                    <td>1601339565</td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0">View</a></td>
+                                                    <td><a href="#" class="btn btn-link p-0 text-danger">Pending</a></td>
+                                                    <td><a href="#" class="btn btn-success py-3 btn-sm">Success</a></td>
+                                                    <td><textarea name="" id=""></textarea></td>
+                                                </tr>
+                                                <!-- Add more rows as needed -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
