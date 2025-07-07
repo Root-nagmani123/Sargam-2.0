@@ -313,7 +313,7 @@
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
                                     id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="material-icons" style="color: #004a93;">account_circle</i> 
+                                    <i class="material-icons" style="color: #004a93;">account_circle</i>
                                     <span class="ms-2">{{ Auth::user()->name }}</span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
@@ -588,6 +588,324 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="tab-pane fade" id="tab-4" role="tabpanel" aria-labelledby="tab-4-tab">
+                            <!-- Joining Details -->
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="fw-bold text-primary mb-3">Administration Section Related Documents</h5>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered align-middle table-hover table-striped text-nowrap">
+                                            <thead class="table-light text-center">
+                                                <tr>
+                                                    <th class="col">Sr.No.</th>
+                                                    <th class="col">Documents</th>
+                                                    <th class="col">Downloads</th>
+                                                    <th class="col">Sample</th>
+                                                    <th class="col">Uploads</th>
+                                                    <th class="col">View Uploaded</th>
+                                                    <th class="col">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+
+                                                <!-- Example Row -->
+                                                <tr> 
+                                                    <td class="text-center">1</td>
+                                                    <td>
+                                                       Family Details Form (Form - 3) of Rules 54(12) of CCS (Pension) Rules, 1972
+                                                    </td>
+                                                    <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+
+                                               <tr>
+                                                <td class="text-center">2</td>
+                                                <td colspan="5">
+                                                    <strong>Declaration of Close Relation (two copies)</strong>
+                                                </td>
+                                               </tr>
+                                                <tr>
+                                                    <td class="text-center"></td>
+                                                    <td>
+                                                        a) National of or are domiciled in other countries and
+                                                        <br>
+                                                        b) Residing in India, who are non-Indian origin
+                                                    </td>
+                                                    <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center text-muted">No forms uploaded</td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-warning text-dark">Pending</span></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center">3</td>
+                                                    <td>Dowry Declaration - Declaration under Rule 13 of CCS (Conduct) Rule 1964 (two copies)</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center">4</td>
+                                                    <td>Marital Status - Declaration under Rule 13 of CCS (Conduct) Rule 1964 (two copies)</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center">5</td>
+                                                    <td>Home Town Declaration (two copies)</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>6</td>
+                                                    <td colspan="6"><strong>
+                                                        Declaration of Movable, Immovable and valuable property on first appointment (two copies)
+                                                    </strong></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center"></td>
+                                                    <td>6-A: Statement of Immovable Property on first appointment</td>
+                                                    <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center"></td>
+                                                    <td>6-B: Statement of Movable Property on first appointment</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center"></td>
+                                                    <td>6-C: Statement of Debts and Other Liabilitieson first appointment</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td></td>
+                                                    <td colspan="6"><strong>Surety Bond-for</strong></td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center"> </td>
+                                                    <td>Surety Bond for IAS or IPS or IFoS (whichever is applicable) </td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center"></td>
+                                                    <td>Surety Bond for other services (other than All India Services) (if applicable)</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="text-center">8</td>
+                                                    <td><strong>Other Documents</strong></td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td></td>
+                                                    <td>Form of OATH / Affirmation</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td></td>
+                                                    <td>Certificate of Assumption Of Charge</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card">
+                                <div class="card-body">
+                                     <h5 class="fw-bold text-primary mb-3">Administration Section Related Documents</h5>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered align-middle text-center table-hover table-striped text-nowrap">
+                                            <thead class="table-light text-center">
+                                                <tr>
+                                                    <th class="col">Sr. No.</th>
+                                                    <th class="col">Documents</th>
+                                                    <th class="col">Downloads</th>
+                                                    <th class="col">Sample</th>
+                                                    <th class="col">Uploads</th>
+                                                    <th class="col">View Uploaded</th>
+                                                    <th class="col">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+
+                                                <tr>
+                                                    <td class="text-center">1</td>
+                                                    <td colspan="6" class="text-start"><strong>Nomination for benefits under the Central Government Employees Group Insurance Scheme, 1980</strong>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td></td>
+                                                    <td>a) Form-7 (if Unmarried) or ii) Form-8 (if Married)</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>2</td>
+                                                    <td>National Pensions System (NPS) - subscription Registration Form</td>
+                                                    <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>3</td>
+                                                    <td>Employee Information Sheet Form</td>
+                                                     <td class="text-center"><a href="#"
+                                                            class="btn btn-link p-0" style="text-decoration: none;">Download
+                                                            Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    <td><input type="file" class="form-control"></td>
+                                                    <td class="text-center"><span class="text-success">View Uploaded
+                                                            Forms</span></td>
+                                                    <td class="text-center"><span
+                                                            class="badge bg-success">Completed</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -600,7 +918,8 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-8">
-                    <p class="mb-0" style="font-size: 14px;">&copy; {{date('Y')}} Lal Bahadur Shastri National Academy of
+                    <p class="mb-0" style="font-size: 14px;">&copy; {{date('Y')}} Lal Bahadur Shastri National Academy
+                        of
                         Administration, Mussoorie, Uttarakhand</p>
                 </div>
                 <div class="col-md-4 text-end">
