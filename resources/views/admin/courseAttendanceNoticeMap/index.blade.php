@@ -38,7 +38,7 @@
 </style>
 <div class="container-fluid">
 
-    <x-breadcrum title="Memo Management" />
+    <x-breadcrum title="Notice /Memo Management" />
     <x-session_message />
 
     <!-- start Zero Configuration -->
@@ -46,17 +46,17 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-6">
-                    <h4 class="card-title">Memo Management</h4>
+                    <h4 class="card-title">Notice /Memo Management</h4>
                 </div>
                 <div class="col-6">
                     <div class="float-end gap-2">
                         <a href="{{ route('memo.notice.management.create') }}" class="btn btn-primary">+ Add
-                            Notice/Memo</a>
+                            Notice</a>
                     </div>
                 </div>
             </div>
             <div class="row">
-                <div class="col-6">
+                <div class="col-4">
                     <div class="mb-3">
                         <label for="program_name" class="form-label">Program Name</label>
                         <select class="form-select" id="program_name" name="program_name">
@@ -65,7 +65,17 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-6">
+                <div class="col-4">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Type (Notice / Memo)</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">Select type</option>
+                            <option value="1">Notice</option>
+                            <option value="0">Memo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-4">
                     <div class="mb-3">
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status">
@@ -75,6 +85,7 @@
                         </select>
                     </div>
                 </div>
+                
             </div>
             <hr>
             <div class="dataTables_wrapper" id="alt_pagination_wrapper">
@@ -86,7 +97,7 @@
                             <tr>
                                 <th class="col">S.No.</th>
                                 <th class="col">Participant Name</th>
-                                <th class="col">Memo Type</th>
+                                <th class="col">Type</th>
                                 <th class="col">Session Date</th>
                                 <th class="col">Topic</th>
                                 <th class="col">Conversation Response</th>
@@ -122,7 +133,7 @@
                                     <a href="" class="text-primary btn btn-sm" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas"><i
                                             class="material-icons md-18">crisis_alert</i></a>
-                                    <a href="" class="btn-outline-primary btn btn-sm" data-bs-toggle="modal"
+                                    <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#memo_generate">Generate Memo</a>
                                 </td>
                                 <!-- Offcanvas Chat Component -->
