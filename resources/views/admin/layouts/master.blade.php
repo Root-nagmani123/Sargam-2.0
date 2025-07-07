@@ -8,6 +8,19 @@
     {{-- @stack('styles') --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     @section('css')
+    <style>
+    .tab-item.active h6 {
+    font-weight: bold;
+    color: #af2910;
+    }
+    .tab-item.active {
+        border-bottom: 4px solid #af2910;
+        background-color:rgb(210, 230, 250);
+        padding: 5px;
+        border-radius: 10px;
+    }
+
+</style>
 </head>
 
 <body>

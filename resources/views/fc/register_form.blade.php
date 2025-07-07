@@ -600,7 +600,7 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-8">
-                    <p class="mb-0" style="font-size: 14px;">&copy; 2024 Lal Bahadur Shastri National Academy of
+                    <p class="mb-0" style="font-size: 14px;">&copy; {{date('Y')}} Lal Bahadur Shastri National Academy of
                         Administration, Mussoorie, Uttarakhand</p>
                 </div>
                 <div class="col-md-4 text-end">
