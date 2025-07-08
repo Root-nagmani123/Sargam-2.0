@@ -8,8 +8,9 @@
 
     <x-breadcrum title="User Conversation" />
     <x-session_message />
-    <div class="container-fluid bg-white p-4 rounded shadow-sm">
-        <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
+    <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card-body">
+            <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
         <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
         <hr>
 
@@ -134,11 +135,12 @@
                     </div>
                 </div>
                 <hr>
-                <div class="gap-2 text-end">
+                <div class="gap-3 text-end">
                     <button type="submit" class="btn btn-primary">Send</button>
-                    <a href="#" class="btn btn-secondary">Back</a>
+                    <a href="#" class="btn btn-outline-secondary">Back</a>
                 </div>
             </form>
+        </div>
         </div>
     </div>
 </div>
