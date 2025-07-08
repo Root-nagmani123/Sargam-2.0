@@ -233,7 +233,7 @@
 
 .h-scroll {
   /* max-height: 630px; */
-  height: calc(100vh - 365px) !important;
+  height: calc(100vh - 300px) !important;
   overflow-y: auto;
   overflow-x: hidden;
 }
