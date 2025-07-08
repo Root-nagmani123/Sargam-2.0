@@ -42,7 +42,7 @@
     <x-session_message />
 
     <!-- start Zero Configuration -->
-    <div class="card">
+    <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row">
                 <div class="col-6">
