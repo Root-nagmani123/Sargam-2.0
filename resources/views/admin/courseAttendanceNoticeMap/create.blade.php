@@ -124,8 +124,7 @@
                     <div class="col-10">
                         <div class="text-center gap-3">
                             <button type="submit" class="btn btn-danger" name="submission_type" value="1">Notice</button>
-                            <button type="submit" class="btn btn-warning" name="submission_type" value="2" style="margin-left: 5%;">Memo</button>
-
+                          
                         </div>
                     </div>
                     <div class="col-2">
@@ -280,3 +279,4 @@
 </script>
 
 @endsection
+ 
