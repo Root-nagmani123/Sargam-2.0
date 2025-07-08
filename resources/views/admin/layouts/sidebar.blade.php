@@ -12,6 +12,12 @@
     <div class="tab-pane d-none" id="tab-academics">
         @include('admin.layouts.sidebar.academics')
     </div>
+    <div class="tab-pane d-none" id="tab-material-management">
+        @include('admin.layouts.sidebar.material')
+    </div>
+    <div class="tab-pane d-none" id="tab-financial">
+        @include('admin.layouts.sidebar.financial')
+    </div>
 </div>
 
 <script>
@@ -48,5 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
+
+
 
 <!--  Sidebar End -->
