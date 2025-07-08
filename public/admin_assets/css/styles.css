@@ -30878,8 +30878,8 @@ body {
 }
 .body-wrapper {
     margin-top: 72px;
-    margin-left: calc(90px / 2);
-    margin-right: calc(90px / 2);
+    margin-left: calc(180px / 2);
+    margin-right: calc(30px / 2);
     margin-bottom: 30px;
     border-radius: 20px;
     background: #f4f7fb;
@@ -30992,6 +30992,7 @@ pre.code-view code.hljs {
     z-index: 99;
     position: relative;
     background: #f4f7fb;
+    width: 120px;
 }
 .side-mini-panel .mini-nav ul.mini-nav-ul {
     height: calc(100vh - 70px);
@@ -31052,11 +31053,11 @@ pre.code-view code.hljs {
 .side-mini-panel .sidebarmenu .sidebar-nav {
     position: absolute;
     height: calc(100vh - 72px);
-    width: 280px;
+    width: 290px;
     background: var(--bs-white);
     top: 72px;
     transition: left 0.4s ease-in-out;
-    left: 80px;
+    left: 120px;
     display: none;
     padding: 0 20px 24px 20px;
     z-index: 98;
@@ -31068,7 +31069,7 @@ pre.code-view code.hljs {
 .nav-logo {
     position: absolute;
     width: 240px;
-    left: 80px;
+    left: 120px;
     background: var(--bs-white);
     top: 0;
     padding: 0 24px;
@@ -31206,14 +31207,14 @@ pre.code-view code.hljs {
 .sidebar-nav ul .sidebar-item.selected > .sidebar-link,
 .sidebar-nav ul .sidebar-item.selected > .sidebar-link.active,
 .sidebar-nav ul .sidebar-item > .sidebar-link.active {
-    background-color: var(--bs-primary);
-    color: var(--bs-white);
+    background-color: var(--bs-gray-300);
+    color: var(--bs-dark);
     box-shadow: 0 17px 20px -8px rgba(77, 91, 236, 0.231372549);
 }
 .sidebar-nav ul .sidebar-item.selected > .sidebar-link iconify-icon,
 .sidebar-nav ul .sidebar-item.selected > .sidebar-link.active iconify-icon,
 .sidebar-nav ul .sidebar-item > .sidebar-link.active iconify-icon {
-    color: var(--bs-white);
+    color: var(--bs-dark);
 }
 .sidebar-nav ul .sidebar-item.selected > .sidebar-link.active.has-arrow::after,
 .sidebar-nav ul .sidebar-item.selected > .sidebar-link.has-arrow::after,
@@ -31226,7 +31227,7 @@ pre.code-view code.hljs {
 .nav-small-cap {
     font-size: 12px;
     font-weight: 600;
-    padding: 7px 0;
+    padding: 7px;
     line-height: 26px;
     letter-spacing: 1.5px;
     text-transform: uppercase;

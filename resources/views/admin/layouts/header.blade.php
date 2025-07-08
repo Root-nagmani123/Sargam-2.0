@@ -46,6 +46,26 @@
                         <h6 class="mb-0">Academics</h6>
                     </a>
                 </li>
+
+                <!-- Material Management -->
+                <li class="nav-item d-none d-xl-flex flex-column align-items-center justify-content-center mx-3 tab-item"
+                    data-tab="material-management">
+                    <a href="#" class="text-decoration-none text-dark text-center">
+                        <iconify-icon icon="solar:command-bold-duotone" class="mb-1"
+                            style="color:#004a93; font-size: 1.5rem;"></iconify-icon>
+                        <h6 class="mb-0">Material Management</h6>
+                    </a>
+                </li>
+
+                <!-- Financial  -->
+                <li class="nav-item d-none d-xl-flex flex-column align-items-center justify-content-center mx-3 tab-item"
+                    data-tab="financial">
+                    <a href="#" class="text-decoration-none text-dark text-center">
+                        <iconify-icon icon="solar:structure-bold-duotone" class="mb-1"
+                            style="color:#004a93; font-size: 1.5rem;"></iconify-icon>
+                        <h6 class="mb-0">Financial </h6>
+                    </a>
+                </li>
             </ul>
 
 
@@ -322,24 +342,34 @@
     </div>
 </header>
 <!--  Header End -->
-
 <script>
-    document.querySelectorAll('.tab-item').forEach(item => {
-        item.addEventListener('click', function (e) {
-            e.preventDefault();
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.tab-item').forEach(item => {
+            item.addEventListener('click', function (e) {
+                e.preventDefault();
 
-            // Remove active class from all tab items
-            document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
+                // Remove active class from all tab items
+                document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
 
-            // Add active class to clicked tab
-            this.classList.add('active');
+                // Add active class to clicked tab
+                this.classList.add('active');
 
-            // Hide all tab content
-            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('d-none'));
+                // Remove active class and hide all tab panes
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    pane.classList.remove('active');
+                    pane.classList.add('d-none');
+                });
 
-            // Show target content
-            const target = this.getAttribute('data-tab');
-            document.getElementById('tab-' + target).classList.remove('d-none');
+                // Show and activate the target content pane
+                const target = this.getAttribute('data-tab');
+                const targetPane = document.getElementById('tab-' + target);
+                if (targetPane) {
+                    targetPane.classList.remove('d-none');
+                    targetPane.classList.add('active');
+                }
+            });
         });
     });
 </script>
+
+

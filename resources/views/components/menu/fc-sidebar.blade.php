@@ -1,8 +1,8 @@
-<nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-4" data-simplebar="">
+<nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-3" data-simplebar="">
     <ul class="sidebar-menu" id="sidebarnav">
 
         <!-- ======= GENERAL SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">General</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2" style="background-color: #af2910 !important;border-radius: 10px;"><span class="hide-menu">General</span></li>
 
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
@@ -32,7 +32,7 @@
         <span class="sidebar-divider"></span>
 
         <!-- ======= REGISTRATION SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Registration Management</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2" style="background-color: #af2910 !important;border-radius: 10px;"><span class="hide-menu">Registration Management</span></li>
 
         <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
             <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
@@ -53,7 +53,7 @@
         <span class="sidebar-divider"></span>
 
         <!-- ======= EXEMPTION SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Exemption</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2" style="background-color: #af2910 !important;border-radius: 10px;"><span class="hide-menu">Exemption</span></li>
 
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
@@ -73,7 +73,7 @@
         <span class="sidebar-divider"></span>
 
         <!-- ======= DATABASE MANAGEMENT ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Database Tools</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2" style="background-color: #af2910 !important;border-radius: 10px;"><span class="hide-menu">Database Tools</span></li>
 
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('admin.column.form') }}">
