@@ -289,9 +289,9 @@
                                         <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
                                             class="rounded-circle" width="56" height="56" alt="matdash-img">
                                         <div>
-                                            <h5 class="mb-0 fs-12">{{Auth::user()->name}}</h5>
+                                            <h5 class="mb-0 fs-12">Admin</h5>
                                             <p class="mb-0 text-dark">
-                                                {{Auth::user()->email}}
+                                                admin@gmail.com
                                             </p>
                                         </div>
                                     </div>

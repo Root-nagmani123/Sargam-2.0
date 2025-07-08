@@ -168,7 +168,7 @@
                 <hr>
                 <div class="gap-2 text-end">
                     <button type="submit" class="btn btn-primary">Send</button>
-                    <a href="#" class="btn btn-secondary">Back</a>
+                    <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
                 </div>
             </form>
         </div>
