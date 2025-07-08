@@ -93,4 +93,3 @@ const toggleDarkMode = () => {
 checkbox.addEventListener("change", toggleDarkMode);
 toggleDarkMode();
     </script>
-    </body>
