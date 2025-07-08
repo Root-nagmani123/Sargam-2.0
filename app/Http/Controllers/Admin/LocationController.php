@@ -30,7 +30,6 @@ class LocationController extends Controller
             Country::create([
                 'country_name' => $name,
                 'active_inactive' => $request->active_inactive,
-                'created_by' => auth()->id() ?? 1,  // Use current logged-in user ID or fallback to 1
                 'created_date' => now(),  // Use current timestamp
             ]);
         }
@@ -68,7 +67,8 @@ class LocationController extends Controller
     // State
     public function stateIndex()
     {
-        $states = State::paginate(10);
+        $states = State::get();
+        // print_r($states);die;
         return view('admin.state.index', compact('states'));
     }
 
@@ -90,7 +90,6 @@ class LocationController extends Controller
         $state->state_name = $request->state_name;
         $state->country_master_pk = $request->country_master_pk;
         $state->active_inactive = $request->active_inactive;
-        $state->created_by = auth()->id();
         $state->created_date = now();
         $state->save();
 
@@ -122,8 +121,6 @@ class LocationController extends Controller
         $state->active_inactive = $request->active_inactive;
 
         // Optionally, track who is updating
-        $state->modified_by = auth()->id();  // Assuming you're using authentication
-        $state->modified_date = now();  // Update the timestamp
 
         // Save the state
         $state->save();
