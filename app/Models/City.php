@@ -24,7 +24,7 @@ class City extends Model
     }
     public function state()
     {
-        return $this->belongsTo(State::class, 'state_master_pk', 'Pk');
+        return $this->belongsTo(State::class, 'state_master_pk', 'pk');
     }
 
     public function district()

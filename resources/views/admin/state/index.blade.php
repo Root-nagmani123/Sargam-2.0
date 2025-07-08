@@ -36,7 +36,7 @@
                                     <th class="col">Status</th>
                                 </tr>
                                 <!-- end row -->
-                            </thead>
+                            </thead> 
                             <tbody>
                                 @foreach($states as $key => $state)
                                 <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
