@@ -1,4 +1,4 @@
-<nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-3" data-simplebar="">
+<nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-2" data-simplebar="">
     <ul class="sidebar-menu" id="sidebarnav">
         <!-- ---------------------------------- -->
         <!-- Home -->

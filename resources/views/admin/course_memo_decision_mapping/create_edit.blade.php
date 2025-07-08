@@ -7,7 +7,7 @@
     <x-breadcrum title="Course Memo Decision Mapping" />
     <x-session_message />
 
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">
                 {{ isset($courseMemoMap) ? 'Edit' : 'Add' }} Course Memo Mapping
