@@ -31095,7 +31095,7 @@ pre.code-view code.hljs {
     border-radius: 12px;
     gap: 10px;
     text-decoration: none;
-    font-weight: 400;
+    font-weight: 600;
     margin-bottom: 4px;
 }
 .sidebar-nav ul .sidebar-item .sidebar-link span:first-child {
@@ -31103,8 +31103,11 @@ pre.code-view code.hljs {
 }
 .sidebar-nav ul .sidebar-item .sidebar-link iconify-icon {
     font-size: 18px;
-    color: var(--bs-heading-color);
-    opacity: 0.8;
+    color: #af2910;
+    opacity: 1;
+    transition: all 0.3s ease-in-out;
+    flex-shrink: 0;
+    font-weight: 600;
 }
 .sidebar-nav ul .sidebar-item .sidebar-link:hover {
     color: var(--bs-primary);
@@ -31117,7 +31120,7 @@ pre.code-view code.hljs {
     border-radius: 12px;
     gap: 10px;
     text-decoration: none;
-    font-weight: 400;
+    font-weight: 600;
     margin-bottom: 4px;
     background-color: var(--bs-primary-bg-subtle);
 }
