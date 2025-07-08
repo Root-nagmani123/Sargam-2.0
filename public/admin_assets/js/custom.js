@@ -781,6 +781,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     $('#topic_id').on('change', function () {
+ 
         let topic_id = $(this).val();
 
         if (topic_id.length > 0) {

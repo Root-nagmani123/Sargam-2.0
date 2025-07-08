@@ -44,7 +44,7 @@
                                     <tr> 
                                         <td>{{ $key + 1 }}</td>
                                         <td>{{ $city->city_name }}</td>
-                                        <td>{{ $city->state->state_name }}</td>
+                                        <td>{{ optional($city->state)->state_name ?? 'N/A' }}</td>
                                         <td>{{ $city->district?->district_name ?? 'N/A' }}</td>
  <td>
                                         <div class="form-check form-switch d-inline-block">

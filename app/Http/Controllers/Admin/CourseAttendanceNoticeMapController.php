@@ -99,8 +99,26 @@ public function gettimetableDetailsBytopic(Request $request)
     $timetable = $query->first();
     return response()->json($timetable);
 }
-function conversation(){
-     return view('admin.courseAttendanceNoticeMap.conversation');
+function conversation($id){
+
+    // Validate the ID
+    if (!$id || !is_numeric($id)) {
+        return redirect()->back()->with('error', 'Invalid Memo/Notice ID.');
+    }
+    // Fetch the memo/notice details
+    $memoNotice = DB::table('notice_message_student_decip_incharge')
+        ->where('student_notice_status_pk', $id)
+        ->get();
+        // print_r(auth()->user()->name);die;
+         $memoNotice->transform(function ($item) {
+        $creator = DB::table('users')
+            ->where('id', $item->created_by)
+            ->first();
+
+        $item->display_name = $creator ? $creator->name : 'N/A';
+        return $item;
+    });
+     return view('admin.courseAttendanceNoticeMap.conversation', compact('id','memoNotice'));
 }
 
 public function getStudentAttendanceBytopic(Request $request)
@@ -118,6 +136,8 @@ public function getStudentAttendanceBytopic(Request $request)
         $attendance = DB::table('course_student_attendance as a')
             ->leftJoin('student_master as s', 'a.Student_master_pk', '=', 's.pk')
             ->where('a.timetable_pk', $topicId)
+            ->whereIn('a.status', [2, 3])
+
             ->select(
                 'a.pk as pk',
                 's.display_name as display_name'
@@ -209,4 +229,64 @@ public function deleteMemoNotice($id)
         return redirect()->back()->with('error', 'Failed to delete Memo/Notice. Please try again.');
     }
 }
+public function memo_notice_conversation(Request $request)
+{
+    // print_r($request->all());die;
+    $validated = $request->validate([
+        'memo_notice_id' => 'required|exists:student_notice_status,pk',
+        'date' => 'required|date',
+        'time' => 'required',
+        'message' => 'required|string|max:500',
+        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+        'status' => 'required|in:OPEN,CLOSED',
+    ]);
+
+    // Handle file upload
+    $filePath = null;
+    if ($request->hasFile('document')) {
+        $file = $request->file('document');
+        $filePath = $file->store('notice_documents', 'public'); // stored in /storage/app/public/notice_documents
+    }
+
+    // Insert into your table
+   $data = DB::table('notice_message_student_decip_incharge')->insert([
+        'student_notice_status_pk' => $validated['memo_notice_id'],
+        'student_decip_incharge_msg' => $validated['message'],
+        'doc_upload' => $filePath,
+        // 'created_date' => now(),
+        'created_by' => auth()->user()->id ?? 1, // Replace with correct user ID
+        // 'status' => $validated['status'], // if this column exists
+    ]);
+
+   if ($data) {
+        return redirect()->back()->with('success', 'Notice msg created successfully.');
+
+        } else {
+        return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
+    }
+}
+public function noticedeleteMessage($id)
+{
+       $message = DB::table('notice_message_student_decip_incharge')
+        ->where('pk', $id)
+        ->first();
+
+    if ($message && !empty($message->file_name)) {
+        // Delete the file from the 'public' disk
+        if (Storage::disk('public')->exists($message->file_name)) {
+            Storage::disk('public')->delete($message->file_name);
+        }
+    }
+
+
+    // Now delete the DB record
+    DB::table('notice_message_student_decip_incharge')
+        ->where('pk', $id)
+        ->delete();
+
+    return redirect()->back()->with('success', 'Message and associated file deleted successfully.');
+
+}
+
+
 }
