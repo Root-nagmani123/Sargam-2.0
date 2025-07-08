@@ -117,8 +117,8 @@
                                 <td>{{ $memo->date_}}</td>
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
-                                    <a href="{{route('memo.notice.management.conversation')}}"
-                                        class="btn btn-primary btn-sm">View Conversation</a>
+                                    <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}" class="btn btn-primary btn-sm">View Conversation</a>
+
                                     <a href="" class="text-primary btn btn-sm" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas"><i
                                             class="material-icons md-18">crisis_alert</i></a>

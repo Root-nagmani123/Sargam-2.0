@@ -40,6 +40,6 @@
   <script src="{{asset('admin_assets/libs/jquery-steps/build/jquery.steps.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/jquery-validation/dist/jquery.validate.min.js')}}"></script>
   <script src="{{ asset('admin_assets/js/prism.min.js') }}"></script>
-  <!-- <script src="{{ asset('admin_assets/js/dual-listbox.js') }}"></script> -->
+  <script src="{{ asset('admin_assets/js/dual-listbox.js') }}"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   @yield('scripts')
