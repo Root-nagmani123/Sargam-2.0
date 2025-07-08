@@ -67,8 +67,8 @@
                 </div>
                 <div class="col-4">
                     <div class="mb-3">
-                        <label for="status" class="form-label">Type (Notice / Memo)</label>
-                        <select class="form-select" id="status" name="status">
+                        <label for="type" class="form-label">Type (Notice / Memo)</label>
+                        <select class="form-select" id="type" name="type">
                             <option value="">Select type</option>
                             <option value="1">Notice</option>
                             <option value="0">Memo</option>
@@ -85,7 +85,7 @@
                         </select>
                     </div>
                 </div>
-                
+
             </div>
             <hr>
             <div class="dataTables_wrapper" id="alt_pagination_wrapper">
@@ -190,10 +190,10 @@
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="memo_generateLabel">Generate Memo / Notice</h5>
+                    <h5 class="modal-title" id="memo_generateLabel">Generate Memo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-<hr>
+                <hr>
                 <form action="{{ route('memo.notice.management.store_memo_notice') }}" method="POST">
                     @csrf
                     <div class="modal-body">
@@ -273,6 +273,56 @@
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
+                            <div class="col-6 mb-3">
+                                <label for="memo_type" class="form-label">Memo Type</label>
+                                <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-control">
+                                    <option value="">Select Memo Type</option>
+                                    <option value="">Memo Type</option>
+                                </select>
+                                @error('memo_type_master_pk')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="memo_number" class="form-label">Memo Number</label>
+                                <input type="text" id="memo_number" class="form-control" readonly>
+                                <input type="hidden" id="memo_number" name="memo_number">
+                                @error('memo_number')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="venue" class="form-label">Venue</label>
+                                <input type="text" id="venue" class="form-control" readonly>
+                                <input type="hidden" id="venue" name="venue">
+                                @error('venue')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="memo_date" class="form-label">Date</label>
+                                <input type="date" id="memo_date" class="form-control" readonly>
+                                <input type="hidden" id="memo_date" name="memo_date">
+                                @error('memo_date')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="meeting_time" class="form-label">Meeting Time</label>
+                                <input type="datetime" id="meeting_time" class="form-control">
+                                <input type="hidden" id="meeting_time" name="meeting_time">
+                                @error('meeting_time')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label for="meeting_time" class="form-label">Meeting Time</label>
+                                <input type="datetime" id="meeting_time" class="form-control">
+                                <input type="hidden" id="meeting_time" name="meeting_time">
+                                @error('meeting_time')
+                                <span class="text-danger">{{ $message }}</span>
+                                @enderror
+                            </div>
 
                             <div class="col-12 mb-3">
                                 <label for="textarea" class="form-label">Message (If Any)</label>
@@ -284,7 +334,7 @@
                             </div>
                         </div>
                     </div>
-<hr>
+                    <hr>
                     <div class="modal-footer d-flex text-end gap-3">
                         <div>
                             <button type="submit" class="btn btn-primary">Send</button>
