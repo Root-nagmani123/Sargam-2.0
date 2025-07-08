@@ -31,7 +31,7 @@
                                                      </iconify-icon>
                                                  </a>
                                                  <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">General</span>
+                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2 text-dark">General</span>
                                              </li>
 
                                              <li class="mini-nav-item {{ request()->is('admin/*') ? 'selected' : '' }}"
@@ -43,7 +43,7 @@
                                                      </iconify-icon>
                                                  </a>
                                                  <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">Master</span>
+                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2 text-dark">Master</span>
                                              </li>
 
                                              <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
@@ -54,7 +54,7 @@
                                                      <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
                                                      </iconify-icon>
                                                  </a>
-                                                 <span class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">FC
+                                                 <span class="mini-nav-title fs-3 fw-bold text-center d-block mb-2 text-dark">FC
                                                      Forms</span>
                                              </li>
 
