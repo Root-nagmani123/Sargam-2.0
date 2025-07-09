@@ -89,5 +89,17 @@
             </a>
         </li>
 
+        <!-- ======= Joining Documents ======= -->
+        <li class="nav-small-cap"><span class="hide-menu"> Documents</span></li>
+
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('fc.joining.index') }}">
+                <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
+                <span class="hide-menu">Joining Documents </span>
+            </a>
+        </li>
+
+       
+
     </ul>
 </nav>

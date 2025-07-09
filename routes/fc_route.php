@@ -9,6 +9,7 @@ use Mews\Captcha\Captcha;
 use App\Http\Controllers\Admin\Registration\RegistrationImportController;
 use App\Http\Controllers\Admin\Registration\FcRegistrationMasterController;
 use App\Http\Controllers\Admin\Registration\FrontPageController;
+use App\Http\Controllers\Admin\Registration\FcJoiningDocumentController;
 
 
 
@@ -202,5 +203,8 @@ Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])
 
 //reset web-auth form verify
 Route::post('/fc/verify-web-auth', [FrontPageController::class, 'verifyWebAuth'])->name('fc.verify_web_auth');
-//
+
+//joining document route
+Route::get('/admin/fc/joining-documents', [FcJoiningDocumentController::class, 'create'])->name('fc.joining.index');
+Route::post('/admin/fc/joining-documents/upload', [FcJoiningDocumentController::class, 'store'])->name('fc.joining.upload');
 

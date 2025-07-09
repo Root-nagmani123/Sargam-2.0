@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Registration - Foundation Course | Lal Bahadur Shastri National Academy of Administration</title>
-    <link rel="shortcut icon" type="image/x-icon" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
     <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
@@ -247,8 +247,8 @@
                                 style=" font-size: 12px;">Skip to Main Content</a></li>
                         <!-- <span class="text-muted me-3 ms-3">|</span>
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="{{ asset('images/text_to_speech.png') }}" alt="" width="20"><span class="ms-1"
-                                    style=" font-size: 12px;">Screen Reader</span></a></li>
+                                    src="{{ asset('images/text_to_speech.png') }}" alt="" width="20"><span
+                                    class="ms-1" style=" font-size: 12px;">Screen Reader</span></a></li>
                         <span class="text-muted me-3 ms-3">|</span>
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
                                 style=" font-size: 12px;">A+</a></li>
@@ -346,35 +346,41 @@
                 <!-- Sidebar -->
                 <div class="col-md-4 col-lg-3 sidebar" style="position: sticky; top: 150px; max-height: 100vh;">
                     <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                        <button class="nav-link active mb-4" id="tab-1-tab" data-bs-toggle="pill"
-                            data-bs-target="#tab-1" type="button" role="tab" aria-controls="tab-1"
-                            aria-selected="true">Descriptive Roll</button>
-                        <button class="nav-link mb-4" id="tab-2-tab" data-bs-toggle="pill" data-bs-target="#tab-2"
-                            type="button" role="tab" aria-controls="tab-2" aria-selected="true">Descriptive Roll
-                            II</button>
-                        <button class="nav-link mb-4" id="tab-3-tab" data-bs-toggle="pill" data-bs-target="#tab-3"
-                            type="button" role="tab" aria-controls="tab-3" aria-selected="true">Joining
-                            Instructions</button>
-                        <button class="nav-link mb-4" id="tab-4-tab" data-bs-toggle="pill" data-bs-target="#tab-4"
-                            type="button" role="tab" aria-controls="tab-4" aria-selected="true">Joining
-                            Documents</button>
-                        <button class="nav-link mb-4" id="tab-5-tab" data-bs-toggle="pill" data-bs-target="#tab-5"
-                            type="button" role="tab" aria-controls="tab-5" aria-selected="true">Bank Details</button>
-                        <button class="nav-link mb-4" id="tab-6-tab" data-bs-toggle="pill" data-bs-target="#tab-6"
-                            type="button" role="tab" aria-controls="tab-6" aria-selected="true">Health Risk
-                            Factors</button>
-                        <button class="nav-link mb-4" id="tab-7-tab" data-bs-toggle="pill" data-bs-target="#tab-7"
-                            type="button" role="tab" aria-controls="tab-7" aria-selected="true">Special
-                            Assistance</button>
-                        <button class="nav-link mb-4" id="tab-8-tab" data-bs-toggle="pill" data-bs-target="#tab-8"
-                            type="button" role="tab" aria-controls="tab-8" aria-selected="true">Vision
-                            Statements</button>
-                        <button class="nav-link mb-4" id="tab-9-tab" data-bs-toggle="pill" data-bs-target="#tab-9"
-                            type="button" role="tab" aria-controls="tab-9" aria-selected="true">Reports (Admin
-                            Only)</button>
+                        <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist"
+                            aria-orientation="vertical">
+                            <button class="nav-link active mb-4" id="tab-1-tab" data-bs-toggle="pill"
+                                data-bs-target="#tab-1" type="button" role="tab" aria-controls="tab-1"
+                                aria-selected="true">Descriptive Roll</button>
+                            <button class="nav-link mb-4" id="tab-2-tab" data-bs-toggle="pill" data-bs-target="#tab-2"
+                                type="button" role="tab" aria-controls="tab-2" aria-selected="true">Descriptive
+                                Roll
+                                II</button>
+                            <button class="nav-link mb-4" id="tab-3-tab" data-bs-toggle="pill" data-bs-target="#tab-3"
+                                type="button" role="tab" aria-controls="tab-3" aria-selected="true">Joining
+                                Instructions</button>
+                            <button class="nav-link mb-4" id="tab-4-tab" data-bs-toggle="pill" data-bs-target="#tab-4"
+                                type="button" role="tab" aria-controls="tab-4" aria-selected="true">Joining
+                                Documents</button>
+                            <button class="nav-link mb-4" id="tab-5-tab" data-bs-toggle="pill" data-bs-target="#tab-5"
+                                type="button" role="tab" aria-controls="tab-5" aria-selected="true">Bank
+                                Details</button>
+                            <button class="nav-link mb-4" id="tab-6-tab" data-bs-toggle="pill" data-bs-target="#tab-6"
+                                type="button" role="tab" aria-controls="tab-6" aria-selected="true">Health Risk
+                                Factors</button>
+                            <button class="nav-link mb-4" id="tab-7-tab" data-bs-toggle="pill" data-bs-target="#tab-7"
+                                type="button" role="tab" aria-controls="tab-7" aria-selected="true">Special
+                                Assistance</button>
+                            <button class="nav-link mb-4" id="tab-8-tab" data-bs-toggle="pill" data-bs-target="#tab-8"
+                                type="button" role="tab" aria-controls="tab-8" aria-selected="true">Vision
+                                Statements</button>
+                            <button class="nav-link mb-4" id="tab-9-tab" data-bs-toggle="pill" data-bs-target="#tab-9"
+                                type="button" role="tab" aria-controls="tab-9" aria-selected="true">Reports (Admin
+                                Only)</button>
+                        </div>
+
+
                     </div>
                 </div>
-
                 <!-- Form Content -->
                 <div class="col-md-8 col-lg-9">
                     <div class="tab-content" id="v-pills-tabContent">
@@ -382,7 +388,8 @@
                             <!-- Personal Details -->
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 class="card-title text-primary fw-bold" style="font-size: 24px;">Personal
+                                    <h5 class="card-title text-primary fw-bold" style="font-size: 24px;">
+                                        Personal
                                         Details
                                     </h5>
                                     <p class="text-muted mb-4">Basic personal information</p>
@@ -479,7 +486,8 @@
                             <!-- Personal Details -->
                             <div class="card">
                                 <div class="card-body">
-                                    <h5 class="card-title text-primary fw-bold" style="font-size: 24px;">Personal
+                                    <h5 class="card-title text-primary fw-bold" style="font-size: 24px;">
+                                        Personal
                                         Details
                                     </h5>
                                     <p class="text-muted mb-4">Basic personal information</p>
@@ -601,10 +609,10 @@
                                                 <tr>
                                                     <th class="col">Sr.No.</th>
                                                     <th class="col">Documents</th>
-                                                    <th class="col">Downloads</th>
-                                                    <th class="col">Sample</th>
                                                     <th class="col">Uploads</th>
-                                                    <th class="col">View Uploaded</th>
+                                                    <th class="col">View Uploaded Forms</th>
+                                                    <th class="col">Sample Document</th>
+                                                    <th class="col">Downloads</th>
                                                     <th class="col">Status</th>
                                                 </tr>
                                             </thead>
@@ -617,15 +625,15 @@
                                                         Family Details Form (Form - 3) of Rules 54(12) of CCS (Pension)
                                                         Rules, 1972
                                                     </td>
-                                                    <td class="text-center"><a href="#" class="btn btn-link p-0"
-                                                            style="text-decoration: none;">Download
-                                                            Forms</a></td>
-                                                    <td class="text-center"><a href="#" class="btn btn-link p-0"
-                                                            style="text-decoration: none;">View
-                                                            Sample</a></td>
                                                     <td><input type="file" class="form-control"></td>
                                                     <td class="text-center"><span class="text-success">View Uploaded
                                                             Forms</span></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0"
+                                                            style="text-decoration: none;">Download
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0"
+                                                            style="text-decoration: none;">View
+                                                            Sample</a></td>
+                                                    Forms</a></td>
                                                     <td class="text-center"><span
                                                             class="badge bg-success">Completed</span>
                                                     </td>
@@ -647,6 +655,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -662,6 +674,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -679,6 +695,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -695,6 +715,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -718,6 +742,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -734,6 +762,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -751,6 +783,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -772,6 +808,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -789,6 +829,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -805,6 +849,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -821,6 +869,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -837,6 +889,10 @@
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">Download
                                                             Forms</a></td>
+                                                    <td class="text-center"><a href="#" class="btn btn-link p-0" <td
+                                                            class="text-center"><a href="#" class="btn btn-link p-0"
+                                                                style="text-decoration: none;">Download
+                                                                Forms</a></td>
                                                     <td class="text-center"><a href="#" class="btn btn-link p-0"
                                                             style="text-decoration: none;">View
                                                             Sample</a></td>
@@ -876,8 +932,7 @@
                                                     <td class="text-center">1</td>
                                                     <td colspan="6" class="text-start"><strong>Nomination for benefits
                                                             under the Central Government Employees Group Insurance
-                                                            Scheme, 1980</strong>
-                                                    </td>
+                                                            Scheme, 1980</strong></td>
                                                 </tr>
                                                 <tr>
                                                     <td></td>
@@ -988,7 +1043,7 @@
                                                     <td><a href="#" class="btn btn-link p-0 text-danger">Pending</a>
                                                     </td>
                                                     <td><a href="#" class="btn btn-success py-3 btn-sm">Success</a></td>
-                                                    <td><textarea name="" id=""></textarea></td>
+                                                    <td><textarea name="" id="" class="form-control"></textarea></td>
                                                 </tr>
                                                 <tr>
                                                     <td>1</td>
@@ -1010,7 +1065,7 @@
                                                     <td><a href="#" class="btn btn-link p-0 text-danger">Pending</a>
                                                     </td>
                                                     <td><a href="#" class="btn btn-success py-3 btn-sm">Success</a></td>
-                                                    <td><textarea name="" id=""></textarea></td>
+                                                    <td><textarea name="" id="" class="form-control"></textarea></td>
                                                 </tr>
                                                 <!-- Add more rows as needed -->
                                             </tbody>
@@ -1020,7 +1075,6 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -1031,7 +1085,8 @@
         <div class="container">
             <div class="row">
                 <div class="col-md-8">
-                    <p class="mb-0" style="font-size: 14px;">&copy; {{date('Y')}} Lal Bahadur Shastri National Academy
+                    <p class="mb-0" style="font-size: 14px;">&copy; {{ date('Y') }} Lal Bahadur Shastri National
+                        Academy
                         of
                         Administration, Mussoorie, Uttarakhand</p>
                 </div>
