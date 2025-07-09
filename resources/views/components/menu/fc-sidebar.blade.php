@@ -2,7 +2,8 @@
     <ul class="sidebar-menu" id="sidebarnav">
         <!-- ======= GENERAL SECTION ======= -->
         <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-           style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">General</span>
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span
+                class="hide-menu">General</span>
         </li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
@@ -26,7 +27,8 @@
         <span class="sidebar-divider"></span>
         <!-- ======= REGISTRATION SECTION ======= -->
         <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px;line-height:10px;"><span class="hide-menu">Registration
+            style="background-color: #af2910 !important;border-radius: 10px;line-height:10px;"><span
+                class="hide-menu">Registration
                 Management</span></li>
         <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
             <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
@@ -45,7 +47,8 @@
         <span class="sidebar-divider"></span>
         <!-- ======= EXEMPTION SECTION ======= -->
         <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Exemption</span>
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span
+                class="hide-menu">Exemption</span>
         </li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
@@ -63,7 +66,8 @@
         <span class="sidebar-divider"></span>
         <!-- ======= DATABASE MANAGEMENT ======= -->
         <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Database
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span
+                class="hide-menu">Database
                 Tools</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('admin.column.form') }}">
@@ -79,11 +83,19 @@
         </li>
         <!-- ======= Joining Documents ======= -->
         <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu"> Documents</span></li>
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">
+                Documents</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('fc.joining.index') }}">
                 <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
                 <span class="hide-menu">Joining Documents </span>
+            </a>
+        </li>
+
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('admin.joining-documents.index') }}">
+                <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
+                <span class="hide-menu">Report(Admin Only)</span>
             </a>
         </li>
     </ul>
