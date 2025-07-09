@@ -3,6 +3,7 @@
 @section('title', 'Joining Documents')
 
 @section('content')
+<div class="container-fluid mt-4">
     <x-session_message />
     <x-breadcrum title="Joining Documents" />
     <form action="{{ route('fc.joining.upload') }}" method="POST" enctype="multipart/form-data">
@@ -32,29 +33,29 @@
                                 <td><input type="file" name="admin_family_details_form" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_family_details_form))
-                                        <a href="{{ asset('storage/' . $documents->admin_family_details_form) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_family_details_form) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_family_details_form))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_family_details_form)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_family_details_form)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
 
                                 <td class="text-center">
                                     @if (!empty($documents->admin_family_details_form))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -66,31 +67,32 @@
                             <tr>
                                 <td></td>
                                 <td>Nationality/Domicile Declaration</td>
-                                <td><input type="file" name="admin_close_relation_declaration" class="form-control"></td>
+                                <td><input type="file" name="admin_close_relation_declaration" class="form-control">
+                                </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_close_relation_declaration))
-                                        <a href="{{ asset('storage/' . $documents->admin_close_relation_declaration) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_close_relation_declaration) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_close_relation_declaration))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_close_relation_declaration)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_close_relation_declaration)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_close_relation_declaration))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -101,28 +103,28 @@
                                 <td><input type="file" name="admin_dowry_declaration" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_dowry_declaration))
-                                        <a href="{{ asset('storage/' . $documents->admin_dowry_declaration) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_dowry_declaration) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_dowry_declaration))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_dowry_declaration)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_dowry_declaration)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_dowry_declaration))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -133,29 +135,29 @@
                                 <td><input type="file" name="admin_marital_status" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_marital_status))
-                                        <a href="{{ asset('storage/' . $documents->admin_marital_status) }}" target="_blank"
-                                            class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_marital_status) }}" target="_blank"
+                                        class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
 
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_marital_status))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_marital_status)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_marital_status)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_marital_status))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
 
@@ -167,28 +169,28 @@
                                 <td><input type="file" name="admin_home_town_declaration" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_home_town_declaration))
-                                        <a href="{{ asset('storage/' . $documents->admin_home_town_declaration) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_home_town_declaration) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_home_town_declaration))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_home_town_declaration)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_home_town_declaration)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_home_town_declaration))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -203,28 +205,28 @@
                                 <td><input type="file" name="admin_property_immovable" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_immovable))
-                                        <a href="{{ asset('storage/' . $documents->admin_property_immovable) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_property_immovable) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_immovable))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_property_immovable)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_property_immovable)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_immovable))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -234,28 +236,28 @@
                                 <td><input type="file" name="admin_property_movable" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_movable))
-                                        <a href="{{ asset('storage/' . $documents->admin_property_movable) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_property_movable) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_movable))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_property_movable)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_property_movable)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_movable))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -265,28 +267,28 @@
                                 <td><input type="file" name="admin_property_liabilities" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_liabilities))
-                                        <a href="{{ asset('storage/' . $documents->admin_property_liabilities) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_property_liabilities) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_liabilities))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_property_liabilities)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_property_liabilities)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_property_liabilities))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -301,28 +303,28 @@
                                 <td><input type="file" name="admin_bond_ias_ips_ifos" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_bond_ias_ips_ifos))
-                                        <a href="{{ asset('storage/' . $documents->admin_bond_ias_ips_ifos) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_bond_ias_ips_ifos) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_bond_ias_ips_ifos))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_bond_ias_ips_ifos)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_bond_ias_ips_ifos)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_bond_ias_ips_ifos))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
 
@@ -333,28 +335,28 @@
                                 <td><input type="file" name="admin_bond_other_services" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_bond_other_services))
-                                        <a href="{{ asset('storage/' . $documents->admin_bond_other_services) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_bond_other_services) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_bond_other_services))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_bond_other_services)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_bond_other_services)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_bond_other_services))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -365,28 +367,28 @@
                                 <td><input type="file" name="admin_other_documents" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_other_documents))
-                                        <a href="{{ asset('storage/' . $documents->admin_other_documents) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_other_documents) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_other_documents))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_other_documents)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_other_documents)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_other_documents))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -396,28 +398,28 @@
                                 <td><input type="file" name="admin_oath_affirmation" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_oath_affirmation))
-                                        <a href="{{ asset('storage/' . $documents->admin_oath_affirmation) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_oath_affirmation) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_oath_affirmation))
-                                        <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_oath_affirmation)) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_oath_affirmation)) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_oath_affirmation))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -427,28 +429,28 @@
                                 <td><input type="file" name="admin_certificate_of_charge" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_certificate_of_charge))
-                                        <a href="{{ asset('storage/' . $documents->admin_certificate_of_charge) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->admin_certificate_of_charge) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center"><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_certificate_of_charge))
-                                        <a href="{{ asset('storage/' . $documents->admin_certificate_of_charge) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/' . $documents->admin_certificate_of_charge) }}" download
+                                        class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->admin_certificate_of_charge))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -486,28 +488,28 @@
                                 <td><input type="file" name="accounts_nomination_form" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->accounts_nomination_form))
-                                        <a href="{{ asset('storage/' . $documents->accounts_nomination_form) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->accounts_nomination_form) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td class="text-center">
                                     @if (!empty($documents->accounts_nomination_form))
-                                        <a href="{{ asset('storage/' . $documents->accounts_nomination_form) }}" download
-                                            class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/' . $documents->accounts_nomination_form) }}" download
+                                        class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->accounts_nomination_form))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -517,28 +519,28 @@
                                 <td><input type="file" name="accounts_nps_registration" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->accounts_nps_registration))
-                                        <a href="{{ asset('storage/' . $documents->accounts_nps_registration) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->accounts_nps_registration) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td>
                                     @if (!empty($documents->accounts_nps_registration))
-                                        <a href="{{ asset('storage/' . $documents->accounts_nps_registration) }}" download
-                                            class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/' . $documents->accounts_nps_registration) }}" download
+                                        class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->accounts_nps_registration))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
 
@@ -549,28 +551,28 @@
                                 <td><input type="file" name="accounts_employee_info_sheet" class="form-control"></td>
                                 <td class="text-center">
                                     @if (!empty($documents->accounts_employee_info_sheet))
-                                        <a href="{{ asset('storage/' . $documents->accounts_employee_info_sheet) }}"
-                                            target="_blank" class="btn btn-link p-0">View</a>
+                                    <a href="{{ asset('storage/' . $documents->accounts_employee_info_sheet) }}"
+                                        target="_blank" class="btn btn-link p-0">View</a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td><a href="#" class="btn btn-link p-0">View Sample</a></td>
                                 <td>
                                     @if (!empty($documents->accounts_employee_info_sheet))
-                                        <a href="{{ asset('storage/' . $documents->accounts_employee_info_sheet) }}"
-                                            download class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-download"></i> Download
-                                        </a>
+                                    <a href="{{ asset('storage/' . $documents->accounts_employee_info_sheet) }}"
+                                        download class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download"></i> Download
+                                    </a>
                                     @else
-                                        <span class="text-muted">No file uploaded</span>
+                                    <span class="text-muted">No file uploaded</span>
                                     @endif
                                 </td>
                                 <td class="text-center">
                                     @if (!empty($documents->accounts_employee_info_sheet))
-                                        <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-success">Completed</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    <span class="badge bg-warning ">Pending</span>
                                     @endif
                                 </td>
                             </tr>
@@ -585,4 +587,5 @@
             <button type="submit" class="text btn btn-primary">Submit</button>
         </div>
     </form>
+</div>
 @endsection
