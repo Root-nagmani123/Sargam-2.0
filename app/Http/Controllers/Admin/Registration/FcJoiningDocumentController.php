@@ -149,56 +149,64 @@ class FcJoiningDocumentController extends Controller
 
         // if ($request->filled('status')) {
         //     $fieldsKeys = array_keys($fields);
-            
+
         //     // Filter by user_id based on whether all documents are uploaded
         //     $filteredUserIds = collect($uploads)->filter(function ($upload) use ($fieldsKeys, $request) {
         //         $allUploaded = collect($fieldsKeys)->every(fn($key) => !empty($upload->$key));
         //         return $request->status == '1' ? $allUploaded : !$allUploaded;
         //     })->keys();
-            
+
         //     $query->whereIn('pk', $filteredUserIds);
         //     // @dd($request->status, $filteredUserIds);;
         // }
 
         // // Paginate after filters
         // $students = $query->orderBy('display_name')->paginate(10)->appends($request->query());
-    
+
         // // Return view with students and uploads
         // return view('admin.report.joining_documents_report', compact('fields', 'students', 'uploads'));
 
         $query = DB::table('student_master')->select('pk', 'display_name', 'schema_id');
 
-$search = $request->input('search');
-$status = $request->input('status');
+        $search = $request->input('search');
+        $status = $request->input('status');
 
-if ($search) {
-    $query->where('display_name', 'like', '%' . $search . '%');
-}
+        if ($search) {
+            $query->where('display_name', 'like', '%' . $search . '%');
+        }
 
-// Get all uploads (needed before status filtering)
-$allUploads = DB::table('fc_joining_documents_user_uploads')->get()->keyBy('user_id');
+        // Get all uploads (needed before status filtering)
+        $allUploads = DB::table('fc_joining_documents_user_uploads')->get()->keyBy('user_id');
 
-if ($request->filled('status')) {
-    $fieldsKeys = array_keys($fields);
+        if ($request->filled('status')) {
+            $fieldsKeys = array_keys($fields);
 
-    $filteredUserIds = $allUploads->filter(function ($upload) use ($fieldsKeys, $status) {
-        $allUploaded = collect($fieldsKeys)->every(fn($key) => !empty($upload->$key));
-        return $status == '1' ? $allUploaded : !$allUploaded;
-    })->keys()->toArray();
+            $allStudentIds = $query->pluck('pk')->toArray();
 
-    $query->whereIn('pk', $filteredUserIds);
-}
+            $filteredUserIds = [];
 
-// Finally paginate
-$students = $query->orderBy('display_name')->paginate(10);
+            foreach ($allStudentIds as $studentId) {
+                $upload = $allUploads->get($studentId);
+                $allUploaded = $upload && collect($fieldsKeys)->every(fn($key) => !empty($upload->$key));
 
-// Get uploads only for paginated students
-$studentIds = $students->pluck('pk')->toArray();
-$uploads = $allUploads->only($studentIds);
+                if ($status == '1' && $allUploaded) {
+                    $filteredUserIds[] = $studentId;
+                } elseif ($status == '0' && !$allUploaded) {
+                    $filteredUserIds[] = $studentId;
+                }
+            }
 
-return view('admin.report.joining_documents_report', compact('fields', 'students', 'uploads'));
+            $query->whereIn('pk', $filteredUserIds);
+        }
 
+        // Finally paginate
+        $students = $query->orderBy('display_name')->paginate(20);
 
+        // Get uploads only for paginated students
+        $studentIds = $students->pluck('pk')->toArray();
+        $uploads = $allUploads->only($studentIds);
+
+        return view('admin.report.joining_documents_report', compact('fields', 'students', 'uploads'));
     }
 
     // Download all documents for a specific user
@@ -228,82 +236,89 @@ return view('admin.report.joining_documents_report', compact('fields', 'students
     //     return back()->with('error', 'Could not create zip.');
     // }
 
-//     public function downloadAll($userId)
-// {
-//     $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
-//     $student = DB::table('student_master')->where('pk', $userId)->first();
+    //     public function downloadAll($userId)
+    // {
+    //     $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
+    //     $student = DB::table('student_master')->where('pk', $userId)->first();
 
-//     if (!$user || !$student) abort(404);
+    //     if (!$user || !$student) abort(404);
 
-//     $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->display_name);
-//     $zipFileName = $cleanName . '_joining_documents.zip';
-//     $tempFile = storage_path("app/temp/{$zipFileName}");
+    //     $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->display_name);
+    //     $zipFileName = $cleanName . '_joining_documents.zip';
+    //     $tempFile = storage_path("app/temp/{$zipFileName}");
 
-//     $zip = new \ZipArchive;
-//     if ($zip->open($tempFile, \ZipArchive::CREATE) === TRUE) {
-//         foreach ((array) $user as $key => $value) {
-//             if (
-//                 Str::endsWith($key, '_form') ||
-//                 Str::endsWith($key, '_declaration') ||
-//                 Str::endsWith($key, '_doc') ||
-//                 Str::endsWith($key, '_bond') ||
-//                 Str::endsWith($key, '_sheet')
-//             ) {
-//                 if (!empty($value) && Storage::disk('public')->exists($value)) {
-//                     $zip->addFile(storage_path("app/public/{$value}"), basename($value));
-//                 }
-//             }
-//         }
+    //     $zip = new \ZipArchive;
+    //     if ($zip->open($tempFile, \ZipArchive::CREATE) === TRUE) {
+    //         foreach ((array) $user as $key => $value) {
+    //             if (
+    //                 Str::endsWith($key, '_form') ||
+    //                 Str::endsWith($key, '_declaration') ||
+    //                 Str::endsWith($key, '_doc') ||
+    //                 Str::endsWith($key, '_bond') ||
+    //                 Str::endsWith($key, '_sheet')
+    //             ) {
+    //                 if (!empty($value) && Storage::disk('public')->exists($value)) {
+    //                     $zip->addFile(storage_path("app/public/{$value}"), basename($value));
+    //                 }
+    //             }
+    //         }
 
-//         $zip->close();
-//         return response()->download($tempFile, $zipFileName)->deleteFileAfterSend(true);
-//     }
+    //         $zip->close();
+    //         return response()->download($tempFile, $zipFileName)->deleteFileAfterSend(true);
+    //     }
 
-//     return back()->with('error', 'Could not create zip.');
-// }
-public function downloadAll($userId)
-{
-    $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
-    $student = DB::table('student_master')->where('pk', $userId)->first();
+    //     return back()->with('error', 'Could not create zip.');
+    // }
+    public function downloadAll($userId)
+    {
+        $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
+        $student = DB::table('student_master')->where('pk', $userId)->first();
 
-    if (!$user || !$student) {
-        return redirect()->back()->with('error', 'No uploaded documents found for this user.');
-    }
+        if (!$user || !$student) {
+            return redirect()->back()->with('error', 'No uploaded documents found for this user.');
+        }
 
-    $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->display_name);
-    $zipFileName = $cleanName . '_joining_documents.zip';
-    $tempFile = storage_path("app/temp/{$zipFileName}");
+        $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->display_name);
+        $zipFileName = $cleanName . '_joining_documents.zip';
+        $tempFile = storage_path("app/temp/{$zipFileName}");
 
-    $zip = new \ZipArchive;
-    if ($zip->open($tempFile, \ZipArchive::CREATE) === TRUE) {
-        $hasFiles = false;
+        $zip = new \ZipArchive;
+        if ($zip->open($tempFile, \ZipArchive::CREATE) === TRUE) {
+            $hasFiles = false;
 
-        foreach ((array) $user as $key => $value) {
-            if (
-                Str::endsWith($key, '_form') ||
-                Str::endsWith($key, '_declaration') ||
-                Str::endsWith($key, '_doc') ||
-                Str::endsWith($key, '_bond') ||
-                Str::endsWith($key, '_sheet')
-            ) {
+            foreach ((array) $user as $key => $value) {
                 if (!empty($value) && Storage::disk('public')->exists($value)) {
                     $zip->addFile(storage_path("app/public/{$value}"), basename($value));
                     $hasFiles = true;
                 }
             }
+
+            $zip->close();
+
+            if (!$hasFiles) {
+                return redirect()->back()->with('error', 'No documents available to download.');
+            }
+
+            return response()->download($tempFile, $zipFileName)->deleteFileAfterSend(true);
         }
 
-        $zip->close();
-
-        if (!$hasFiles) {
-            return redirect()->back()->with('error', 'No documents available to download.');
-        }
-
-        return response()->download($tempFile, $zipFileName)->deleteFileAfterSend(true);
+        return redirect()->back()->with('error', 'Could not create ZIP file.');
     }
 
-    return redirect()->back()->with('error', 'Could not create ZIP file.');
-}
+    // Function to save remarks for a user
+    // This function allows the admin to save remarks for a specific user.
+    public function saveRemark(Request $request, $user_id)
+    {
+        $request->validate([
+            'remark' => 'nullable|string',
+        ]);
 
+        DB::table('fc_joining_documents_user_uploads')
+            ->updateOrInsert(
+                ['user_id' => $user_id],
+                ['remark' => $request->remark, 'updated_at' => now()]
+            );
 
+        return back()->with('success', 'Remark saved successfully.');
+    }
 }
