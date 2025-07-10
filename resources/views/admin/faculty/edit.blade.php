@@ -10,7 +10,7 @@
     <!-- start Vertical Steps Example -->
     {{-- id="facultyForm" data-store-url="{{ route('faculty.update') }}"
         data-index-url="{{ route('faculty.index') }} --}}
-        <form>
+        <form class="facultyForm">
             <div class="card">
                 <div class="card-body">
                     <h4 class="card-title">Personal Information</h4>
