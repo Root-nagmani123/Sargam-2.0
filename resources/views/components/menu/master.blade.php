@@ -3,7 +3,8 @@
         <!-- ---------------------------------- -->
         <!-- Home -->
         <!-- ---------------------------------- -->
-        <li class="nav-small-cap">
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;">
             <span class="hide-menu">General</span>
         </li>
         <li class="sidebar-item">
@@ -76,7 +77,8 @@
         <!-- Divider -->
         <span class="sidebar-divider"></span>
         <!-- ======= Exemption SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Exemption</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Exemption</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.exemption.category.master.index') }}" id="get-url"
                 aria-expanded="false">
@@ -94,7 +96,8 @@
         <!-- Divider -->
         <span class="sidebar-divider"></span>
         <!-- ======= REGISTRATION SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Memo</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Memo</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.memo.type.master.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
@@ -136,7 +139,8 @@
         <!-- Divider -->
         <span class="sidebar-divider"></span>
         <!-- ======= REGISTRATION SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Employee</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Employee</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.employee.type.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
@@ -156,7 +160,8 @@
         <!-- Divider -->
         <span class="sidebar-divider"></span>
         <!-- ======= REGISTRATION SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Faculty</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Faculty</span></li>
 
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.faculty.expertise.index') }}" id="get-url"
@@ -190,7 +195,8 @@
         <span class="sidebar-divider"></span>
 
         <!-- ======= REGISTRATION SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Hostel</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Hostel</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
@@ -237,7 +243,8 @@
         <span class="sidebar-divider"></span>
 
         <!-- ======= REGISTRATION SECTION ======= -->
-        <li class="nav-small-cap"><span class="hide-menu">Address</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Address</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('master.country.index') }}">
                 <iconify-icon icon="solar:airbuds-case-line-duotone">
