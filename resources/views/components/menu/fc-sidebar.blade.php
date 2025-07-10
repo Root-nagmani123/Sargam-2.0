@@ -2,7 +2,7 @@
     <ul class="sidebar-menu" id="sidebarnav">
         <!-- ======= GENERAL SECTION ======= -->
         <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px;"><span class="hide-menu">General</span>
+           style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">General</span>
         </li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
@@ -45,7 +45,7 @@
         <span class="sidebar-divider"></span>
         <!-- ======= EXEMPTION SECTION ======= -->
         <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px;"><span class="hide-menu">Exemption</span>
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Exemption</span>
         </li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
@@ -63,7 +63,7 @@
         <span class="sidebar-divider"></span>
         <!-- ======= DATABASE MANAGEMENT ======= -->
         <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px;"><span class="hide-menu">Database
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Database
                 Tools</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('admin.column.form') }}">
@@ -78,7 +78,8 @@
             </a>
         </li>
         <!-- ======= Joining Documents ======= -->
-        <li class="nav-small-cap"><span class="hide-menu"> Documents</span></li>
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu"> Documents</span></li>
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('fc.joining.index') }}">
                 <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
