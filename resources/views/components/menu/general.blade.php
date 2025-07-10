@@ -12,7 +12,8 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
-                            <li class="nav-small-cap">
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;">
                                 <span class="hide-menu">General</span>
                             </li>
                             <!-- ---------------------------------- -->
@@ -119,7 +120,8 @@
                             <!-- Divider -->
                             <span class="sidebar-divider"></span>
                             <!-- ======= Feedback SECTION ======= -->
-                            <li class="nav-small-cap"><span class="hide-menu">Feedback</span></li>
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Feedback</span></li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}" id="get-url"
                                     aria-expanded="false">
@@ -141,7 +143,8 @@
                             <!-- Divider -->
                             <span class="sidebar-divider"></span>
                             <!-- ======= User Management SECTION ======= -->
-                            <li class="nav-small-cap"><span class="hide-menu">User Management</span></li>
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">User Management</span></li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.users.index') }}" id="get-url"
                                     aria-expanded="false">
