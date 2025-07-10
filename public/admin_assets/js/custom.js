@@ -459,9 +459,11 @@ $('input[name="photo"]').on('change', function () {
         });
     })
 
-    $('.facultyForm #country').on('change', function () {
-        if($(this).val() != '') {
-            let countryId = $(this).val();
+    $(document).on('change', '#country, #permanentcountry', function () {
+        const $form = $(this).closest('form');
+        const countryId = $(this).val();
+        let currentElement = this;
+        if (countryId !== '') {
             $.ajax({
                 url: routes.getStatesByCountry,
                 type: 'POST',
@@ -471,14 +473,18 @@ $('input[name="photo"]').on('change', function () {
                 },
                 success: function (response) {
                     if (response.status) {
-                        let stateSelect = $('.facultyForm #state');
-                        stateSelect.empty();
-                        stateSelect.append('<option value="">Select State</option>');
+                        let $stateSelect;
+                        if($(currentElement).attr('id') == 'permanentcountry') {
+                            $stateSelect = $form.find('#permanentstate');
+                        } else {
+                            $stateSelect = $form.find('#state');
+                        }
+                        $stateSelect.empty().append('<option value="">Select State</option>');
                         response.states.forEach(function (state) {
-                            stateSelect.append(`<option value="${state.pk}">${state.state_name}</option>`);
+                            $stateSelect.append(`<option value="${state.pk}">${state.state_name}</option>`);
                         });
                     } else {
-                        toastr.error(response.message);
+                        toastr.error(response.message || 'Failed to load states.');
                     }
                 },
                 error: function () {
@@ -487,9 +493,14 @@ $('input[name="photo"]').on('change', function () {
             });
         }
     });
-    $('.facultyForm #state').on('change', function () {
-        if($(this).val() != '') {
-            let stateId = $(this).val();
+
+
+    // When state changes — load districts
+    $(document).on('change', '#state, #permanentstate', function () {
+        const $form = $(this).closest('form');
+        const stateId = $(this).val();
+        let currentElement = this;
+        if (stateId !== '') {
             $.ajax({
                 url: routes.getDistrictsByState,
                 type: 'POST',
@@ -499,14 +510,19 @@ $('input[name="photo"]').on('change', function () {
                 },
                 success: function (response) {
                     if (response.status) {
-                        let districtSelect = $('.facultyForm #district');
-                        districtSelect.empty();
-                        districtSelect.append('<option value="">Select District</option>');
+                        let $districtSelect = '';
+                        if($(currentElement).attr('id') == 'permanentstate') {
+                            $districtSelect = $form.find('#permanentdistrict');
+                        } else {
+                            $districtSelect = $form.find('#district');
+                        }
+                        $districtSelect.empty().append('<option value="">Select District</option>');
                         response.districts.forEach(function (district) {
-                            districtSelect.append(`<option value="${district.pk}">${district.district_name}</option>`);
+                            $districtSelect.append(`<option value="${district.pk}">${district.district_name}</option>`);
                         });
+
                     } else {
-                        toastr.error(response.message);
+                        toastr.error(response.message || 'Failed to load districts.');
                     }
                 },
                 error: function () {
@@ -516,9 +532,12 @@ $('input[name="photo"]').on('change', function () {
         }
     });
 
-    $('.facultyForm #district').on('change', function () {
-        if($(this).val() != '') {
-            let districtId = $(this).val();
+    // When district changes — load cities
+    $(document).on('change', '#district, #permanentdistrict', function () {
+        const $form = $(this).closest('form');
+        const districtId = $(this).val();
+        let currentElement = this;
+        if (districtId !== '') {
             $.ajax({
                 url: routes.getCitiesByDistrict,
                 type: 'POST',
@@ -528,14 +547,20 @@ $('input[name="photo"]').on('change', function () {
                 },
                 success: function (response) {
                     if (response.status) {
-                        let citySelect = $('.facultyForm #city');
-                        citySelect.empty();
-                        citySelect.append('<option value="">Select City</option>');
+                        let $citySelect = '';
+                        if($(currentElement).attr('id') == 'permanentdistrict') {
+                            $citySelect = $form.find('#permanentcity');
+                            console.log('if part');
+                        } else {
+                            $citySelect = $form.find('#city');
+                            console.log('else part');
+                        }
+                        $citySelect.empty().append('<option value="">Select City</option>');
                         response.cities.forEach(function (city) {
-                            citySelect.append(`<option value="${city.pk}">${city.city_name}</option>`);
+                            $citySelect.append(`<option value="${city.pk}">${city.city_name}</option>`);
                         });
                     } else {
-                        toastr.error(response.message);
+                        toastr.error(response.message || 'Failed to load cities.');
                     }
                 },
                 error: function () {
@@ -543,7 +568,8 @@ $('input[name="photo"]').on('change', function () {
                 }
             });
         }
-    })
+    });
+
 });
 
 // Group Mapping Modules
