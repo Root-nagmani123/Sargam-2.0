@@ -212,4 +212,5 @@ Route::post('/admin/fc/joining-documents/upload', [FcJoiningDocumentController::
 Route::get('/admin/reports/joining-documents', [FcJoiningDocumentController::class, 'fc_report_index'])->name('admin.joining-documents.index');
 Route::get('/admin/reports/joining-documents/download-all/{userId}', [FcJoiningDocumentController::class, 'downloadAll'])->name('admin.joining-documents.download-all');
 
-
+//remark
+Route::post('/admin/joining-documents/save-remark/{user_id}', [FcJoiningDocumentController::class, 'saveRemark'])->name('admin.joining-documents.save-remark');
