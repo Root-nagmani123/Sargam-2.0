@@ -5,6 +5,8 @@
 @section('content')
 
 <div class="container-fluid">
+    <x-breadcrum title="Dashboard" />
+    <x-session_message />
     <div class="row">
         <div class="col-12">
             <div class="card">
