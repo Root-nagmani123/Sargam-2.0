@@ -19,7 +19,7 @@
 
          <x-session_message />
          <x-breadcrum title="Joining Documents" />
-         <div class="card card-body mb-4">
+         <div class="card card-body mb-4" style="border-left:4px solid #004a93;">
              <ul class="mb-0">
                  <li>
                      All the documents are compulsory to fill up and upload.
@@ -41,7 +41,7 @@
              @csrf
 
              <!-- Administration Section Related Documents -->
-             <div class="card mb-4">
+             <div class="card mb-4" style="border-left:4px solid #004a93;">
                  <div class="card-body">
                      <h5 class="fw-bold text-primary mb-3">Administration Section Related Documents</h5>
                      <div class="table-responsive">
@@ -522,7 +522,7 @@
              </div>
 
              <!-- Accounts Section Related Documents -->
-             <div class="card">
+             <div class="card" style="border-left:4px solid #004a93;">
                  <div class="card-body">
                      <h5 class="fw-bold text-primary mb-3">Accounts Section Related Documents</h5>
                      <div class="table-responsive">
