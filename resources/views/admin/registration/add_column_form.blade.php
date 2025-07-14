@@ -13,10 +13,10 @@
         <div class="card-body">
             <h4 class="card-title mb-3">Add New Column to Table</h4>
             <hr>
-
+{{-- 
             @if (session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
+            @endif --}}
 
             @if (session('error'))
                 <div class="alert alert-danger">{{ session('error') }}</div>

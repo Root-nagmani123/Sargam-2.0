@@ -48,8 +48,8 @@ class FormEditController extends Controller
             ->where('formid', $form_id)
             ->get();
 
-        // Get all column names from the form_submission table
-        $columns = Schema::getColumnListing('form_submission');
+        // Get all column names from the fc_registration_master table
+        $columns = Schema::getColumnListing('fc_registration_master');
         
         // Optional: Exclude technical columns
         $excluded = ['id', 'formid', 'uid', 'created_at', 'updated_at'];
