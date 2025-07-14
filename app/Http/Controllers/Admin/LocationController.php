@@ -143,8 +143,9 @@ class LocationController extends Controller
 
     public function districtCreate()
     {
+         $countries = Country::all();
         $states = State::all();
-        return view('admin.district.create', compact('states'));
+        return view('admin.district.create', compact('states', 'countries'));
     }
 
     public function districtStore(Request $request)
@@ -157,6 +158,7 @@ class LocationController extends Controller
 
 
         District::create([
+            'country_master_pk' => $request->country_master_pk, // Assuming you have a country_master_pk in the request
             'state_master_pk' => $request->state_master_pk,
             'district_name' => $request->district_name,
             'active_inactive' => $request->active_inactive,
@@ -168,9 +170,11 @@ class LocationController extends Controller
 
     public function districtEdit($id)
     {
+         $countries = Country::all();
+
         $district = District::findOrFail($id);
         $states = State::all();
-        return view('admin.district.edit', compact('district', 'states'));
+        return view('admin.district.edit', compact('district', 'states', 'countries'));
     }
 
     public function districtUpdate(Request $request, $id)
@@ -183,6 +187,8 @@ class LocationController extends Controller
 
         $district = District::findOrFail($id);
         $district->update([
+            'country_master_pk' => $request->country_master_pk, // Assuming you have a country_master_pk in the request
+
             'state_master_pk' => $request->state_master_pk,
             'district_name' => $request->district_name,
              'active_inactive' => $request->active_inactive,
@@ -208,9 +214,11 @@ class LocationController extends Controller
 
     public function cityCreate()
     {
+         $countries = Country::all();
+
         $states = State::all();  // Fetch all states
         $districts = District::all();
-        return view('admin.city.create', compact('states', 'districts'));
+        return view('admin.city.create', compact('states', 'districts', 'countries'));
     }
 
     public function cityStore(Request $request)
@@ -223,6 +231,7 @@ class LocationController extends Controller
         ]);
 
         City::create([
+            'country_master_pk' => $request->country_master_pk, 
             'state_master_pk' => $request->state_master_pk,
             'district_master_pk' => $request->district_master_pk,
             'city_name' => $request->city_name,
@@ -236,10 +245,11 @@ class LocationController extends Controller
     {
         $city = City::findOrFail($id);  // This will automatically handle finding by primary key 'pk'
 
+         $countries = Country::all();
 
         $states = State::all();  // Get all states
         $districts = District::all();  // Get all districts
-        return view('admin.city.edit', compact('city', 'districts', 'states'));
+        return view('admin.city.edit', compact('city', 'districts', 'states', 'countries'));
     }
 
     public function cityUpdate(Request $request, $id)
@@ -255,6 +265,7 @@ class LocationController extends Controller
 
         // Update the city details using the model
         $city->update([
+            'country_master_pk' => $request->country_master_pk, 
             'state_master_pk' => $request->state_master_pk,
             'district_master_pk' => $request->district_master_pk,
             'city_name' => $request->city_name,

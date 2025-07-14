@@ -12,6 +12,7 @@ class City extends Model
     public $timestamps = true;
     
     protected $fillable = [
+        'country_master_pk',
         'state_master_pk',
         'district_master_pk',
         'city_name',
@@ -30,5 +31,9 @@ class City extends Model
     public function district()
     {
         return $this->belongsTo(District::class, 'district_master_pk', 'pk');
+    }
+    public function country()
+    {
+        return $this->belongsTo(Country::class, 'country_master_pk', 'pk');
     }
 }
