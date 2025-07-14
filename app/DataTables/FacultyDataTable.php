@@ -79,6 +79,12 @@ class FacultyDataTable extends DataTable
                 </div>
                 ";
             })
+            ->filterColumn('full_name', function ($query, $keyword) {
+                $query->where('full_name', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('mobile_number', function ($query, $keyword) {
+                $query->where('mobile_no', 'like', "%{$keyword}%");
+            })
             ->rawColumns(['faculty_type','action', 'status', 'current_sector']);
     }
 
@@ -135,12 +141,12 @@ class FacultyDataTable extends DataTable
             Column::make('full_name')
                 ->title('Full Name')
                 ->addClass('text-center')
-                ->searchable(false)
+                ->searchable(true)
                 ->orderable(false),
             Column::make('mobile_number')
                 ->title('Mobile Number')
                 ->addClass('text-center')
-                ->searchable(false)
+                ->searchable(true)
                 ->orderable(false),
             Column::make('designation')
                 ->title('Designation')
