@@ -130,7 +130,7 @@
                                 <td>{{ $memo->date_}}</td>
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
-                                    <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}" class="btn btn-primary btn-sm">View Conversation</a>
+                                    <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}" class="btn btn-primary btn-sm">Notice Conversation</a>
 
                                     <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas" data-type="admin" data-id="{{ $memo->memo_notice_id }}" 

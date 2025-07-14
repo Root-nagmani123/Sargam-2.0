@@ -135,6 +135,12 @@
                 <span class="hide-menu">Memo Course Mapping</span>
             </a>
         </li>
+        <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('admin.courseAttendanceNoticeMap.memo_notice') }}">
+                <iconify-icon icon="solar:airbuds-case-line-duotone">
+                </iconify-icon>
+                <span class="hide-menu">Memo / Notice Creation (Admin)</span>
+            </a>
 
         <!-- Divider -->
         <span class="sidebar-divider"></span>

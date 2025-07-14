@@ -313,3 +313,8 @@ Route::prefix('admin/course-memo-decision')
 Route::get('/admin/memo-conversation', function () {
     return view('admin.courseAttendanceNoticeMap.memo_conversation'); // or any other view you want to show
 })->name('admin.courseAttendanceNoticeMap.memo_conversation');
+
+//route for admin notice/ memo conversation
+Route::get('/admin/memo-notice', function () {
+    return view('admin.courseAttendanceNoticeMap.memo_notice'); // or any other view you want to show
+})->name('admin.courseAttendanceNoticeMap.memo_notice');
