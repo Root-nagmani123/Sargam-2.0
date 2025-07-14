@@ -8,7 +8,7 @@
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
                 <iconify-icon icon="material-symbols:home-outline-rounded"></iconify-icon>
-                <span class="hide-menu">User Landing Page</span>
+                <span class="hide-menu">User Landing Page (User)</span>
             </a>
         </li>
         <li class="sidebar-item">
@@ -88,7 +88,7 @@
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('fc.joining.index') }}">
                 <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
-                <span class="hide-menu">Joining Documents </span>
+                <span class="hide-menu">Joining Documents(User) </span>
             </a>
         </li>
 
