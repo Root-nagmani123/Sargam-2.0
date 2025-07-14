@@ -39,7 +39,19 @@
         @endif
         
 
-        <input type="text" class="form-control" id="chatInput" name="message" placeholder="Type your message...">
+        @if($conversations->isNotEmpty() && $conversations->last()->notice_status == 1)
+            <div class="mb-3">
+                <label for="message" class="form-label">Your Message</label>
+                <textarea class="form-control" id="message" name="student_decip_incharge_msg" rows="3" required></textarea>
+            </div>
+            <input type="text" class="form-control" id="chatInput" name="message" placeholder="Type your message...">
         <button class="btn btn-primary" type="submit">Send</button>
+        @else
+            <div class="alert alert-warning">
+                <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.    
+            </div>
+        @endif
+
+        
     </div>
 </form>

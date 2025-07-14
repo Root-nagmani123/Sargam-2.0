@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent};
+use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, MemoTypeMaster};
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -29,11 +29,16 @@ class CourseAttendanceNoticeMapController extends Controller
         'sm.display_name as student_name','sm.pk as student_id','t.subject_topic as topic_name'
     )
     ->get();
-
+    $venue = [];
+    $memo_master = [];
+if($memos[0]->status == 2){
+    $venue = VenueMaster::where('active_inactive', 1)->get();
+    $memo_master = MemoTypeMaster::where('active_inactive', 1)->get();
+}
 
                     
                     // print_r($memos);die;
-         return view('admin.courseAttendanceNoticeMap.index', compact('memos'));
+         return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master'));
     }
 public function create(Request $request)
 {
@@ -119,6 +124,8 @@ function conversation($id){
     ->orderBy('nmsdi.created_date', 'asc')
     ->select(
         'nmsdi.*',
+        'sns.pk as notice_id',
+        'sns.status as notice_status',
         'sm.pk as student_id',
         'sm.display_name as student_name'
     )
@@ -143,6 +150,7 @@ $memoNotice->transform(function ($item) {
 
     return $item;
 });
+// print_r($memoNotice);die;
      return view('admin.courseAttendanceNoticeMap.conversation', compact('id','memoNotice'));
 }
 
@@ -266,7 +274,7 @@ public function memo_notice_conversation(Request $request)
         'time' => 'required',
         'message' => 'required|string|max:500',
         'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
-        'status' => 'required|in:OPEN,CLOSED',
+        'status' => 'required|in:1,2',
     ]);
 
     // Handle file upload
@@ -286,6 +294,11 @@ public function memo_notice_conversation(Request $request)
          ]);
 
    if ($data) {
+             if (isset($validated['status']) && $validated['status'] == 2) {
+                DB::table('student_notice_status')
+                ->where('pk', $validated['memo_notice_id'])
+                ->update(['status' => $validated['status']]);
+        }
         return redirect()->back()->with('success', 'Notice msg created successfully.');
 
         } else {
@@ -344,6 +357,8 @@ $memoNotice = DB::table('notice_message_student_decip_incharge as nmsdi')
     ->orderBy('nmsdi.created_date', 'asc')
     ->select(
         'nmsdi.*',
+        'sns.pk as notice_id',
+        'sns.status as notice_status',
         'sm.pk as student_id',
         'sm.display_name as student_name'
     )
@@ -418,6 +433,8 @@ public function get_conversation_model($id,$type, Request $request)
     ->orderBy('nmsdi.created_date', 'asc')
     ->select(
         'nmsdi.*',
+        'sns.pk as notice_id',
+        'sns.status as notice_status',
         'sm.pk as student_id',
         'sm.display_name as student_name'
     )

@@ -110,12 +110,16 @@
 
                         <td>
                             {{-- Add delete button here if needed --}}
+                            @if($row->notice_status == 1)
                             <form action="{{ route('memo.notice.management.noticedeleteMessage', $row->pk) }}"
                                 method="POST" onsubmit="return confirm('Are you sure?')">
                                 @csrf
                                 @method('DELETE')
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>
+                            @else
+                            <span class="text-muted">N/A</span>
+                            @endif  
                         </td>
 
                         <td>
@@ -137,6 +141,8 @@
         </div>
 
         <!-- Reply Form -->
+         @if($memoNotice->isNotEmpty())
+         @if($memoNotice->first()->notice_status == 1)
         <div class="border p-3 bg-light rounded">
             <form id="memo_notice_conversation" method="POST" enctype="multipart/form-data"
                 action="{{ route('memo.notice.management.memo_notice_conversation') }}">
@@ -173,8 +179,8 @@
                         <div class="mb-3">
                             <label class="form-label">Status</label>
                             <select class="form-select" name="status">
-                                <option value="OPEN">OPEN</option>
-                                <option value="CLOSED">CLOSED</option>
+                                <option value="1">OPEN</option>
+                                <option value="2">CLOSED</option>
                             </select>
                         </div>
                     </div>
@@ -186,6 +192,13 @@
                     <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
                 </div>
             </form>
+            @else
+            <div class="alert alert-warning mt-3">
+                <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
+                @endif
+                @endif
+
+              
 
 
         </div>
