@@ -129,15 +129,13 @@
                                 <td>{{ $memo->date_}}</td>
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
-                                    @if ($memo->memo_notice_id)
                                     <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}"
                                         class="btn btn-primary btn-sm">Notice Conversation</a>
-                                    @else
-                                    <a href="#" class="btn btn-primary btn-sm">Memo Conversation</a>
-                                    @endif
-                                    <a href="" class="text-primary btn btn-sm" data-bs-toggle="offcanvas"
+                                        <a href="" class="text-primary btn btn-sm" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas"><i
                                             class="material-icons md-18">crisis_alert</i></a>
+                                    <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}" class="btn btn-primary btn-sm">Memo Conversation</a>
+                                    
                                 </td>
                                 <td>
                                     <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
@@ -145,7 +143,7 @@
                                     
                                 </td>
                                 <!-- Offcanvas Chat Component -->
-                                <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
+                                <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas" style="width: 400px; border-left: 4px solid #004a93;">
                                     <div class="offcanvas-header">
                                         <h5 class="offcanvas-title">{{ $memo->topic_name }} : </h5> <br>
                                         <small class="text-muted">{{ $memo->notice_memo }}</small>
