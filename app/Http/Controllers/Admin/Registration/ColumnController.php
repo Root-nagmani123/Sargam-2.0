@@ -36,7 +36,10 @@ class ColumnController extends Controller
 
             Schema::table($table, function ($tableBlueprint) use ($type, $column, $length, $nullable, $default) {
                 $col = match ($type) {
-                    'VARCHAR' => $tableBlueprint->string($column, $length ?? 255),
+                    // 'VARCHAR' => $tableBlueprint->string($column, $length ?? 255),
+                    'VARCHAR' => ($length && $length <= 191)
+                        ? $tableBlueprint->string($column, $length)
+                        : $tableBlueprint->text($column), // fallback to TEXT
                     'INT' => $tableBlueprint->integer($column),
                     'TEXT' => $tableBlueprint->text($column),
                     'DATE' => $tableBlueprint->date($column),
@@ -58,4 +61,3 @@ class ColumnController extends Controller
         }
     }
 }
-

@@ -150,7 +150,7 @@ class FormController extends Controller
         // Get column names using raw query (Query Builder)
         $excludedColumns = ['id', 'formid', 'uid', 'timecreated'];
 
-        $columns = collect(DB::select('SHOW COLUMNS FROM form_submission'))
+        $columns = collect(DB::select('SHOW COLUMNS FROM fc_registration_master'))
             ->pluck('Field')
             ->filter(function ($column) use ($excludedColumns) {
                 return !in_array(strtolower($column), array_map('strtolower', $excludedColumns));
@@ -519,7 +519,7 @@ class FormController extends Controller
     }
 
     // Submission data for current user and form
-    $submissions = DB::table('form_submission')
+    $submissions = DB::table('fc_registration_master')
         ->where('formid', $form->id)
         ->where('uid', Auth::id())
         ->get()
@@ -555,7 +555,7 @@ class FormController extends Controller
             $timestamp = now()->timestamp;
 
             // Check if a submission already exists
-            $existingSubmission = DB::table('form_submission')
+            $existingSubmission = DB::table('fc_registration_master')
                 ->where('formid', $formId)
                 ->where('uid', $userId)
                 ->first();
@@ -590,12 +590,12 @@ class FormController extends Controller
                 $dynamicFields['timecreated'] = $timestamp;
 
                 if ($existingSubmission) {
-                    DB::table('form_submission')
+                    DB::table('fc_registration_master')
                         ->where('formid', $formId)
                         ->where('uid', $userId)
                         ->update($dynamicFields);
                 } else {
-                    DB::table('form_submission')->insert($dynamicFields);
+                    DB::table('fc_registration_master')->insert($dynamicFields);
                 }
             }
 
@@ -819,7 +819,7 @@ class FormController extends Controller
         $statusval = $request->input('statusval');
 
         // Fetch submission records
-        $query = DB::table('form_submission')->where('formid', $formid);
+        $query = DB::table('fc_registration_master')->where('formid', $formid);
         if ($statusval) {
             $query->where('confirm_status', $statusval);
         }
@@ -850,7 +850,7 @@ class FormController extends Controller
         $passwords = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
 
         // Total student count (distinct users)
-        $total_students = DB::table('form_submission')
+        $total_students = DB::table('fc_registration_master')
             ->where('formid', $formid)
             ->distinct('uid')
             ->count('uid');
@@ -994,7 +994,7 @@ class FormController extends Controller
         $statusval = $request->input('statusval');
         $format = $request->input('format'); // 'xlsx', 'csv', or 'pdf'
 
-        $query = DB::table('form_submission')->where('formid', $formid);
+        $query = DB::table('fc_registration_master')->where('formid', $formid);
         if ($statusval) {
             $query->where('confirm_status', $statusval);
         }
@@ -1002,7 +1002,7 @@ class FormController extends Controller
 
         $columns = DB::select(
             'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
-            ['form_submission']
+            ['fc_registration_master']
         );
         $allColumns = array_map(fn($col) => $col->COLUMN_NAME, $columns);
 
@@ -1050,7 +1050,7 @@ class FormController extends Controller
             $form_date_range = date('d-m-Y', strtotime($formInfo->course_sdate)) . " to " . date('d-m-Y', strtotime($formInfo->course_edate));
 
             // Get submission (normal fields)
-            $submission = DB::table('form_submission')
+            $submission = DB::table('fc_registration_master')
                 ->where('formid', $form_id)
                 ->where('uid', $user_id)
                 ->first();
