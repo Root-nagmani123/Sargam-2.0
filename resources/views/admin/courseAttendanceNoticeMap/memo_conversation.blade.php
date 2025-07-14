@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Notice Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Memo Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
 <div class="container-fluid">
 
-    <x-breadcrum title="Notice Conversation" />
+    <x-breadcrum title="Memo Conversation" />
     <x-session_message />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
@@ -94,43 +94,31 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($memoNotice as $row)
                     <tr>
-                        <td class="{{ $loop->first ? 'fw-bold text-danger' : '' }}">
-                            {{ $row->display_name ?? 'N/A' }}
+                        <td class="">
                         </td>
 
-                        <td class="{{ $loop->first ? 'text-danger' : '' }}">
-                            {{ $row->student_decip_incharge_msg }}
+                        <td class="">
+                           
                         </td>
 
                         <td>
-                            {{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}
                         </td>
 
                         <td>
                             {{-- Add delete button here if needed --}}
-                            <form action="{{ route('memo.notice.management.noticedeleteMessage', $row->pk) }}"
+                            <form action=""
                                 method="POST" onsubmit="return confirm('Are you sure?')">
-                                @csrf
-                                @method('DELETE')
+                               
                                 <button class="btn btn-sm btn-danger">Delete</button>
                             </form>
                         </td>
 
                         <td>
-                            @if ($row->doc_upload)
-                            <a href="{{ asset('storage/' . $row->doc_upload) }}" target="_blank">View</a>
-                            @else
-                            ---
-                            @endif
+                            <a href="" target="_blank">View</a>
+                          
                         </td>
                     </tr>
-                    @empty
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">No conversation found.</td>
-                    </tr>
-                    @endforelse
                 </tbody>
 
             </table>
@@ -139,12 +127,11 @@
         <!-- Reply Form -->
         <div class="border p-3 bg-light rounded">
             <form id="memo_notice_conversation" method="POST" enctype="multipart/form-data"
-                action="{{ route('memo.notice.management.memo_notice_conversation') }}">
-                @csrf
+                action="">
 
                 <div class="row g-3 mb-3">
                     <div class="col-md-6">
-                        <input type="hidden" name="memo_notice_id" value="{{ $id }}">
+                        <input type="hidden" name="memo_notice_id" value="">
                         <label class="form-label">Select Date</label>
                         <input type="date" class="form-control" id="current_date" name="date" readonly>
                     </div>
