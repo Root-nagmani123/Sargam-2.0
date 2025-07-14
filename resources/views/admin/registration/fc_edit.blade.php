@@ -3,29 +3,8 @@
 @section('title', 'Edit Form Fields - Sargam | Lal Bahadur')
 @section('content')
     <div class="container-fluid">
-        <div class="card card-body py-3">
-            <div class="row align-items-center">
-                <div class="col-12">
-                    <div class="d-sm-flex align-items-center justify-space-between">
-                        <h4 class="mb-4 mb-sm-0 card-title">Edit Registration Form</h4>
-                        <nav aria-label="breadcrumb" class="ms-auto">
-                            <ol class="breadcrumb">
-                                <li class="breadcrumb-item d-flex align-items-center">
-                                    <a class="text-muted text-decoration-none d-flex" href="{{ route('forms.fc_update') }}">
-                                        <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                    </a>
-                                </li>
-                                <li class="breadcrumb-item" aria-current="page">
-                                    <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                        Registration
-                                    </span>
-                                </li>
-                            </ol>
-                        </nav>
-                    </div>
-                </div>
-            </div>
-        </div>
+         <x-session_message />
+         <x-breadcrum title="Edit Registration Form" />
         {{-- <h1>Edit Form Fields</h1> --}}
 
         <form method="POST" action="{{ route('forms.fc_update') }}">
@@ -155,15 +134,15 @@
 
                                             <div class="row align-items-center">
                                                 <div class="col-md-6">
-                                                   <div class="form-check">
-                                    <input type="checkbox" name="is_required[{{ $field->id }}]" class="form-check-input" id="required_{{ $field->id }}" {{ $field->required ? 'checked' : '' }}>
+                                                   <div class="form-check" style="padding-left: 0 !important;">
+                                    <input type="checkbox" name="is_required[{{ $field->id }}]" id="required_{{ $field->id }}" {{ $field->required ? 'checked' : '' }}>
                                     <label class="form-check-label" for="required_{{ $field->id }}">Required</label>
                                 </div>
                                                 </div>
                                                 <div class="col-md-6">
-                                                    <div class="form-check">
+                                                    <div class="form-check" style="padding-left: 0 !important;">
                                                         <input type="checkbox" name="delete_fields[{{ $fieldIndex }}]"
-                                                            value="{{ $field->id }}" class="form-check-input"
+                                                            value="{{ $field->id }}"
                                                             id="delete_{{ $fieldIndex }}">
                                                         <label class="form-check-label text-danger"
                                                             for="delete_{{ $fieldIndex }}">Delete</label>

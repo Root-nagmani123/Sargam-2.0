@@ -72,7 +72,6 @@
             </div>
             <!-- Main content area -->
             <div class="col-md-9">
-                <div class="card">
                     @if (session('success') || session('error'))
                         <div class="container">
                             <div class="alert alert-{{ session('success') ? 'success' : 'danger' }} alert-dismissible fade show"
@@ -83,7 +82,6 @@
                             </div>
                         </div>
                     @endif
-                    <div class="card-body">
                         <div class="tab-content" id="v-pills-tabContent">
                             <div class="tab-pane fade show active" id="{{ route('forms.show', $form->id) }}"
                                 role="tabpanel" aria-labelledby="{{ route('forms.show', $form->id) }}-tab">
@@ -93,7 +91,9 @@
                                     @csrf
 
                                     @foreach ($sections as $section)
-                                        <div class="section-container mb-4">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="section-container mb-4">
                                             <div class="section-title py-2 fw-bold mb-2"
                                                 style="font-size: 24px; color: #004a93;">{{ $section->section_title }}
                                             </div>
@@ -181,6 +181,8 @@
                                                 </div>
                                             @endif
                                         </div>
+                                            </div>
+                                        </div>
                                     @endforeach
 
                                     <div class="form-actions border-top pt-3">
@@ -194,8 +196,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
 
 
