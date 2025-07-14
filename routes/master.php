@@ -232,15 +232,4 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/edit/{id}', 'edit')->name('edit');
     });
 
-    //memo management
-    // Route::get('/memo', function () {
-    //      view('admin.courseAttendanceNoticeMap.index');
-    // })->name('memo.index');
-    // Route::get('/conversation', function () {
-    //     return view('admin.courseAttendanceNoticeMap.conversation');
-    // })->name('memo.conversation');
-    // Route::get('/create', function () {
-    //     return view('admin.courseAttendanceNoticeMap.create');
-    // })->name('memo.create');
-
 });
