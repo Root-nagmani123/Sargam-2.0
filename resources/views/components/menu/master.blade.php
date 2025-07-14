@@ -121,7 +121,7 @@
             </a>
         </li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('admin.courseAttendanceNoticeMap.chat') }}" id="get-url"
+            <a class="sidebar-link" href="{{ route('memo.notice.management.user') }}" id="get-url"
                 aria-expanded="false">
                 <iconify-icon icon="solar:feed-bold-duotone">
                 </iconify-icon>
