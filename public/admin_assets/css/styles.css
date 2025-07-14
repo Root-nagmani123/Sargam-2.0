@@ -30860,9 +30860,6 @@ fieldset:disabled .btn {
     flex: 1 1 auto;
     min-height: 100vh;
 }
-body {
-    font-family: Manrope, sans-serif !important;
-}
 .page-wrapper {
     width: 100%;
     transition: 0.2s ease-in;
