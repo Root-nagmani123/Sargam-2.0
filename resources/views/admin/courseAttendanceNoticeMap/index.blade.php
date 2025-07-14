@@ -41,6 +41,7 @@
     <x-breadcrum title="Notice /Memo Management" />
     <x-session_message />
 
+    
     <!-- start Zero Configuration -->
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
@@ -130,42 +131,15 @@
                                 <td>
                                     <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}" class="btn btn-primary btn-sm">View Conversation</a>
 
-                                    <a href="" class="text-primary btn btn-sm" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas"><i
+                                    <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation" data-bs-toggle="offcanvas"
+                                        data-bs-target="#chatOffcanvas" data-type="admin" data-id="{{ $memo->memo_notice_id }}" 
+       data-topic="{{ $memo->topic_name }}"><i
                                             class="material-icons md-18">crisis_alert</i></a>
                                     <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#memo_generate">Generate Memo</a>
                                 </td>
                                 <!-- Offcanvas Chat Component -->
-                                <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
-                                    <div class="offcanvas-header">
-                                        <h5 class="offcanvas-title">{{ $memo->topic_name }} : </h5>
-                                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                            aria-label="Close"></button>
-                                    </div>
-                                    <div class="offcanvas-body d-flex flex-column">
-
-                                        <!-- Chat Body -->
-                                        <div class="chat-body flex-grow-1 mb-3" id="chatBody">
-                                            <div class="chat-message bot">
-                                                <div class="message">Hello! How can I help you today?</div>
-                                            </div>
-                                            <div class="chat-message user">
-                                                <div class="message">Hi! I have a question about my order.</div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Chat Footer -->
-                                        <form id="chatForm">
-                                            <div class="input-group">
-                                                <input type="text" class="form-control" id="chatInput"
-                                                    placeholder="Type your message...">
-                                                <button class="btn btn-primary" type="submit">Send</button>
-                                            </div>
-                                        </form>
-
-                                    </div>
-                                </div>
+                                
                                 <td>
                                     @if ($memo->status == 1)
                                     <span class="badge bg-success-subtle text-success">Open</span>
@@ -185,6 +159,20 @@
     </div>
     <!-- end Zero Configuration -->
     <!-- memo generation modal -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="conversationTopic">Conversation</h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <input type="hidden" id="userType" value="">
+
+    <div class="offcanvas-body d-flex flex-column">
+        <!-- Chat Body -->
+        <div class="chat-body flex-grow-1 mb-3" id="chatBody">
+            <p class="text-muted text-center">Loading conversation...</p>
+        </div>
+    </div>
+</div>
 
     <div class="modal fade" id="memo_generate" tabindex="-1" aria-labelledby="memo_generateLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -347,20 +335,35 @@
     </div>
     <!-- Memo generation end -->
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-document.getElementById('chatForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const input = document.getElementById('chatInput');
-    const message = input.value.trim();
-    if (message !== '') {
-        const chatBody = document.getElementById('chatBody');
-        const userMessage = document.createElement('div');
-        userMessage.className = 'chat-message user';
-        userMessage.innerHTML = `<div class="message">${message}</div>`;
-        chatBody.appendChild(userMessage);
-        chatBody.scrollTop = chatBody.scrollHeight;
-        input.value = '';
-    }
+
+$(document).ready(function () {
+    $('.view-conversation').on('click', function () {
+        let memoId = $(this).data('id');
+        let topic = $(this).data('topic');
+        let type = $(this).data('type');
+        $('#userType').val(type);
+
+        $('#conversationTopic').text(topic);
+        $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
+
+        $.ajax({
+            url: '/admin/memo-notice-management/get_conversation_model/' + memoId+ '/' + type,
+            type: 'GET',
+            success: function (res) {
+                $('#chatBody').html(res);
+            },
+            error: function () {
+                $('#chatBody').html('<p class="text-danger text-center">Failed to load conversation.</p>');
+            }
+        });
+
+        // Show offcanvas
+        let chatOffcanvas = new bootstrap.Offcanvas(document.getElementById('chatOffcanvas'));
+        chatOffcanvas.show();
+    });
 });
 </script>
+
 @endsection

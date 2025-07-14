@@ -15,18 +15,23 @@ class CourseAttendanceNoticeMapController extends Controller
     //
     public function index()
     {
-       $memos =  DB::table('student_notice_status')
-                    ->join('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk')
-                    ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')  
-                    ->join('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')          
-       ->select(
-            'student_notice_status.pk as memo_notice_id',
-            'student_notice_status.course_master_pk', 'student_notice_status.date_',
-            'student_notice_status.subject_master_pk','student_notice_status.subject_topic',
-            'student_notice_status.venue_id', 'student_notice_status.class_session_master_pk','student_notice_status.faculty_master_pk','student_notice_status.message','student_notice_status.notice_memo',
-            'student_notice_status.status',
-            'sm.display_name as student_name','sm.pk as student_id','t.subject_topic as topic_name',)
-                    ->get();
+     $memos = DB::table('student_notice_status')
+    ->join('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk')
+    ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')  
+    ->join('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')          
+    ->select(
+        'student_notice_status.pk as memo_notice_id',
+        'student_notice_status.course_master_pk', 'student_notice_status.date_',
+        'student_notice_status.subject_master_pk','student_notice_status.subject_topic',
+        'student_notice_status.venue_id', 'student_notice_status.class_session_master_pk',
+        'student_notice_status.faculty_master_pk','student_notice_status.message','student_notice_status.notice_memo',
+        'student_notice_status.status',
+        'sm.display_name as student_name','sm.pk as student_id','t.subject_topic as topic_name'
+    )
+    ->get();
+
+
+                    
                     // print_r($memos);die;
          return view('admin.courseAttendanceNoticeMap.index', compact('memos'));
     }
@@ -106,18 +111,38 @@ function conversation($id){
         return redirect()->back()->with('error', 'Invalid Memo/Notice ID.');
     }
     // Fetch the memo/notice details
-    $memoNotice = DB::table('notice_message_student_decip_incharge')
-        ->where('student_notice_status_pk', $id)
-        ->get();
-        // print_r(auth()->user()->name);die;
-         $memoNotice->transform(function ($item) {
+ $memoNotice = DB::table('notice_message_student_decip_incharge as nmsdi')
+    ->join('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
+    ->join('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+    ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+    ->where('nmsdi.student_notice_status_pk', $id)
+    ->orderBy('nmsdi.created_date', 'asc')
+    ->select(
+        'nmsdi.*',
+        'sm.pk as student_id',
+        'sm.display_name as student_name'
+    )
+    ->get();
+
+$memoNotice->transform(function ($item) {
+    if ($item->role_type == 'f') {
+        // Admin (From users table)
         $creator = DB::table('users')
             ->where('id', $item->created_by)
             ->first();
+        $item->display_name = $creator ? $creator->name : 'Admin';
+    } elseif ($item->role_type == 's') {
+        // Student (From student_master table)
+        $student = DB::table('student_master')
+            ->where('pk', $item->created_by)
+            ->first();
+        $item->display_name = $student ? $student->display_name : 'Student';
+    } else {
+        $item->display_name = 'Unknown';
+    }
 
-        $item->display_name = $creator ? $creator->name : 'N/A';
-        return $item;
-    });
+    return $item;
+});
      return view('admin.courseAttendanceNoticeMap.conversation', compact('id','memoNotice'));
 }
 
@@ -253,10 +278,9 @@ public function memo_notice_conversation(Request $request)
         'student_notice_status_pk' => $validated['memo_notice_id'],
         'student_decip_incharge_msg' => $validated['message'],
         'doc_upload' => $filePath,
-        // 'created_date' => now(),
+        'role_type' => 'f',
         'created_by' => auth()->user()->id ?? 1, // Replace with correct user ID
-        // 'status' => $validated['status'], // if this column exists
-    ]);
+         ]);
 
    if ($data) {
         return redirect()->back()->with('success', 'Notice msg created successfully.');
@@ -287,6 +311,165 @@ public function noticedeleteMessage($id)
     return redirect()->back()->with('success', 'Message and associated file deleted successfully.');
 
 }
+  public function user()
+    {
+       $memos =  DB::table('student_notice_status')
+                    ->join('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk')
+                    ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')  
+                    ->join('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')          
+       ->select(
+            'student_notice_status.pk as memo_notice_id',
+            'student_notice_status.course_master_pk', 'student_notice_status.date_',
+            'student_notice_status.subject_master_pk','student_notice_status.subject_topic',
+            'student_notice_status.venue_id', 'student_notice_status.class_session_master_pk','student_notice_status.faculty_master_pk','student_notice_status.message','student_notice_status.notice_memo',
+            'student_notice_status.status',
+            'sm.display_name as student_name','sm.pk as student_id','t.subject_topic as topic_name',)
+                    ->get();
+                    // print_r($memos);die;
+         return view('admin.courseAttendanceNoticeMap.uers_notice_list', compact('memos'));
+    }
+public function conversation_student($id , Request $request){
+     if (!$id || !is_numeric($id)) {
+        return redirect()->back()->with('error', 'Invalid Memo/Notice ID.');
+    }
+ 
+$memoNotice = DB::table('notice_message_student_decip_incharge as nmsdi')
+    ->join('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
+    ->join('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+    ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+    ->where('nmsdi.student_notice_status_pk', $id)
+    ->orderBy('nmsdi.created_date', 'asc')
+    ->select(
+        'nmsdi.*',
+        'sm.pk as student_id',
+        'sm.display_name as student_name'
+    )
+    ->get();
 
+$memoNotice->transform(function ($item) {
+    if ($item->role_type == 'f') {
+        // Admin (From users table)
+        $creator = DB::table('users')
+            ->where('id', $item->created_by)
+            ->first();
+        $item->display_name = $creator ? $creator->name : 'Admin';
+    } elseif ($item->role_type == 's') {
+        // Student (From student_master table)
+        $student = DB::table('student_master')
+            ->where('pk', $item->created_by)
+            ->first();
+        $item->display_name = $student ? $student->display_name : 'Student';
+    } else {
+        $item->display_name = 'Unknown';
+    }
+
+    return $item;
+});
+
+
+   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice'));
+}
+public function memo_notice_conversation_student(Request $request){
+      $validated = $request->validate([
+        'memo_notice_id' => 'required|exists:student_notice_status,pk',
+        
+        'message' => 'required|string|max:500',
+        'student_id' => 'required|exists:student_master,pk',
+        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+         ]);
+
+    // Handle file upload
+    $filePath = null;
+    if ($request->hasFile('document')) {
+        $file = $request->file('document');
+        $filePath = $file->store('notice_documents', 'public'); // stored in /storage/app/public/notice_documents
+    }
+
+    // Insert into your table
+   $data = DB::table('notice_message_student_decip_incharge')->insert([
+        'student_notice_status_pk' => $validated['memo_notice_id'],
+        'student_decip_incharge_msg' => $validated['message'],
+        'doc_upload' => $filePath,
+        'role_type' => 's',
+        'created_by' => $validated['student_id'], // Replace with correct user ID
+         ]);
+
+   if ($data) {
+        return redirect()->back()->with('success', 'Notice msg created successfully.');
+
+        } else {
+        return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
+    }
+}
+public function get_conversation_model($id,$type, Request $request)
+{
+    // $conversations = DB::table('notice_message_student_decip_incharge')
+    //     ->where('student_notice_status_pk', $id)
+    //     ->orderBy('created_date', 'asc')
+    //     ->get()
+        $conversations = DB::table('notice_message_student_decip_incharge as nmsdi')
+    ->join('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
+    ->join('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+    ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+    ->where('nmsdi.student_notice_status_pk', $id)
+    ->orderBy('nmsdi.created_date', 'asc')
+    ->select(
+        'nmsdi.*',
+        'sm.pk as student_id',
+        'sm.display_name as student_name'
+    )
+    ->get()
+        ->map(function ($item) {
+            if ($item->role_type == 'f') {
+                $user = DB::table('users')->find($item->created_by);
+                $item->display_name = $user->name ?? 'Admin';
+                $item->user_type = 'admin';
+            } elseif ($item->role_type == 's') {
+                $student = DB::table('student_master')->where('pk', $item->created_by)->first();
+
+                $item->display_name = $student->display_name ?? 'Student';
+                $item->user_type = 'student';
+            } else {
+                $item->display_name = 'Unknown';
+                $item->user_type = 'unknown';
+            }
+            return $item;
+        });
+
+    return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id'));
+}
+public function memo_notice_conversation_model(Request $request){
+     $validated = $request->validate([
+        'memo_notice_id' => 'required|exists:student_notice_status,pk',
+        
+        'message' => 'required|string|max:500',
+        'created_by' => 'required',
+        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+         ]);
+
+    // Handle file upload
+    $filePath = null;
+    if ($request->hasFile('document')) {
+        $file = $request->file('document');
+        $filePath = $file->store('notice_documents', 'public'); // stored in /storage/app/public/notice_documents
+    }
+
+    // Insert into your table
+   $data = DB::table('notice_message_student_decip_incharge')->insert([
+        'student_notice_status_pk' => $validated['memo_notice_id'],
+        'student_decip_incharge_msg' => $validated['message'],
+        'doc_upload' => $filePath,
+        'role_type' => $request->role_type, // 'f' for admin, 's' for student
+        'created_by' => $validated['created_by'], // Replace with correct user ID
+         ]);
+
+   if ($data) {
+        return redirect()->back()->with('success', 'Notice msg created successfully.');
+
+        } else {
+        return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
+    }
+
+}
 
 }

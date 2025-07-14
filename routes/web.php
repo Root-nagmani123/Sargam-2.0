@@ -262,6 +262,7 @@ Route::prefix('admin/course-memo-decision')
     ->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/conversation/{id}', 'conversation')->name('conversation');
+        Route::get('/get_conversation_model/{id}/{type}', 'get_conversation_model')->name('get_conversation_model');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/Subject-by-course', 'getSubjectByCourse')->name('getSubjectByCourse'); // <-- New AJAX route
@@ -270,10 +271,19 @@ Route::prefix('admin/course-memo-decision')
         Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
         Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
         Route::post('/memo_notice_conversation', 'memo_notice_conversation')->name('memo_notice_conversation');
+        Route::post('/memo_notice_conversation_student', 'memo_notice_conversation_student')->name('memo_notice_conversation_student');
+        Route::post('/memo_notice_conversation_model', 'memo_notice_conversation_model')->name('memo_notice_conversation_model');
    Route::delete('/notice-delete-Message/{id}', [CourseAttendanceNoticeMapController::class, 'noticedeleteMessage'])
     ->name('noticedeleteMessage');
-
+//  Route::get('/user_chat', function () {
+//     return view('admin.courseAttendanceNoticeMap.chat');
+// })->name('admin.courseAttendanceNoticeMap.chat');
+        Route::get('/user', 'user')->name('user');
+        Route::get('/conversation_student/{id}', 'conversation_student')->name('conversation_student');
     });
+    Route::get('/user/chat', function () {
+    return view('admin.courseAttendanceNoticeMap.chat');
+})->name('admin.courseAttendanceNoticeMap.chat');
 
     Route::prefix('hostel-building-map')->name('hostel.building.map.')->controller(HostelBuildingFloorMappingController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -293,9 +303,7 @@ Route::prefix('admin/course-memo-decision')
     });
 });
 
-Route::get('/user/chat', function () {
-    return view('admin.courseAttendanceNoticeMap.chat');
-})->name('admin.courseAttendanceNoticeMap.chat');
+
 
 // //fc front page route
 // Route::get('/fc-front', function () {

@@ -1,16 +1,15 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
 
 <div class="container-fluid">
 
-    <x-breadcrum title="User Conversation" />
+    <x-breadcrum title="Conversation" />
     <x-session_message />
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-            <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
+    <div class="container-fluid bg-white p-4 rounded shadow-sm">
+        <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
         <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
         <hr>
 
@@ -38,7 +37,7 @@
                         <td>22-11-2013</td>
                         <td>1</td>
                         <td>Lorem ipsum dolor sit amet.</td>
-                         <td>Lorem, ipsum.</td>
+                        <td>Lorem, ipsum.</td>
                         <td>06:00-07:00</td>
                     </tr>
                 </tbody>
@@ -95,42 +94,80 @@
                     </tr>
                 </thead>
                 <tbody>
+                    @forelse ($memoNotice as $row)
                     <tr>
-                        <td class="fw-bold text-danger">RAJESH ARYA</td>
-                        <td class="text-danger">You are advised to appear in person to explain why suitable disciplinary
-                            action should not be considered...</td>
-                        <td>26-11-2013 06:41 PM</td>
-                        <td>---</td>
-                        <td>---</td>
+                        <td class="{{ $loop->first ? 'fw-bold text-danger' : '' }}">
+                            {{ $row->display_name ?? 'N/A' }}
+                        </td>
+
+                        <td class="{{ $loop->first ? 'text-danger' : '' }}">
+                            {{ $row->student_decip_incharge_msg }}
+                        </td>
+
+                        <td>
+                            {{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}
+                        </td>
+
+                        <td>
+                            {{-- Add delete button here if needed --}}
+                            ---
+                        </td>
+
+                        <td>
+                            @if ($row->doc_upload)
+                            <a href="{{ asset('storage/' . $row->doc_upload) }}" target="_blank">View</a>
+                            @else
+                            ---
+                            @endif
+                        </td>
                     </tr>
+                    @empty
                     <tr>
-                        <td>ALBY VARGHESE</td>
-                        <td>I sincerely apologize... I hope you would kindly excuse my absence.</td>
-                        <td>30-11-2013 08:15 AM</td>
-                        <td>---</td>
-                        <td>---</td>
+                        <td colspan="5" class="text-center text-muted">No conversation found.</td>
                     </tr>
+                    @endforelse
                 </tbody>
+
             </table>
         </div>
 
         <!-- Reply Form -->
         <div class="border p-3 bg-light rounded">
-            <form>
+            <form id="memo_notice_conversation" method="POST" enctype="multipart/form-data"
+                action="{{ route('memo.notice.management.memo_notice_conversation_student') }}">
+                @csrf
+                @if ($errors->any())
+    <div class="alert alert-danger">
+        <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
 
                 <div class="row g-3 mb-3">
                     <div class="col-6">
                         <div class="mb-3">
+                            <input type="hidden" name="memo_notice_id" value="{{ $id }}">
+                            <input type="hidden" name="student_id" value="{{ $memoNotice[0]->student_id ?? '' }}">
                             <label class="form-label">Message</label>
-                            <textarea class="form-control" rows="4" placeholder="Type your message here..."></textarea>
+                            <textarea class="form-control" rows="4" name="message"
+                                placeholder="Type your message here...">{{ old('message') }}</textarea>
+                            @error('message')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="mb-3">
                             <label class="form-label">Upload Document (if any)</label>
-                            <input type="file" class="form-control">
-                            <small class="text-muted">Less than 1 MB</small>
+                            <input type="file" name="document" class="form-control">
+                            <small class="text-muted">Less than 2 MB (jpg, jpeg, png, pdf)</small>
+                            @error('document')
+                            <div class="text-danger">{{ $message }}</div>
+                            @enderror
                         </div>
                     </div>
                 </div>
@@ -140,7 +177,7 @@
                     <a href="#" class="btn btn-outline-secondary">Back</a>
                 </div>
             </form>
-        </div>
+
         </div>
     </div>
 </div>
