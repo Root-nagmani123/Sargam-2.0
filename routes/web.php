@@ -309,3 +309,7 @@ Route::prefix('admin/course-memo-decision')
 // Route::get('/fc-front', function () {
 //     return view('fc.front_page');
 // })->name('fc.front');
+
+Route::get('/admin/memo-conversation', function () {
+    return view('admin.courseAttendanceNoticeMap.memo_conversation'); // or any other view you want to show
+})->name('admin.courseAttendanceNoticeMap.memo_conversation');

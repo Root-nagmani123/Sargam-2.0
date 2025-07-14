@@ -146,6 +146,9 @@ $memoNotice->transform(function ($item) {
      return view('admin.courseAttendanceNoticeMap.conversation', compact('id','memoNotice'));
 }
 
+//memo conversation
+
+
 public function getStudentAttendanceBytopic(Request $request)
 {
     try {

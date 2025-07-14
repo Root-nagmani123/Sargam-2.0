@@ -136,6 +136,8 @@
                                         data-bs-target="#chatOffcanvas" data-type="admin" data-id="{{ $memo->memo_notice_id }}" 
        data-topic="{{ $memo->topic_name }}"><i
                                             class="material-icons md-18">crisis_alert</i></a>
+                                    <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}" class="btn btn-primary btn-sm">Memo Conversation</a>
+                                    
                                 </td>
                                 <td>
                                     <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
