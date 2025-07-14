@@ -136,12 +136,23 @@
                                         data-bs-target="#chatOffcanvas" data-type="admin" data-id="{{ $memo->memo_notice_id }}" 
        data-topic="{{ $memo->topic_name }}"><i
                                             class="material-icons md-18">crisis_alert</i></a>
+                                    @if($memo->status == 1)
+                                    <a href="script:void(0)" class="btn btn-primary btn-sm">Memo Conversation</a>
+                                    @elseif($memo->status == 2)
                                     <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}" class="btn btn-primary btn-sm">Memo Conversation</a>
+                                    @else
+                                    @endif
                                     
                                 </td>
                                 <td>
-                                    <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#memo_generate">Generate Memo</a>
+                                    @if($memo->status == 1)
+                                    <button href="" class="btn-danger btn btn-sm"  readonly>Generate Memo</button>
+                                    @elseif($memo->status == 2)
+                                      <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#memo_generate" >Generate Memo</a>
+                                    @else
+                                    @endif
+
                                     
                                 </td>
                                 <!-- Offcanvas Chat Component -->
@@ -235,8 +246,13 @@
                             <div class="col-6 mb-3">
                                 <label for="venue_name" class="form-label">Venue <span
                                         class="text-danger">*</span></label>
-                                <input type="text" id="venue_name" class="form-control" readonly>
-                                <input type="hidden" id="venue_id" name="venue_id">
+                                <select name="venue_id" class="form-control" id="venue_id" required>
+                                    <option value="">Select Vanue</option>
+                                    @foreach ($venue as $v)
+                                    <option value="{{ $v->pk }}">{{ $v->venue_name }}</option>
+                                    @endforeach
+                                </select>
+                                
                                 @error('venue_id')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -271,7 +287,9 @@
                                 <label for="memo_type" class="form-label">Memo Type</label>
                                 <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-control">
                                     <option value="">Select Memo Type</option>
-                                    <option value="">Memo Type</option>
+                                    @foreach ($memo_master as $master)
+                                    <option value="{{ $master->pk }}">{{ $master->memo_type_name }}</option>
+                                    @endforeach
                                 </select>
                                 @error('memo_type_master_pk')
                                 <span class="text-danger">{{ $message }}</span>

@@ -132,19 +132,21 @@
         </div>
 
         <!-- Reply Form -->
+        @if($memoNotice->isNotEmpty())
+        @if($memoNotice->first()->notice_status == 1)
         <div class="border p-3 bg-light rounded">
             <form id="memo_notice_conversation" method="POST" enctype="multipart/form-data"
                 action="{{ route('memo.notice.management.memo_notice_conversation_student') }}">
                 @csrf
                 @if ($errors->any())
-    <div class="alert alert-danger">
-        <ul class="mb-0">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
+                <div class="alert alert-danger">
+                    <ul class="mb-0">
+                        @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+                @endif
 
 
                 <div class="row g-3 mb-3">
@@ -177,6 +179,11 @@
                     <a href="#" class="btn btn-outline-secondary">Back</a>
                 </div>
             </form>
+            @else
+            <div class="alert alert-warning mt-3">
+                <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
+                @endif
+                @endif
 
         </div>
     </div>
