@@ -100,7 +100,8 @@
                                 <th class="col">Type</th>
                                 <th class="col">Session Date</th>
                                 <th class="col">Topic</th>
-                                <th class="col">Conversation Response</th>
+                                <th class="col">Conversation</th>
+                                <th class="col">Response</th>
                                 <th class="col">Status</th>
                             </tr>
                             <!-- end row -->
@@ -128,18 +129,26 @@
                                 <td>{{ $memo->date_}}</td>
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
-                                    <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}" class="btn btn-primary btn-sm">View Conversation</a>
-
+                                    @if ($memo->memo_notice_id)
+                                    <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}"
+                                        class="btn btn-primary btn-sm">Notice Conversation</a>
+                                    @else
+                                    <a href="#" class="btn btn-primary btn-sm">Memo Conversation</a>
+                                    @endif
                                     <a href="" class="text-primary btn btn-sm" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas"><i
                                             class="material-icons md-18">crisis_alert</i></a>
+                                </td>
+                                <td>
                                     <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#memo_generate">Generate Memo</a>
+                                    
                                 </td>
                                 <!-- Offcanvas Chat Component -->
                                 <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
                                     <div class="offcanvas-header">
-                                        <h5 class="offcanvas-title">{{ $memo->topic_name }} : </h5>
+                                        <h5 class="offcanvas-title">{{ $memo->topic_name }} : </h5> <br>
+                                        <small class="text-muted">{{ $memo->notice_memo }}</small>
                                         <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
                                             aria-label="Close"></button>
                                     </div>
