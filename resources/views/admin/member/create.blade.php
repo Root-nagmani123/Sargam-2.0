@@ -202,6 +202,7 @@ $(document).ready(function () {
     }
 
     function clearErrors(stepElement) {
+        stepElement.find("div.text-danger").remove();
         stepElement.find("div.validation-error").remove();
         stepElement.find(".is-invalid").removeClass("is-invalid");
     }
