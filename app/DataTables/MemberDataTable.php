@@ -37,6 +37,14 @@ class MemberDataTable extends DataTable
                 ';
 
             })
+            ->filterColumn('employee_name', function ($query, $keyword) {
+                $query->where('first_name', 'like', "%{$keyword}%")
+                      ->orWhere('middle_name', 'like', "%{$keyword}%")
+                      ->orWhere('last_name', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('mobile_no', function ($query, $keyword) {
+                $query->where('mobile', 'like', "%{$keyword}%");
+            })
             ->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email']);
     }
 
@@ -74,9 +82,9 @@ class MemberDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('employee_name')->title('Employee Name')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('employee_name')->title('Employee Name')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('employee_id')->title('Employee ID')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('email')->title('Email')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
         ];
