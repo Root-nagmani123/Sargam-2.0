@@ -18,6 +18,23 @@
                 @csrf
 
                 <div class="row">
+                     <div class="col-6">
+                        <div class="mb-3">
+                            <label for="country_master_pk" class="form-label">Select Country</label>
+                            <select class="form-select" id="country_master_pk" name="country_master_pk" required>
+                                <option value="">-- Select Country --</option>
+                                @foreach($countries as $country)
+                                <option value="{{ $country->pk }}"
+                                    {{ old('country_master_pk', $city->country_master_pk) == $country->pk ? 'selected' : '' }}>
+                                    {{ $country->country_name }}
+                                </option>
+                                @endforeach
+                            </select>
+                            @error('country_master_pk')
+                            <p class="text-danger">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="state" class="form-label">State</label>
