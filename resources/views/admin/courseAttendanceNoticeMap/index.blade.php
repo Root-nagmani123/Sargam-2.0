@@ -137,7 +137,7 @@
        data-topic="{{ $memo->topic_name }}"><i
                                             class="material-icons md-18">crisis_alert</i></a>
                                     @if($memo->status == 1)
-                                    <a href="script:void(0)" class="btn btn-primary btn-sm">Memo Conversation</a>
+                                    <a href="script:void(0)" class="btn btn-secondary btn-sm">Memo Conversation</a>
                                     @elseif($memo->status == 2)
                                     <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}" class="btn btn-primary btn-sm">Memo Conversation</a>
                                     @else
@@ -146,6 +146,9 @@
                                 </td>
                                 <td>
                                    
+                                    @if($memo->status == 1)
+                                    <button href="" class="btn-secondary btn btn-sm"  readonly>Generate Memo</button>
+                                    @elseif($memo->status == 2)
                                       <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#memo_generate" >Generate Memo</a>
 
