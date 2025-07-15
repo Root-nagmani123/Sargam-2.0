@@ -59,7 +59,7 @@
         <li class="sidebar-item">
             <a class="sidebar-link" href="{{ route('exemptions.datalist') }}">
                 <iconify-icon icon="mdi:file-document-multiple-outline"></iconify-icon>
-                <span class="hide-menu">Exemption Applications</span>
+                <span class="hide-menu">Applications (Registration & Exemption)</span>
             </a>
         </li>
         <!-- Divider -->
