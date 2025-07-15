@@ -145,13 +145,9 @@
                                     
                                 </td>
                                 <td>
-                                    @if($memo->status == 1)
-                                    <button href="" class="btn-danger btn btn-sm"  readonly>Generate Memo</button>
-                                    @elseif($memo->status == 2)
+                                   
                                       <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#memo_generate" >Generate Memo</a>
-                                    @else
-                                    @endif
 
                                     
                                 </td>
@@ -305,8 +301,12 @@
                             </div>
                             <div class="col-6 mb-3">
                                 <label for="venue" class="form-label">Venue</label>
-                                <input type="text" id="venue" class="form-control" readonly>
-                                <input type="hidden" id="venue" name="venue">
+                                <select name="venue" id="venue" class="form-control">
+                                    <option value="">Select Venue</option>
+                                    @foreach ($venue as $v)
+                                    <option value="{{ $v->pk }}">{{ $v->venue_name }}</option>
+                                    @endforeach
+                                </select>
                                 @error('venue')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
