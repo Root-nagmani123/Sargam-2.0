@@ -52,7 +52,7 @@
 
                         @endphp
                         <tr>
-                            <td>{{ $index + 1 }}</td>
+                            <td>{{ ($students->currentPage() - 1) * $students->perPage() + $loop->iteration }}</td>
                             {{-- <td>{{ $student->display_name }}</td> --}}
                             <td>{{ $student->name }}</td>
                             {{-- <td>{{ $student->schema_id }}</td> --}}
@@ -100,8 +100,7 @@
 
                             {{-- <td><textarea class="form-control form-control-sm" placeholder="Enter remarks"></textarea></td> --}}
                             <td style="min-width: 250px;">
-                                <form method="POST"
-                                    {{-- action="{{ route('admin.joining-documents.save-remark', $student->pk) }}"> --}}
+                                <form method="POST" {{-- action="{{ route('admin.joining-documents.save-remark', $student->pk) }}"> --}}
                                     action="{{ route('admin.joining-documents.save-remark', $student->id) }}">
                                     @csrf
                                     <textarea name="remark" class="form-control form-control-sm text-center" rows="4"

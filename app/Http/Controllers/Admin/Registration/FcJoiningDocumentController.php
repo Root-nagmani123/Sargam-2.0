@@ -105,11 +105,11 @@ class FcJoiningDocumentController extends Controller
     {
         // Define document fields with readable labels
         $fields = [
-            'admin_family_details_form' => 'Family Details Doc',
-            'admin_close_relation_declaration' => 'Close Relation Doc',
+            'admin_family_details_form' => 'Family Details Declaration',
+            'admin_close_relation_declaration' => 'Close Relation Declaration',
             'admin_dowry_declaration' => 'Dowry Declaration',
             'admin_marital_status' => 'Marital Declaration',
-            'admin_home_town_declaration' => 'HomeTown Doc',
+            'admin_home_town_declaration' => 'HomeTown Declaration',
             'admin_property_immovable' => 'Immovable Property',
             'admin_property_movable' => 'Movable Property',
             'admin_property_liabilities' => 'Debts And Liabilities',
