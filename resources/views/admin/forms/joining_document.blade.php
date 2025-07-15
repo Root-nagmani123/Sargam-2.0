@@ -60,7 +60,7 @@
                              <tbody>
                                  <tr>
                                      <td class="text-center">1</td>
-                                     <td>Family Details Form (Form - 3)</td>
+                                     <td> Family Details Form (Form - 3) of Rules 54(12) of CCS (Pension) Rules, 1972</td>
                                      <td><input type="file" name="admin_family_details_form" class="form-control"></td>
                                      <td class="text-center">
                                          @if (!empty($documents->admin_family_details_form))
@@ -95,11 +95,15 @@
 
                                  <tr>
                                      <td class="text-center">2</td>
-                                     <td colspan="6"><strong>Declaration of Close Relation</strong></td>
+                                     <td colspan="6"><strong>Declaration of Close Relation (two copies)</strong></td>
                                  </tr>
                                  <tr>
                                      <td></td>
-                                     <td>Nationality/Domicile Declaration</td>
+                                     <td>
+                                         a) National of or are domiciled in other countries and
+                                         <br>
+                                         b) Residing in India, who are non-Indian origin
+                                     </td>
                                      <td><input type="file" name="admin_close_relation_declaration" class="form-control">
                                      </td>
                                      <td class="text-center">
@@ -134,7 +138,8 @@
 
                                  <tr>
                                      <td class="text-center">3</td>
-                                     <td>Dowry Declaration</td>
+                                     <td>Dowry Declaration - Declaration under Rule 13 of CCS (Conduct)
+                                         Rule 1964 (two copies)</td>
                                      <td><input type="file" name="admin_dowry_declaration" class="form-control"></td>
                                      <td class="text-center">
                                          @if (!empty($documents->admin_dowry_declaration))
@@ -168,7 +173,8 @@
 
                                  <tr>
                                      <td class="text-center">4</td>
-                                     <td>Marital Status Declaration</td>
+                                     <td>Marital Status - Declaration under Rule 13 of CCS (Conduct) Rule
+                                         1964 (two copies)</td>
                                      <td><input type="file" name="admin_marital_status" class="form-control"></td>
                                      <td class="text-center">
                                          @if (!empty($documents->admin_marital_status))
@@ -204,7 +210,7 @@
 
                                  <tr>
                                      <td class="text-center">5</td>
-                                     <td>Home Town Declaration</td>
+                                     <td>Home Town Declaration (two copies)</td>
                                      <td><input type="file" name="admin_home_town_declaration" class="form-control">
                                      </td>
                                      <td class="text-center">
@@ -239,11 +245,12 @@
 
                                  <tr>
                                      <td class="text-center">6</td>
-                                     <td colspan="6"><strong>Property Declaration</strong></td>
+                                     <td colspan="6"><strong> Declaration of Movable, Immovable and valuable property on
+                                             first appointment (two copies)</strong></td>
                                  </tr>
                                  <tr>
                                      <td></td>
-                                     <td>6-A: Immovable Property</td>
+                                     <td>6-A: Statement of Immovable Property on first appointment</td>
                                      <td><input type="file" name="admin_property_immovable" class="form-control"></td>
                                      <td class="text-center">
                                          @if (!empty($documents->admin_property_immovable))
@@ -276,7 +283,7 @@
                                  </tr>
                                  <tr>
                                      <td></td>
-                                     <td>6-B: Movable Property</td>
+                                     <td>6-B: Statement of Movable Property on first appointment</td>
                                      <td><input type="file" name="admin_property_movable" class="form-control"></td>
                                      <td class="text-center">
                                          @if (!empty($documents->admin_property_movable))
@@ -309,7 +316,8 @@
                                  </tr>
                                  <tr>
                                      <td></td>
-                                     <td>6-C: Debts and Liabilities</td>
+                                     <td>6-C: Statement of Debts and Other Liabilities on first
+                                         appointment</td>
                                      <td><input type="file" name="admin_property_liabilities" class="form-control">
                                      </td>
                                      <td class="text-center">
@@ -344,11 +352,11 @@
 
                                  <tr>
                                      <td class="text-center">7</td>
-                                     <td colspan="6"><strong>Surety Bond</strong></td>
+                                     <td colspan="6"><strong>Surety Bond-for</strong></td>
                                  </tr>
                                  <tr>
                                      <td></td>
-                                     <td>IAS/IPS/IFoS Bond</td>
+                                     <td>Surety Bond for IAS or IPS or IFoS (whichever is applicable)</td>
                                      <td><input type="file" name="admin_bond_ias_ips_ifos" class="form-control"></td>
                                      <td class="text-center">
                                          @if (!empty($documents->admin_bond_ias_ips_ifos))
@@ -382,7 +390,9 @@
                                  </tr>
                                  <tr>
                                      <td></td>
-                                     <td>Other Services Bond</td>
+                                     <td>Surety Bond for other services (other than All India
+                                         Services)
+                                         (if applicable)</td>
                                      <td><input type="file" name="admin_bond_other_services" class="form-control">
                                      </td>
                                      <td class="text-center">
@@ -417,7 +427,7 @@
 
                                  <tr>
                                      <td class="text-center">8</td>
-                                     <td>Other Documents</td>
+                                     <td><strong>Other Documents</strong></td>
                                  </tr>
                                  <tr>
                                      <td></td>
@@ -513,11 +523,13 @@
                              <tbody>
                                  <tr>
                                      <td class="text-center">1</td>
-                                     <td class="text-start" colspan="6"><strong>Nomination under CGEGIS</strong></td>
+                                     <td class="text-start" colspan="6"><strong>Nomination for benefits
+                                             under the Central Government Employees Group Insurance
+                                             Scheme, 1980</strong></td>
                                  </tr>
                                  <tr>
                                      <td></td>
-                                     <td>Form-7 (Unmarried) or Form-8 (Married)</td>
+                                     <td>a) Form-7 (if Unmarried) or ii) Form-8 (if Married)</td>
                                      <td><input type="file" name="accounts_nomination_form" class="form-control"></td>
                                      <td class="text-center">
                                          @if (!empty($documents->accounts_nomination_form))
@@ -549,7 +561,7 @@
                                  </tr>
                                  <tr>
                                      <td>2</td>
-                                     <td>NPS Registration Form</td>
+                                     <td>National Pensions System (NPS) - subscription Registration Form</td>
                                      <td><input type="file" name="accounts_nps_registration" class="form-control">
                                      </td>
                                      <td class="text-center">
@@ -583,7 +595,7 @@
                                  </tr>
                                  <tr>
                                      <td>3</td>
-                                     <td>Employee Information Sheet</td>
+                                     <td>Employee Information Sheet Form</td>
                                      <td><input type="file" name="accounts_employee_info_sheet" class="form-control">
                                      </td>
                                      <td class="text-center">
