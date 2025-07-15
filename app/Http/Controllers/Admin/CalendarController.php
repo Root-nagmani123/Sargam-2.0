@@ -33,6 +33,7 @@ class CalendarController extends Controller
         $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
             ->select('pk', 'shift_name','shift_time', 'start_time', 'end_time')
             ->get();
+            // print_r($classSessionMaster);die;
     
         return view('admin.calendar.index', compact(
             'courseMaster',
@@ -218,7 +219,9 @@ function event_edit($id){
         'faculty' => 'required|integer',
         'faculty_type' => 'required|integer',
         'vanue' => 'required|integer',
-        'shift' => 'required|integer',
+       'shift' => 'required_if:shift_type,1',
+        'start_time' => 'required_if:shift_type,2',
+        'end_time' => 'required_if:shift_type,2',
         'start_datetime' => 'nullable|date',
         'end_datetime' => 'nullable|date',
     ]);
