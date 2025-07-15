@@ -418,35 +418,6 @@
                                  <tr>
                                      <td class="text-center">8</td>
                                      <td>Other Documents</td>
-                                     <td><input type="file" name="admin_other_documents" class="form-control"></td>
-                                     <td class="text-center">
-                                         @if (!empty($documents->admin_other_documents))
-                                             <a href="{{ asset('storage/' . $documents->admin_other_documents) }}"
-                                                 target="_blank" class="btn btn-link p-0 text-primary">View</a>
-                                         @else
-                                             <span class="text-muted">No file uploaded</span>
-                                         @endif
-                                     </td>
-                                     <td class="text-center"><a
-                                             href="{{ asset('admin_assets/sample/joining_documents/sample_surety_bond_other_services7b.pdf') }}"
-                                             class="btn btn-link p-0 text-primary" target="_blank">View Sample</a></td>
-                                     <td class="text-center">
-                                         @if (!empty($documents->admin_other_documents))
-                                             <a href="{{ asset('storage/fc_joining_documents/' . $userId . '/' . basename($documents->admin_other_documents)) }}"
-                                                 download class="btn btn-sm btn-outline-primary">
-                                                 <i class="bi bi-download"></i> Download
-                                             </a>
-                                         @else
-                                             <span class="text-muted">No file uploaded</span>
-                                         @endif
-                                     </td>
-                                     <td class="text-center">
-                                         @if (!empty($documents->admin_other_documents))
-                                             <span class="badge bg-success">Completed</span>
-                                         @else
-                                             <span class="badge bg-warning ">Pending</span>
-                                         @endif
-                                     </td>
                                  </tr>
                                  <tr>
                                      <td></td>
@@ -656,3 +627,62 @@
          </form>
      </div>
  @endsection
+ {{-- <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const maxSize = 1024 * 1024; // 1MB
+        const allowedType = 'application/pdf';
+
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function () {
+                const file = this.files[0];
+
+                if (file) {
+                    if (file.size > maxSize) {
+                        alert(`"${file.name}" exceeds the 1MB size limit.`);
+                        this.value = ''; // Clear the file input
+                        return;
+                    }
+
+                    if (file.type !== allowedType) {
+                        alert(`"${file.name}" must be a PDF file.`);
+                        this.value = ''; // Clear the file input
+                        return;
+                    }
+                }
+            });
+        });
+    });
+</script> --}}
+
+ <script>
+     document.addEventListener('DOMContentLoaded', function() {
+         const maxSize = 1024 * 1024; // 1MB
+         const allowedType = 'application/pdf';
+
+         document.querySelectorAll('input[type="file"]').forEach(input => {
+             // Create error container just after each file input
+             const errorDiv = document.createElement('div');
+             errorDiv.className = 'text-danger mt-1 fw-semibold small';
+             input.parentNode.appendChild(errorDiv);
+
+             input.addEventListener('change', function() {
+                 const file = this.files[0];
+                 errorDiv.textContent = ''; // Clear old errors
+
+                 if (file) {
+                     if (file.size > maxSize) {
+                         errorDiv.textContent = `"${file.name}" exceeds the 1MB size limit.`;
+                         this.value = ''; // Clear file input
+                         return;
+                     }
+
+                     if (file.type !== allowedType) {
+                         errorDiv.textContent = `"${file.name}" must be a PDF file.`;
+                         this.value = ''; // Clear file input
+                         return;
+                     }
+                 }
+             });
+         });
+     });
+ </script>
