@@ -110,16 +110,20 @@
                         @if (!empty($pathPage) && $pathPage->faqs->count())
                             @foreach ($pathPage->faqs as $faq)
                                 <div class="row mb-3" data-id="{{ $faq->id }}">
-                                    <div class="col-5">
-                                        <label for="" class="form-label">Accordian Header</label>
-                                        <input type="text" name="faq_header[]" class="form-control"
+                                    <div class="col-12">
+                                        <label for="" class="form-label">Question</label>
+                                        <div class="mb-3">
+                                            <input type="text" name="faq_header[]" class="form-control"
                                             value="{{ $faq->header }}">
+                                        </div>
                                     </div>
-                                    <div class="col-6">
-                                        <label for="" class="form-label">Accordian Content</label>
-                                        <textarea name="faq_content[]" class="form-control" rows="2">{{ $faq->content }}</textarea>
+                                    <div class="col-12">
+                                        <label for="" class="form-label">Answer</label>
+                                       <div class="mb-3">
+                                         <textarea name="faq_content[]" class="form-control" rows="2">{{ $faq->content }}</textarea>
+                                       </div>
                                     </div>
-                                    <div class="col-1 text-end align-self-end">
+                                    <div class="text-end align-self-end">
                                         <button type="button" class="btn btn-sm btn-danger delete-faq-btn"
                                             data-id="{{ $faq->id }}">
                                             Delete
@@ -130,21 +134,21 @@
                         @else
                             <!-- <div class="row faq-item align-items-end">
                                                             <div class="col-md-5 mb-3">
-                                                                <label class="form-label fw-semibold">Accordion Header</label>
+                                                                <label class="form-label fw-semibold">Question</label>
                                                                 <input type="text" name="faq_header[]" class="form-control">
                                                             </div>
                                                             <div class="col-md-5 mb-3">
-                                                                <label class="form-label fw-semibold">Accordion Content</label>
+                                                                <label class="form-label fw-semibold">Answer</label>
                                                                 <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
                                                             </div>
                                                         </div> -->
                             <div class="row mb-3">
                                 <div class="col-md-5">
-                                    <label class="form-label">Accordion Header</label>
+                                    <label class="form-label">Question</label>
                                     <input type="text" name="faq_header[]" class="form-control">
                                 </div>
                                 <div class="col-md-5 ">
-                                    <label class="form-label">Accordion Content</label>
+                                    <label class="form-label">Answer</label>
                                     <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
                                 </div>
                             </div>
@@ -202,15 +206,19 @@
             $('#add-faq').on('click', function() {
                 const newFaq = `
                     <div class="row faq-item mb-3">
-                        <div class="col-md-5">
-                            <label class="form-label fw-semibold">Accordion Header</label>
-                            <input type="text" name="faq_header[]" class="form-control">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Question</label>
+                            <div class="mb-3">
+                               <input type="text" name="faq_header[]" class="form-control">
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Accordion Content</label>
-                            <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Answer</label>
+                            <div class="mb-3">
+                                <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                            </div>
                         </div>
-                        <div class="col-md-1 text-end align-self-end">
+                        <div class="text-end align-self-end">
                             <button type="button" class="btn btn-sm btn-danger remove-faq">Remove</button>
                         </div>
                     </div>`;
