@@ -78,7 +78,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <h5 class="modal-title" id="eventModalLabel">
-                            {{ $modalTitle ?? __('Add / Edit Calendar Event') }}
+                            {{ $modalTitle ?? __('Add Calendar Event') }}
                         </h5>
                         <input type="date" name="start_datetime" id="start_datetime" class="form-control w-50 me-5"
                             placeholder="Select Date" required>
@@ -619,7 +619,7 @@ $('#eventForm').on('submit', function(e) {
         const shift = $('#shift').val();
         if (!shift) {
             $('#shift').addClass('is-invalid');
-            $('#shift').next('.text-danger').text("Please select a Shift.");
+            $('#shift').next('.text-danger').text("Please select a Shift..");
             isValid = false;
         }
     } else if ($('#manualShift').is(':checked')) {
@@ -645,6 +645,28 @@ $('#eventForm').on('submit', function(e) {
         }
     }
 
+     $('#fullDayCheckbox').on('change', function () {
+    if ($(this).is(':checked')) {
+        let startTime = $('#start_time').val(); // format: "HH:MM"
+
+        if (!startTime) {
+            alert("Please select a start time.");
+            $(this).prop('checked', false);
+            return;
+        }
+
+        // Get current time + 1 hour
+        let now = new Date();
+        now.setHours(now.getHours() + 1);
+        let currentPlus1Hr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+        // Compare times
+        if (startTime < currentPlus1Hr) {
+            alert("Start time must be at least 1 hour ahead of the current time.");
+            $(this).prop('checked', false);
+        }
+    }
+});
     let formData = new FormData(this);
     $('input[name="group_type_name[]"]:checked').each(function() {
         formData.append('group_type_name[]', $(this).val());
@@ -724,6 +746,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     _token: '{{ csrf_token() }}'
                 },
                 success: function(data) {
+   
+
                  
                     $('#eventTopic').text(data.topic ?? '');
                    const startDate = new Date(data.start).toLocaleDateString();
@@ -882,7 +906,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             .pk
                                         );
                                     $('#start_datetime').prop(
-                                        'readonly', true);
+                                        'readonly', false);
                                     $('.btn-add-event').hide();
                                     $('#eventModal').modal('show');
                                     $('#fullDayCheckbox').off('change').on('change', function() {
@@ -902,6 +926,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         },
         select: function(info) {
+             $('#eventModalLabel').text('Add Calendar Event');
              
             // Reset form
             $('#eventForm')[0].reset();
@@ -1025,10 +1050,27 @@ $(document).on('click', '.btn-update-event', function(e) {
         $('#vanue').focus();
         return false;
     }
-    if (!shift) {
-        alert("Please select a Shift.");
-        $('#shift').focus();
-        return false;
+    if ($('#normalShift').is(':checked')) {
+        const shift = $('#shift').val();
+        if (!shift) {
+            $('#shift').addClass('is-invalid');
+            $('#shift').next('.text-danger').text("Please select a Shift..");
+            isValid = false;
+        }
+    } else if ($('#manualShift').is(':checked')) {
+        const startTime = $('#start_time').val();
+        const endTime = $('#end_time').val();
+
+        if (!startTime) {
+            $('#start_time').addClass('is-invalid');
+            $('#start_time').next('.text-danger').text("Start Time is required.");
+            isValid = false;
+        }
+        if (!endTime) {
+            $('#end_time').addClass('is-invalid');
+            $('#end_time').next('.text-danger').text("End Time is required.");
+            isValid = false;
+        }
     }
     let startDate = $('#start_datetime').val().trim();
     if (startDate === "") {
@@ -1036,17 +1078,40 @@ $(document).on('click', '.btn-update-event', function(e) {
         $('#start_datetime').focus();
         return false;
     }
-  
-    let now = new Date();
-    let start = new Date(startDate);
-    // Check if start date is in the past
-    if (start < now) {
-        alert("Start Date & Time cannot be in the past.");
-        $('#start_datetime').focus();
-        return false;
-    }
+ let now = new Date();
+let start = new Date(startDate);
+
+// Remove time part from both to compare only dates
+let today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+let selectedDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+
+// Compare dates
+if (selectedDate < today) {
+    alert("Start Date cannot be in the past.");
+    $('#start_datetime').focus();
+    return false;
+}
+
     // Check if end date is before start date
   
+     if ($('#fullDayCheckbox').is(':checked')) {
+   
+        let startTime_data = $('#start_time').val(); // format: "HH:MM"
+        // Get current time + 1 hour
+        let now = new Date();
+        now.setHours(now.getHours() + 1);
+        let currentPlus1Hr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+        // Compare times
+        if (startTime_data < currentPlus1Hr) {
+            alert("Start time must be at least 1 hour ahead of the current time.");
+            // $(this).prop('checked', false);
+            $('#start_time').focus();
+            return false;
+        }
+    }
+
+
     if ($('#feedback_checkbox').is(':checked')) {
         if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
             alert("Please select at least Remark or Rating when Feedback is checked.");
@@ -1087,6 +1152,7 @@ function waitForGroupTypeAndSet(value, callback, retries = 20) {
     }
 }
 $(document).on('click', '#createEventupperButton', function() {
+    $('#eventModalLabel').text('Add Calendar Event');
     $('#eventForm')[0].reset();
     $('#start_datetime').prop('readonly', false);
     $('#shiftSelect').show();
