@@ -13,7 +13,7 @@
         <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
         <hr>
 
-        <p class="mb-1">SHOW CAUSE NOTICE</p>
+        <p class="mb-1">Memo</p>
         <p><strong>Date:</strong> 22/11/2013</p>
 
         <p>It has been brought to the notice of the undersigned that you were absent without prior authorization from
@@ -26,9 +26,7 @@
                         <th>Date</th>
                         <th>No. of Session(s)</th>
                         <th>Topics</th>
-                        <th>
-                            Venue
-                        </th>
+                        <th>Venue</th>
                         <th>Session(s)</th>
                     </tr>
                 </thead>
