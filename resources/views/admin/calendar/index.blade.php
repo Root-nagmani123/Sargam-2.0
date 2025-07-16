@@ -645,28 +645,22 @@ $('#eventForm').on('submit', function(e) {
         }
     }
 
-     $('#fullDayCheckbox').on('change', function () {
-    if ($(this).is(':checked')) {
-        let startTime = $('#start_time').val(); // format: "HH:MM"
-
-        if (!startTime) {
-            alert("Please select a start time.");
-            $(this).prop('checked', false);
-            return;
-        }
-
+    if ($('#fullDayCheckbox').is(':checked')) {
+   
+        let startTime_data = $('#start_time').val(); // format: "HH:MM"
         // Get current time + 1 hour
         let now = new Date();
         now.setHours(now.getHours() + 1);
         let currentPlus1Hr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
         // Compare times
-        if (startTime < currentPlus1Hr) {
+        if (startTime_data < currentPlus1Hr) {
             alert("Start time must be at least 1 hour ahead of the current time.");
-            $(this).prop('checked', false);
+            // $(this).prop('checked', false);
+            $('#start_time').focus();
+            return false;
         }
     }
-});
     let formData = new FormData(this);
     $('input[name="group_type_name[]"]:checked').each(function() {
         formData.append('group_type_name[]', $(this).val());

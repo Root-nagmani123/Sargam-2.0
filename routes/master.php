@@ -68,6 +68,8 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/edit/{id}', 'cityEdit')->name('edit');
         Route::post('/update/{id}', 'cityUpdate')->name('update');
         Route::delete('/delete/{id}', 'cityDelete')->name('delete');
+        Route::post('/get-states', 'getStates')->name('getStates');
+        Route::post('/get-districts', 'getDistricts')->name('getDistricts');
     });
 
     // Faulty Expertise Master Routes
