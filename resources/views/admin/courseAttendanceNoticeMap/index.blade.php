@@ -41,7 +41,7 @@
     <x-breadcrum title="Notice /Memo Management" />
     <x-session_message />
 
-    
+
     <!-- start Zero Configuration -->
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
@@ -130,32 +130,32 @@
                                 <td>{{ $memo->date_}}</td>
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
-                                    <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}" class="btn btn-primary btn-sm">Notice Conversation</a>
+                                    <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}"
+                                        class="btn btn-primary btn-sm">Notice Conversation</a>
 
-                                    <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" data-type="admin" data-id="{{ $memo->memo_notice_id }}" 
-       data-topic="{{ $memo->topic_name }}"><i
+                                    <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
+                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
+                                        data-id="{{ $memo->memo_notice_id }}" data-topic="{{ $memo->topic_name }}"><i
                                             class="material-icons md-18">crisis_alert</i></a>
                                     @if($memo->status == 1)
                                     <a href="script:void(0)" class="btn btn-secondary btn-sm">Memo Conversation</a>
                                     @elseif($memo->status == 2)
-                                    <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}" class="btn btn-primary btn-sm">Memo Conversation</a>
+                                    <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}"
+                                        class="btn btn-primary btn-sm">Memo Conversation</a>
                                     @else
                                     @endif
-                                    
+
                                 </td>
                                 <td>
-                                   
                                     @if($memo->status == 1)
-                                    <button href="" class="btn-secondary btn btn-sm"  readonly>Generate Memo</button>
+                                    <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate Memo</button>
                                     @elseif($memo->status == 2)
-                                      <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#memo_generate" >Generate Memo</a>
-
-                                    
+                                    <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#memo_generate">Generate Memo</a>
+                                    @endif
                                 </td>
                                 <!-- Offcanvas Chat Component -->
-                                
+
                                 <td>
                                     @if ($memo->status == 1)
                                     <span class="badge bg-success-subtle text-success">Open</span>
@@ -175,20 +175,20 @@
     </div>
     <!-- end Zero Configuration -->
     <!-- memo generation modal -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="conversationTopic">Conversation</h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-    </div>
-    <input type="hidden" id="userType" value="">
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title" id="conversationTopic">Conversation</h5>
+            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <input type="hidden" id="userType" value="">
 
-    <div class="offcanvas-body d-flex flex-column">
-        <!-- Chat Body -->
-        <div class="chat-body flex-grow-1 mb-3" id="chatBody">
-            <p class="text-muted text-center">Loading conversation...</p>
+        <div class="offcanvas-body d-flex flex-column">
+            <!-- Chat Body -->
+            <div class="chat-body flex-grow-1 mb-3" id="chatBody">
+                <p class="text-muted text-center">Loading conversation...</p>
+            </div>
         </div>
     </div>
-</div>
 
     <div class="modal fade" id="memo_generate" tabindex="-1" aria-labelledby="memo_generateLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
@@ -251,7 +251,7 @@
                                     <option value="{{ $v->pk }}">{{ $v->venue_name }}</option>
                                     @endforeach
                                 </select>
-                                
+
                                 @error('venue_id')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -364,9 +364,8 @@
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-
-$(document).ready(function () {
-    $('.view-conversation').on('click', function () {
+$(document).ready(function() {
+    $('.view-conversation').on('click', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
         let type = $(this).data('type');
@@ -376,13 +375,15 @@ $(document).ready(function () {
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
-            url: '/admin/memo-notice-management/get_conversation_model/' + memoId+ '/' + type,
+            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type,
             type: 'GET',
-            success: function (res) {
+            success: function(res) {
                 $('#chatBody').html(res);
             },
-            error: function () {
-                $('#chatBody').html('<p class="text-danger text-center">Failed to load conversation.</p>');
+            error: function() {
+                $('#chatBody').html(
+                    '<p class="text-danger text-center">Failed to load conversation.</p>'
+                );
             }
         });
 
