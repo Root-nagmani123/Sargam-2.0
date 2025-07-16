@@ -301,4 +301,16 @@ class LocationController extends Controller
         $cities = City::where('district_master_pk', $districtId)->select('pk', 'city_name')->get()->toArray();
         return response()->json(['status' => true, 'cities' => $cities]);
     }
+    public function getStates(Request $request)
+{
+    $states = State::where('country_master_pk', $request->country_id)->get();
+    return response()->json($states);
+}
+
+public function getDistricts(Request $request)
+{
+    $districts = District::where('state_master_pk', $request->state_id)->get();
+    return response()->json($districts);
+}
+
 }
