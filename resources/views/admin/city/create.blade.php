@@ -36,15 +36,9 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="state" class="form-label">State</label>
-                            <select name="state_master_pk" class="form-select" required>
-                                <option value="">Select State</option>
-                                @foreach($states as $state)
-                                <option value="{{ $state->pk }}"
-                                    {{ old('state_master_pk') == $state->pk ? 'selected' : '' }}>
-                                    {{ $state->state_name }}
-                                </option>
-                                @endforeach
-                            </select>
+                            <select name="state_master_pk" id="state_master_pk" class="form-select" required>
+                            <option value="">Select State</option>
+                        </select>
                             @error('state_master_pk')
                             <p class="text-danger">{{ $message }}</p>
                             @enderror
@@ -53,14 +47,8 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="district" class="form-label">District</label>
-                            <select name="district_master_pk" class="form-select" required>
+                            <select name="district_master_pk" id="district_master_pk" class="form-select" required>
                                 <option value="">Select District</option>
-                                @foreach($districts as $district)
-                                <option value="{{ $district->pk }}"
-                                    {{ old('district_master_pk') == $district->pk ? 'selected' : '' }}>
-                                    {{ $district->district_name }}
-                                </option>
-                                @endforeach
                             </select>
                             @error('district_master_pk')
                             <p class="text-danger">{{ $message }}</p>
@@ -109,3 +97,53 @@
 
 
 @endsection
+@push('scripts')
+<script>
+    $(document).ready(function () {
+        $('#country_master_pk').on('change', function () {
+            let countryId = $(this).val();
+            $('#state_master_pk').html('<option value="">Loading...</option>');
+            $('#district_master_pk').html('<option value="">Select District</option>');
+
+            if (countryId) {
+                $.ajax({
+                  url: "{{ route('master.city.getStates') }}",
+                    type: "POST",
+                    data: {
+                        country_id: countryId,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function (states) {
+                        $('#state_master_pk').empty().append('<option value="">Select State</option>');
+                        $.each(states, function (key, state) {
+                            $('#state_master_pk').append('<option value="' + state.pk + '">' + state.state_name + '</option>');
+                        });
+                    }
+                });
+            }
+        });
+
+        $('#state_master_pk').on('change', function () {
+            let stateId = $(this).val();
+            $('#district_master_pk').html('<option value="">Loading...</option>');
+
+            if (stateId) {
+                $.ajax({
+                    url: "{{ route('master.city.getDistricts') }}",
+                    type: "POST",
+                    data: {
+                        state_id: stateId,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function (districts) {
+                        $('#district_master_pk').empty().append('<option value="">Select District</option>');
+                        $.each(districts, function (key, district) {
+                            $('#district_master_pk').append('<option value="' + district.pk + '">' + district.district_name + '</option>');
+                        });
+                    }
+                });
+            }
+        });
+    });
+</script>
+@endpush
