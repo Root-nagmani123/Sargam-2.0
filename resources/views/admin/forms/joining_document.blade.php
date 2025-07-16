@@ -45,16 +45,16 @@
                  <div class="card-body">
                      <h5 class="fw-bold text-primary mb-3">Administration Section Related Documents</h5>
                      <div class="table-responsive">
-                         <table class="table table-bordered align-middle table-hover table-striped text-nowrap">
+                         <table class="table table-bordered align-middle table-hover table-striped">
                              <thead class="table-light text-center">
                                  <tr>
-                                     <th>Sr.No.</th>
-                                     <th>Document Title</th>
-                                     <th>Upload</th>
-                                     <th>View Uploaded Forms</th>
-                                     <th>Sample Documents</th>
-                                     <th>Download Forms</th>
-                                     <th>Status</th>
+                                     <th class="col">Sr.No.</th>
+                                     <th class="col">Document Title</th>
+                                     <th class="col">Upload</th>
+                                     <th class="col">View Uploaded Forms</th>
+                                     <th class="col">Sample Documents</th>
+                                     <th class="col">Download Forms</th>
+                                     <th class="col">Status</th>
                                  </tr>
                              </thead>
                              <tbody>
@@ -508,21 +508,21 @@
                      <h5 class="fw-bold text-primary mb-3">Accounts Section Related Documents</h5>
                      <div class="table-responsive">
                          <table
-                             class="table table-bordered align-middle text-center table-hover table-striped text-nowrap">
-                             <thead class="table-light text-center">
+                             class="table table-bordered align-middle text-center table-hover table-striped">
+                             <thead class="table-light">
                                  <tr>
-                                     <th>Sr. No.</th>
-                                     <th>Document Title</th>
-                                     <th>Upload</th>
-                                     <th>View Uploaded Forms</th>
-                                     <th>Sample Documents</th>
-                                     <th>Download Forms</th>
-                                     <th>Status</th>
+                                     <th class="col">Sr. No.</th>
+                                     <th class="col">Document Title</th>
+                                     <th class="col">Upload</th>
+                                     <th class="col">View Uploaded Forms</th>
+                                     <th class="col">Sample Documents</th>
+                                     <th class="col">Download Forms</th>
+                                     <th class="col">Status</th>
                                  </tr>
                              </thead>
                              <tbody>
                                  <tr>
-                                     <td class="text-center">1</td>
+                                     <td class="text-start">1</td>
                                      <td class="text-start" colspan="6"><strong>Nomination for benefits
                                              under the Central Government Employees Group Insurance
                                              Scheme, 1980</strong></td>
@@ -531,7 +531,7 @@
                                      <td></td>
                                      <td>a) Form-7 (if Unmarried) or ii) Form-8 (if Married)</td>
                                      <td><input type="file" name="accounts_nomination_form" class="form-control"></td>
-                                     <td class="text-center">
+                                     <td class="text-start">
                                          @if (!empty($documents->accounts_nomination_form))
                                              <a href="{{ asset('storage/' . $documents->accounts_nomination_form) }}"
                                                  target="_blank" class="btn btn-link p-0 text-primary">View</a>
