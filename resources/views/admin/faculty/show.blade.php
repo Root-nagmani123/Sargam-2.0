@@ -128,7 +128,7 @@
                 @if( !empty($faculty->Rech_Publi_Upload_path) )
                 
                 <span class="text-info text-bold">Research Publications</span>
-                <a href="{{ asset($faculty->Rech_Publi_Upload_path) }}" target="_blank" class="rounded-circle"
+                <a href="{{ asset('storage/'.$faculty->Rech_Publi_Upload_path) }}" target="_blank" class="rounded-circle"
                     title="View Document">
                     <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
                 </a>
@@ -139,7 +139,7 @@
                 @if( !empty($faculty->Professional_Memberships_doc_upload_path) )
                 
                 <span class="text-info text-bold">Professional Memberships</span>
-                <a href="{{ asset($faculty->Professional_Memberships_doc_upload_path) }}" target="_blank"
+                <a href="{{ asset('storage/'.$faculty->Professional_Memberships_doc_upload_path) }}" target="_blank"
                     class="rounded-circle" title="View Document">
                     <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
                 </a>
@@ -151,7 +151,7 @@
                 @if( !empty($faculty->Reference_Recommendation) )
                 <br>
                 <span class="text-info text-bold">Recommendation Details</span>
-                <a href="{{ asset($faculty->Reference_Recommendation) }}" target="_blank" class="rounded-circle"
+                <a href="{{ asset('storage/'.$faculty->Reference_Recommendation) }}" target="_blank" class="rounded-circle"
                     title="View Document">
                     <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
                 </a>
