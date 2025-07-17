@@ -508,10 +508,10 @@
                      <h5 class="fw-bold text-primary mb-3">Accounts Section Related Documents</h5>
                      <div class="table-responsive">
                          <table
-                             class="table table-bordered align-middle text-center table-hover table-striped">
+                             class="table table-bordered align-middle table-hover table-striped">
                              <thead class="table-light">
                                  <tr>
-                                     <th class="col">Sr. No.</th>
+                                     <th class="col">Sr.No.</th>
                                      <th class="col">Document Title</th>
                                      <th class="col">Upload</th>
                                      <th class="col">View Uploaded Forms</th>
