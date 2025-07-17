@@ -280,7 +280,7 @@ $('input[name="photo"]').on('change', function () {
         $('input[name="degree[]"]').each(function (index) {
             degrees.push($(this).val());
             universities.push($('input[name="university_institution_name[]"]').eq(index).val());
-            years.push($('input[name="year_of_passing[]"]').eq(index).val());
+            years.push($('select[name="year_of_passing[]"]').eq(index).val());
             percentages.push($('input[name="percentage_CGPA[]"]').eq(index).val());
 
             // Handle certificate files
