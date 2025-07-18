@@ -113,3 +113,11 @@
     <!-- end Vertical Steps Example -->
 </div>
 @endsection
+
+
+
+@if(old('course_master_pk'))
+<script>
+    window.triggerCourseChange = true;
+</script>
+@endif
