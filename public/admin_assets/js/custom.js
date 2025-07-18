@@ -176,22 +176,22 @@ $(document).on('change', '.status-toggle', function () {
 
 document.addEventListener('DOMContentLoaded', function () {
 
-$('input[name="photo"]').on('change', function () {
-    console.log('Photo input changed');
-    
-    const input = this;
-    const preview = $('#photoPreview');
+    $('input[name="photo"]').on('change', function () {
+        console.log('Photo input changed');
+        
+        const input = this;
+        const preview = $('#photoPreview');
 
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
 
-        reader.onload = function (e) {
-            preview.attr('src', e.target.result).removeClass('d-none');
-        };
+            reader.onload = function (e) {
+                preview.attr('src', e.target.result).removeClass('d-none');
+            };
 
-        reader.readAsDataURL(input.files[0]);
-    }
-});
+            reader.readAsDataURL(input.files[0]);
+        }
+    });
 
 
     $('input[name="landline"], input[name="mobile"]').on('input', function () {
@@ -570,6 +570,46 @@ $('input[name="photo"]').on('change', function () {
         }
     });
 
+    $(document).on('change', '#customCheck4', function () {
+    const isChecked = $(this).is(':checked');
+
+        if (isChecked) {
+            // 1. Copy immediate fields
+            $('#permanentaddress').val($('#address').val()).prop('disabled', true);
+            $('#permanentpostal').val($('#postal').val()).prop('disabled', true);
+
+            // 2. Start cascading copy with delay (country → state → district → city)
+            let countryId = $('#country').val();
+            $('#permanentcountry').val(countryId).trigger('change').prop('disabled', true);
+
+            // Wait for state options to load via AJAX
+            setTimeout(function () {
+                let stateId = $('#state').val();
+                $('#permanentstate').val(stateId).trigger('change').prop('disabled', true);
+
+                // Wait for district options
+                setTimeout(function () {
+                    let districtId = $('#district').val();
+                    $('#permanentdistrict').val(districtId).trigger('change').prop('disabled', true);
+
+                    // Wait for city options
+                    setTimeout(function () {
+                        let cityId = $('#city').val();
+                        $('#permanentcity').val(cityId).trigger('change').prop('disabled', true);
+                    }, 500);
+
+                }, 500);
+
+            }, 500);
+
+        } else {
+            // Unchecked: Enable and clear permanent fields
+            $('#permanentaddress, #permanentpostal, #permanentcountry, #permanentstate, #permanentdistrict, #permanentcity')
+                .prop('disabled', false)
+                .val('')
+                .trigger('change');
+        }
+    });
 });
 
 // Group Mapping Modules
