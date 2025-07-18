@@ -344,7 +344,7 @@
             </nav>
             <div class="row">
                 <!-- Sidebar -->
-                <div class="col-md-4 col-lg-3 sidebar" style="position: sticky; top: 150px; max-height: 100vh;">
+                <div class="col-md-4 col-lg-2 sidebar" style="position: sticky; top: 150px; max-height: 100vh;">
                     <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
                         <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist"
                             aria-orientation="vertical">
@@ -382,7 +382,7 @@
                     </div>
                 </div>
                 <!-- Form Content -->
-                <div class="col-md-8 col-lg-9">
+                <div class="col-md-8 col-lg-10">
                     <div class="tab-content" id="v-pills-tabContent">
                         <div class="tab-pane fade show active" id="tab-1" role="tabpanel" aria-labelledby="tab-1-tab">
                             <!-- Personal Details -->
