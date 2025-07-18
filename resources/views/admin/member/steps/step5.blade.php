@@ -23,6 +23,9 @@
             <label class="form-label" for="picture">Upload Picture :</label>
             <input type="file" class="form-control" id="picture" name="picture">
         </div>
+        <small class="text-muted d-block">
+            Allowed file types: <strong>JPG</strong>, <strong>PNG</strong>, <strong>JPEG</strong> | Max file size: <strong>500 KB</strong>
+        </small>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
@@ -30,4 +33,7 @@
             <input type="file" class="form-control" id="additionaldocument" name="additionaldocument">
         </div>
     </div>
+    <small class="text-muted d-block">
+        Allowed file types: <strong>PDF</strong>, <strong>JPG</strong>, <strong>PNG</strong> | Max file size: <strong>1 MB</strong>
+    </small>
 </div>

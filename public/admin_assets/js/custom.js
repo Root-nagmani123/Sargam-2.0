@@ -787,6 +787,12 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     });
+
+    if (window.triggerCourseChange) {
+        setTimeout(function () {
+            $('.course-selected').trigger('change');
+        }, 500); // delay ensures event handlers are attached
+    }
 });
 document.addEventListener('DOMContentLoaded', function () {
     // Initialize DualListbox on page load
