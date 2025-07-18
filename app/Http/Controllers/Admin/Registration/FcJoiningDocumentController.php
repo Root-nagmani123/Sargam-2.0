@@ -34,12 +34,26 @@ class FcJoiningDocumentController extends Controller
         'accounts_employee_info_sheet'    => ['title' => 'Employee Information Sheet', 'section' => 'accounts'],
     ];
 
-    public function create()
+    public function create($formId)
     {
+        $form = DB::table('local_form')->where('id', $formId)->first();
+        if (!$form) abort(404, 'Form not found');
+
+        // Determine parent form ID
+        $parentFormId = ($form->parent_id && $form->parent_id != 0) ? $form->parent_id : $form->id;
+
+        // Fetch children of the parent form
+        $childForms = DB::table('local_form')
+            ->where('parent_id', $parentFormId)
+            ->where('visible', 1)
+            ->orderBy('sortorder')
+            ->get();
+
         $documents = FcJoiningDocument::where('user_id', auth()->id())->first();
         $userId = Auth::id();
+        // dd($documents->admin_family_details_form);
 
-        return view('admin.forms.joining_document', compact('documents', 'userId'));
+        return view('admin.forms.joining_document', compact('documents', 'userId', 'form', 'childForms', 'formId'));
     }
 
 
@@ -100,8 +114,8 @@ class FcJoiningDocumentController extends Controller
         return back()->with('success', 'Documents uploaded successfully.');
     }
 
-   // Assuming student_master table has OT user info
-    public function fc_report_index(Request $request)
+    // Assuming student_master table has OT user info
+    public function fc_report_index(Request $request , $formId)
     {
         // Define document fields with readable labels
         $fields = [
@@ -124,6 +138,18 @@ class FcJoiningDocumentController extends Controller
 
 
 
+        $form = DB::table('local_form')->where('id', $formId)->first();
+        if (!$form) abort(404, 'Form not found');
+
+        // Determine parent form ID
+        $parentFormId = ($form->parent_id && $form->parent_id != 0) ? $form->parent_id : $form->id;
+
+        // Fetch children of the parent form
+        $childForms = DB::table('local_form')
+            ->where('parent_id', $parentFormId)
+            ->where('visible', 1)
+            ->orderBy('sortorder')
+            ->get();
         // $query = DB::table('student_master')->select('pk', 'display_name', 'schema_id');
         $query = DB::table('users')->select('id', 'name', 'id');
 
@@ -172,7 +198,9 @@ class FcJoiningDocumentController extends Controller
         $studentIds = $students->pluck('id')->toArray();
         $uploads = $allUploads->only($studentIds);
 
-        return view('admin.report.joining_documents_report', compact('fields', 'students', 'uploads'));
+        return view('admin.report.joining_documents_report', compact('fields', 'students', 'uploads', 'form', 'childForms', 'formId'))
+            ->with('search', $search)
+            ->with('status', $status);
     }
 
 
