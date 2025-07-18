@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;">
+                                style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;">
                                 <span class="hide-menu">General</span>
                             </li>
                             <!-- ---------------------------------- -->
@@ -43,69 +43,11 @@
                                 </a>
                             </li>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('expertise.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:airbuds-case-minimalistic-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Area of Expertise</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('stream.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:widget-4-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Stream</span>
-                                </a>
-                            </li>
-
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('subject.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:speaker-minimalistic-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Subject</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('curriculum.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:iphone-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Course Curriculum</span>
-                                </a>
-                            </li>
-
-                            <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('calendar.index') }}" id="get-url"
                                     aria-expanded="false">
                                     <iconify-icon icon="solar:calendar-mark-line-duotone">
                                     </iconify-icon>
                                     <span class="hide-menu">Calendar</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('section.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Section</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('student.medical.exemption.index') }}"
-                                    id="get-url" aria-expanded="false">
-                                    <iconify-icon icon="solar:feed-bold-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">Student Medical Exemption</span>
-                                </a>
-                            </li>
-                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="{{ route('mdo-escrot-exemption.index') }}" id="get-url"
-                                    aria-expanded="false">
-                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
-                                    </iconify-icon>
-                                    <span class="hide-menu">MDO Escrot Exemption</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
@@ -116,12 +58,35 @@
                                     <span class="hide-menu">Attendance</span>
                                 </a>
                             </li>
-                            
+                            <!-- Divider -->
+                            <span class="sidebar-divider"></span>
+                            <!-- ======= User Management SECTION ======= -->
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
+                                style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;">
+                                <span class="hide-menu">Exemption Duty</span></li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('student.medical.exemption.index') }}"
+                                    id="get-url" aria-expanded="false">
+                                    <iconify-icon icon="solar:feed-bold-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">Student Medical Exemption</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item">
+                                <a class="sidebar-link" href="{{ route('mdo-escrot-exemption.index') }}" id="get-url"
+                                    aria-expanded="false">
+                                    <iconify-icon icon="solar:calendar-mark-line-duotone">
+                                    </iconify-icon>
+                                    <span class="hide-menu">MDO Escrot Exemption</span>
+                                </a>
+                            </li>
+
                             <!-- Divider -->
                             <span class="sidebar-divider"></span>
                             <!-- ======= Feedback SECTION ======= -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">Feedback</span></li>
+                                style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;">
+                                <span class="hide-menu">Feedback</span></li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}" id="get-url"
                                     aria-expanded="false">
@@ -139,12 +104,13 @@
                                 </a>
                             </li>
 
-                           
+
                             <!-- Divider -->
                             <span class="sidebar-divider"></span>
                             <!-- ======= User Management SECTION ======= -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2"
-            style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">User Management</span></li>
+                                style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;">
+                                <span class="hide-menu">User Management</span></li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('admin.users.index') }}" id="get-url"
                                     aria-expanded="false">
