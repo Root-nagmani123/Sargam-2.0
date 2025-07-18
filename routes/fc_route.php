@@ -205,11 +205,11 @@ Route::post('/fc/password-reset', [FrontPageController::class, 'resetPassword'])
 Route::post('/fc/verify-web-auth', [FrontPageController::class, 'verifyWebAuth'])->name('fc.verify_web_auth');
 
 //joining document route
-Route::get('/admin/fc/joining-documents', [FcJoiningDocumentController::class, 'create'])->name('fc.joining.index');
+Route::get('/admin/fc/joining-documents/{formId}', [FcJoiningDocumentController::class, 'create'])->name('fc.joining.index');
 Route::post('/admin/fc/joining-documents/upload', [FcJoiningDocumentController::class, 'store'])->name('fc.joining.upload');
 
 //joining document list
-Route::get('/admin/reports/joining-documents', [FcJoiningDocumentController::class, 'fc_report_index'])->name('admin.joining-documents.index');
+Route::get('/admin/reports/joining-documents/{formId}', [FcJoiningDocumentController::class, 'fc_report_index'])->name('admin.joining-documents.index');
 Route::get('/admin/reports/joining-documents/download-all/{userId}', [FcJoiningDocumentController::class, 'downloadAll'])->name('admin.joining-documents.download-all');
 
 //remark

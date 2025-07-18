@@ -86,14 +86,15 @@
             style="background-color: #af2910 !important;border-radius: 10px; line-height:10px;"><span class="hide-menu">
                 Documents</span></li>
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('fc.joining.index') }}">
+            {{-- <a class="sidebar-link" href="{{ route('fc.joining.index'), ['formId' => 1] }}"> --}}
+            <a class="sidebar-link" href="{{ route('fc.joining.index', ['formId' => 1]) }}">
                 <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
                 <span class="hide-menu">Joining Documents(User) </span>
             </a>
         </li>
 
         <li class="sidebar-item">
-            <a class="sidebar-link" href="{{ route('admin.joining-documents.index') }}">
+            <a class="sidebar-link" href="{{ route('admin.joining-documents.index', ['formId' => 1]) }}">
                 <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
                 <span class="hide-menu">Report(Admin Only)</span>
             </a>
