@@ -6,24 +6,20 @@
         <!-- Start Vertical Layout Header -->
         <!-- ---------------------------------- -->
         <nav class="navbar navbar-expand-lg p-0">
-            <ul class="navbar-nav w-100 justify-content-center text-center" id="navTabs">
+            <ul class="navbar-nav flex-row" id="navTabs" style="max-width: 1200px; margin-left: 100px;width: 100%;overflow: auto;">
                 <!-- Home -->
-                <li class="nav-item d-none d-xl-flex flex-column align-items-center justify-content-center mx-3 tab-item active"
-                    data-tab="home">
-                    <a href="#" class="text-decoration-none text-dark text-center">
-                        <iconify-icon icon="solar:home-angle-bold-duotone" class="mb-1"
-                            style="color:#004a93;font-size: 1.5rem;"></iconify-icon>
-                        <h6 class="mb-0">Home</h6>
+                <li class="nav-item active tab-item" data-tab="home">
+                    <a class="nav-link active" href="#" aria-current="page" style="color: #fff !important;">
+                        <iconify-icon icon="mdi:home"></iconify-icon>
+                        Home
                     </a>
                 </li>
 
                 <!-- Setup -->
-                <li class="nav-item d-none d-xl-flex flex-column align-items-center justify-content-center mx-3 tab-item"
-                    data-tab="setup">
-                    <a href="#" class="text-decoration-none text-dark text-center">
-                        <iconify-icon icon="solar:settings-minimalistic-bold-duotone" class="mb-1"
-                            style="color:#004a93; font-size: 1.5rem;"></iconify-icon>
-                        <h6 class="mb-0">Setup</h6>
+                <li class="nav-item tab-item" data-tab="setup">
+                    <a class="nav-link" href="#" aria-current="page" style="color: #fff !important;">
+                        <iconify-icon icon="mdi:cog-outline"></iconify-icon>
+                        Setup
                     </a>
                 </li>
 
@@ -64,6 +60,42 @@
                         <iconify-icon icon="solar:structure-bold-duotone" class="mb-1"
                             style="color:#004a93; font-size: 1.5rem;"></iconify-icon>
                         <h6 class="mb-0">Financial </h6>
+                    </a>
+                </li>
+                <li class="nav-item active tab-item" data-tab="home">
+                    <a class="nav-link active" href="#">
+                        <iconify-icon icon="mdi:home"></iconify-icon>
+                        Home
+                    </a>
+                </li>
+                <li class="nav-item active tab-item" data-tab="home">
+                    <a class="nav-link active" href="#">
+                        <iconify-icon icon="mdi:home"></iconify-icon>
+                        Home
+                    </a>
+                </li>
+                <li class="nav-item active tab-item" data-tab="home">
+                    <a class="nav-link active" href="#">
+                        <iconify-icon icon="mdi:home"></iconify-icon>
+                        Home
+                    </a>
+                </li>
+                <li class="nav-item active tab-item" data-tab="home">
+                    <a class="nav-link active" href="#">
+                        <iconify-icon icon="mdi:home"></iconify-icon>
+                        Home
+                    </a>
+                </li>
+                <li class="nav-item active tab-item" data-tab="home">
+                    <a class="nav-link active" href="#">
+                        <iconify-icon icon="mdi:home"></iconify-icon>
+                        Home
+                    </a>
+                </li>
+                <li class="nav-item active tab-item" data-tab="home">
+                    <a class="nav-link active" href="#">
+                        <iconify-icon icon="mdi:home"></iconify-icon>
+                        Home
                     </a>
                 </li>
             </ul>
@@ -343,33 +375,32 @@
 </header>
 <!--  Header End -->
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.tab-item').forEach(item => {
-            item.addEventListener('click', function (e) {
-                e.preventDefault();
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.tab-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
 
-                // Remove active class from all tab items
-                document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove('active'));
+            // Remove active class from all tab items
+            document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove(
+                'active'));
 
-                // Add active class to clicked tab
-                this.classList.add('active');
+            // Add active class to clicked tab
+            this.classList.add('active');
 
-                // Remove active class and hide all tab panes
-                document.querySelectorAll('.tab-pane').forEach(pane => {
-                    pane.classList.remove('active');
-                    pane.classList.add('d-none');
-                });
-
-                // Show and activate the target content pane
-                const target = this.getAttribute('data-tab');
-                const targetPane = document.getElementById('tab-' + target);
-                if (targetPane) {
-                    targetPane.classList.remove('d-none');
-                    targetPane.classList.add('active');
-                }
+            // Remove active class and hide all tab panes
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.remove('active');
+                pane.classList.add('d-none');
             });
+
+            // Show and activate the target content pane
+            const target = this.getAttribute('data-tab');
+            const targetPane = document.getElementById('tab-' + target);
+            if (targetPane) {
+                targetPane.classList.remove('d-none');
+                targetPane.classList.add('active');
+            }
         });
     });
+});
 </script>
-
-

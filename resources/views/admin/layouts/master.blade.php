@@ -14,9 +14,7 @@
     color: #af2910;
     }
     .tab-item.active {
-        border-bottom: 4px solid #af2910;
-        background-color:rgb(210, 230, 250);
-        padding: 5px;
+        background-color:#004a93;
         border-radius: 10px;
     }
 
