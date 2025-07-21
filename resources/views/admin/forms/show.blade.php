@@ -264,7 +264,7 @@
 <body>
     <!-- Top Blue Bar (Govt of India) -->
     <div class="top-header d-flex justify-content-between align-items-center d-none d-md-block">
-        <div class="container">
+        <div class="container-fluid">
             <div class="row">
                 <div class="col-md-3 d-flex align-items-center">
                     <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png"
@@ -276,29 +276,6 @@
                         <li class="nav-item"><a href="#content" class="text-white text-decoration-none"
                                 style=" font-size: 12px;">Skip to Main Content</a></li>
                         <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="{{ asset('images/text_to_speech.png') }}" alt="" width="20"><span
-                                    class="ms-1" style=" font-size: 12px;">Screen Reader</span></a></li>
-                        <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style=" font-size: 12px;">A+</a></li>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style=" font-size: 12px;">A</a></li>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style=" font-size: 12px;">A-</a></li>
-                        <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="{{ asset('images/contrast.png') }}" alt="" width="20"></a></li>
-                        <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="{{ asset('images/Regular.png') }}" alt="" width="20">
-                                <span><select name="lang" id="" class="form-select form-select-sm"
-                                        style="width: 100px; display: inline-block; font-size: 14px;  background-color: transparent; border: none;color: #fff;font-size: 12px;">"
-                                        <option value="">Language</option>
-                                        <option value="en" selected>English</option>
-                                    </select></span></a></li>
-                        <span class="text-muted me-3 ">|</span>
-                        <li>
                             <a id="uw-widget-custom-trigger" contenteditable="false" style="cursor: pointer;">
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
                                     src="{{ asset('images/accessible.png') }}" alt="" width="20">
@@ -319,12 +296,12 @@
                 <div class="container-fluid px-0">
                     <a class="navbar-brand me-2" href="#">
                         <img src="https://i.pinimg.com/736x/a8/fa/ef/a8faef978e6230b6a12d1c29c62d5edf.jpg"
-                            alt="Logo 1" height="40">
+                            alt="Logo 1" height="60">
                     </a>
                     <span class="vr mx-2"></span>
                     <a class="navbar-brand" href="#">
                         <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2"
-                            height="40">
+                            height="60">
                     </a>
 
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
@@ -364,7 +341,33 @@
     </div>
 
     <main style="flex: 1;">
-        <div class="container-fluid mt-5">
+       <div class="container-fluid py-4">
+         <div class="row mb-4">
+     <div class="row align-items-center">
+                                    <!-- Left Logo -->
+                                    <div class="col-md-2 text-start">
+                                        <img src="{{ asset($data->logo1 ? 'storage/' . $data->logo1 : 'admin_assets/images/logos/logo.png') }}"
+                                            alt="logo1" style="max-height: 80px;" class="">
+                                    </div>
+
+                                    <!-- Center Heading -->
+                                    <div class="col-md-8 text-center">
+                                        <h3 class="mb-1">{!! $data->heading ?? '<b>Main Heading Here</b>' !!}</h3>
+                                        <div class="small fw-bold text-muted">
+                                            {{ $data->sub_heading ?? 'Sub Heading Here' }}
+                                        </div>
+                                    </div>
+
+                                    <!-- Right Logo -->
+                                    <div class="col-md-2 text-end">
+                                        <img src="{{ asset($data->logo2 ? 'storage/' . $data->logo2 : 'images/azadi.png') }}"
+                                            alt="logo2" style="max-height: 80px;" class="img-fluid">
+                                    </div>
+                                </div>
+</div>
+       </div>
+        <div class="container-fluid">
+            
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item active">Home</li>
@@ -420,38 +423,18 @@
                     <div class="card">
                         <div class="card-body">
                             <div class="card-title">
-                                <div class="row align-items-center">
-                                    <!-- Left Logo -->
-                                    <div class="col-md-2 text-start">
-                                        <img src="{{ asset($data->logo1 ? 'storage/' . $data->logo1 : 'admin_assets/images/logos/logo.png') }}"
-                                            alt="logo1" style="max-height: 80px;" class="">
-                                    </div>
-
-                                    <!-- Center Heading -->
-                                    <div class="col-md-8 text-center">
-                                        <h3 class="mb-1">{!! $data->heading ?? '<b>Main Heading Here</b>' !!}</h3>
-                                        <div class="small fw-bold">
-                                            {{ $data->sub_heading ?? 'Sub Heading Here' }}
-                                        </div>
-                                    </div>
-
-                                    <!-- Right Logo -->
-                                    <div class="col-md-2 text-end">
-                                        <img src="{{ asset($data->logo2 ? 'storage/' . $data->logo2 : 'images/azadi.png') }}"
-                                            alt="logo2" style="max-height: 80px;" class="img-fluid">
-                                    </div>
-                                </div>
+                               
 
                                 <!-- Bottom Row Logos (Digital India & Swachh Bharat) -->
-                                <div class="row mt-5 align-items-center">
-                                    <div class="col-md-6 d-flex justify-content-center">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6 d-flex justify-content-start">
                                         <img src="{{ asset($data->logo3 ? 'storage/' . $data->logo3 : 'images/digital.png') }}"
-                                            alt="logo3" style="max-height: 50px; margin-right: 20px;"
+                                            alt="logo3" style="max-height: 60px; margin-right: 20px;"
                                             class="img-fluid">
                                     </div>
-                                    <div class="col-md-6 d-flex justify-content-center">
+                                    <div class="col-md-6 d-flex justify-content-end">
                                         <img src="{{ asset($data->logo4 ? 'storage/' . $data->logo4 : 'images/swachh.png') }}"
-                                            alt="logo4" style="max-height: 50px; margin-left: 20px;"
+                                            alt="logo4" style="max-height: 60px; margin-left: 20px;"
                                             class="img-fluid">
                                     </div>
                                 </div>
