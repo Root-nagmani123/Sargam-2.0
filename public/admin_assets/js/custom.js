@@ -235,6 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
         let document = $('input[name="document"]').val();
         let residence_address = $('input[name="residence_address"]').val();
         let permanent_address = $('input[name="permanent_address"]').val();
+        let other_city = $('input[name="other_city"]').val();
 
         formData.append('facultyType', facultyType);
         formData.append('firstName', firstName);
@@ -252,6 +253,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('alternativeEmail', alternativeEmail);
         formData.append('residence_address', residence_address);
         formData.append('permanent_address', permanent_address);
+        formData.append('other_city', other_city);
 
         // photo is file
         const photoInput = $('input[name="photo"]')[0];
@@ -609,6 +611,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 .prop('disabled', false)
                 .val('')
                 .trigger('change');
+        }
+    });
+
+    // Faculty When City is Other
+    $('#city').on('change', function () {
+        console.log('City changed');
+        console.log($(this).find('option:selected').text().toLowerCase().trim());
+        console.log($(this).find('option:selected').text().toLowerCase().trim() == 'other');
+        
+        if ($(this).find('option:selected').text().toLowerCase().trim() == 'other') {
+            console.log('Other city selected');
+            $('#otherCityContainer').removeClass('d-none');
+        } else {
+            $('#otherCityContainer').addClass('d-none');
         }
     });
 });

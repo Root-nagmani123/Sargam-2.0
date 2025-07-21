@@ -59,6 +59,7 @@
         </div>
         <div class="card-body">
             @foreach ($faculty->facultyQualificationMap as $facultyQualification)
+            
             <div class="border rounded p-3 mb-3 bg-light">
                 <div class="row g-3">
                     <x-view-item label="Qualification" :value="$facultyQualification->Degree_name" />
@@ -67,11 +68,12 @@
                     <x-view-item label="Year of Passing" :value="$facultyQualification->Year_of_passing" />
                     <x-view-item label="Percentage/CGPA" :value="$facultyQualification->Percentage_CGPA" />
                     @if(!empty($facultyQualification->Certifcates_upload_path))
-                    <small class="text-muted">Existing:
-                        <a href="{{ asset($facultyQualification->Certifcates_upload_path) }}" target="_blank">
+                    <div class="col-md-6">
+                        <a class="btn btn-primary" href="{{ asset('storage/'.$facultyQualification->Certifcates_upload_path) }}" target="_blank">
+                            
                             View Document
                         </a>
-                    </small>
+                    </div>
                     @endif
                 </div>
             </div>
