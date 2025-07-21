@@ -105,7 +105,7 @@ class EmployeeMaster extends Model
 
     public function userCredential()
     {
-        return $this->hasOne(UserCredential::class, 'user_id', 'pk');
+        return $this->hasOne(UserCredential::class, 'user_id', 'pk')->where('user_category', 'E');
     }
 
     public function employeeRoleMapping()
