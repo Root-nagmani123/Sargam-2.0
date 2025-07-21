@@ -575,27 +575,28 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (isChecked) {
             // 1. Copy immediate fields
-            $('#permanentaddress').val($('#address').val()).prop('disabled', true);
-            $('#permanentpostal').val($('#postal').val()).prop('disabled', true);
+            $('#permanentaddress').val($('#address').val());
+            $('#permanentpostal').val($('#postal').val());
 
             // 2. Start cascading copy with delay (country → state → district → city)
             let countryId = $('#country').val();
-            $('#permanentcountry').val(countryId).trigger('change').prop('disabled', true);
+            $('#permanentcountry').val(countryId).trigger('change');
 
             // Wait for state options to load via AJAX
             setTimeout(function () {
                 let stateId = $('#state').val();
-                $('#permanentstate').val(stateId).trigger('change').prop('disabled', true);
+                $('#permanentstate').val(stateId).trigger('change');
+
 
                 // Wait for district options
                 setTimeout(function () {
                     let districtId = $('#district').val();
-                    $('#permanentdistrict').val(districtId).trigger('change').prop('disabled', true);
+                    $('#permanentdistrict').val(districtId).trigger('change');
 
                     // Wait for city options
                     setTimeout(function () {
                         let cityId = $('#city').val();
-                        $('#permanentcity').val(cityId).trigger('change').prop('disabled', true);
+                        $('#permanentcity').val(cityId).trigger('change');
                     }, 500);
 
                 }, 500);

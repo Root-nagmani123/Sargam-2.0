@@ -283,7 +283,8 @@ class MemberController extends Controller
             'mobile_no' => $request->mnumber,
             'reg_date' => now(),
             'user_id' => $request->emp_id,
-            'user_name' => $request->userid
+            'user_name' => $request->userid,
+            'user_category' => 'E'
         ]);
 
         if ($userCredential) {
@@ -331,7 +332,8 @@ class MemberController extends Controller
                 'last_name'   => $request->last_name,
                 'email_id'    => $request->personalemail,
                 'mobile_no'   => $request->mnumber,
-                'user_name'   => $request->userid
+                'user_name'   => $request->userid,
+                'user_category' => 'E'
             ]
         );
         $userCredential = UserCredential::where('user_id', $request->emp_id)->first();
