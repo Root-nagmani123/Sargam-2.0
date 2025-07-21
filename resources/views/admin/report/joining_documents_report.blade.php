@@ -20,14 +20,14 @@
             min-height: 100vh;
             font-family: 'Inter', sans-serif;
         }
-        
+
         .sidebar {
             padding: 15px;
             background-color: #f8f9fa;
             min-height: calc(100vh - 120px);
             border-right: 1px solid #dee2e6;
         }
-        
+
         .sidebar .nav-pills .nav-link.active {
             font-weight: 500;
             background-color: #004a93;
@@ -35,12 +35,12 @@
             color: #fff;
             border-radius: 0.25rem;
         }
-        
+
         .sidebar .nav-link:hover {
             background-color: #004a93;
             color: #fff !important;
         }
-        
+
         .sidebar .nav-link {
             color: #000;
             font-weight: 500;
@@ -48,57 +48,58 @@
             border: 1px solid #ddd;
             margin-bottom: 10px;
         }
-        
+
         .top-header {
             background-color: #004a93;
             color: white;
             padding: 5px 15px;
         }
-        
+
         .main-content-container {
             padding: 20px;
         }
-        
+
         .table-responsive {
             overflow-x: auto;
         }
-        
+
         table {
             width: 100%;
             border-collapse: collapse;
         }
-        
-        th, td {
+
+        th,
+        td {
             padding: 12px 15px;
             text-align: left;
             border: 1px solid #dee2e6;
         }
-        
+
         th {
             background-color: #f8f9fa;
             font-weight: 600;
         }
-        
+
         .badge {
             padding: 5px 10px;
             font-size: 12px;
             font-weight: 600;
         }
-        
+
         .badge-success {
             background-color: #28a745;
         }
-        
+
         .badge-warning {
             background-color: #ffc107;
             color: #212529;
         }
-        
+
         .btn-primary {
             background-color: #004a93;
             border-color: #004a93;
         }
-        
+
         footer {
             background-color: #004a93;
             padding: 1rem 0;
@@ -108,6 +109,7 @@
 </head>
 
 <body>
+
     <!-- Top Blue Bar (Govt of India) -->
     <div class="top-header d-flex justify-content-between align-items-center d-none d-md-block">
         <div class="container">
@@ -120,7 +122,8 @@
                 <div class="col-md-9 text-end d-flex justify-content-end align-items-center">
                     <ul class="nav justify-content-end align-items-center">
                         <li class="nav-item">
-                            <a href="#content" class="text-white text-decoration-none" style="font-size: 12px;">Skip to Main Content</a>
+                            <a href="#content" class="text-white text-decoration-none" style="font-size: 12px;">Skip to
+                                Main Content</a>
                         </li>
                         <span class="text-muted mx-3">|</span>
                         <li class="nav-item">
@@ -130,9 +133,12 @@
                             </a>
                         </li>
                         <span class="text-muted mx-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none mx-2" style="font-size: 12px;">A+</a></li>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none mx-2" style="font-size: 12px;">A</a></li>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none mx-2" style="font-size: 12px;">A-</a></li>
+                        <li class="nav-item"><a href="#" class="text-white text-decoration-none mx-2"
+                                style="font-size: 12px;">A+</a></li>
+                        <li class="nav-item"><a href="#" class="text-white text-decoration-none mx-2"
+                                style="font-size: 12px;">A</a></li>
+                        <li class="nav-item"><a href="#" class="text-white text-decoration-none mx-2"
+                                style="font-size: 12px;">A-</a></li>
                         <span class="text-muted mx-3">|</span>
                         <li class="nav-item">
                             <a href="#" class="text-white text-decoration-none">
@@ -143,7 +149,8 @@
                         <li class="nav-item">
                             <a href="#" class="text-white text-decoration-none">
                                 <img src="{{ asset('images/Regular.png') }}" alt="" width="20">
-                                <select name="lang" class="form-select form-select-sm d-inline-block" style="width: 100px; background-color: transparent; border: none; color: #fff; font-size: 12px;">
+                                <select name="lang" class="form-select form-select-sm d-inline-block"
+                                    style="width: 100px; background-color: transparent; border: none; color: #fff; font-size: 12px;">
                                     <option value="">Language</option>
                                     <option value="en" selected>English</option>
                                 </select>
@@ -161,14 +168,16 @@
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid px-0">
                     <a class="navbar-brand me-2" href="#">
-                        <img src="https://i.pinimg.com/736x/a8/fa/ef/a8faef978e6230b6a12d1c29c62d5edf.jpg" alt="Logo 1" height="40">
+                        <img src="https://i.pinimg.com/736x/a8/fa/ef/a8faef978e6230b6a12d1c29c62d5edf.jpg"
+                            alt="Logo 1" height="40">
                     </a>
                     <span class="vr mx-2"></span>
                     <a class="navbar-brand" href="#">
                         <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="40">
                     </a>
 
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
 
@@ -181,7 +190,8 @@
                                 <a class="nav-link mx-3" href="#">FAQs</a>
                             </li>
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
+                                    role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="material-icons" style="color: #004a93;">account_circle</i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
@@ -199,30 +209,32 @@
             </nav>
         </div>
     </div>
+    <x-session_message />
 
     <main style="flex: 1;">
         <div class="container-fluid mt-3">
             <div class="row">
                 <!-- Left Sidebar -->
                 <div class="col-md-3 col-lg-2 sidebar">
-                    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                    <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist"
+                        aria-orientation="vertical">
                         @if ($childForms->isEmpty())
                             <a class="nav-link active mb-3" href="{{ route('forms.show', $form->id) }}">
                                 {{ $form->name }}
                             </a>
                         @else
                             @foreach ($childForms as $child)
-                                <a class="nav-link mb-3 {{ $child->id == $form->id ? 'active' : '' }}" 
-                                   href="{{ route('forms.show', $child->id) }}">
+                                <a class="nav-link mb-3 {{ $child->id == $form->id ? 'active' : '' }}"
+                                    href="{{ route('forms.show', $child->id) }}">
                                     {{ $child->name }}
                                 </a>
                             @endforeach
-                            <a class="nav-link mb-3 {{ request()->routeIs('fc.joining.index') ? 'active' : '' }}" 
-                               href="{{ route('fc.joining.index', ['formId' => $form->id]) }}">
+                            <a class="nav-link mb-3 {{ request()->routeIs('fc.joining.index') ? 'active' : '' }}"
+                                href="{{ route('fc.joining.index', ['formId' => $form->id]) }}">
                                 Joining Documents
                             </a>
-                            <a class="nav-link mb-3 {{ request()->routeIs('admin.joining-documents.index') ? 'active' : '' }}" 
-                               href="{{ route('admin.joining-documents.index', ['formId' => $form->id]) }}">
+                            <a class="nav-link mb-3 {{ request()->routeIs('admin.joining-documents.index') ? 'active' : '' }}"
+                                href="{{ route('admin.joining-documents.index', ['formId' => $form->id]) }}">
                                 Report (Admin Only)
                             </a>
                         @endif
@@ -237,24 +249,28 @@
                             <form method="GET" class="row align-items-end">
                                 <div class="col-md-4">
                                     <label class="form-label">Search OT Name</label>
-                                    <input type="text" name="search" class="form-control" placeholder="Search OT Name..." value="{{ request('search') }}">
+                                    <input type="text" name="search" class="form-control"
+                                        placeholder="Search OT Name..." value="{{ request('search') }}">
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Status</label>
                                     <select name="status" class="form-select">
                                         <option value="">-- All Status --</option>
-                                        <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>Complete</option>
-                                        <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Pending</option>
+                                        <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>
+                                            Complete</option>
+                                        <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>
+                                            Pending</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3 d-flex gap-2 mt-2 mt-md-0">
                                     <button class="btn btn-primary" type="submit">Filter</button>
-                                    <a href="{{ route('admin.joining-documents.index', ['formId' => $form->id]) }}" class="btn btn-secondary">Reset</a>
+                                    <a href="{{ route('admin.joining-documents.index', ['formId' => $form->id]) }}"
+                                        class="btn btn-secondary">Reset</a>
                                 </div>
                             </form>
                         </div>
                     </div>
-                    
+
                     <!-- Report Table -->
                     <div class="card">
                         <div class="card-body">
@@ -279,15 +295,20 @@
                                                 $upload = $uploads[$student->id] ?? null;
                                             @endphp
                                             <tr>
-                                                <td>{{ ($students->currentPage() - 1) * $students->perPage() + $loop->iteration }}</td>
+                                                <td>{{ ($students->currentPage() - 1) * $students->perPage() + $loop->iteration }}
+                                                </td>
                                                 <td>{{ $student->name }}</td>
                                                 <td>{{ $student->id }}</td>
 
                                                 @foreach ($fields as $fieldKey => $fieldLabel)
                                                     <td>
                                                         @if ($upload && !empty($upload->$fieldKey))
-                                                            <a href="{{ asset('storage/' . $upload->$fieldKey) }}" target="_blank" class="btn btn-link p-0 text-primary">View</a> |
-                                                            <a href="{{ asset('storage/' . $upload->$fieldKey) }}" download class="btn btn-link p-0 text-primary">Download</a>
+                                                            <a href="{{ asset('storage/' . $upload->$fieldKey) }}"
+                                                                target="_blank"
+                                                                class="btn btn-link p-0 text-primary">View</a> |
+                                                            <a href="{{ asset('storage/' . $upload->$fieldKey) }}"
+                                                                download
+                                                                class="btn btn-link p-0 text-primary">Download</a>
                                                         @else
                                                             <span class="text-danger">Pending</span>
                                                         @endif
@@ -295,23 +316,29 @@
                                                 @endforeach
                                                 <td>
                                                     @php
-                                                        $allDone = $upload && collect($fields)->every(fn($label, $key) => !empty($upload->$key));
+                                                        $allDone =
+                                                            $upload &&
+                                                            collect($fields)->every(
+                                                                fn($label, $key) => !empty($upload->$key),
+                                                            );
                                                     @endphp
-                                                    <span class="badge {{ $allDone ? 'bg-success' : 'bg-warning text-dark' }}">
+                                                    <span
+                                                        class="badge {{ $allDone ? 'bg-success' : 'bg-warning text-dark' }}">
                                                         {{ $allDone ? 'Success' : 'Pending' }}
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route('admin.joining-documents.download-all', $student->id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <a href="{{ route('admin.joining-documents.download-all', $student->id) }}"
+                                                        class="btn btn-sm btn-outline-primary">
                                                         <i class="fa fa-download"></i> Download All
                                                     </a>
                                                 </td>
                                                 <td style="min-width: 250px;">
-                                                    <form method="POST" action="{{ route('admin.joining-documents.save-remark', $student->id) }}">
+                                                    <form method="POST"
+                                                        action="{{ route('admin.joining-documents.save-remark', $student->id) }}">
                                                         @csrf
                                                         <textarea name="remark" class="form-control form-control-sm text-center" rows="1"
-                                                            style="width: 100%; min-height: 60px; resize: vertical;"
-                                                            onchange="this.form.submit()"
+                                                            style="width: 100%; min-height: 60px; resize: vertical;" onchange="this.form.submit()"
                                                             placeholder="Enter remarks">{{ $upload->remark ?? '' }}</textarea>
                                                     </form>
                                                 </td>
@@ -330,11 +357,12 @@
         </div>
     </main>
 
-     <footer>
+    <footer>
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <p class="mb-0">© 2023 Lal Bahadur Shastri National Academy of Administration. All rights reserved.</p>
+                    <p class="mb-0">© 2023 Lal Bahadur Shastri National Academy of Administration. All rights
+                        reserved.</p>
                 </div>
                 <div class="col-md-6 text-md-end">
                     <a href="#" class="text-white me-3">Privacy Policy</a>
@@ -346,7 +374,8 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
-        crossorigin="anonymous"></script>
+         crossorigin="anonymous">
+    </script>
 </body>
+
 </html>

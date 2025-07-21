@@ -20,6 +20,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\UploadedFile;
 
 
+
 class FormController extends Controller
 {
    public function index(Request $request)
@@ -38,7 +39,7 @@ class FormController extends Controller
     });
 
     return view('admin.registration.index', [
-        'forms' => $forms,  // ✅ Needed for arrow logic in view
+        'forms' => $forms,  // Needed for arrow logic in view
         'groupedForms' => $groupedForms,
     ]);
 }
@@ -1183,6 +1184,7 @@ class FormController extends Controller
             return response($mpdf->Output('form.pdf', 'I'), 200)
                 ->header('Content-Type', 'application/pdf');
         } catch (\Exception $e) {
+            
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             abort(500, 'An error occurred while generating the PDF.');
         }
