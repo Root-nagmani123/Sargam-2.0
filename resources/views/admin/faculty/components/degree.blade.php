@@ -46,13 +46,13 @@
                         placeholder="Certificates/Documents Upload" formLabelClass="form-label" required="false"
                         helperSmallText="Please upload your certificates/documents, if any" />
 
-                    {{-- @if(!empty($qualification->Certifcates_upload_path))
-                    <small class="text-muted">Existing:
-                        <a href="{{ asset($qualification->Certifcates_upload_path) }}" target="_blank">
-                            View Document
+                    @if(!empty($qualification->Certifcates_upload_path))
+                    
+                        <a href="{{ asset('storage/'.$qualification->Certifcates_upload_path) }}" target="_blank">
+                            <i class="material-icons text-info">visibility</i>
                         </a>
-                    </small>
-                    @endif --}}
+                    
+                    @endif
                 </div>
             </div>
         @endforeach

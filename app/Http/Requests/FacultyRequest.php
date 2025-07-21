@@ -3,6 +3,8 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\{City, FacultyMaster};
+use Illuminate\Validation\Rule;
 
 class FacultyRequest extends FormRequest
 {
@@ -23,6 +25,9 @@ class FacultyRequest extends FormRequest
      */
     public function rules()
     {
+        
+        $existingFaculty = FacultyMaster::find($this->faculty_id);
+        $otherCityPks = City::whereRaw('LOWER(city_name) = ?', ['other'])->pluck('pk')->toArray();
         return [
 
             // Basic Info
@@ -40,8 +45,22 @@ class FacultyRequest extends FormRequest
             "city"=> "required|string",
             "email"=> "required|email|max:255",
             "alternativeEmail" => "nullable|email|max:255",
-            "photo" => "required|mimes:jpg,jpeg,png|max:2048",
-            "document" => "required|mimes:pdf,jpg,jpeg,png|max:2048",
+            'photo' => [
+                Rule::requiredIf(function () use ($existingFaculty) {
+                    return !$existingFaculty || empty($existingFaculty->photo_uplode_path);
+                }),
+                'nullable',
+                'mimes:jpg,jpeg,png',
+                'max:2048'
+            ],
+            "document" => [
+                Rule::requiredIf(function () use ($existingFaculty) {
+                    return !$existingFaculty || empty($existingFaculty->Doc_uplode_path);
+                }),
+                'nullable',
+                'mimes:pdf,jpg,jpeg,png',
+                'max:2048'
+            ],
             "residence_address" => "nullable|string|max:255",
             "permanent_address" => "nullable|string|max:255",
 
@@ -75,6 +94,12 @@ class FacultyRequest extends FormRequest
             
             // Radio button
             'current_sector' => 'required|string|in:1,2',
+
+            'other_city' => [
+                Rule::requiredIf(in_array($this->input('city'), $otherCityPks)),
+                'string',
+                'nullable'
+            ],
         ];
     }
 

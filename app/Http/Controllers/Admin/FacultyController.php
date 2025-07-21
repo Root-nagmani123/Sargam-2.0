@@ -39,9 +39,11 @@ class FacultyController extends Controller
 
     public function store(FacultyRequest $request)
     { //FacultyRequest
-
         try {
-
+            // dd($request->all());
+            // if($request->faculty_idfaculty_id) {
+            //     $this->update($request);
+            // }
 
             DB::beginTransaction();
 
@@ -60,7 +62,7 @@ class FacultyController extends Controller
                 'country_master_pk' => $request->country,
                 'state_master_pk' => $request->state,
                 'state_district_mapping_pk' => $request->district,
-                'city_master_pk' => $request->city,
+                
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
                 'residence_address' => $request->residence_address,
@@ -73,24 +75,37 @@ class FacultyController extends Controller
                 'PAN_No' => $request->pannumber,
             ];
 
+            if(!empty($request->other_city)) {
+                $otherCity = City::create([
+                    'country_master_pk' => $request->country,
+                    'state_master_pk' => $request->state,
+                    'district_master_pk' => $request->district,
+                    'city_name' => $request->other_city,
+                    'active_inactive' => 1
+                ]);
+                $facultyDetails['city_master_pk'] = $otherCity->pk;
+            } else {
+                $facultyDetails['city_master_pk'] = $request->city;
+            }
 
-            if ($request->hasFile('photo')) {
+
+            if (!empty($request->photo) && $request->hasFile('photo')) {
                 $facultyDetails['photo_uplode_path'] = $request->file('photo')->store('faculty/faculty_photos', 'public');
             }
 
-            if ($request->hasFile('document')) {
+            if (!empty($request->document) && $request->hasFile('document')) {
                 $facultyDetails['Doc_uplode_path'] = $request->file('document')->store('faculty/faculty_documents', 'public');
             }
 
-            if ($request->hasFile('researchpublications')) {
+            if (!empty($request->researchpublications) && $request->hasFile('researchpublications')) {
                 $facultyDetails['Rech_Publi_Upload_path'] = $request->file('researchpublications')->store('faculty/research_publications', 'public');
             }
 
-            if ($request->hasFile('professionalmemberships')) {
+            if (!empty($request->professionalmemberships) && $request->hasFile('professionalmemberships')) {
                 $facultyDetails['Professional_Memberships_doc_upload_path'] = $request->file('professionalmemberships')->store('faculty/professional_memberships', 'public');
             }
 
-            if ($request->hasFile('recommendationdetails')) {
+            if (!empty($request->recommendationdetails) && $request->hasFile('recommendationdetails')) {
                 $facultyDetails['Reference_Recommendation'] = $request->file('recommendationdetails')->store('faculty/recommendation_details', 'public');
             }
 
@@ -103,9 +118,15 @@ class FacultyController extends Controller
             $facultyDetails['last_update'] = now();
             $facultyDetails['active_inactive'] = 1;
 
-            $faculty = FacultyMaster::create($facultyDetails);
+            if($request->faculty_id) {
+                $faculty = FacultyMaster::find($request->faculty_id);
+                $faculty->update($facultyDetails);
+            }
+            else {
+                $faculty = FacultyMaster::create($facultyDetails);
+                $this->generateFacultyCode($faculty, $request->facultyType);
+            }
 
-            $this->generateFacultyCode($faculty, $request->facultyType);
 
             if ($faculty) {
 
@@ -114,6 +135,8 @@ class FacultyController extends Controller
                 $degreeDetails = [];
 
                 if (!empty($request->degree) && $request->degree[0] != null) {
+
+                    FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->delete();
 
                     foreach ($request->degree as $key => $degree) {
 
@@ -130,13 +153,16 @@ class FacultyController extends Controller
                         }
                     }
 
-                    FacultyQualificationMap::insert($degreeDetails);
+                    FacultyQualificationMap::insert(values: $degreeDetails);
                 }
 
                 # Step : 3
                 $experienceDetails = [];
 
                 if (!empty($request->experience) && $request->experience[0] != null) {
+
+                    FacultyExperienceMap::where('faculty_master_pk', $faculty->pk)->delete();
+
                     foreach ($request->experience as $key => $experience) {
 
                         $experienceDetails[] = [
@@ -157,6 +183,9 @@ class FacultyController extends Controller
                 $expertiseDetails = [];
 
                 if (!empty($request->faculties) && $request->faculties[0] != null) {
+
+                    FacultyExpertiseMap::where('faculty_master_pk', $faculty->pk)->delete();
+
                     foreach ($request->faculties as $key => $expertise) {
 
                         $expertiseDetails[] = [
@@ -208,7 +237,7 @@ class FacultyController extends Controller
         return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years'));
     }
 
-    public function update(FacultyUpdateRequest $request)
+    public function update(Request $request)
     {
         try {
             DB::beginTransaction();
@@ -228,7 +257,7 @@ class FacultyController extends Controller
                 'country_master_pk' => $request->country,
                 'state_master_pk'   => $request->state,
                 'state_district_mapping_pk' => $request->district,
-                'city_master_pk'        => $request->city,
+                // 'city_master_pk'        => $request->city,
                 'email_id'              => $request->email,
                 'alternate_email_id'    => $request->alternativeEmail,
                 'residence_address'     => $request->residence_address,
@@ -240,6 +269,19 @@ class FacultyController extends Controller
                 'IFSC_Code'             => $request->ifsccode,
                 'PAN_No'                => $request->pannumber,
             ];
+
+            if(!empty($request->other_city)) {
+                $otherCity = City::create([
+                    'country_master_pk' => $request->country,
+                    'state_master_pk' => $request->state,
+                    'district_master_pk' => $request->district,
+                    'city_name' => $request->other_city,
+                    'active_inactive' => 1
+                ]);
+                $facultyDetails['city_master_pk'] = $otherCity->pk;
+            } else {
+                $facultyDetails['city_master_pk'] = $request->city;
+            }
 
 
             if ($request->hasFile('photo')) {
@@ -417,7 +459,7 @@ class FacultyController extends Controller
             'facultyExpertiseMap.facultyExpertise:pk,expertise_name', 
             'facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
             'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk', 
-            'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA'
+            'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path'
         ])->find(decrypt($id));
         
         if (!$faculty) {

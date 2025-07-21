@@ -183,6 +183,20 @@
 
         </div>
     </div>
+    <div class="col-md-6 d-none" id="otherCityContainer">
+        <div class="mb-3">
+
+            <x-input 
+                name="other_city"
+                label="Other City :"
+                placeholder="Other City"
+                formLabelClass="form-label"
+                required="true"
+                value=""
+                />
+
+        </div>
+    </div>
     <div class="col-md-6">
 
         <x-input
