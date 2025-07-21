@@ -4,15 +4,15 @@
 
 @section('content')
     <main style="flex: 1;">
-        <div class="container mt-5">
-            <div class="text-center">
+        <div class="container-fluid mt-5">
+            <div class="text-center mb-4">
                 <h4 style="color: #004a93; font-size: 30px; font-weight: 700;">Foundation Course Status</h4>
                 <p class="text-muted" style="font-size: 20px;">
                     Check your current status in the Foundation Course.
                 </p>
             </div>
             <!-- Tabs as Status Buttons -->
-  <div class="container">
+  <div class="container-fluid">
     <ul class="nav nav-tabs justify-content-center mb-4" id="statusTabs" role="tablist">
       <li class="nav-item" role="presentation">
         <button class="nav-link active text-danger" id="not-responded-tab" data-bs-toggle="tab" data-bs-target="#not-responded" type="button" role="tab">Not Responded <span class="badge bg-danger">653</span></button>
