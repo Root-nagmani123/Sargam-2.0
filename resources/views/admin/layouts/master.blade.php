@@ -9,16 +9,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     @section('css')
     <style>
-    .tab-item.active h6 {
-    font-weight: bold;
-    color: #af2910;
-    }
-    .tab-item.active {
-        background-color:#004a93;
-        border-radius: 10px;
-    }
-
-</style>
+        .nav-item .tab-item .active {
+    background-color:#bbd9f7;
+            border-radius: 10px;
+            color: #ffffff !important;
+    transition: all 0.3s ease-in-out;
+}
+    </style>
 </head>
 
 <body>

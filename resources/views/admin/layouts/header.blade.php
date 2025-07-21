@@ -8,8 +8,8 @@
         <nav class="navbar navbar-expand-lg p-0">
             <ul class="navbar-nav flex-row" id="navTabs" style="max-width: 1200px; margin-left: 100px;width: 100%;overflow: auto;">
                 <!-- Home -->
-                <li class="nav-item active tab-item" data-tab="home">
-                    <a class="nav-link active" href="#" aria-current="page" style="color: #fff !important;">
+                <li class="nav-item tab-item active" data-tab="home">
+                    <a class="nav-link gap-2" href="#" aria-current="page">
                         <iconify-icon icon="mdi:home"></iconify-icon>
                         Home
                     </a>
@@ -17,8 +17,8 @@
 
                 <!-- Setup -->
                 <li class="nav-item tab-item" data-tab="setup">
-                    <a class="nav-link" href="#" aria-current="page" style="color: #fff !important;">
-                        <iconify-icon icon="mdi:cog-outline"></iconify-icon>
+                    <a class="nav-link gap-2" href="#" aria-current="page">
+                        <iconify-icon icon="mdi:cog"></iconify-icon>
                         Setup
                     </a>
                 </li>
@@ -60,42 +60,6 @@
                         <iconify-icon icon="solar:structure-bold-duotone" class="mb-1"
                             style="color:#004a93; font-size: 1.5rem;"></iconify-icon>
                         <h6 class="mb-0">Financial </h6>
-                    </a>
-                </li>
-                <li class="nav-item active tab-item" data-tab="home">
-                    <a class="nav-link active" href="#">
-                        <iconify-icon icon="mdi:home"></iconify-icon>
-                        Home
-                    </a>
-                </li>
-                <li class="nav-item active tab-item" data-tab="home">
-                    <a class="nav-link active" href="#">
-                        <iconify-icon icon="mdi:home"></iconify-icon>
-                        Home
-                    </a>
-                </li>
-                <li class="nav-item active tab-item" data-tab="home">
-                    <a class="nav-link active" href="#">
-                        <iconify-icon icon="mdi:home"></iconify-icon>
-                        Home
-                    </a>
-                </li>
-                <li class="nav-item active tab-item" data-tab="home">
-                    <a class="nav-link active" href="#">
-                        <iconify-icon icon="mdi:home"></iconify-icon>
-                        Home
-                    </a>
-                </li>
-                <li class="nav-item active tab-item" data-tab="home">
-                    <a class="nav-link active" href="#">
-                        <iconify-icon icon="mdi:home"></iconify-icon>
-                        Home
-                    </a>
-                </li>
-                <li class="nav-item active tab-item" data-tab="home">
-                    <a class="nav-link active" href="#">
-                        <iconify-icon icon="mdi:home"></iconify-icon>
-                        Home
                     </a>
                 </li>
             </ul>
