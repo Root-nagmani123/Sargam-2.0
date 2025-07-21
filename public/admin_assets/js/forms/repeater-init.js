@@ -6,16 +6,65 @@ function education_fields() {
     room++;
     var objTo = document.getElementById("education_fields");
     objTo.setAttribute("class", "degree_container");
+
+    // Get current year
+    const currentYear = new Date().getFullYear();
+    let yearOptions = '<option value="">Select Year</option>';
+    for (let y = currentYear; y >= 1950; y--) {
+        yearOptions += '<option value="' + y + '">' + y + '</option>';
+    }
+
     var divtest = document.createElement("div");
     divtest.setAttribute("class", "mb-3 removeclass" + room);
     var rdiv = "removeclass" + room;
+
     divtest.innerHTML =
-        '<form class="row"> <div class="col-3"><label for="degree[]" class="form-label">Degree :</label><div class="mb-3"><input type="text" class="form-control" id="degree[]" name="degree[]" placeholder="Degree Name"><small>Bachelors, Masters, PhD</small></div></div><div class="col-3"><label for="university_institution_name[]" class="form-label">University/Institution Name :</label><div class="mb-3"><input type="text" class="form-control" id="university_institution_name[]" name="university_institution_name[]" placeholder="University/Institution Name"></div></div><div class="col-3"><label for="Schoolname" class="form-label">Year of Passing :</label><div class="mb-3"><input type="number" class="form-control" id="year_of_passing[]" name="year_of_passing[]" placeholder="Year of Passing" min="1900" max="2025" ></div></div><div class="col-3"><label for="Schoolname" class="form-label">Percentage/CGPA :</label><div class="mb-3"> <input type="number" name="percentage_CGPA[]" placeholder="Percentage/CGPA" id="percentage_CGPA[]" class="form-control" min="0" max="100"> </div></div><div class="col-3"><label for="certificate[]" class="form-label">Certificates/Documents Upload :</label><div class="mb-3"><input type="file" name="certificate[]" placeholder="Certificates/Documents Upload" id="certificate[]" class="form-control"></div></div><div class="col-sm-2"> <div class="form-group"> <button class="btn btn-danger" type="button" onclick="remove_education_fields(' +
-        room +
-        ');"> <i class="material-icons menu-icon">remove</i> </button> </div></div></form>';
-    
+        '<form class="row">' +
+        '<div class="col-3">' +
+        '<label for="degree[]" class="form-label">Degree :</label>' +
+        '<div class="mb-3">' +
+        '<input type="text" class="form-control" name="degree[]" placeholder="Degree Name">' +
+        '<small>Bachelors, Masters, PhD</small>' +
+        '</div></div>' +
+
+        '<div class="col-3">' +
+        '<label for="university_institution_name[]" class="form-label">University/Institution Name :</label>' +
+        '<div class="mb-3">' +
+        '<input type="text" class="form-control" name="university_institution_name[]" placeholder="University/Institution Name">' +
+        '</div></div>' +
+
+        '<div class="col-3">' +
+        '<label class="form-label">Year of Passing :</label>' +
+        '<div class="mb-3">' +
+        '<select name="year_of_passing[]" class="form-control" required>' +
+        yearOptions +
+        '</select>' +
+        '</div></div>' +
+
+        '<div class="col-3">' +
+        '<label class="form-label">Percentage/CGPA :</label>' +
+        '<div class="mb-3">' +
+        '<input type="number" name="percentage_CGPA[]" placeholder="Percentage/CGPA" class="form-control" min="0" max="100">' +
+        '</div></div>' +
+
+        '<div class="col-3">' +
+        '<label for="certificate[]" class="form-label">Certificates/Documents Upload :</label>' +
+        '<div class="mb-3">' +
+        '<input type="file" name="certificate[]" placeholder="Certificates/Documents Upload" class="form-control">' +
+        '</div></div>' +
+
+        '<div class="col-sm-2">' +
+        '<div class="form-group">' +
+        '<button class="btn btn-danger" type="button" onclick="remove_education_fields(' + room + ');">' +
+        '<i class="material-icons menu-icon">remove</i>' +
+        '</button>' +
+        '</div></div>' +
+
+        '</form>';
+
     objTo.appendChild(divtest);
 }
+
 
 function remove_education_fields(rid) {
     $(".removeclass" + rid).remove();
