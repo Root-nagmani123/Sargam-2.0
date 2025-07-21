@@ -26,9 +26,7 @@
 
         .sidebar {
             padding: 15px;
-            background-color: #f8f9fa;
             min-height: calc(100vh - 120px);
-            border-right: 1px solid #dee2e6;
         }
 
         .sidebar .nav-pills .nav-link.active {
@@ -58,18 +56,6 @@
             background-color: #004a93;
             color: white;
             padding: 5px 15px;
-        }
-
-        .main-content-container {
-            padding: 20px;
-        }
-
-        .instruction-box {
-            border-left: 4px solid #004a93;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: white;
-            border-radius: 5px;
         }
 
         .document-section {
@@ -272,18 +258,14 @@
                 </div>
 
                 <!-- Main Content Area -->
-                <div class="col-md-9 col-lg-10 main-content-container">
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item active">Home</li>
-                            <li class="breadcrumb-item" aria-current="page">Registration Form</li>
-                        </ol>
-                    </nav>
+                <div class="col-md-9 col-lg-10">
 
                     <x-session_message />
                     
                     <!-- Instruction Box and Content in Same Div -->
-                    <div class="instruction-box">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="instruction-box">
                         <ul class="mb-0">
                             <li>
                                 All the documents are compulsory to fill up and upload.
@@ -295,6 +277,8 @@
                                 </ol>
                             </li>
                         </ul>
+                    </div>
+                        </div>
                     </div>
 
                     <form action="{{ route('fc.joining.upload') }}" method="POST" enctype="multipart/form-data">
