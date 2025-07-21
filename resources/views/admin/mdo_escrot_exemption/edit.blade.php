@@ -18,6 +18,19 @@
                 {{ !empty($mdoDutyType) ? 'Edit MDO Escrot Exemption' : 'Create MDO Escrot Exemption' }}
             </h4>
             <hr>
+
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="alert alert-info d-flex align-items-center" role="alert">
+                        <i class="material-icons me-2">person</i>
+                        <div>
+                            <strong>Student Name:</strong>
+                            <span class="ms-2 fs-5">{{ $mdoDutyType->studentMaster->display_name ?? '—' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <form action="{{ route('mdo-escrot-exemption.update') }}" method="POST" id="mdoDutyTypeForm">
                 @csrf
                 @if(!empty($mdoDutyType))
