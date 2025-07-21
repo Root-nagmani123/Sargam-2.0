@@ -35,7 +35,7 @@ body {
 }
 
 .academy-box {
-    max-width: 900px;
+    max-width: 1200px;
     margin: 3rem auto;
     background: white;
     border-radius: 10px;
