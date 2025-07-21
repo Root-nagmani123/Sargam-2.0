@@ -18,7 +18,10 @@
         <div class="card mt-3">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered text-nowrap align-middle dataTable">
+                   <div id="zero_config_wrapper" class="dataTables_wrapper">
+                        <table id="zero_config"
+                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
+                            aria-describedby="zero_config_info">
                         <thead>
                             <tr>
                                 <th>S.No.</th>
