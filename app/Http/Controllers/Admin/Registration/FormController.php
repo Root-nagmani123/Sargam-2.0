@@ -23,26 +23,26 @@ use Illuminate\Http\UploadedFile;
 
 class FormController extends Controller
 {
-   public function index(Request $request)
-{
-    $query = DB::table('local_form')->orderBy('sortorder');
+    public function index(Request $request)
+    {
+        $query = DB::table('local_form')->orderBy('sortorder');
 
-    if ($request->has('search') && $request->search != '') {
-        $query->where('name', 'like', '%' . $request->search . '%');
+        if ($request->has('search') && $request->search != '') {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        $forms = $query->get();
+
+        // Group forms by parent_id (null or 0 for parents)
+        $groupedForms = $forms->groupBy(function ($item) {
+            return $item->parent_id ?: null;
+        });
+
+        return view('admin.registration.index', [
+            'forms' => $forms,  // Needed for arrow logic in view
+            'groupedForms' => $groupedForms,
+        ]);
     }
-
-    $forms = $query->get();
-
-    // Group forms by parent_id (null or 0 for parents)
-    $groupedForms = $forms->groupBy(function($item) {
-        return $item->parent_id ?: null;
-    });
-
-    return view('admin.registration.index', [
-        'forms' => $forms,  // Needed for arrow logic in view
-        'groupedForms' => $groupedForms,
-    ]);
-}
 
 
 
@@ -457,89 +457,89 @@ class FormController extends Controller
     // }
 
     public function show($formId)
-{
-    // Fetch the requested form
-    $form = DB::table('local_form')->where('id', $formId)->first();
-    if (!$form) abort(404, 'Form not found');
+    {
+        // Fetch the requested form
+        $form = DB::table('local_form')->where('id', $formId)->first();
+        if (!$form) abort(404, 'Form not found');
 
-    // Determine parent form ID
-    $parentFormId = ($form->parent_id && $form->parent_id != 0) ? $form->parent_id : $form->id;
+        // Determine parent form ID
+        $parentFormId = ($form->parent_id && $form->parent_id != 0) ? $form->parent_id : $form->id;
 
-    // Fetch children of the parent form
-    $childForms = DB::table('local_form')
-        ->where('parent_id', $parentFormId)
-        ->where('visible', 1)
-        ->orderBy('sortorder')
-        ->get();
+        // Fetch children of the parent form
+        $childForms = DB::table('local_form')
+            ->where('parent_id', $parentFormId)
+            ->where('visible', 1)
+            ->orderBy('sortorder')
+            ->get();
 
-    // Check fields for the current form
-    $fields = DB::table('form_data')
-        ->where('formid', $form->id)
-        ->orderBy('id')
-        ->orderBy('row_index')
-        ->orderBy('col_index')
-        ->get();
-
-    // If this is a parent form with no fields, but children exist,
-    // switch to first child form and load its fields instead
-    if (($form->parent_id == 0 || $form->parent_id == null) && $fields->isEmpty() && $childForms->isNotEmpty()) {
-        // Switch form to first child
-        $form = $childForms->first();
-
-        // Reload fields for first child form
+        // Check fields for the current form
         $fields = DB::table('form_data')
             ->where('formid', $form->id)
             ->orderBy('id')
             ->orderBy('row_index')
             ->orderBy('col_index')
             ->get();
-    }
 
-    // Group fields for display (table and grid)
-    $fieldsBySection = [];
-    $gridFields = [];
-    foreach ($fields as $field) {
-        if ($field->format === 'table') {
-            $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
-        } else {
-            $gridFields[$field->section_id][] = $field;
+        // If this is a parent form with no fields, but children exist,
+        // switch to first child form and load its fields instead
+        if (($form->parent_id == 0 || $form->parent_id == null) && $fields->isEmpty() && $childForms->isNotEmpty()) {
+            // Switch form to first child
+            $form = $childForms->first();
+
+            // Reload fields for first child form
+            $fields = DB::table('form_data')
+                ->where('formid', $form->id)
+                ->orderBy('id')
+                ->orderBy('row_index')
+                ->orderBy('col_index')
+                ->get();
         }
-    }
 
-    // Fetch sections for the (possibly switched) form
-    $sections = DB::table('form_sections')
-        ->where('formid', $form->id)
-        ->get();
-
-    // Table headers for table fields
-    $headersBySection = [];
-    foreach ($fields as $field) {
-        if ($field->format === 'table') {
-            $headersBySection[$field->section_id][$field->col_index] = $field->header;
+        // Group fields for display (table and grid)
+        $fieldsBySection = [];
+        $gridFields = [];
+        foreach ($fields as $field) {
+            if ($field->format === 'table') {
+                $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
+            } else {
+                $gridFields[$field->section_id][] = $field;
+            }
         }
+
+        // Fetch sections for the (possibly switched) form
+        $sections = DB::table('form_sections')
+            ->where('formid', $form->id)
+            ->get();
+
+        // Table headers for table fields
+        $headersBySection = [];
+        foreach ($fields as $field) {
+            if ($field->format === 'table') {
+                $headersBySection[$field->section_id][$field->col_index] = $field->header;
+            }
+        }
+
+        // Submission data for current user and form
+        $submissions = DB::table('fc_registration_master')
+            ->where('formid', $form->id)
+            ->where('uid', Auth::id())
+            ->get()
+            ->keyBy('fieldname');
+
+        // Fetch logo or other dynamic data if needed
+        $data = DB::table('registration_logo')->first();
+
+        return view('admin.forms.show', compact(
+            'form',
+            'data',
+            'childForms',
+            'sections',
+            'fieldsBySection',
+            'gridFields',
+            'headersBySection',
+            'submissions'
+        ));
     }
-
-    // Submission data for current user and form
-    $submissions = DB::table('fc_registration_master')
-        ->where('formid', $form->id)
-        ->where('uid', Auth::id())
-        ->get()
-        ->keyBy('fieldname');
-
-    // Fetch logo or other dynamic data if needed
-    $data = DB::table('registration_logo')->first();
-
-    return view('admin.forms.show', compact(
-        'form',
-        'data',
-        'childForms',
-        'sections',
-        'fieldsBySection',
-        'gridFields',
-        'headersBySection',
-        'submissions'
-    ));
-}
 
 
 
@@ -1073,7 +1073,7 @@ class FormController extends Controller
             }
             // If no profile or invalid path, set default
             if (empty($base64)) {
-                $defaultPath = storage_path("app/public/dummypic.jpeg");
+                $defaultPath = public_path('images/dummypic.jpeg');
                 if (file_exists($defaultPath)) {
                     $type = pathinfo($defaultPath, PATHINFO_EXTENSION);
                     $data = base64_encode(file_get_contents($defaultPath));
@@ -1184,7 +1184,7 @@ class FormController extends Controller
             return response($mpdf->Output('form.pdf', 'I'), 200)
                 ->header('Content-Type', 'application/pdf');
         } catch (\Exception $e) {
-            
+
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             abort(500, 'An error occurred while generating the PDF.');
         }
