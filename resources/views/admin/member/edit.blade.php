@@ -192,15 +192,16 @@
 
                 function showErrors(stepElement, errors) {
                     clearErrors(stepElement);
-                    $.each(errors, function (field, messageArray) {
+                    $.each(errors, function (field, messages) {
                         const input = stepElement.find(`[name="${field}"]`);
-                        const message = messageArray[0];
+                        const message = messages[0];
                         const errorDiv = $('<div class="text-danger mt-1"></div>').text(message);
                         input.addClass("is-invalid").after(errorDiv);
                     });
                 }
 
                 function clearErrors(stepElement) {
+                    stepElement.find("div.text-danger").remove();
                     stepElement.find("div.validation-error").remove();
                     stepElement.find(".is-invalid").removeClass("is-invalid");
                 }
