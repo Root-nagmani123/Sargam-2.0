@@ -193,6 +193,11 @@ Route::get('/fc/forget-password', function () {
     return view('fc.forget');
 })->name('fc.forget');
 
+//status page
+Route::get('/fc/status', function () {
+    return view('fc.status');
+})->name('fc.status');
+
 
 //reset passowrd index
 Route::get('/fc/forgot-password', [FrontPageController::class, 'showForgotPasswordForm'])->name('fc.password.forgot');
