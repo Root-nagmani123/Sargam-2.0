@@ -32,7 +32,7 @@ class MDOEscrotExemptionController extends Controller
     {
         $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
 
-        $mdoDutyType = MDOEscotDutyMap::findOrFail($id);
+        $mdoDutyType = MDOEscotDutyMap::with(['studentMaster'])->findOrFail($id);
 
         return view('admin.mdo_escrot_exemption.edit', compact('id', 'MDODutyTypeMaster', 'mdoDutyType'));
     }
