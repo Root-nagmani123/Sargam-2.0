@@ -31362,6 +31362,16 @@ pre.code-view code.hljs {
     font-size: 14px;
     color: var(--bs-muted);
 }
+.topbar > .navbar> .navbar-nav> .nav-item >.tab-item> .active{
+        background: #dfe5ef !important;
+    border-radius: 5px !important;
+    border-left: 4px solid #004a93 !important;
+}
+.topbar .navbar .navbar-nav .nav-item .tab-item .active .nav-link{
+    color: #af2910 !important;
+    font-weight: 600 !important;
+}
+
 .topbar .navbar .navbar-nav .nav-item .nav-link i {
     font-size: 20px;
 }
