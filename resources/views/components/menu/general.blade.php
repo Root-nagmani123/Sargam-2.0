@@ -22,16 +22,16 @@
                             <li class="sidebar-item d-none">
                                 <a class="sidebar-link" href="{{ route('admin.dashboard') }}" id="get-url"
                                     aria-expanded="false">
-                                    <iconify-icon icon="solar:shield-user-line-duotone">
+                                    <iconify-icon icon="solar:notification-unread-bold-duotone">
                                     </iconify-icon>
-                                    <span class="hide-menu">Dashboard</span>
+                                    <span class="hide-menu">Notification</span>
                                 </a>
                             </li>
                             <li class="sidebar-item {{ request()->routeIs('admin.dashboard') ? 'selected' : '' }}">
                                 <a class="sidebar-link" href="{{ route('admin.dashboard') }}" id="get-url"
                                     aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Dashboard</span>
+                                    <iconify-icon icon="solar:notification-unread-bold-duotone"></iconify-icon>
+                                    <span class="hide-menu">Notifications</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
