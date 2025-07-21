@@ -35,4 +35,9 @@ class MDOEscotDutyMap extends Model
     {
         return $this->belongsTo(StudentMaster::class, 'selected_student_list', 'pk');
     }
+
+    public function studentMasterCourseMap()
+    {
+        return $this->hasMany(StudentMasterCourseMap::class, 'course_master_pk', 'course_master_pk');
+    }
 }

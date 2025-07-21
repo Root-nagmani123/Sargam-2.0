@@ -55,23 +55,28 @@ class MDOEscrotExemptionDataTable extends DataTable
 
     public function query(): QueryBuilder
     {
-        return MDOEscotDutyMap::with(['courseMaster', 'mdoDutyTypeMaster', 'studentMaster'])->orderBy('pk', 'desc')->newQuery();
+        return MDOEscotDutyMap::with([
+            'courseMaster' => fn($q) => $q->select('pk', 'course_name'),
+            'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
+            'studentMaster' => fn($q) => $q->select('pk', 'display_name')
+        ])->orderBy('pk', 'desc')->newQuery();
+        
     }
 
     public function html(): HtmlBuilder
     {
         return $this->builder()
-            ->setTableId('mdoescot-table')
-            ->columns($this->getColumns())
-            ->minifiedAjax()
-            ->orderBy(1)
-            ->responsive(true)
-            ->parameters([
-                'responsive' => true,
-                'scrollX' => true,
-                'autoWidth' => false,
-            ])
-            ->buttons(['excel', 'csv', 'pdf', 'print', 'reset', 'reload']);
+        ->setTableId('mdoescot-table')
+        ->columns($this->getColumns())
+        ->minifiedAjax()
+        ->responsive(true)
+        ->parameters([
+            'responsive' => true,
+            'scrollX' => true,
+            'autoWidth' => false,
+            'order' => [],
+        ])
+        ->buttons(['excel', 'csv', 'pdf', 'print', 'reset', 'reload']);
     }
 
     public function getColumns(): array
@@ -79,7 +84,7 @@ class MDOEscrotExemptionDataTable extends DataTable
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_date')->title('Date')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('Student Name')->addClass('text-center'),
+            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false),
             Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('course_name')->title('Programme Name')->addClass('text-center'),

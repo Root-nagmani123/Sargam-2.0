@@ -83,7 +83,7 @@ class MDOEscrotExemptionController extends Controller
                     if( !$studentMaster ) {
                         return null; 
                     }
-                    $students['pk'] = $student['pk'];
+                    $students['pk'] = $student['student_master_pk'];
                     $students['display_name'] = $studentMaster ? $studentMaster->display_name : null;
                     return $students;
                 });
