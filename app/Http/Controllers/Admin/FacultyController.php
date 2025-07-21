@@ -40,11 +40,7 @@ class FacultyController extends Controller
     public function store(FacultyRequest $request)
     { //FacultyRequest
         try {
-            // dd($request->all());
-            // if($request->faculty_idfaculty_id) {
-            //     $this->update($request);
-            // }
-
+            
             DB::beginTransaction();
 
             # Step : 1
