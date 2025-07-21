@@ -60,23 +60,23 @@ class MDOEscrotExemptionDataTable extends DataTable
             'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
             'studentMaster' => fn($q) => $q->select('pk', 'display_name')
         ])->orderBy('pk', 'desc')->newQuery();
-        
+
     }
 
     public function html(): HtmlBuilder
     {
         return $this->builder()
-        ->setTableId('mdoescot-table')
-        ->columns($this->getColumns())
-        ->minifiedAjax()
-        ->responsive(true)
-        ->parameters([
-            'responsive' => true,
-            'scrollX' => true,
-            'autoWidth' => false,
-            'order' => [],
-        ])
-        ->buttons(['excel', 'csv', 'pdf', 'print', 'reset', 'reload']);
+            ->setTableId('mdoescot-table')
+            ->columns($this->getColumns())
+            ->minifiedAjax()
+            ->responsive(true)
+            ->parameters([
+                'responsive' => true,
+                'scrollX' => true,
+                'autoWidth' => false,
+                'order' => [],
+            ])
+            ->buttons(['excel', 'csv', 'pdf', 'print', 'reset', 'reload']);
     }
 
     public function getColumns(): array
@@ -87,11 +87,12 @@ class MDOEscrotExemptionDataTable extends DataTable
             Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false),
             Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::make('course_name')->title('Programme Name')->addClass('text-center'),
-            Column::make('mdo_name')->title('MDO Name')->addClass('text-center'),
-            Column::make('Remark')->title('Remarks')->addClass('text-center'),
-            Column::computed('actions')->title('Actions')->addClass('text-center'),
+            Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(false)->orderable(false),
+            Column::make('mdo_name')->title('MDO Name')->addClass('text-center')->searchable(false)->orderable(false),
+            Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(false)->orderable(false),
+            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
         ];
+
     }
 
     protected function filename(): string
