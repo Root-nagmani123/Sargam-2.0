@@ -292,7 +292,10 @@ class MemberController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), (new StoreMemberStep5Request())->rules());
+        $requestRules = (new StoreMemberStep5Request())->rules();
+        $requestMessages = (new StoreMemberStep5Request())->messages();
+        
+        $validator = Validator::make($request->all(), $requestRules, $requestMessages);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
@@ -339,7 +342,11 @@ class MemberController extends Controller
     }
 
     public function update(Request $request) {
-        $validator = Validator::make($request->all(), (new StoreMemberStep5Request())->rules());
+        
+        $requestRules = (new StoreMemberStep5Request())->rules();
+        $requestMessages = (new StoreMemberStep5Request())->messages();
+        
+        $validator = Validator::make($request->all(), $requestRules, $requestMessages);
         
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
