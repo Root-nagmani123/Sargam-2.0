@@ -112,7 +112,8 @@
                             <td>
                                 {{-- Add delete button here if needed --}}
                                 @if($row->notice_status == 1)
-                                <form action="{{ route('memo.notice.management.noticedeleteMessage', ['id' => $row->pk, 'type' =>  $type ]) }}"
+                                <form
+                                    action="{{ route('memo.notice.management.noticedeleteMessage', ['id' => $row->pk, 'type' =>  $type ]) }}"
                                     method="POST" onsubmit="return confirm('Are you sure?')">
                                     @csrf
                                     @method('DELETE')
@@ -179,13 +180,43 @@
                         <div class="col-6">
                             <div class="mb-3">
                                 <label class="form-label">Status</label>
-                                <select class="form-select" name="status">
+                                <select class="form-select" name="status" id="status">
                                     <option value="1">OPEN</option>
                                     <option value="2">CLOSED</option>
                                 </select>
                             </div>
                         </div>
+                        @if($type == 'memo')
+                       
+
+                        <div id="conclusion_div" style="display: none;">
+                            <div class="col-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Conclusion Type</label>
+                                    <select class="form-select" name="conclusion_type">
+                                        <option value="">Select Conclusion Type</option>
+                                        @foreach($memo_conclusion_master as $conclusion)
+                                        <option value="{{ $conclusion->pk }}">{{ $conclusion->discussion_name }}
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-6">
+
+                                <div class="mb-3">
+                                    <label class="form-label">Conclusion Remark</label>
+                                    <textarea class="form-control" rows="4" name="conclusion_remark"
+                                        placeholder="Type your conclusion message here..."></textarea>
+                                    <small class="text-muted">This will be sent to the student as a conclusion of the
+                                        memo.</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
+                    @endif
+
 
                     <hr>
                     <div class="gap-2 text-end">
@@ -203,20 +234,37 @@
         </div>
     </div>
     @endsection
+    @section('scripts')
     <script>
-    window.onload = function() {
+    document.addEventListener('DOMContentLoaded', function() {
+        var statusSelector = document.getElementById('status');
+        var conclusionDiv = document.getElementById('conclusion_div');
+
+        if (statusSelector) {
+            statusSelector.addEventListener('change', function() {
+                // Show or hide the conclusion section based on the selected status
+                if (this.value == '2') {
+                    conclusionDiv.style.display = 'block';
+                } else {
+                    conclusionDiv.style.display = 'none';
+                }
+            });
+
+            // Default check on page load
+            if (statusSelector.value == '2') {
+                conclusionDiv.style.display = 'block';
+            }
+        }
+
+        // Set date and time fields
         const now = new Date();
-
-        // Format date as YYYY-MM-DD
         const date = now.toISOString().split('T')[0];
-
-        // Format time as HH:MM
         const hours = String(now.getHours()).padStart(2, '0');
         const minutes = String(now.getMinutes()).padStart(2, '0');
         const time = `${hours}:${minutes}`;
 
-        // Set values
         document.getElementById('current_date').value = date;
         document.getElementById('current_time').value = time;
-    };
+    });
     </script>
+    @endsection
