@@ -605,18 +605,30 @@ document.addEventListener('DOMContentLoaded', function () {
 
             }, 500);
 
+
+            if (!$('#otherCityContainer').hasClass('d-none')) {
+                $('#permanentOtherCityContainer').removeClass('d-none');
+                $('input[name="permanent_other_city"]').val($('input[name="other_city"]').val());
+            } else {
+                $('#permanentOtherCityContainer').addClass('d-none');
+                $('input[name="permanent_other_city"]').val('');
+            }
+
         } else {
             // Unchecked: Enable and clear permanent fields
             $('#permanentaddress, #permanentpostal, #permanentcountry, #permanentstate, #permanentdistrict, #permanentcity')
                 .prop('disabled', false)
                 .val('')
                 .trigger('change');
+            $('#permanentOtherCityContainer').addClass('d-none');
+            $('input[name="permanent_other_city"]').val('');
         }
     });
 
     // Faculty When City is Other
-    $('#city').on('change', function () {
-        console.log('City changed');
+    $(document).on('change', '#city', function () {
+    // $('#city').on('change', function () {
+        
         console.log($(this).find('option:selected').text().toLowerCase().trim());
         console.log($(this).find('option:selected').text().toLowerCase().trim() == 'other');
         
@@ -625,6 +637,15 @@ document.addEventListener('DOMContentLoaded', function () {
             $('#otherCityContainer').removeClass('d-none');
         } else {
             $('#otherCityContainer').addClass('d-none');
+        }
+    });
+
+    $(document).on('change', '#permanentcity', function () {
+        const selectedText = $(this).find('option:selected').text().toLowerCase().trim();
+        if (selectedText === 'other') {
+            $('#permanentOtherCityContainer').removeClass('d-none');
+        } else {
+            $('#permanentOtherCityContainer').addClass('d-none');
         }
     });
 });

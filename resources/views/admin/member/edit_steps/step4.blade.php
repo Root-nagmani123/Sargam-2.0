@@ -24,7 +24,7 @@
     <div class="col-md-6">
         <div class="mb-3">
             @php
-                $stateOptions = App\Models\State::getStateList();
+                $stateOptions = App\Models\State::where('country_master_pk', $member->country_master_pk)->get()->pluck('state_name', 'pk');
             @endphp
             <x-select name="state" label="State :" formLabelClass="form-label" formSelectClass="form-select" :options="$stateOptions ?? []" :value="$member->state_master_pk" labelRequired="true" />
         </div>
@@ -32,7 +32,7 @@
     <div class="col-md-6">
         <div class="mb-3">
             @php
-                $districtOptions = App\Models\District::getDistrictList();
+                $districtOptions = App\Models\District::where('state_master_pk', $member->state_master_pk)->get()->pluck('district_name', 'pk');
             @endphp
             <x-select name="district" label="District :" formLabelClass="form-label" formSelectClass="form-select" :options="$districtOptions ?? []" :value="$member->state_district_mapping_pk" />
         </div>
@@ -40,11 +40,19 @@
     <div class="col-md-6">
         <div class="mb-3">
             @php
-                $cityOptions = App\Models\City::getCityList();
+                $cityOptions = App\Models\City::where(['district_master_pk' => $member->state_district_mapping_pk, 'state_master_pk' => $member->state_master_pk])->get()->pluck('city_name', 'pk');
             @endphp
             <x-select name="city" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" :value="$member->city ?? ''" labelRequired="true" />
         </div>
     </div>
+    
+    {{-- other city name --}}
+    <div class="col-md-6 d-none" id="otherCityContainer">
+        <div class="mb-3">
+            <x-input name="other_city" label="Other City Name :" formLabelClass="form-label" formInputClass="form-control" />
+        </div>
+    </div>
+    {{-- /other city name --}}
     <div class="col-md-6">
         <div class="mb-3">
             <x-input name="postal" label="Postal Code :" formLabelClass="form-label" formInputClass="form-control" value="{{ $member->zipcode ?? '' }}" labelRequired="true" />
@@ -100,6 +108,15 @@
             <x-select name="permanentcity" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" :value="$member->pcity ?? ''" labelRequired="true" />
         </div>
     </div>
+
+    {{-- other permanent city name --}}
+    <div class="col-md-6 d-none" id="permanentOtherCityContainer">
+        <div class="mb-3">
+            <x-input name="permanent_other_city" label="Other Permanent City Name :" formLabelClass="form-label" formInputClass="form-control" />
+        </div>
+    </div>
+    {{-- /other permanent city name --}}
+
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="permanentpostal">Postal Code : <span class="text-danger">*</span></label>
