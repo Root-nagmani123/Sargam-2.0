@@ -47,7 +47,7 @@
                 </div>    
             </div>
             <div class="col-md-3">
-                <div class="card bg-warning text-dark">
+                <div class="card bg-warning text-white" style="background-color: #ffa500 !important;">
                     <div class="card-body text-center">
                         <h5 class="card-title">Incomplete Registrations</h5>
                         <p class="card-text">160 Participants</p>
@@ -79,7 +79,7 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link text-warning" id="incomplete-tab" data-bs-toggle="tab"
-                        data-bs-target="#incomplete" type="button" role="tab">Incomplete</button>
+                        data-bs-target="#incomplete" type="button" role="tab" style="color: #ffa500 !important;">Incomplete</button>
                 </li>
             </ul>
 
@@ -198,7 +198,7 @@
                 <!-- Incomplete Tab -->
                 <div class="tab-pane fade" id="incomplete" role="tabpanel">
                     <div class="card shadow-sm">
-                        <div class="card-header bg-warning text-dark fw-bold">Incomplete Registrations</div>
+                        <div class="card-header bg-warning text-white fw-bold" style="background-color: #ffa500 !important;">Incomplete Registrations</div>
                         <div class="table-responsive">
                             <table class="table table-bordered text-center m-0">
                                 <thead class="table-warning">
