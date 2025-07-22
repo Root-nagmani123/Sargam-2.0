@@ -42,4 +42,5 @@
   <script src="{{ asset('admin_assets/js/prism.min.js') }}"></script>
   <script src="{{ asset('admin_assets/js/dual-listbox.js') }}"></script>
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="{{ asset('admin_assets/js/validations.js') }}"></script>
   @yield('scripts')
