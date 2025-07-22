@@ -39,7 +39,7 @@ class StoreMemberStep5Request extends FormRequest
         return [
             'residencenumber.required' => 'Residence number is required.',
             'residencenumber.numeric'  => 'Residence number must be a valid number.',
-            'residencenumber.digits_between' => 'Residence number must be between',
+            'residencenumber.digits_between' => 'Residence number must be between 6 and 15 digits.',
             'picture.image'        => 'The uploaded file must be an image.',
             'picture.mimes'        => 'Picture must be a file of type: jpg, jpeg, png.',
             'picture.max'          => 'Picture size must not exceed 2MB.',
