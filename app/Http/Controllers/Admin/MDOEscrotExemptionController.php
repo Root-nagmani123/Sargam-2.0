@@ -77,6 +77,16 @@ class MDOEscrotExemptionController extends Controller
             }
 
             if (!empty($course->studentMasterCourseMap)) {
+
+                $alreadyAssignedStudents = MDOEscotDutyMap::
+                where('course_master_pk', $course->pk)
+                ->whereDate('mdo_date', $request->selectedDate)
+                ->pluck('selected_student_list')->toArray();
+                
+
+                // dd($alreadyAssignedStudents);
+
+                
                 $students = [];
                 $students = $course->studentMasterCourseMap->map(function ($student) {
                     $studentMaster = StudentMaster::where('pk', $student['student_master_pk'])->first();
@@ -87,8 +97,12 @@ class MDOEscrotExemptionController extends Controller
                     $students['display_name'] = $studentMaster ? $studentMaster->display_name : null;
                     return $students;
                 });
-
-                return response()->json(['status' => true, 'message' => 'Student list fetched successfully.', 'students' => $students]);
+                // dd($students->toArray());
+                $filteredStudents = $students->reject(function ($student) use ($alreadyAssignedStudents) {
+                    return in_array($student['pk'], $alreadyAssignedStudents);
+                })->values();
+                
+                return response()->json(['status' => true, 'message' => 'Student list fetched successfully.', 'students' => $filteredStudents]);
             }
 
             return response()->json(['status' => false, 'message' => 'No students found for this course.']);

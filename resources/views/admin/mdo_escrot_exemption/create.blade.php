@@ -182,17 +182,22 @@
         $(document).ready(function () {
             initDualListbox();
 
-            $('.course-selected').on('change', function () {
-                const courses = $(this).val();
-                console.log(courses);
-                if (!courses || courses.length === 0) return;
+            $('#mdo_date').on('change', function(){
+                const courses = $('.course-selected').val();
+                const selectedDate = $('#mdo_date').val();
+
+                if (!courses || courses.length === 0) {
+                    alert('Please select a course first.');
+                    return;
+                }
 
                 $.ajax({
                     url: "{{ route('mdo-escrot-exemption.get.student.list.according.to.course') }}",
                     type: 'POST',
                     data: {
                         _token: $('meta[name="csrf-token"]').attr('content'),
-                        selectedCourses: courses
+                        selectedCourses: courses,
+                        selectedDate: selectedDate
                     },
                     success: function (response) {
                         if (!response.status) {
@@ -221,9 +226,49 @@
                 });
             });
 
-            @if(old('course_master_pk'))
+
+            // $('.course-selected').on('change', function () {
+            //     const courses = $(this).val();
+            //     console.log(courses);
+            //     if (!courses || courses.length === 0) return;
+
+            //     $.ajax({
+            //         url: "{{ route('mdo-escrot-exemption.get.student.list.according.to.course') }}",
+            //         type: 'POST',
+            //         data: {
+            //             _token: $('meta[name="csrf-token"]').attr('content'),
+            //             selectedCourses: courses
+            //         },
+            //         success: function (response) {
+            //             if (!response.status) {
+            //                 alert(response.message);
+            //                 return;
+            //             }
+            //             if (response.students.length === 0) {
+            //                 alert('No students found for the selected courses.');
+            //                 return;
+            //             }
+
+            //             const currentSelected = $('#select').val() || [];
+
+            //             // Rebuild options
+            //             $('#select').empty();
+            //             response.students.forEach(s => {
+            //                 const isSel = currentSelected.includes(s.pk.toString());
+            //                 $('#select').append(new Option(s.display_name, s.pk, false, isSel));
+            //             });
+
+            //             initDualListbox(); // refresh to re-render
+            //         },
+            //         error: function () {
+            //             alert('Error fetching student list');
+            //         }
+            //     });
+            // });
+
+            @if(old('course_master_pk') && old('mdo_date'))
                 setTimeout(function () {
-                    $('.course-selected').trigger('change');
+                    $('#mdo_date').trigger('change');
                 }, 500);
             @endif
 
