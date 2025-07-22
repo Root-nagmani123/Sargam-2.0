@@ -11,7 +11,7 @@ use App\Http\Requests\Admin\Member\{
     StoreMemberStep4Request,
     StoreMemberStep5Request,
 };
-use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential};
+use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City};
 use App\DataTables\MemberDataTable;
 use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
@@ -162,6 +162,7 @@ class MemberController extends Controller
 
     private function saveOrUpdateStep4Data(Request $request)
     {
+        // dd($request->all());
         if (!$request->has('emp_id')) {
             return response()->json(['error' => 'Employee ID is required'], 422);
         }
@@ -171,14 +172,13 @@ class MemberController extends Controller
             'country_master_pk' => $request->country,
             'state_master_pk' => $request->state,
             'state_district_mapping_pk' => $request->district,
-            'city' => $request->city,
             'zipcode' => $request->postal,
 
             'permanent_address' => $request->permanentaddress,
             'pcountry_master_pk' => $request->permanentcountry,
             'pstate_master_pk' => $request->permanentstate,
             'pstate_district_mapping_pk' => $request->permanentdistrict,
-            'pcity' => $request->permanentcity,
+            // 'pcity' => $request->permanentcity,
             'pzipcode' => $request->permanentpostal,
 
             'email' => $request->personalemail,
@@ -187,6 +187,44 @@ class MemberController extends Controller
             'emergency_contact_no' => $request->emergencycontact ?? $request->emergencynumber,
             'landline_contact_no' => $request->landlinenumber,
         ];
+
+        if(!empty($request->other_city)) {
+            $otherCity = City::firstOrCreate(
+                [
+                    'country_master_pk' => $request->country,
+                    'state_master_pk' => $request->state,
+                    'district_master_pk' => $request->district,
+                    'city_name' => $request->other_city,
+                    'active_inactive' => 1
+                ],
+            [
+                'active_inactive' => 1
+                ]
+            );
+                $address['city'] = $otherCity->pk;
+        }
+        else {
+            $address['city'] = $request->city;
+        }
+
+        if(!empty($request->permanent_other_city)) {
+            $permanentOtherCity = City::firstOrCreate(
+                [
+                    'country_master_pk' => $request->permanentcountry,
+                    'state_master_pk' => $request->permanentstate,
+                    'district_master_pk' => $request->permanentdistrict,
+                    'city_name' => $request->permanent_other_city,
+                    'active_inactive' => 1
+                ],
+            [
+                'active_inactive' => 1
+                ]
+            );
+            $address['pcity'] = $permanentOtherCity->pk;
+        }
+        else {
+            $address['pcity'] = $request->permanentcity;
+        }
 
         EmployeeMaster::where('pk', $request->emp_id)->update($address);
 

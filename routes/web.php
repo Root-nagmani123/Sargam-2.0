@@ -261,7 +261,7 @@ Route::prefix('admin/course-memo-decision')
     ->controller(CourseAttendanceNoticeMapController::class)
     ->group(function () {
         Route::get('/', 'index')->name('index');
-        Route::get('/conversation/{id}', 'conversation')->name('conversation');
+        Route::get('/conversation/{id}/{type}', 'conversation')->name('conversation');
         Route::get('/get_conversation_model/{id}/{type}', 'get_conversation_model')->name('get_conversation_model');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
@@ -270,16 +270,19 @@ Route::prefix('admin/course-memo-decision')
         Route::get('/get-timetable-Details-By-topic', 'gettimetableDetailsBytopic')->name('gettimetableDetailsBytopic'); // <-- New AJAX route
         Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
         Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
+        Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
         Route::post('/memo_notice_conversation', 'memo_notice_conversation')->name('memo_notice_conversation');
         Route::post('/memo_notice_conversation_student', 'memo_notice_conversation_student')->name('memo_notice_conversation_student');
         Route::post('/memo_notice_conversation_model', 'memo_notice_conversation_model')->name('memo_notice_conversation_model');
-   Route::delete('/notice-delete-Message/{id}', [CourseAttendanceNoticeMapController::class, 'noticedeleteMessage'])
+   Route::delete('/notice-delete-Message/{id}/{type}', [CourseAttendanceNoticeMapController::class, 'noticedeleteMessage'])
     ->name('noticedeleteMessage');
 //  Route::get('/user_chat', function () {
 //     return view('admin.courseAttendanceNoticeMap.chat');
 // })->name('admin.courseAttendanceNoticeMap.chat');
         Route::get('/user', 'user')->name('user');
-        Route::get('/conversation_student/{id}', 'conversation_student')->name('conversation_student');
+        Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
+        Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
+
     });
     Route::get('/user/chat', function () {
     return view('admin.courseAttendanceNoticeMap.chat');

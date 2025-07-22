@@ -39,6 +39,15 @@
             <x-select name="city" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" labelRequired="true" />
         </div>
     </div>
+
+    {{-- other city name --}}
+    <div class="col-md-6 d-none" id="otherCityContainer">
+        <div class="mb-3">
+            <x-input name="other_city" label="Other City Name :" formLabelClass="form-label" formInputClass="form-control" />
+        </div>
+    </div>
+    {{-- /other city name --}}
+    
     <div class="col-md-6">
         <div class="mb-3">
             <x-input name="postal" label="Postal Code :" formLabelClass="form-label" formInputClass="form-control" labelRequired="true" />
@@ -94,6 +103,15 @@
             <x-select name="permanentcity" label="City :" formLabelClass="form-label" formSelectClass="form-select" :options="$cityOptions ?? []" labelRequired="true" />
         </div>
     </div>
+    
+    {{-- other permanent city name --}}
+    <div class="col-md-6 d-none" id="permanentOtherCityContainer">
+        <div class="mb-3">
+            <x-input name="permanent_other_city" label="Other Permanent City Name :" formLabelClass="form-label" formInputClass="form-control" />
+        </div>
+    </div>
+    {{-- /other permanent city name --}}
+
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="permanentpostal">Postal Code : <span class="text-danger">*</span></label>
