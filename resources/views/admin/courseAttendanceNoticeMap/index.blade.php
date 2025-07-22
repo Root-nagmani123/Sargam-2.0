@@ -143,7 +143,8 @@
                                                 
                                                
                                     @elseif($memo->type_notice_memo == 'Memo')
-                                               @if($memo->status == 1 && $memo->communication_status == 1)
+                                               @if($memo->status == 1 || $memo->communication_status == 1 || $memo->communication_status == 2)
+                                                    
                                                  <!-- <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}"
                                                     class="btn btn-primary btn-sm">Memo Conversation</a> -->
                                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
