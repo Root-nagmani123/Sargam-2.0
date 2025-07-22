@@ -44,7 +44,7 @@ class StoreMemberStep1Request extends FormRequest
                 'required',
                 Rule::in(array_keys(CasteCategoryMaster::GetSeatName()->toArray()))
             ],
-            'height' => 'nullable|string|max:20',
+            'height' => 'nullable||regex:/^\d+(\.\d+)?$/',
             'date_of_birth' => 'required|date|before_or_equal:today',
         ];
     }
@@ -68,6 +68,7 @@ class StoreMemberStep1Request extends FormRequest
             'caste_category.required' => 'Please select caste category.',
             'date_of_birth.required' => 'Date of birth is required.',
             'date_of_birth.before_or_equal' => 'Date of birth cannot be in the future.',
+            'height.regex' => 'Height must be a valid number.',
         ];
     }
     
