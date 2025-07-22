@@ -44,7 +44,7 @@ class StoreMemberStep1Request extends FormRequest
                 'required',
                 Rule::in(array_keys(CasteCategoryMaster::GetSeatName()->toArray()))
             ],
-            'height' => 'nullable||regex:/^\d+(\.\d+)?$/',
+            'height' => 'nullable|regex:/^\d+(\.\d+)?$/',
             'date_of_birth' => 'required|date|before_or_equal:today',
         ];
     }
