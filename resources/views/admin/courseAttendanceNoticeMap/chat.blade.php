@@ -153,6 +153,7 @@
                     <div class="col-6">
                         <div class="mb-3">
                             <input type="hidden" name="memo_notice_id" value="{{ $id }}">
+                             <input type="hidden" name="type" value="{{ $type }}">
                             <input type="hidden" name="student_id" value="{{ $memoNotice[0]->student_id ?? '' }}">
                             <label class="form-label">Message</label>
                             <textarea class="form-control" rows="4" name="message"
