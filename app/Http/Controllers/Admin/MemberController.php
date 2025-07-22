@@ -312,7 +312,7 @@ class MemberController extends Controller
         EmployeeMaster::find($request->emp_id)->update([
             'residence_no' => $request->residencenumber,
             'home_town_details' => $request->homeaddress,
-            'other_miscellaneous_fields' => $request->miscellaneous,
+            'other_miscellaneous_fields' => $request->miscellaneous ?? null,
             'additional_doc_upload' => $additional_doc_upload,
             'profile_picture' => $profile_picture,
         ]);
@@ -342,7 +342,7 @@ class MemberController extends Controller
     }
 
     public function update(Request $request) {
-        
+
         $requestRules = (new StoreMemberStep5Request())->rules();
         $requestMessages = (new StoreMemberStep5Request())->messages();
         
@@ -365,7 +365,7 @@ class MemberController extends Controller
         EmployeeMaster::find($request->emp_id)->update([
             'residence_no' => $request->residencenumber,
             'home_town_details' => $request->homeaddress,
-            'other_miscellaneous_fields' => $request->miscellaneous,
+            'other_miscellaneous_fields' => $request->miscellaneous ?? null,
             'additional_doc_upload' => $additional_doc_upload,
             'profile_picture' => $profile_picture,
         ]);
