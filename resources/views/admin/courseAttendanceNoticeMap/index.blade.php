@@ -130,28 +130,40 @@
                                 <td>{{ $memo->date_}}</td>
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
-                                    <a href="{{ route('memo.notice.management.conversation', $memo->memo_notice_id) }}"
-                                        class="btn btn-primary btn-sm">Notice Conversation</a>
+                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
+   class="btn btn-primary btn-sm">Notice Conversation</a>
 
                                     <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
-                                        data-id="{{ $memo->memo_notice_id }}" data-topic="{{ $memo->topic_name }}"><i
+                                        data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}"><i
                                             class="material-icons md-18">crisis_alert</i></a>
-                                    @if($memo->status == 1)
-                                    <a href="script:void(0)" class="btn btn-secondary btn-sm">Memo Conversation</a>
-                                    @elseif($memo->status == 2)
-                                    <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}"
-                                        class="btn btn-primary btn-sm">Memo Conversation</a>
-                                    @else
+                                    @if($memo->type_notice_memo == 'Notice')
+                                              
+                                                <a href="script:void(0)" class="btn btn-secondary btn-sm">Memo Conversation</a>
+                                                
+                                               
+                                    @elseif($memo->type_notice_memo == 'Memo')
+                                               @if($memo->status == 1 && $memo->communication_status == 1)
+                                                 <!-- <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}"
+                                                    class="btn btn-primary btn-sm">Memo Conversation</a> -->
+                                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
+   class="btn btn-primary btn-sm">Memo Conversation</a>
+                                             
+                                                @endif
                                     @endif
 
                                 </td>
                                 <td>
                                     @if($memo->status == 1)
-                                    <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate Memo</button>
+                                    <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate
+                                        Memo</button>
                                     @elseif($memo->status == 2)
-                                    <a href="" class="btn-danger btn btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#memo_generate">Generate Memo</a>
+                                    <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn"
+                                        data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal"
+                                        data-bs-target="#memo_generate">
+                                        Generate Memo
+                                    </a>
+
                                     @endif
                                 </td>
                                 <!-- Offcanvas Chat Component -->
@@ -198,16 +210,21 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <hr>
-                <form action="{{ route('memo.notice.management.store_memo_notice') }}" method="POST">
+                <form action="{{ route('memo.notice.management.store_memo_status') }}" method="POST">
                     @csrf
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-6 mb-3">
-                                <label for="course_master_pk" class="form-label">Course</label>
-                                <select name="course_master_pk" class="form-control" id="courseSelect" required>
-                                    <option value="">Select Course</option>
-                                </select>
-                                @error('course_master_pk')
+                                <label for="course_master_name" class="form-label">Course</label>
+
+                                <input type="text" id="course_master_name" class="form-control"
+                                    name="course_master_name" readonly>
+                                <input type="hidden" id="course_master_pk" name="course_master_pk">
+                                <input type="hidden" id="course_attendance_notice_map_pk"
+                                    name="course_attendance_notice_map_pk">
+                                <input type="hidden" id="memo_count" name="memo_count">
+                                <input type="hidden" id="student_pk" name="student_pk">
+                                @error('course_master_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
@@ -215,7 +232,7 @@
                             <div class="col-6 mb-3">
                                 <label for="date_memo_notice" class="form-label">Date</label>
                                 <input type="date" class="form-control" id="date_memo_notice" name="date_memo_notice"
-                                    required>
+                                    required readonly>
                                 @error('date_memo_notice')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -224,9 +241,10 @@
                             <div class="col-6 mb-3">
                                 <label for="subject_master_id" class="form-label">Subject <span
                                         class="text-danger">*</span></label>
-                                <select name="subject_master_id" class="form-control" id="subject_master_id">
-                                    <option value="">Select Subject</option>
-                                </select>
+
+                                <input type="text" id="subject_master_id" class="form-control" name="subject_master_id"
+                                    readonly>
+
                                 @error('subject_master_id')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -234,33 +252,19 @@
 
                             <div class="col-6 mb-3">
                                 <label for="topic_id" class="form-label">Topic</label>
-                                <select name="topic_id" class="form-control" id="topic_id">
-                                    <option value="">Select Topic</option>
-                                </select>
+
+                                <input type="text" id="topic_id" class="form-control" name="topic_id" readonly>
+
                                 @error('topic_id')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
 
-                            <div class="col-6 mb-3">
-                                <label for="venue_name" class="form-label">Venue <span
-                                        class="text-danger">*</span></label>
-                                <select name="venue_id" class="form-control" id="venue_id" required>
-                                    <option value="">Select Vanue</option>
-                                    @foreach ($venue as $v)
-                                    <option value="{{ $v->pk }}">{{ $v->venue_name }}</option>
-                                    @endforeach
-                                </select>
 
-                                @error('venue_id')
-                                <span class="text-danger">{{ $message }}</span>
-                                @enderror
-                            </div>
 
                             <div class="col-6 mb-3">
                                 <label for="session_name" class="form-label">Session</label>
-                                <input type="text" id="session_name" class="form-control" readonly>
-                                <input type="hidden" id="class_session_master_pk" name="class_session_master_pk">
+                                <input type="text" id="class_session_master_pk" class="form-control" readonly>
                                 @error('session_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -269,18 +273,18 @@
                             <div class="col-6 mb-3">
                                 <label for="faculty_name" class="form-label">Faculty Name</label>
                                 <input type="text" id="faculty_name" class="form-control" readonly>
-                                <input type="hidden" id="faculty_master_pk" name="faculty_master_pk">
                                 @error('faculty_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
                             <div class="col-6 mb-3">
-                                <label for="faculty_name" class="form-label">Student Name</label>
-                                <input type="text" id="faculty_name" class="form-control" readonly>
-                                <input type="hidden" id="faculty_master_pk" name="faculty_master_pk">
-                                @error('faculty_name')
+                                <label for="student_name" class="form-label">Student Name</label>
+                                <input type="text" id="student_name" class="form-control" readonly>
+                                @error('student_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
+                            </div>
+                            <div class="col-6 mb-3">
                             </div>
                             <div class="col-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
@@ -296,49 +300,39 @@
                             </div>
                             <div class="col-6 mb-3">
                                 <label for="memo_number" class="form-label">Memo Number</label>
-                                <input type="text" id="memo_number" class="form-control" readonly>
-                                <input type="hidden" id="memo_number" name="memo_number">
+                                <input type="text" id="memo_number" name="memo_number" class="form-control" readonly>
                                 @error('memo_number')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
+
+
                             <div class="col-6 mb-3">
                                 <label for="venue" class="form-label">Venue</label>
                                 <select name="venue" id="venue" class="form-control">
                                     <option value="">Select Venue</option>
                                     @foreach ($venue as $v)
-                                    <option value="{{ $v->pk }}">{{ $v->venue_name }}</option>
+                                    <option value="{{ $v->venue_id }}">{{ $v->venue_name }}</option>
                                     @endforeach
                                 </select>
                                 @error('venue')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-3 mb-3">
                                 <label for="memo_date" class="form-label">Date</label>
-                                <input type="date" id="memo_date" class="form-control" readonly>
-                                <input type="hidden" id="memo_date" name="memo_date">
+                                <input type="date" id="memo_date" class="form-control">
                                 @error('memo_date')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
+                            <div class="col-3 mb-3">
                                 <label for="meeting_time" class="form-label">Meeting Time</label>
-                                <input type="datetime" id="meeting_time" class="form-control">
-                                <input type="hidden" id="meeting_time" name="meeting_time">
+                                <input type="time" id="meeting_time" name="meeting_time" class="form-control">
                                 @error('meeting_time')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
-                            <div class="col-6 mb-3">
-                                <label for="meeting_time" class="form-label">Meeting Time</label>
-                                <input type="datetime" id="meeting_time" class="form-control">
-                                <input type="hidden" id="meeting_time" name="meeting_time">
-                                @error('meeting_time')
-                                <span class="text-danger">{{ $message }}</span>
-                                @enderror
-                            </div>
-
                             <div class="col-12 mb-3">
                                 <label for="textarea" class="form-label">Message (If Any)</label>
                                 <textarea class="form-control" id="textarea" name="Remark" rows="3"
@@ -393,5 +387,47 @@ $(document).ready(function() {
     });
 });
 </script>
+@push('scripts')
+<script>
+$(document).ready(function() {
+    $('.generate-memo-btn').on('click', function() {
+        let memoId = $(this).data('id');
+
+        $.ajax({
+            url: "{{ route('memo.notice.management.get_memo_data') }}",
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                memo_notice_id: memoId
+            },
+            success: function(res) {
+                // Populate modal fields
+                $('#course_master_name').val(res.course_master_name);
+                $('#date_memo_notice').val(res.date_);
+                $('#student_name').val(res.student_name);
+                $('#subject_master_id').val(res.student_name);
+                $('#topic_id').val(res.subject_topic);
+                $('#venue_id').val(res.venue_id);
+                $('#course_attendance_notice_map_pk').val(res
+                    .course_attendance_notice_map_pk);
+                $('#course_master_pk').val(res.course_master_pk);
+                $('#memo_count').val(res.memo_count + 1);
+
+                $('#session_name').val(res.session_name);
+                $('#class_session_master_pk').val(res.class_session_master_pk);
+                $('#faculty_name').val(res.faculty_name);
+                $('#student_pk').val(res.student_pk);
+                $('#memo_number').val(res.memo_number);
+
+                // Add more if needed
+            },
+            error: function() {
+                alert('Something went wrong!');
+            }
+        });
+    });
+});
+</script>
+@endpush
 
 @endsection

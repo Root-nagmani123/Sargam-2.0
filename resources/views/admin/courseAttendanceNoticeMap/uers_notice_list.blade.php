@@ -55,7 +55,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <hr>
             <div class="dataTables_wrapper" id="alt_pagination_wrapper">
                 <div class="table-responsive">
@@ -80,8 +80,15 @@
                                 <td colspan="9" class="text-center">No records found</td>
                             </tr>
                             @else
-                            @foreach ($memos as $memo)
+                            @php
+                            $grouped = $memos->groupBy('type_notice_memo');
+                            @endphp
 
+                            @foreach ($grouped as $type => $group)
+                            {{-- Section Heading --}}
+                           
+
+                            @foreach ($group as $memo)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $memo->student_name }}</td>
@@ -94,19 +101,25 @@
                                     <span class="badge bg-info-subtle text-info">Other</span>
                                     @endif
                                 </td>
-                                <td>{{ $memo->date_}}</td>
+                                <td>{{ $memo->date_ }}</td>
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
-                                    <a href="{{ route('memo.notice.management.conversation_student', $memo->memo_notice_id) }}" class="btn btn-primary btn-sm">Notice Conversation</a>
+                                    <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
+                                        class="btn btn-primary btn-sm">Notice Conversation</a>
 
-                                     <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas"  data-type="student" data-id="{{ $memo->memo_notice_id }}" 
-       data-topic="{{ $memo->topic_name }}"><i
-                                            class="material-icons md-18">crisis_alert</i></a>
-                                   
+
+                                    <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
+                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="student"
+                                        data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
+                                        <i class="material-icons md-18">crisis_alert</i>
+                                    </a>
+                                    @if($memo->type_notice_memo == 'Memo')
+                              
+                                        <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
+                                        class="btn btn-primary btn-sm">Memo Conversation</a>
+
+                                    @endif
                                 </td>
-                                <!-- Offcanvas Chat Component -->
-                                
                                 <td>
                                     @if ($memo->status == 1)
                                     <span class="badge bg-success-subtle text-success">Open</span>
@@ -116,15 +129,17 @@
                                 </td>
                             </tr>
                             @endforeach
+                            @endforeach
                             @endif
                         </tbody>
+
                     </table>
                 </div>
 
             </div>
         </div>
     </div>
-  
+
 </div>
 <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
     <div class="offcanvas-header">
@@ -142,9 +157,8 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-
-$(document).ready(function () {
-    $('.view-conversation').on('click', function () {
+$(document).ready(function() {
+    $('.view-conversation').on('click', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
         let type = $(this).data('type');
@@ -155,14 +169,16 @@ $(document).ready(function () {
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
-            url: '/admin/memo-notice-management/get_conversation_model/' + memoId+ '/' + type,
+            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type,
 
             type: 'GET',
-            success: function (res) {
+            success: function(res) {
                 $('#chatBody').html(res);
             },
-            error: function () {
-                $('#chatBody').html('<p class="text-danger text-center">Failed to load conversation.</p>');
+            error: function() {
+                $('#chatBody').html(
+                    '<p class="text-danger text-center">Failed to load conversation.</p>'
+                    );
             }
         });
 
