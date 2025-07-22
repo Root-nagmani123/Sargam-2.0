@@ -3,6 +3,11 @@
 @section('title', 'Foundation Course Status | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
+<style>
+  .card-body{
+    padding: 0.5rem !important;
+  }
+</style>
 <main style="flex: 1;">
     <div class="container-fluid mt-5">
         <!-- Page Title -->
@@ -14,6 +19,7 @@
         </div>
         <!-- Status Overview -->
         <div class="row mb-4">
+          <h4 class="fw-bold text-muted text-center bg-primary-subtle text-primary p-2">Status count</h4>
             <div class="col-md-3">
                 <div class="card bg-danger text-white">
                     <div class="card-body text-center">
@@ -151,12 +157,14 @@
                             <table class="table table-bordered text-center m-0">
                                 <thead class="table-primary">
                                     <tr>
+                                      <th>Sr.No</th>
                                         <th>Service</th>
                                         <th>Count</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
+                                      <td>1</td>
                                         <td>IAS</td>
                                         <td>50</td>
                                     </tr>
@@ -207,7 +215,6 @@
                                         <th>Name</th>
                                          <th>Service</th>
                                           <th>Rank</th>
-                                        <th>Missing Fields</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -216,7 +223,6 @@
                                         <td>Amit Kumar</td>
                                         <td>IAS</td>
                                         <td>2</td>
-                                        <td>Photo, ID</td>
                                     </tr>
                                 </tbody>
                             </table>
