@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
-
+use Illuminate\Support\Facades\Validator;
  
 class CourseAttendanceNoticeMapController extends Controller
 {
@@ -198,7 +198,7 @@ public function conversation($id, $type)
     }
 
     $memoNotice = collect(); // default empty collection
-
+$memo_conclusion_master = collect(); // default empty collection
     if ($type == 'notice') {
         $memoNotice = DB::table('notice_message_student_decip_incharge as nmsdi')
             ->leftjoin('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
@@ -230,6 +230,7 @@ public function conversation($id, $type)
                 'sm.display_name as student_name'
             )
             ->get();
+            $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
           
             
     }
@@ -248,7 +249,7 @@ public function conversation($id, $type)
         return $item;
     });
 // print_r($memoNotice);die;
-    return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type'));
+    return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type', 'memo_conclusion_master'));
 }
 
 function conversation_bkp($id,$type){
@@ -481,10 +482,9 @@ public function deleteMemoNotice($id)
 }
 public function memo_notice_conversation(Request $request)
 {
-    $type = $request->input('type'); // memo or notice
+    $type = $request->input('type'); // 'memo' or 'notice'
 
-    // Basic validation
-    $validated = $request->validate([
+    $validator = Validator::make($request->all(), [
         'memo_notice_id' => [
             'required',
             function ($attribute, $value, $fail) use ($type) {
@@ -501,15 +501,28 @@ public function memo_notice_conversation(Request $request)
         'status' => 'required|in:1,2',
     ]);
 
+ 
+
+    $validator->sometimes('conclusion_type', 'required_if:status,1|integer', function ($input) {
+        return $input->type === 'memo';
+    });
+
+    $validator->sometimes('conclusion_remark', 'required_if:status,1|string|max:500', function ($input) {
+        return $input->type === 'memo';
+    });
+
+
+if ($validator->fails()) {
+    return redirect()->back()->withErrors($validator)->withInput();
+}
+
     // File upload
     $filePath = null;
     if ($request->hasFile('document')) {
         $file = $request->file('document');
-        if($type == 'memo') {
-            $filePath = $file->store('memo_conversation_documents', 'public');
-        } else {
-            $filePath = $file->store('notice_documents', 'public');
-        }
+        $filePath = $type == 'memo'
+            ? $file->store('memo_conversation_documents', 'public')
+            : $file->store('notice_documents', 'public');
     }
 
     // Define insert table and foreign key field
@@ -529,11 +542,27 @@ public function memo_notice_conversation(Request $request)
 
     if ($inserted) {
         // Update status if needed
-        if ($validated['status'] == 2) {
+       if ($validated['status'] == 2) {
             DB::table($statusTable)
                 ->where('pk', $validated['memo_notice_id'])
                 ->update([
-                    $type === 'memo' ? 'communication_status' : 'status' => 2
+                    'communication_status' => 2,
+                    'status' => 2
+                ]);
+        }
+
+
+
+        // If memo and conclusion provided
+        if ($type === 'memo' && isset($validated['conclusion_status']) && $validated['conclusion_status'] == 1) {
+            DB::table('student_memo_status')
+                ->where('pk', $validated['memo_notice_id'])
+                ->update([
+                    'memo_conclusion_master_pk' => $validated['conclusion_type'],
+                    'conclusion_remark' => $validated['conclusion_remark'],
+                    'decicion_taken_by' => auth()->user()->id ?? 1,
+                    'decision_date' => now(),
+                    'modified_date' => now(),
                 ]);
         }
 
