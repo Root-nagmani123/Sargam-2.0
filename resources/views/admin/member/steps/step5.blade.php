@@ -14,7 +14,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="miscellaneous" formLabelClass="form-label" label="Other Miscellaneous Fields :" id="miscellaneous" value="{{ old('miscellaneous') }}" labelRequired="true" />
+            <x-input name="miscellaneous" formLabelClass="form-label" label="Other Miscellaneous Fields :" id="miscellaneous" value="{{ old('miscellaneous') }}" />
 
         </div>
     </div>

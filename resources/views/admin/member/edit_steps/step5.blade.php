@@ -14,7 +14,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="miscellaneous" formLabelClass="form-label" label="Other Miscellaneous Fields :" id="miscellaneous" value="{{ $member->other_miscellaneous_fields ?? old('miscellaneous') }}" labelRequired="true" />
+            <x-input name="miscellaneous" formLabelClass="form-label" label="Other Miscellaneous Fields :" id="miscellaneous" value="{{ $member->other_miscellaneous_fields ?? old('miscellaneous') }}" />
 
         </div>
     </div>
