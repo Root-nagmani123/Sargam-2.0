@@ -214,6 +214,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const formData = new FormData();
         // remove all error class
+        $('label.text-danger').removeClass('text-danger');
         $('input').removeClass('is-invalid');
         $('span.text-danger').remove();
 

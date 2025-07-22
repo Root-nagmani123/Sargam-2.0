@@ -28,10 +28,10 @@ class StoreMemberStep1Request extends FormRequest
         // dd(array_keys(CasteCategoryMaster::GetSeatName()));
         return [
             'title' => 'required|string|max:20',
-            'first_name' => 'required|string|max:100',
-            'middle_name' => 'nullable|string|max:100',
-            'last_name' => 'required|string|max:100',
-            'father_husband_name' => 'required|string|max:100',
+            'first_name' => 'required|string|max:100|regex:/^[A-Za-z\s]+$/',
+            'middle_name' => 'nullable|string|max:100|regex:/^[A-Za-z\s]+$/',
+            'last_name' => 'required|string|max:100|regex:/^[A-Za-z\s]+$/',
+            'father_husband_name' => 'required|string|max:100|regex:/^[A-Za-z\s]+$/',
             'marital_status' => [
                 'required',
                 Rule::in(array_keys(EmployeeMaster::maritalStatus))
@@ -54,8 +54,15 @@ class StoreMemberStep1Request extends FormRequest
         return [
             'title.required' => 'The title field is required.',
             'first_name.required' => 'The first name field is required.',
+            'first_name.regex' => 'The first name must contain only letters and spaces.',
+            'middle_name.regex' => 'The middle name must contain only letters and spaces.',
+            'middle_name.max' => 'The middle name may not be greater than 100 characters.',
             'last_name.required' => 'The last name field is required.',
+            'last_name.regex' => 'The last name must contain only letters and spaces.',
+            'last_name.max' => 'The last name may not be greater than 100 characters.',
             'father_husband_name.required' => 'Father/Husband name is required.',
+            'father_husband_name.regex' => 'Father/Husband name must contain only letters and spaces.',
+            'father_husband_name.max' => 'Father/Husband name may not be greater than 100 characters.',
             'marital_status.required' => 'Please select marital status.',
             'gender.required' => 'Please select gender.',
             'caste_category.required' => 'Please select caste category.',
