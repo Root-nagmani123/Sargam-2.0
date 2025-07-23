@@ -48,6 +48,7 @@ class CourseAttendanceNoticeMapController extends Controller
     ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
     ->select(
         'sns.pk as notice_id',
+        'sns.pk as memo_notice_id',
         'sns.student_pk',
         'sns.course_master_pk',
         'sns.date_',
@@ -518,7 +519,7 @@ public function deleteMemoNotice($id)
 public function memo_notice_conversation(Request $request)
 {
     $type = $request->input('type'); // 'memo' or 'notice'
-
+// print_r($request->all());die;
     $validator = Validator::make($request->all(), [
         'memo_notice_id' => [
             'required',
@@ -535,16 +536,20 @@ public function memo_notice_conversation(Request $request)
         'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         'status' => 'required|in:1,2',
     ]);
-
-    $validator->sometimes('conclusion_type', 'required_if:status,1|integer', function ($input) {
+    if($type === 'memo') {
+    $validator->sometimes('conclusion_type', 'required_if:status,2', function ($input) {
         return $input->type === 'memo';
     });
 
-    $validator->sometimes('conclusion_remark', 'required_if:status,1|string|max:500', function ($input) {
+    $validator->sometimes('conclusion_remark', 'required_if:status,2|max:500', function ($input) {
         return $input->type === 'memo';
     });
+}
 
     if ($validator->fails()) {
+
+       print_r($validator->errors());die;
+
         return redirect()->back()->withErrors($validator)->withInput();
     }
 
@@ -575,16 +580,24 @@ public function memo_notice_conversation(Request $request)
         'created_date' => now(),
     ]);
 
-    if ($inserted) {
-        // Update status if needed
-        if ($validated['status'] == 2) {
-            DB::table($statusTable)
-                ->where('pk', $validated['memo_notice_id'])
-                ->update([
-                    'communication_status' => 2,
-                    'status' => 2
-                ]);
+   if ($inserted) {
+    // Update status if needed
+    if ($validated['status'] == 2) {
+        $query = DB::table($statusTable)
+            ->where('pk', $validated['memo_notice_id']);
+
+        if ($type === 'memo') {
+            $query->update([
+                'communication_status' => 2,
+                'status' => 2
+            ]);
+        } else {
+            $query->update([
+                'status' => 2
+            ]);
         }
+    }
+
 
         // Optional: Memo conclusion update (if applicable)
         if ($type === 'memo' && isset($validated['conclusion_type'])) {
@@ -1003,10 +1016,12 @@ public function get_conversation_model($id,$type, Request $request)
     return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id'));
 }
 public function memo_notice_conversation_model(Request $request){
+   
+   
      $validated = $request->validate([
         'memo_notice_id' => 'required|exists:student_notice_status,pk',
         
-        'message' => 'required|string|max:500',
+        'student_decip_incharge_msg' => 'required|string|max:500',
         'created_by' => 'required',
         'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
          ]);
@@ -1021,7 +1036,7 @@ public function memo_notice_conversation_model(Request $request){
     // Insert into your table
    $data = DB::table('notice_message_student_decip_incharge')->insert([
         'student_notice_status_pk' => $validated['memo_notice_id'],
-        'student_decip_incharge_msg' => $validated['message'],
+        'student_decip_incharge_msg' => $validated['student_decip_incharge_msg'],
         'doc_upload' => $filePath,
         'role_type' => $request->role_type, // 'f' for admin, 's' for student
         'created_by' => $validated['created_by'], // Replace with correct user ID
