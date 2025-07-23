@@ -10,28 +10,28 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="first_name" label="First Name :" type="text" value="{{ old('first_name') }}" formLabelClass="form-label" formInputClass="form-control" labelRequired="true" />
-            
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="mb-3">
-
-            <x-input name="middle_name" label="Middle Name :" type="text" value="{{ old('middle_name') }}" formLabelClass="form-label" formInputClass="form-control" />
+            <x-input name="first_name" label="First Name :" type="text" value="{{ old('first_name') }}" formLabelClass="form-label" formInputClass="form-control only-letters" labelRequired="true" />
 
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="last_name" label="Last Name :" type="text" value="{{ old('last_name') }}" formLabelClass="form-label" formInputClass="form-control" labelRequired="true" />
+            <x-input name="middle_name" label="Middle Name :" type="text" value="{{ old('middle_name') }}" formLabelClass="form-label" formInputClass="form-control only-letters" />
 
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="father_husband_name" label="Father's/Husband's Name :" type="text" value="{{ old('father_husband_name') }}" formLabelClass="form-label" formInputClass="form-control" labelRequired="true" />
+            <x-input name="last_name" label="Last Name :" type="text" value="{{ old('last_name') }}" formLabelClass="form-label" formInputClass="form-control only-letters" labelRequired="true" />
+
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+
+            <x-input name="father_husband_name" label="Father's/Husband's Name :" type="text" value="{{ old('father_husband_name') }}" formLabelClass="form-label" formInputClass="form-control only-letters" labelRequired="true" />
 
         </div>
     </div>
@@ -64,7 +64,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="height" label="Exact Height by Measurement (Without Shoes):" type="text" value="{{ old('height') }}" formLabelClass="form-label" formInputClass="form-control" />
+            <x-input name="height" label="Exact Height by Measurement (Without Shoes):" type="text" value="{{ old('height') }}" formLabelClass="form-label" formInputClass="form-control only-numbers" />
 
         </div>
     </div>

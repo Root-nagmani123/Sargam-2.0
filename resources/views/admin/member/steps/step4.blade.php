@@ -137,19 +137,19 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="mnumber">Mobile Number : <span class="text-danger">*</span></label>
-            <input type="number" name="mnumber" id="mnumber" class="form-control">
+            <input type="number" name="mnumber" id="mnumber" class="form-control only-numbers">
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="emergencynumber ">Emergency Contact Number :</label>
-            <input type="number" class="form-control" id="emergencynumber" name="emergencycontact">
+            <input type="number" class="form-control only-numbers" id="emergencynumber" name="emergencycontact">
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="landlinenumber">Landline Number :</label>
-            <input type="number" class="form-control" id="landlinenumber" name="landlinenumber">
+            <input type="number" class="form-control only-numbers" id="landlinenumber" name="landlinenumber">
         </div>
     </div>
 </div>
