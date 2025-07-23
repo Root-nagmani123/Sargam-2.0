@@ -22,9 +22,11 @@
                             </div>
                         </div>
                     </div>
-                    
                     <hr>
-                    {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}
+                    <div class="table-responsive">
+                        {{ $dataTable->table(['class' => 'table  table-hover ']) }}
+                    </div>
+
                 </div>
             </div>
         </div>
