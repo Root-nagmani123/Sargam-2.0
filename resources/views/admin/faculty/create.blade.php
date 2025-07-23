@@ -40,6 +40,7 @@
                                         required="true"
                                         value="{{ $hostelFloorMapping->hostel_floor_master_pk ?? '' }}"
                                         labelRequired="true"
+                                        formInputClass="only-letters"
                                         />
                                 </div>
                             </div>
@@ -52,6 +53,7 @@
                                         placeholder="Middle Name"
                                         formLabelClass="form-label"
                                         required="true"
+                                        formInputClass="only-letters"
                                         />
 
                                     
@@ -67,6 +69,7 @@
                                         formLabelClass="form-label"
                                         required="true"
                                         labelRequired="true"
+                                        formInputClass="only-letters"
                                         />
 
                                 </div>
@@ -120,6 +123,7 @@
                                         labelRequired="true"
                                         inputmode="numeric"
                                         pattern="\d*"
+                                        formInputClass="only-numbers"
                                         />
 
                                 </div>
@@ -136,7 +140,7 @@
                                         labelRequired="true"
                                         inputmode="numeric"
                                         pattern="\d*"
-
+                                        formInputClass="only-numbers"
                                         />
                                 </div>
                             </div>
@@ -498,6 +502,7 @@
                                         formLabelClass="form-label"
                                         required="true"
                                         labelRequired="true"
+                                        formInputClass="only-numbers"
                                         />
                                     
                                 </div>

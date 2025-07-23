@@ -27,6 +27,7 @@
                 formLabelClass="form-label"
                 value="{{ $faculty->first_name }}"
                 required="true"
+                formInputClass="only-letters"
                 />
         </div>
     </div>
@@ -40,6 +41,7 @@
                 formLabelClass="form-label"
                 required="true"
                 value="{{ $faculty->middle_name }}"
+                formInputClass="only-letters"
                 />
 
             
@@ -55,6 +57,7 @@
                 formLabelClass="form-label"
                 required="true"
                 value="{{ $faculty->last_name }}"
+                formInputClass="only-letters"
                 />
 
         </div>
@@ -107,6 +110,7 @@
                 formLabelClass="form-label"
                 required="true"
                 value="{{ $faculty->landline_no }}"
+                formInputClass="only-numbers"
                 />
 
         </div>
@@ -121,6 +125,7 @@
                 formLabelClass="form-label"
                 required="true"
                 value="{{ $faculty->mobile_no }}"
+                formInputClass="only-numbers"
                 />
         </div>
     </div>
