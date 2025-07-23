@@ -164,13 +164,18 @@
                                     @endif
                                 </td>
                                 <td>
+                                     @if($memo->type_notice_memo == 'Memo')
                                     @if ($memo->communication_status == 2)
                                    {{ $memo->discussion_name }}
                                     @endif
+                                    @endif
                                 </td>
                                 <td>
+                                     @if($memo->type_notice_memo == 'Memo')
+
                                      @if( $memo->communication_status == 2)
                                    {{ $memo->conclusion_remark }}
+                                    @endif
                                     @endif
                                 </td>
                                 <!-- Offcanvas Chat Component -->
