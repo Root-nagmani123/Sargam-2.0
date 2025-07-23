@@ -114,9 +114,7 @@ class StudentAttendanceListDataTable extends DataTable
                     ['group_type_master_course_master_map_pk', '=', $this->group_pk],
                     ['timetable_pk', '=', $this->timetable_pk]
                 ])->first();
-                if($courseStudentMDO) {
-                    $checked = 'checked';
-                }
+                $checked = 'checked';
             }
         }
 
