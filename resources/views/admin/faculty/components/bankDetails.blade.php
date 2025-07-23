@@ -21,6 +21,7 @@
                 formLabelClass="form-label"
                 required="true"
                 value="{{ $faculty->Account_No }}"
+                formInputClass="only-numbers"
                 />
             
         </div>

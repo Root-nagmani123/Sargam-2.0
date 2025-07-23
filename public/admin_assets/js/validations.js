@@ -8,4 +8,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }); 
+
+    // Allow only letters in input fields with class 'only-letters'
+    document.querySelectorAll('.only-letters').forEach(function(input) {
+        input.addEventListener('keypress', function(event) {
+            if (!/^[a-zA-Z]$/.test(event.key)) {
+                event.preventDefault();
+            }
+        });
+    });
 });
