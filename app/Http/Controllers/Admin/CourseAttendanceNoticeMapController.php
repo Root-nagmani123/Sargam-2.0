@@ -18,29 +18,54 @@ class CourseAttendanceNoticeMapController extends Controller
     public function index()
 {
     // Get initial notice records
-    $notices = DB::table('student_notice_status')
-        ->leftjoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk')
-        ->leftjoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
-        ->leftjoin('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')
-        ->select(
-            'student_notice_status.pk as notice_id',
-            'student_notice_status.student_pk',
-            'student_notice_status.course_master_pk',
-            'student_notice_status.date_',
-            'student_notice_status.subject_master_pk',
-            'student_notice_status.subject_topic',
-            'student_notice_status.venue_id',
-            'student_notice_status.class_session_master_pk',
-            'student_notice_status.faculty_master_pk',
-            'student_notice_status.message',
-            'student_notice_status.notice_memo',
-            'student_notice_status.status',
-            'sm.display_name as student_name',
-            'sm.pk as student_id',
-            't.subject_topic as topic_name',
-            DB::raw('"Notice" as type_notice_memo'),
-        )
-        ->get();
+    // $notices = DB::table('student_notice_status')
+    //     ->leftjoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk')
+    //     ->leftjoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+    //     ->leftjoin('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')
+    //     ->select(
+    //         'student_notice_status.pk as notice_id',
+    //         'student_notice_status.student_pk',
+    //         'student_notice_status.course_master_pk',
+    //         'student_notice_status.date_',
+    //         'student_notice_status.subject_master_pk',
+    //         'student_notice_status.subject_topic',
+    //         'student_notice_status.venue_id',
+    //         'student_notice_status.class_session_master_pk',
+    //         'student_notice_status.faculty_master_pk',
+    //         'student_notice_status.message',
+    //         'student_notice_status.notice_memo',
+    //         'student_notice_status.status',
+    //         'sm.display_name as student_name',
+    //         'sm.pk as student_id',
+    //         't.subject_topic as topic_name',
+    //         DB::raw('"Notice" as type_notice_memo'),
+    //     )
+    //     ->get();
+    
+        $notices = DB::table('course_student_attendance as csa')
+    ->leftJoin('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+    ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+    ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+    ->select(
+        'sns.pk as notice_id',
+        'sns.student_pk',
+        'sns.course_master_pk',
+        'sns.date_',
+        'sns.subject_master_pk',
+        'sns.subject_topic',
+        'sns.venue_id',
+        'sns.class_session_master_pk',
+        'sns.faculty_master_pk',
+        'sns.message',
+        'sns.notice_memo',
+        'sns.status',
+        'sm.display_name as student_name',
+        'sm.pk as student_id',
+        't.subject_topic as topic_name',
+        DB::raw('"Notice" as type_notice_memo')
+    )
+    ->get();
+
 
     $memos = collect(); // final result
 // print_r($notices);die;
@@ -378,31 +403,38 @@ public function store_memo_notice(Request $request)
     // ✅ Fetch all required student info in one query
     $students = DB::table('course_student_attendance as a')
         ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
-        ->whereIn('a.pk', $validated['selected_student_list'])
+        ->whereIn('a.Student_master_pk', $validated['selected_student_list'])
         ->select('a.pk as course_attendance_pk', 's.pk as student_pk')
         ->get()
         ->keyBy('course_attendance_pk'); // So we can access by course attendance PK
 
     $data = [];
+    // print_r($students);
+    // print_r($validated['selected_student_list']);die;
 
-    foreach ($validated['selected_student_list'] as $studentId) {
-        if (isset($students[$studentId])) {
-            $student = $students[$studentId];
+    foreach ($students as $studentId) {
+    // $studentId is actually the course_student_attendance.pk
+    // if (isset($students[$studentId])) {
+        // $student = $students[$studentId]; 
+    // print_r($studentId);die;
+
+
             $data[] = [
                 'course_master_pk'           => $validated['course_master_pk'],
-                'student_pk'                 => $student->student_pk,
+                'student_pk'                 => $studentId->student_pk,
                 'date_'                      => $validated['date_memo_notice'],
                 'subject_master_pk'          => $validated['subject_master_id'],
                 'subject_topic'              => $validated['topic_id'],
                 'venue_id'                   => $validated['venue_id'],
                 'class_session_master_pk'    => $validated['class_session_master_pk'],
                 'faculty_master_pk'          => $validated['faculty_master_pk'],
-                'course_student_attendance_pk' => $studentId,
+                'course_student_attendance_pk' => $studentId->course_attendance_pk,
                 'message'                    => $validated['Remark'],
                 'notice_memo'                => $validated['submission_type'],
             ];
         }
-    }
+    // }
+    // print_r($data);die;
 
     // ✅ Bulk insert
     $inserted = DB::table('student_notice_status')->insert($data);

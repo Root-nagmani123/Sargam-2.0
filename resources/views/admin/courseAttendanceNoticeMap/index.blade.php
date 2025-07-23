@@ -133,8 +133,14 @@
                                 <td>{{ $memo->date_}}</td>
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
+                                    @if($memo->type_notice_memo == 'Notice')
+                                        @if( $memo->notice_id != null)
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
    class="btn btn-primary btn-sm">Notice Conversation</a>
+                                        @else
+                                        <span class="text-muted">No Conversation</span>
+                                        @endif
+                                    @endif
 
                                     <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
