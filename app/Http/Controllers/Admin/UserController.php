@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\UserCredentialsDataTable;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
@@ -19,10 +20,9 @@ class UserController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function index(Request $request)
+    public function index(UserCredentialsDataTable $request)
     {
-        $users = User::all();
-        return view('admin.user_management.users.index',compact('users'));
+        return $request->render('admin.user_management.users.index');
     }
 
     /**
