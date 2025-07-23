@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\DataTables\RoleDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
@@ -14,11 +15,9 @@ use Illuminate\Validation\Rule;
 
 class RoleController extends Controller
 {
-    public function index()
+    public function index(RoleDataTable $dataTable)
     {
-        return view('admin.user_management.roles.index', [
-            'roles' => Role::all(),
-        ]);
+        return $dataTable->render('admin.user_management.roles.index');
     }
 
     public function create()
