@@ -52,6 +52,7 @@ class CourseAttendanceNoticeMapController extends Controller
                 ->leftjoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
                 ->leftjoin('student_notice_status as sns', 'student_memo_status.course_attendance_notice_map_pk', '=', 'sns.pk')
                 ->leftjoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+                ->leftjoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
                 ->where('student_memo_status.course_attendance_notice_map_pk', $notice->notice_id)
                 ->select(
                     'student_memo_status.pk as memo_id',
@@ -60,6 +61,7 @@ class CourseAttendanceNoticeMapController extends Controller
                     'student_memo_status.communication_status',
                     'student_memo_status.course_master_pk',
                     'student_memo_status.date as date_',
+                    'student_memo_status.conclusion_remark',
                     DB::raw('NULL as subject_master_pk'), // if not in memo table
                     DB::raw('NULL as subject_topic'),
                     DB::raw('NULL as venue_id'),
@@ -71,7 +73,8 @@ class CourseAttendanceNoticeMapController extends Controller
                     'student_memo_status.status',
                     'sm.display_name as student_name',
                     'sm.pk as student_id',
-                    't.subject_topic as topic_name'
+                    't.subject_topic as topic_name',
+                    'mcm.discussion_name',
                 )
                 ->first();
                 
@@ -501,8 +504,6 @@ public function memo_notice_conversation(Request $request)
         'status' => 'required|in:1,2',
     ]);
 
- 
-
     $validator->sometimes('conclusion_type', 'required_if:status,1|integer', function ($input) {
         return $input->type === 'memo';
     });
@@ -511,10 +512,12 @@ public function memo_notice_conversation(Request $request)
         return $input->type === 'memo';
     });
 
+    if ($validator->fails()) {
+        return redirect()->back()->withErrors($validator)->withInput();
+    }
 
-if ($validator->fails()) {
-    return redirect()->back()->withErrors($validator)->withInput();
-}
+    // ✅ Fixed: Get validated data
+    $validated = $validator->validated();
 
     // File upload
     $filePath = null;
@@ -542,7 +545,7 @@ if ($validator->fails()) {
 
     if ($inserted) {
         // Update status if needed
-       if ($validated['status'] == 2) {
+        if ($validated['status'] == 2) {
             DB::table($statusTable)
                 ->where('pk', $validated['memo_notice_id'])
                 ->update([
@@ -551,15 +554,13 @@ if ($validator->fails()) {
                 ]);
         }
 
-
-
-        // If memo and conclusion provided
-        if ($type === 'memo' && isset($validated['conclusion_status']) && $validated['conclusion_status'] == 1) {
+        // Optional: Memo conclusion update (if applicable)
+        if ($type === 'memo' && isset($validated['conclusion_type'])) {
             DB::table('student_memo_status')
                 ->where('pk', $validated['memo_notice_id'])
                 ->update([
                     'memo_conclusion_master_pk' => $validated['conclusion_type'],
-                    'conclusion_remark' => $validated['conclusion_remark'],
+                    'conclusion_remark' => $validated['conclusion_remark'] ?? null,
                     'decicion_taken_by' => auth()->user()->id ?? 1,
                     'decision_date' => now(),
                     'modified_date' => now(),
@@ -571,6 +572,7 @@ if ($validator->fails()) {
 
     return redirect()->back()->with('error', 'Failed to create ' . ucfirst($type) . '. Please try again.');
 }
+
 
 public function memo_notice_conversation_bkp(Request $request)
 {
