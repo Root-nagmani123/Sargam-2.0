@@ -645,22 +645,28 @@ $('#eventForm').on('submit', function(e) {
         }
     }
 
-    if ($('#fullDayCheckbox').is(':checked')) {
-   
-        let startTime_data = $('#start_time').val(); // format: "HH:MM"
+   if ($('#fullDayCheckbox').is(':checked')) {
+
+    let start_date = $('#start_datetime').val(); // format: "YYYY-MM-DD"
+    let start_time = $('#start_time').val();     // format: "HH:MM"
+
+    if (start_date && start_time) {
+        // Combine date and time into one Date object
+        let selectedDateTime = new Date(start_date + 'T' + start_time + ':00');
+
         // Get current time + 1 hour
         let now = new Date();
         now.setHours(now.getHours() + 1);
-        let currentPlus1Hr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
-        // Compare times
-        if (startTime_data < currentPlus1Hr) {
-            alert("Start time must be at least 1 hour ahead of the current time.");
-            // $(this).prop('checked', false);
+        // Compare
+        if (selectedDateTime < now) {
+            alert("Start Date & Time must be at least 1 hour ahead of current time.");
             $('#start_time').focus();
             return false;
         }
     }
+}
+
     let formData = new FormData(this);
     $('input[name="group_type_name[]"]:checked').each(function() {
         formData.append('group_type_name[]', $(this).val());
@@ -1088,22 +1094,27 @@ if (selectedDate < today) {
 
     // Check if end date is before start date
   
-     if ($('#fullDayCheckbox').is(':checked')) {
-   
-        let startTime_data = $('#start_time').val(); // format: "HH:MM"
+   if ($('#fullDayCheckbox').is(':checked')) {
+
+    let start_date = $('#start_datetime').val(); // format: "YYYY-MM-DD"
+    let start_time = $('#start_time').val();     // format: "HH:MM"
+
+    if (start_date && start_time) {
+        // Combine date and time into one Date object
+        let selectedDateTime = new Date(start_date + 'T' + start_time + ':00');
+
         // Get current time + 1 hour
         let now = new Date();
         now.setHours(now.getHours() + 1);
-        let currentPlus1Hr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 
-        // Compare times
-        if (startTime_data < currentPlus1Hr) {
-            alert("Start time must be at least 1 hour ahead of the current time.");
-            // $(this).prop('checked', false);
+        // Compare
+        if (selectedDateTime < now) {
+            alert("Start Date & Time must be at least 1 hour ahead of current time.");
             $('#start_time').focus();
             return false;
         }
     }
+}
 
 
     if ($('#feedback_checkbox').is(':checked')) {
