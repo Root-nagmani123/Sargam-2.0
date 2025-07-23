@@ -142,19 +142,19 @@
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="mnumber">Mobile Number : <span class="text-danger">*</span></label>
-            <input type="number" name="mnumber" id="mnumber" class="form-control" value="{{ $member->mobile ?? '' }}">
+            <input type="number" name="mnumber" id="mnumber" class="form-control only-numbers" value="{{ $member->mobile ?? '' }}">
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="emergencynumber ">Emergency Contact Number :</label>
-            <input type="number" class="form-control" id="emergencynumber" name="emergencynumber" value="{{ $member->emergency_contact_no ?? '' }}">
+            <input type="number" class="form-control only-numbers" id="emergencynumber" name="emergencynumber" value="{{ $member->emergency_contact_no ?? '' }}">
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
             <label class="form-label" for="landlinenumber">Landline Number :</label>
-            <input type="number" class="form-control" id="landlinenumber" name="landlinenumber" value="{{ $member->landline_contact_no ?? '' }}">
+            <input type="number" class="form-control only-numbers" id="landlinenumber" name="landlinenumber" value="{{ $member->landline_contact_no ?? '' }}">
         </div>
     </div>
 </div>
