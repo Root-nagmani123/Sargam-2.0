@@ -102,7 +102,10 @@
                                 <th class="col">Session Date</th>
                                 <th class="col">Topic</th>
                                 <th class="col">Conversation</th>
+                             
                                 <th class="col">Response</th>
+                                <th class="col">Conclusion Type</th>
+                                <th class="col">Conclusion Remark</th>
                                 <th class="col">Status</th>
                             </tr>
                             <!-- end row -->
@@ -145,8 +148,6 @@
                                     @elseif($memo->type_notice_memo == 'Memo')
                                                @if($memo->status == 1 || $memo->communication_status == 1 || $memo->communication_status == 2)
                                                     
-                                                 <!-- <a href="{{route('admin.courseAttendanceNoticeMap.memo_conversation')}}"
-                                                    class="btn btn-primary btn-sm">Memo Conversation</a> -->
                                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
    class="btn btn-primary btn-sm">Memo Conversation</a>
                                              
@@ -159,12 +160,17 @@
                                     <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate
                                         Memo</button>
                                     @elseif($memo->status == 2)
-                                    <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn"
-                                        data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal"
-                                        data-bs-target="#memo_generate">
-                                        Generate Memo
-                                    </a>
-
+                                   
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($memo->communication_status == 2)
+                                   {{ $memo->discussion_name }}
+                                    @endif
+                                </td>
+                                <td>
+                                     @if( $memo->communication_status == 2)
+                                   {{ $memo->conclusion_remark }}
                                     @endif
                                 </td>
                                 <!-- Offcanvas Chat Component -->
