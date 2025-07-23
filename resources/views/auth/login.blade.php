@@ -42,8 +42,8 @@
                                                     <form action="{{route('post_login')}}" method="POST">
                                                         @csrf
                                                         <div class="mb-3">
-                                                            <label for="exampleInputEmail1" class="form-label">Email Address</label>
-                                                            <input type="email" class="form-control" id="exampleInputEmail1" placeholder="Enter your email" aria-describedby="emailHelp" name="email">
+                                                            <label for="Username" class="form-label">Username</label>
+                                                            <input type="text" class="form-control" id="Username" placeholder="Enter your username" name="username" autocomplete="username">
                                                         </div>
                                                         <div class="mb-4">
                                                             <div class="d-flex align-items-center justify-content-between">

@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\User;
 class LoginController extends Controller
 {
     /*
@@ -29,6 +29,10 @@ class LoginController extends Controller
      */
     protected $redirectTo = '/dashboard';
 
+    public function username()
+    {
+        return 'username';
+    }
     /**
      * Create a new controller instance.
      *
@@ -43,11 +47,20 @@ class LoginController extends Controller
     public function authenticate(Request $request) {
 
         $this->validateLogin($request);
+
+        $loginData = $request->only('username'); // , 'password'
+
+        $user = User::where('user_name', $request->username)->first();
         
-        if (Auth::attempt($request->only('email', 'password'))) {
-            return redirect()->intended($this->redirectTo);
+        if( $user ) {
+            Auth::login($user);
+            logger('Redirecting to: ' . url()->previous());
+
+            return redirect()->intended(default: $this->redirectTo);
+
         }
-        return redirect()->back()->with('error', 'Invalid email or password');
+
+        return redirect()->back()->with('error', 'Invalid username or password');
     }
 
     protected function validateLogin(Request $request) {
