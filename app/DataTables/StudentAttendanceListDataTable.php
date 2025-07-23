@@ -3,6 +3,7 @@
 namespace App\DataTables;
 
 use App\Models\{StudentCourseGroupMap, GroupTypeMasterCourseMasterMap, MDOEscotDutyMap, CourseStudentAttendance};
+use App\Models\Timetable;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -92,7 +93,7 @@ class StudentAttendanceListDataTable extends DataTable
         ])->first();
 
         $checked = ($courseStudent && $courseStudent->status == $value) ? 'checked' : '';
-
+            
         if (!$courseStudent && !$checked ) { // && $value === 4
 
             match ($value) {
@@ -101,20 +102,27 @@ class StudentAttendanceListDataTable extends DataTable
                 7 => $dutyType = MDOEscotDutyMap::getMdoDutyTypes()['other'],
                 default => $dutyType = 0,
             };
-            $mdoEscot = MDOEscotDutyMap::where([
-                ['course_master_pk', '=', $this->course_pk],
-                ['mdo_duty_type_master_pk', '=', $dutyType],
-                ['selected_student_list', '=', $studentId],
-            ])->first();
 
-            if ($mdoEscot) {
-                $courseStudentMDO = CourseStudentAttendance::where([
-                    ['Student_master_pk', '=', $studentId],
-                    ['Course_master_pk', '=', $this->course_pk],
-                    ['group_type_master_course_master_map_pk', '=', $this->group_pk],
-                    ['timetable_pk', '=', $this->timetable_pk]
-                ])->first();
-                $checked = 'checked';
+            $timetable = Timetable::select('START_DATE')->where('pk', $this->timetable_pk)->first();
+            
+            if(!empty($timetable)) {
+                
+                $mdoEscot = MDOEscotDutyMap::where([
+                    ['course_master_pk', '=', $this->course_pk],
+                    ['mdo_duty_type_master_pk', '=', $dutyType],
+                    ['selected_student_list', '=', $studentId]
+                ])
+                ->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
+
+                if ($mdoEscot) {
+                    $courseStudentMDO = CourseStudentAttendance::where([
+                        ['Student_master_pk', '=', $studentId],
+                        ['Course_master_pk', '=', $this->course_pk],
+                        ['group_type_master_course_master_map_pk', '=', $this->group_pk],
+                        ['timetable_pk', '=', $this->timetable_pk]
+                    ])->first();
+                    $checked = 'checked';
+                }
             }
         }
 
