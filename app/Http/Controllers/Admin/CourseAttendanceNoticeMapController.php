@@ -349,7 +349,7 @@ public function getStudentAttendanceBytopic(Request $request)
         $attendance = DB::table('course_student_attendance as a')
             ->leftJoin('student_master as s', 'a.Student_master_pk', '=', 's.pk')
             ->where('a.timetable_pk', $topicId)
-            ->whereIn('a.status', [2, 3])
+            ->whereIn('a.status', ['2', '3'])
 
             ->select(
                 'a.pk as studnet_pk',
@@ -357,6 +357,7 @@ public function getStudentAttendanceBytopic(Request $request)
                 's.display_name as display_name'
             )
             ->get();
+            // print_r($attendance);die;
 
         if ($attendance->isEmpty()) {
             return response()->json([
@@ -534,7 +535,7 @@ public function memo_notice_conversation(Request $request)
         'date' => 'required|date',
         'time' => 'required',
         'message' => 'required|string|max:500',
-        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+        'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:1048',
         'status' => 'required|in:1,2',
     ]);
     if($type === 'memo') {
