@@ -7,6 +7,8 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use Adldap\Laravel\Facades\Adldap;
+
 class LoginController extends Controller
 {
     /*
@@ -44,7 +46,7 @@ class LoginController extends Controller
         $this->middleware('auth')->only('logout');
     }
 
-    public function authenticate(Request $request) {
+    public function authenticate_bkp(Request $request) {
 
         $this->validateLogin($request);
 
@@ -63,6 +65,47 @@ class LoginController extends Controller
         return redirect()->back()->with('error', 'Invalid username or password');
     }
 
+    public function authenticate(Request $request)
+{
+    $this->validateLogin($request);
+
+    $username = $request->input('username');
+    $password = $request->input('password');
+
+    $serverHost = request()->getHost(); // gets hostname like localhost or domain.com
+
+    try {
+       
+            if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local'])) {
+            // 👨‍💻 Localhost: Normal DB-based login
+            $user = User::where('user_name', $username)->first();
+
+            if( $user ) {
+            Auth::login($user);
+            logger('Redirecting to: ' . url()->previous());
+
+            return redirect()->intended(default: $this->redirectTo);
+
+        }
+
+        } else {
+            // 🌐 Production: LDAP authentication
+            if (Adldap::auth()->attempt($username, $password)) {
+                $user = User::where('user_name', $username)->first();
+
+                if ($user) {
+                    Auth::login($user);
+                    return redirect()->intended($this->redirectTo);
+                }
+            }
+        }
+
+    } catch (\Exception $e) {
+        logger('Authentication failed: ' . $e->getMessage());
+    }
+
+    return redirect()->back()->with('error', 'Invalid username or password.');
+}
     protected function validateLogin(Request $request) {
         $request->validate([
             $this->username() => 'required|string',
