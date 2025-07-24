@@ -72,7 +72,20 @@ class GroupMappingDataTable extends DataTable
                 </div>
                 ";
             })
-
+            ->filterColumn('course_name', function ($query, $keyword) {
+                dd("Filtering by course_name with keyword: {$keyword}");
+                $query->whereHas('courseGroup', function ($q) use ($keyword) {
+                    $q->where('course_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('type_name', function ($query, $keyword) {
+                $query->whereHas('courseGroupType', function ($q) use ($keyword) {
+                    $q->where('type_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('group_name', function ($query, $keyword) {
+                $query->where('group_name', 'like', "%{$keyword}%");
+            })
             ->rawColumns(['course_name', 'group_name', 'view_download', 'action', 'status']);
     }
 
@@ -97,6 +110,7 @@ class GroupMappingDataTable extends DataTable
                 'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
+                'order' => [],
             ]);
     }
 
