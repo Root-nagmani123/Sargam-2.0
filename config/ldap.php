@@ -51,7 +51,7 @@ return [
 
             'port' => env('LDAP_PORT', 389), // Use 636 for LDAPS if required
 
-            'timeout' => env('LDAP_TIMEOUT', 5),
+           'timeout' => env('LDAP_TIMEOUT', 1000),
 
             'base_dn' => env('LDAP_BASE_DN', 'DC=lbsnaa,DC=gov,DC=in'), // Your domain base DN
 
@@ -65,6 +65,7 @@ return [
 
             'use_tls' => env('LDAP_USE_TLS', false), // Set to true for TLS
 
+ 
         ],
 
     ],
