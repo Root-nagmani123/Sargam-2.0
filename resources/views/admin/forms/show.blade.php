@@ -236,10 +236,12 @@
         }
 
         .section-title {
-            background-color: #e6e6e7;
+            background-color: #004a93;
             padding: 0.5rem 1rem;
-            border-radius: 0.25rem;
+            border-radius: 0.5rem;
             margin-bottom: 1rem;
+            color: #fff;
+            font-weight: 600;
         }
 
         .dynamic-table {
