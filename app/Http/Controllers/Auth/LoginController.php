@@ -54,7 +54,7 @@ class LoginController extends Controller
         
         if( $user ) {
             Auth::login($user);
-            logger('Redirecting to: ' . url()->previous());
+            // logger('Redirecting to: ' . url()->previous());
 
             return redirect()->intended(default: $this->redirectTo);
 
