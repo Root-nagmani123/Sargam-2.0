@@ -71,8 +71,11 @@ class UserCredentialsDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->dom('Bfrtip')
-            ->orderBy(1)
+            ->orderBy(0)
             ->selectStyleSingle()
+            ->parameters([
+                'order' => [],
+            ])
             ->buttons([
                 Button::make('excel'),
                 Button::make('csv'),

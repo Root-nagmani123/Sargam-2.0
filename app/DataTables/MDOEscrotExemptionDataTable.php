@@ -27,16 +27,16 @@ class MDOEscrotExemptionDataTable extends DataTable
                     $q->where('display_name', 'like', "%{$keyword}%");
                 });
             })
-            ->filterColumn('course_name', function ($query, $keyword) {
-                $query->whereHas('courseMaster', function ($q) use ($keyword) {
-                    $q->where('course_name', 'like', "%{$keyword}%");
-                });
-            })
-            ->filterColumn('mdo_name', function ($query, $keyword) {
-                $query->whereHas('mdoDutyTypeMaster', function ($q) use ($keyword) {
-                    $q->where('mdo_duty_type_name', 'like', "%{$keyword}%");
-                });
-            })
+            // ->filterColumn('course_name', function ($query, $keyword) {
+            //     $query->whereHas('courseMaster', function ($q) use ($keyword) {
+            //         $q->where('course_name', 'like', "%{$keyword}%");
+            //     });
+            // })
+            // ->filterColumn('mdo_name', function ($query, $keyword) {
+            //     $query->whereHas('mdoDutyTypeMaster', function ($q) use ($keyword) {
+            //         $q->where('mdo_duty_type_name', 'like', "%{$keyword}%");
+            //     });
+            // })
             ->addColumn('actions', function ($row) {
                 $editUrl = route('mdo-escrot-exemption.edit', $row->pk);
                 // $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);

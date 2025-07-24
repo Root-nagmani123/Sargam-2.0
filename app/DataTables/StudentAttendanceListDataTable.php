@@ -65,6 +65,7 @@ class StudentAttendanceListDataTable extends DataTable
                 'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
+                'order' => [],
             ]);
     }
 

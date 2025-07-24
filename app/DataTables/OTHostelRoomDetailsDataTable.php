@@ -58,6 +58,9 @@ class OTHostelRoomDetailsDataTable extends DataTable
                     //->dom('Bfrtip')
                     ->orderBy(1)
                     ->selectStyleSingle()
+                    ->parameters([
+                        'order' => [],
+                    ])
                     ->buttons([
                         Button::make('excel'),
                         Button::make('csv'),

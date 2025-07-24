@@ -68,8 +68,11 @@ class HostelBuildingMasterDataTable extends DataTable
                     ->columns($this->getColumns())
                     ->minifiedAjax()
                     //->dom('Bfrtip')
-                    ->orderBy(1)
+                    // ->orderBy(1)
                     ->selectStyleSingle()
+                    ->parameters([
+                        'order' => [],
+                    ])
                     ->buttons([
                         Button::make('excel'),
                         Button::make('csv'),

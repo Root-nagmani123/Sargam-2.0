@@ -11,6 +11,7 @@ use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Html\Editor\Editor;
 use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
+use Illuminate\Support\Facades\DB;
 
 class HostelBuildingFloorRoomMappingDataTable extends DataTable
 {
@@ -36,6 +37,21 @@ class HostelBuildingFloorRoomMappingDataTable extends DataTable
                 <input class="form-check-input status-toggle" type="checkbox" role="switch"
                     data-table="hostel_floor_room_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
             </div>';
+            })
+            ->filterColumn('hostel_building_floor_mapping_pk', function ($query, $keyword) {
+                $query->whereHas('buildingFloor', function ($q) use ($keyword) {
+                    $q->whereHas('building', function ($q) use ($keyword) {
+                        $q->where('hostel_building_name', 'like', "%{$keyword}%");
+                    })->orWhereHas('floor', function ($q) use ($keyword) {
+                        $q->where('hostel_floor_name', 'like', "%{$keyword}%");
+                    });
+                });
+            })
+            
+            ->filterColumn('hostel_room_master_pk', function ($query, $keyword) {
+                $query->whereHas('room', function ($q) use ($keyword) {
+                    $q->where('hostel_room_name', 'like', "%{$keyword}%");
+                });
             })
             ->rawColumns(['hostel_building_floor_mapping_pk', 'hostel_room_master_pk', 'actions', 'status']);
     }
@@ -66,7 +82,10 @@ class HostelBuildingFloorRoomMappingDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             //->dom('Bfrtip')
-            ->orderBy(1)
+            // ->orderBy(1)
+            ->parameters([
+                'order' => [],
+            ])
             ->selectStyleSingle()
             ->buttons([
                 Button::make('excel'),
@@ -87,8 +106,8 @@ class HostelBuildingFloorRoomMappingDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('hostel_building_floor_mapping_pk')->title('Hostel Building Floor Mapping')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('hostel_room_master_pk')->title('Hostel Room Master')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('hostel_building_floor_mapping_pk')->title('Hostel Building Floor Mapping')->addClass('text-center')->orderable(false),
+            Column::make('hostel_room_master_pk')->title('Hostel Room Master')->addClass('text-center')->orderable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
         ];

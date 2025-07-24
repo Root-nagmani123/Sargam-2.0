@@ -68,12 +68,13 @@ class EmployeeTypeMasterDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             //->dom('Bfrtip')
-            ->orderBy(1)
+            // ->orderBy(1)
             ->selectStyleSingle()
             ->parameters([
                 'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
+                'order' => [],
             ])
             ->buttons([
                 Button::make('excel'),
