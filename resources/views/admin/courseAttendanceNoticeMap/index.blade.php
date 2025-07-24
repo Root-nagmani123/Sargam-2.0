@@ -102,7 +102,7 @@
                                 <th class="col">Session Date</th>
                                 <th class="col">Topic</th>
                                 <th class="col">Conversation</th>
-                             
+
                                 <th class="col">Response</th>
                                 <th class="col">Conclusion Type</th>
                                 <th class="col">Conclusion Remark</th>
@@ -134,30 +134,32 @@
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
                                     @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
-                                        @if( $memo->notice_id != null)
+                                    @if( $memo->notice_id != null)
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
-   class="btn btn-primary btn-sm">Notice Conversation</a>
-                                        @else
-                                        <span class="text-muted">No Conversation</span>
-                                        @endif
+                                        class="btn btn-primary btn-sm">Notice Conversation</a>
+                                    @else
+                                    <span class="text-muted">No Conversation</span>
+                                    @endif
                                     @endif
 
                                     <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
                                         data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}"><i
-                                            class="material-icons md-18" style="vertical-align: middle; line-height: 1;color: #af2910;">mark_unread_chat_alt</i></a>
+                                            class="material-icons md-18"
+                                            style="vertical-align: middle; line-height: 1;color: #af2910;">mark_unread_chat_alt</i></a>
                                     @if($memo->type_notice_memo == 'Notice')
-                                              
-                                                <a href="script:void(0)" class="btn btn-secondary btn-sm">Memo Conversation</a>
-                                                
-                                               
+
+                                    <a href="script:void(0)" class="btn btn-secondary btn-sm">Memo Conversation</a>
+
+
                                     @elseif($memo->type_notice_memo == 'Memo')
-                                               @if($memo->status == 1 || $memo->communication_status == 1 || $memo->communication_status == 2)
-                                                    
-                                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
-   class="btn btn-primary btn-sm">Memo Conversation</a>
-                                             
-                                                @endif
+                                    @if($memo->status == 1 || $memo->communication_status == 1 ||
+                                    $memo->communication_status == 2)
+
+                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
+                                        class="btn btn-primary btn-sm">Memo Conversation</a>
+
+                                    @endif
                                     @endif
 
                                 </td>
@@ -166,25 +168,26 @@
                                     <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate
                                         Memo</button>
                                     @elseif($memo->status == 2)
-                                  <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn" 
-   data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal" data-bs-target="#memo_generate">
-   Generate Memo
-</a>
+                                    <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn"
+                                        data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal"
+                                        data-bs-target="#memo_generate">
+                                        Generate Memo
+                                    </a>
 
                                     @endif
                                 </td>
                                 <td>
-                                     @if($memo->type_notice_memo == 'Memo')
+                                    @if($memo->type_notice_memo == 'Memo')
                                     @if ($memo->communication_status == 2)
-                                   {{ $memo->discussion_name }}
+                                    {{ $memo->discussion_name }}
                                     @endif
                                     @endif
                                 </td>
                                 <td>
-                                     @if($memo->type_notice_memo == 'Memo')
+                                    @if($memo->type_notice_memo == 'Memo')
 
-                                     @if( $memo->communication_status == 2)
-                                   {{ $memo->conclusion_remark }}
+                                    @if( $memo->communication_status == 2)
+                                    {{ $memo->conclusion_remark }}
                                     @endif
                                     @endif
                                 </td>
@@ -223,18 +226,16 @@
             </div>
         </div>
     </div>
-
     <div class="modal fade" id="memo_generate" tabindex="-1" aria-labelledby="memo_generateLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="memo_generateLabel">Generate Memo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <hr>
-                <form action="{{ route('memo.notice.management.store_memo_status') }}" method="POST">
-                    @csrf
-                    <div class="modal-body">
+                <div class="modal-body">
+                    <form action="{{ route('memo.notice.management.store_memo_status') }}" method="POST">
+                        @csrf
                         <div class="row">
                             <div class="col-6 mb-3">
                                 <label for="course_master_name" class="form-label">Course</label>
@@ -364,19 +365,17 @@
                                 @enderror
                             </div>
                         </div>
-                    </div>
-                    <hr>
-                    <div class="modal-footer d-flex text-end gap-3">
-                        <div>
-                            <button type="submit" class="btn btn-primary">Send</button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        </div>
-                    </div>
-                </form>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
             </div>
         </div>
+
     </div>
-    <!-- Memo generation end -->
+<!-- Memo generation end -->
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>

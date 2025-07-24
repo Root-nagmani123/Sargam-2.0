@@ -48,12 +48,6 @@
                 <div class="col-6">
                     <h4 class="card-title">Notice /Memo Management</h4>
                 </div>
-                <div class="col-6">
-                    <div class="float-end gap-2">
-                        <a href="{{ route('memo.notice.management.create') }}" class="btn btn-primary">+ Add
-                            Notice</a>
-                    </div>
-                </div>
             </div>
 
             <hr>
@@ -111,7 +105,7 @@
                                     <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="student"
                                         data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
-                                        <i class="material-icons md-18">crisis_alert</i>
+                                        <i class="material-icons md-18" style="color: #af2910;">mark_unread_chat_alt</i>
                                     </a>
                                     @if($memo->type_notice_memo == 'Memo')
                               
