@@ -178,110 +178,161 @@
     </div>
 
     <script>
+        // Track used options
+        const usedOptions = new Set();
+
+        // Initialize with already used options
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('select[name^="field_name"]').forEach(select => {
+                if (select.value) {
+                    usedOptions.add(select.value);
+                }
+
+                // Add change event listeners
+                select.addEventListener('change', function() {
+                    updateDropdownOptions();
+                });
+            });
+
+            updateDropdownOptions();
+        });
+
+        // Function to update dropdown options
+        function updateDropdownOptions() {
+            const allDropdowns = document.querySelectorAll('select[name^="field_name"]');
+
+            // First, clear all used options and rebuild
+            usedOptions.clear();
+            allDropdowns.forEach(dropdown => {
+                if (dropdown.value) {
+                    usedOptions.add(dropdown.value);
+                }
+            });
+
+            // Then update all dropdowns
+            allDropdowns.forEach(dropdown => {
+                const currentValue = dropdown.value;
+                const options = dropdown.querySelectorAll('option');
+
+                options.forEach(option => {
+                    if (option.value === '') return; // Skip placeholder
+
+                    // Disable if used by another dropdown (and not this one)
+                    option.disabled = usedOptions.has(option.value) && option.value !== currentValue;
+                });
+            });
+        }
         let sectionCounter = {{ count($sections) }};
         let fieldCounter = {{ count($fields) }};
 
-        //         function addField(sectionIndex, sectionId) {
-        //             const fieldsContainer = document.querySelector(`#fields-container_${sectionIndex}`);
-        //             const isTableFormat = fieldsContainer.querySelector('table') !== null;
-        //             const newFieldIndex = fieldsContainer.querySelectorAll('tr, .form-group').length;
+        // function addField(sectionIndex, sectionId) {
+        //     const fieldsContainer = document.querySelector(`#fields-container_${sectionIndex}`);
+        //     const isTableFormat = fieldsContainer.querySelector('table') !== null;
+        //     const newFieldIndex = fieldCounter;
 
-        //             let fieldHtml;
+        //     let fieldHtml;
 
-        //             if (isTableFormat) {
-        //                 fieldHtml = `
-    //                 <tr>
-    //                     <input type="hidden" name="field_id[]" value="new">
-    //                     <input type="hidden" name="field_section[]" value="${sectionId}">
-    //                     <td><input type="text" name="field_label[]" required></td>
-    //                     <td><input type="text" name="field_name[]" required></td>
-    //                     <td>
-    //                         <select name="field_type[]" class="form-control">
-    //                             @foreach (['Label', 'Text', 'Date', 'Email', 'Textarea', 'Checkbox', 'Radio Button', 'Select Box', 'File Upload', 'View/Download'] as $type)
-    //                                 <option value="{{ $type }}">{{ $type }}</option>
-    //                             @endforeach
-    //                         </select>
-    //                     </td>
-    //                     <td><input type="text" name="field_options[]"></td>
-    //                     <td><input type="checkbox" name="is_required[]"></td>
-    //                     <td><input type="checkbox" name="delete_fields[]" value="new"></td>
-    //                 </tr>
-    //             `;
-        //             } else {
-        //                 // For non-table format, use the select dropdown for field names
-        //                 let optionsHtml = '<option value="" selected disabled>Choose an option</option>';
-        //                 @foreach ($columns as $column)
-        //                     optionsHtml +=
-        //                         `<option value="{{ $column }}">{{ ucfirst(str_replace('_', ' ', $column)) }}</option>`;
-        //                 @endforeach
-
-        //                 fieldHtml = `
-    //         <div class="form-group border p-3 mb-4 rounded shadow-sm">
-    //             <input type="hidden" name="field_id[]" value="new">
-    //             <input type="hidden" name="field_section[]" value="${sectionId}">
-
-    //             <div class="row mb-3">
-    //                 <div class="col-md-6">
-    //                     <label class="form-label">Label:</label>
-    //                     <input type="text" name="field_label[]" class="form-control" required>
-    //                 </div>
-
-    //                 <div class="col-md-6">
-    //                     <label class="form-label">Name:</label>
-    //                     <select class="form-control" name="field_name[]" required>
-    //                         ${optionsHtml}
-    //                     </select>
-    //                 </div>
-    //     </div>
-
-    //     <div class="row mb-3">
-    //         <div class="col-md-6">
-    //             <label class="form-label">Type:</label>
-    //             <select name="field_type[]" class="form-control">
-    //                 @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file', 'textarea', 'email', 'number', 'time'] as $type)
-    //                     <option value="{{ $type }}">{{ ucfirst($type) }}</option>
+        //     if (isTableFormat) {
+        //         fieldHtml = `
+    //     <tr>
+    //         <input type="hidden" name="field_id[${newFieldIndex}]" value="new">
+    //         <input type="hidden" name="field_section[${newFieldIndex}]" value="${sectionId}">
+    //         <td><input type="text" name="field_label[${newFieldIndex}]" required></td>
+    //         <td><input type="text" name="field_name[${newFieldIndex}]" required></td>
+    //         <td>
+    //             <select name="field_type[${newFieldIndex}]" class="form-control">
+    //                 @foreach (['Label', 'Text', 'Date', 'Email', 'Textarea', 'Checkbox', 'Radio Button', 'Select Box', 'File Upload', 'View/Download'] as $type)
+    //                     <option value="{{ $type }}">{{ $type }}</option>
     //                 @endforeach
     //             </select>
-    //         </div>
-
-    //         <div class="col-md-6">
-    //             <label class="form-label">Options (comma separated):</label>
-    //             <input type="text" name="field_options[]" class="form-control">
-    //         </div>
-    //     </div>
-
-    //     <div class="row align-items-center">
-    //         <div class="col-md-6">
-    //             <div class="form-check">
-    //                 <input type="checkbox" name="is_required[]" class="form-check-input" id="required_${newFieldIndex}">
-    //                 <label class="form-check-label" for="required_${newFieldIndex}">Required</label>
-    //             </div>
-    //         </div>
-    //         <div class="col-md-6">
-    //             <div class="form-check">
-    //                 <input type="checkbox" name="delete_fields[]" class="form-check-input" value="new" id="delete_${newFieldIndex}">
-    //                 <label class="form-check-label text-danger" for="delete_${newFieldIndex}">Delete</label>
-    //             </div>
-    //         </div>
-    //     </div>
-    // </div>
+    //         </td>
+    //         <td><input type="text" name="field_options[${newFieldIndex}]"></td>
+    //         <td><input type="checkbox" name="is_required[${newFieldIndex}]"></td>
+    //         <td><input type="checkbox" name="delete_fields[${newFieldIndex}]" value="new"></td>
+    //     </tr>
     // `;
-        //             }
+        //     } else {
+        //         let optionsHtml = '<option value="" selected disabled>Choose an option</option>';
+        //         @foreach ($columns as $column)
+        //             optionsHtml +=
+        //                 `<option value="{{ $column }}">{{ ucfirst(str_replace('_', ' ', $column)) }}</option>`;
+        //         @endforeach
 
-        //             if (isTableFormat) {
-        //                 fieldsContainer.querySelector('tbody').insertAdjacentHTML('beforeend', fieldHtml);
-        //             } else {
-        //                 fieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
-        //             }
+        //         fieldHtml = `
+    //     <div class="form-group border p-3 mb-4 rounded shadow-sm">
+    //         <input type="hidden" name="field_id[${newFieldIndex}]" value="new">
+    //         <input type="hidden" name="field_section[${newFieldIndex}]" value="${sectionId}">
 
-        //             fieldCounter++;
-        //         }
+    //         <div class="row mb-3">
+    //             <div class="col-md-6">
+    //                 <label class="form-label">Label:</label>
+    //                 <input type="text" name="field_label[${newFieldIndex}]" class="form-control" required>
+    //             </div>
 
+    //             <div class="col-md-6">
+    //                 <label class="form-label">Name:</label>
+    //                 <select class="form-control" name="field_name[${newFieldIndex}]" required>
+    //                     ${optionsHtml}
+    //                 </select>
+    //             </div>
+    //         </div>
+
+    //         <div class="row mb-3">
+    //             <div class="col-md-6">
+    //                 <label class="form-label">Type:</label>
+    //                 <select name="field_type[${newFieldIndex}]" class="form-control">
+    //                     @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file', 'textarea', 'email', 'number', 'time'] as $type)
+    //                         <option value="{{ $type }}">{{ ucfirst($type) }}</option>
+    //                     @endforeach
+    //                 </select>
+    //             </div>
+
+    //             <div class="col-md-6">
+    //                 <label class="form-label">Options (comma separated):</label>
+    //                 <input type="text" name="field_options[${newFieldIndex}]" class="form-control">
+    //             </div>
+    //         </div>
+
+    //         <div class="row align-items-center">
+    //             <div class="col-md-6">
+    //                 <div class="form-check">
+    //                     <input type="checkbox" name="is_required[${newFieldIndex}]" class="form-check-input" id="required_${newFieldIndex}">
+    //                     <label class="form-check-label" for="required_${newFieldIndex}">Required</label>
+    //                 </div>
+    //             </div>
+    //             <div class="col-md-6">
+    //                 <div class="form-check">
+    //                     <input type="checkbox" name="delete_fields[${newFieldIndex}]" class="form-check-input" value="new" id="delete_${newFieldIndex}">
+    //                     <label class="form-check-label text-danger" for="delete_${newFieldIndex}">Delete</label>
+    //                 </div>
+    //             </div>
+    //         </div>
+    //     </div>
+    // `;
+        //     }
+
+        //     if (isTableFormat) {
+        //         fieldsContainer.querySelector('tbody').insertAdjacentHTML('beforeend', fieldHtml);
+        //     } else {
+        //         fieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
+        //     }
+
+        //     fieldCounter++;
+        // }
 
         function addField(sectionIndex, sectionId) {
             const fieldsContainer = document.querySelector(`#fields-container_${sectionIndex}`);
             const isTableFormat = fieldsContainer.querySelector('table') !== null;
             const newFieldIndex = fieldCounter;
+
+            // Generate options HTML while excluding already used options
+            let optionsHtml = '<option value="" selected disabled>Choose an option</option>';
+            @foreach ($columns as $column)
+                if (!usedOptions.has('{{ $column }}')) {
+                    optionsHtml +=
+                        `<option value="{{ $column }}">{{ ucfirst(str_replace('_', ' ', $column)) }}</option>`;
+                }
+            @endforeach
 
             let fieldHtml;
 
@@ -290,27 +341,25 @@
             <tr>
                 <input type="hidden" name="field_id[${newFieldIndex}]" value="new">
                 <input type="hidden" name="field_section[${newFieldIndex}]" value="${sectionId}">
-                <td><input type="text" name="field_label[${newFieldIndex}]" required></td>
-                <td><input type="text" name="field_name[${newFieldIndex}]" required></td>
+                <td><input type="text" name="field_label[${newFieldIndex}]" required class="form-control"></td>
+                <td>
+                    <select name="field_name[${newFieldIndex}]" class="form-control" required>
+                        ${optionsHtml}
+                    </select>
+                </td>
                 <td>
                     <select name="field_type[${newFieldIndex}]" class="form-control">
-                        @foreach (['Label', 'Text', 'Date', 'Email', 'Textarea', 'Checkbox', 'Radio Button', 'Select Box', 'File Upload', 'View/Download'] as $type)
-                            <option value="{{ $type }}">{{ $type }}</option>
+                        @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file', 'textarea', 'email', 'number', 'time'] as $type)
+                            <option value="{{ $type }}">{{ ucfirst($type) }}</option>
                         @endforeach
                     </select>
                 </td>
-                <td><input type="text" name="field_options[${newFieldIndex}]"></td>
-                <td><input type="checkbox" name="is_required[${newFieldIndex}]"></td>
-                <td><input type="checkbox" name="delete_fields[${newFieldIndex}]" value="new"></td>
+                <td><input type="text" name="field_options[${newFieldIndex}]" class="form-control"></td>
+                <td><input type="checkbox" name="is_required[${newFieldIndex}]" class="form-check-input"></td>
+                <td><button type="button" class="btn btn-sm btn-danger" onclick="removeField(this)">Remove</button></td>
             </tr>
-        `;
+         `;
             } else {
-                let optionsHtml = '<option value="" selected disabled>Choose an option</option>';
-                @foreach ($columns as $column)
-                    optionsHtml +=
-                        `<option value="{{ $column }}">{{ ucfirst(str_replace('_', ' ', $column)) }}</option>`;
-                @endforeach
-
                 fieldHtml = `
             <div class="form-group border p-3 mb-4 rounded shadow-sm">
                 <input type="hidden" name="field_id[${newFieldIndex}]" value="new">
@@ -354,14 +403,11 @@
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <div class="form-check">
-                            <input type="checkbox" name="delete_fields[${newFieldIndex}]" class="form-check-input" value="new" id="delete_${newFieldIndex}">
-                            <label class="form-check-label text-danger" for="delete_${newFieldIndex}">Delete</label>
-                        </div>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeField(this)">Remove Field</button>
                     </div>
                 </div>
             </div>
-        `;
+         `;
             }
 
             if (isTableFormat) {
@@ -370,49 +416,33 @@
                 fieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
             }
 
+            // Add event listener to the new dropdown
+            const newDropdown = fieldsContainer.querySelector(`select[name="field_name[${newFieldIndex}]"]`);
+            if (newDropdown) {
+                newDropdown.addEventListener('change', function() {
+                    // When a value is selected, add it to usedOptions
+                    if (this.value) {
+                        usedOptions.add(this.value);
+                    }
+                    updateDropdownOptions();
+                });
+            }
+
             fieldCounter++;
         }
 
+        // Function to remove a field and make its option available again
+        function removeField(button) {
+            const fieldElement = button.closest('tr, .form-group');
+            const dropdown = fieldElement.querySelector('select[name^="field_name"]');
 
-        // function addSection() {
-        //     const sectionsContainer = document.getElementById('sections-container');
-        //     const newSectionIndex = sectionCounter++;
+            if (dropdown && dropdown.value) {
+                usedOptions.delete(dropdown.value);
+                updateDropdownOptions();
+            }
 
-        //     const sectionHtml = `
-    //     <div class="section-group rounded" id="section_${newSectionIndex}">
-    //         <input type="hidden" name="section_id[]" value="new">
-    //         <input type="hidden" name="sort_order[]" value="${newSectionIndex}">
-
-    //         <div class="form-group">
-    //             <label class="form-label">Section Title:</label>
-    //             <input type="text" name="section_title[]" required class="form-control">
-    //         </div>
-
-    //         <div id="fields-container_${newSectionIndex}"></div>
-
-    //         <button type="button" class="btn btn-primary btn-add-field btn-sm" 
-    //                 onclick="addField(${newSectionIndex}, 'new')">
-    //             Add New Field
-    //         </button>
-    //         <button type="button" class="btn btn-danger btn-remove-section btn-sm" 
-    //                 onclick="removeSection(this)">
-    //             Remove Section
-    //         </button>
-    //    <!--      <div class="btn-group">
-    //             <button type="button" class="btn btn-secondary btn-move-up btn-sm" 
-    //                     onclick="moveSection(${newSectionIndex}, -1)">
-    //                 Move Up
-    //             </button>
-    //             <button type="button" class="btn btn-secondary btn-move-down btn-sm" 
-    //                     onclick="moveSection(${newSectionIndex}, 1)">
-    //                 Move Down
-    //             </button>
-    //         </div>-->
-    //     </div>
-    // `;
-
-        //     sectionsContainer.insertAdjacentHTML('beforeend', sectionHtml);
-        // }
+            fieldElement.remove();
+        }
 
         function addSection() {
             const sectionsContainer = document.getElementById('sections-container');

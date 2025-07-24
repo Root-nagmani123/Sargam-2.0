@@ -58,27 +58,46 @@
             const container = document.getElementById("sections-container");
             const index = container.children.length;
 
+            // const sectionHtml = `
+        //     <div class="section-entry border p-4 rounded shadow-sm my-4" id="section_${index}">
+        //         <h3 class="mb-3">Section ${index + 1}</h3>
+        //         <div class="form-group mb-3">
+        //             <label for="section_title_${index}">Section Title:</label>
+        //             <input type="text" class="form-control" id="section_title_${index}" name="section_title[]" required>
+        //         </div>
+        //         <div id="fields-container_${index}">
+        //             <!-- Fields for this section will be added here -->
+        //         </div>
+        //         <div id="tables-container_${index}">
+        //             <!-- Tables for this section will be added here -->
+        //         </div>
+        //         <div class="text-center mt-3">
+        //             <button type="button" class="btn btn-primary" onclick="addField(${index})">Add Field</button>
+        //             <button type="button" class="btn btn-info" onclick="addTable(${index})">Add Table</button>
+        //             <button type="button" class="btn btn-danger" onclick="removeSection(${index})">Remove Section</button>
+        //         </div>
+        //         <hr>
+        //     </div>
+        // `;
+
             const sectionHtml = `
-                <div class="section-entry border p-4 rounded shadow-sm my-4" id="section_${index}">
-                    <h3 class="mb-3">Section ${index + 1}</h3>
-                    <div class="form-group mb-3">
-                        <label for="section_title_${index}">Section Title:</label>
-                        <input type="text" class="form-control" id="section_title_${index}" name="section_title[]" required>
-                    </div>
-                    <div id="fields-container_${index}">
-                        <!-- Fields for this section will be added here -->
-                    </div>
-                    <div id="tables-container_${index}">
-                        <!-- Tables for this section will be added here -->
-                    </div>
-                    <div class="text-center mt-3">
-                        <button type="button" class="btn btn-primary" onclick="addField(${index})">Add Field</button>
-                        <button type="button" class="btn btn-info" onclick="addTable(${index})">Add Table</button>
-                        <button type="button" class="btn btn-danger" onclick="removeSection(${index})">Remove Section</button>
-                    </div>
-                    <hr>
-                </div>
-            `;
+    <div class="section-entry border p-4 rounded shadow-sm my-4" id="section_${index}">
+        <h3 class="mb-3">Section ${index + 1}</h3>
+        <div class="form-group mb-3">
+            <label for="section_title_${index}">Section Title:</label>
+            <input type="text" class="form-control" id="section_title_${index}" name="section_title[]" required>
+        </div>
+        <div id="elements-container_${index}">
+            <!-- Both fields and tables will be added here in sequence -->
+        </div>
+        <div class="text-center mt-3">
+            <button type="button" class="btn btn-primary" onclick="addField(${index})">Add Field</button>
+            <button type="button" class="btn btn-info" onclick="addTable(${index})">Add Table</button>
+            <button type="button" class="btn btn-danger" onclick="removeSection(${index})">Remove Section</button>
+        </div>
+        <hr>
+    </div>
+`;
             container.insertAdjacentHTML("beforeend", sectionHtml);
         }
 
@@ -145,8 +164,15 @@
 
         const sectionFieldCount = {};
 
+        // function addField(sectionIndex) {
+        //     const container = document.getElementById(`fields-container_${sectionIndex}`);
+        //     if (!sectionFieldCount[sectionIndex]) {
+        //         sectionFieldCount[sectionIndex] = 0;
+        //     }
+        //     const index = sectionFieldCount[sectionIndex]++;
+
         function addField(sectionIndex) {
-            const container = document.getElementById(`fields-container_${sectionIndex}`);
+            const container = document.getElementById(`elements-container_${sectionIndex}`);
             if (!sectionFieldCount[sectionIndex]) {
                 sectionFieldCount[sectionIndex] = 0;
             }
@@ -290,6 +316,13 @@
             }
         }
 
+        // function removeField(sectionIndex, fieldIndex) {
+        //     const field = document.getElementById(`field_${sectionIndex}_${fieldIndex}`);
+        //     if (field) {
+        //         field.remove();
+        //     }
+        // }
+
         function removeField(sectionIndex, fieldIndex) {
             const field = document.getElementById(`field_${sectionIndex}_${fieldIndex}`);
             if (field) {
@@ -297,9 +330,13 @@
             }
         }
 
+        // function addTable(sectionIndex) {
+        //     const container = document.getElementById(`tables-container_${sectionIndex}`);
+        //     const index = container.children.length;
         function addTable(sectionIndex) {
-            const container = document.getElementById(`tables-container_${sectionIndex}`);
+            const container = document.getElementById(`elements-container_${sectionIndex}`);
             const index = container.children.length;
+
 
             const tableHtml = `
                 <div class="table-entry border p-4 rounded shadow-sm my-3" id="table_${sectionIndex}_${index}">
@@ -389,6 +426,13 @@
 
             tableContainer.innerHTML = table;
         }
+
+        // function removeTable(sectionIndex, tableIndex) {
+        //     const table = document.getElementById(`table_${sectionIndex}_${tableIndex}`);
+        //     if (table) {
+        //         table.remove();
+        //     }
+        // }
 
         function removeTable(sectionIndex, tableIndex) {
             const table = document.getElementById(`table_${sectionIndex}_${tableIndex}`);
