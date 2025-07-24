@@ -140,7 +140,7 @@
 
                     <div class="col-12">
                         <div class="mb-3">
-                            <label class="form-label">Message</label>
+                            <label class="form-label">Message <span class="text-muted">*</span></label>
                             <textarea class="form-control" rows="4" name="message"
                                 placeholder="Type your message here..."></textarea>
                         </div>
@@ -150,7 +150,7 @@
                         <div class="mb-3">
                             <label class="form-label">Upload Document (if any)</label>
                             <input type="file" class="form-control" name="document">
-                            <small class="text-muted">Less than 1 MB</small>
+                            <small class="text-muted">Less than 1 MB type (jpg,jpeg,png,pdf)</small>
                         </div>
                     </div>
 
