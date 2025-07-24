@@ -134,7 +134,7 @@ public function fullCalendarDetails(Request $request)
         ->get();
 
     // Array of some sample colors
-    $colors = ['#FF5733', '#33B5FF', '#28B463', '#AF7AC5', '#F39C12', '#E74C3C'];
+    $colors = ['#9edcf5ff'];
 
     // Assign random color to each event
     $events = $events->map(function ($event) use ($colors) {
