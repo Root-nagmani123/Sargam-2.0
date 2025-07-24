@@ -245,28 +245,6 @@
                     <ul class="nav justify-content-end align-items-center">
                         <li class="nav-item"><a href="#content" class="text-white text-decoration-none"
                                 style=" font-size: 12px;">Skip to Main Content</a></li>
-                        <!-- <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="{{ asset('images/text_to_speech.png') }}" alt="" width="20"><span
-                                    class="ms-1" style=" font-size: 12px;">Screen Reader</span></a></li>
-                        <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style=" font-size: 12px;">A+</a></li>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style=" font-size: 12px;">A</a></li>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none me-3 ms-3"
-                                style=" font-size: 12px;">A-</a></li>
-                        <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="{{ asset('images/contrast.png') }}" alt="" width="20"></a></li>
-                        <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="{{ asset('images/Regular.png') }}" alt="" width="20">
-                                <span><select name="lang" id="" class="form-select form-select-sm"
-                                        style="width: 100px; display: inline-block; font-size: 14px;  background-color: transparent; border: none;color: #fff;font-size: 12px;">"
-                                        <option value="">Language</option>
-                                        <option value="en" selected>English</option>
-                                    </select></span></a></li> -->
                         <span class="text-muted me-3 ">|</span>
                         <li class="nav-item"><a href="#" class="text-white text-decoration-none"
                                 id="uw-widget-custom-trigger" contenteditable="false" style="cursor: pointer;"><img
