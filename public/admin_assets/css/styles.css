@@ -38636,9 +38636,6 @@ body .ql-toolbar.ql-snow {
     color: var(--bs-primary);
     font-size: 18px;
 }
-.app-calendar .fc-daygrid-event {
-    border-radius: 4px 20px 20px 4px;
-}
 .app-calendar .fc .fc-col-header-cell-cushion,
 .app-calendar .fc .fc-daygrid-day-number {
     color: var(--bs-body-color-rgb);
