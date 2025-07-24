@@ -46,6 +46,21 @@ class CourseMasterDataTable extends DataTable
                         data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
                 </div>';
             })
+            ->filterColumn('course_name', function ($query, $keyword) {
+                $query->where('course_name', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('couse_short_name', function ($query, $keyword) {
+                $query->where('couse_short_name', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('course_year', function ($query, $keyword) {
+                $query->where('course_year', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('start_year', function ($query, $keyword) {
+                $query->where('start_year', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('end_date', function ($query, $keyword) {
+                $query->where('end_date', 'like', "%{$keyword}%");
+            })
             ->rawColumns(['action', 'status'])
             ->setRowId('pk');
     }
@@ -72,13 +87,14 @@ class CourseMasterDataTable extends DataTable
             ->setTableId('coursemaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax() // This will use the current route for ajax
-            ->orderBy(1)
+            // ->orderBy(1)
             ->selectStyleSingle()
             ->responsive(true)
             ->parameters([
                 'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
+                'order' => [],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -99,11 +115,11 @@ class CourseMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
-            Column::make('course_name')->title('Course Name'),
-            Column::make('couse_short_name')->title('Short Name'), 
-            Column::make('course_year')->title('Course Year'),
-            Column::make('start_year')->title('Start Date'),
-            Column::make('end_date')->title('End Date'),
+            Column::make('course_name')->title('Course Name')->orderable(false),
+            Column::make('couse_short_name')->title('Short Name')->orderable(false),
+            Column::make('course_year')->title('Course Year')->orderable(false),
+            Column::make('start_year')->title('Start Date')->orderable(false),
+            Column::make('end_date')->title('End Date')->orderable(false),
             Column::computed('action')->addClass('text-center'),
             Column::computed('status')->addClass('text-center'),
         ];

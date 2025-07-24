@@ -40,8 +40,11 @@ class CasteCategoryMasterDataTable extends DataTable
 
             ->setRowId('pk')
             ->setRowClass('text-center')
-            ->filterColumn('group_name', function ($query, $keyword) {
-                $query->where('group_name', 'like', "%{$keyword}%");
+            ->filterColumn('Seat_name', function ($query, $keyword) {
+                $query->where('Seat_name', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('Seat_name_hindi', function ($query, $keyword) {
+                $query->where('Seat_name_hindi', 'like', "%{$keyword}%");
             })
             ->rawColumns(['Seat_name', 'Seat_name_hindi', 'action', 'status']);
     }
@@ -69,8 +72,11 @@ class CasteCategoryMasterDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             //->dom('Bfrtip')
-            ->orderBy(1)
+            // ->orderBy(1)
             ->selectStyleSingle()
+            ->parameters([
+                'order' => [],
+            ])
             ->buttons([
                 Button::make('excel'),
                 Button::make('csv'),

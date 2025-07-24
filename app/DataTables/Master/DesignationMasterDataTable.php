@@ -67,13 +67,14 @@ class DesignationMasterDataTable extends DataTable
             ->setTableId('departmentmaster-table')
             ->columns($this->getColumns())
             ->minifiedAjax() // This will use the current route for ajax
-            ->orderBy(1)
+            // ->orderBy(1)
             ->selectStyleSingle()
             ->responsive(true)
             ->parameters([
                 'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
+                'order' => [],
             ])
             ->buttons([
                 Button::make('excel'),
