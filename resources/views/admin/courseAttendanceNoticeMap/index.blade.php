@@ -164,6 +164,7 @@
 
                                 </td>
                                 <td>
+                                     @if($memo->type_notice_memo == 'Notice')
                                     @if($memo->status == 1)
                                     <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate
                                         Memo</button>
@@ -173,6 +174,11 @@
                                         data-bs-target="#memo_generate">
                                         Generate Memo
                                     </a>
+
+                                    @endif
+                                    @elseif($memo->type_notice_memo == 'Memo')
+                                   <button href="" class="btn-outline-secondary btn btn-sm" readonly>Memo Generated
+                                        </button>
 
                                     @endif
                                 </td>
@@ -365,12 +371,13 @@
                                 @enderror
                             </div>
                         </div>
-                    </form>
+                    
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
+                </form>
             </div>
         </div>
 
