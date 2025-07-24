@@ -71,7 +71,6 @@ class LoginController extends Controller
 
     $username = $request->input('username');
     $password = $request->input('password');
-
     $serverHost = request()->getHost(); // gets hostname like localhost or domain.com
 
     try {
@@ -83,27 +82,21 @@ class LoginController extends Controller
             if( $user ) {
             Auth::login($user);
             logger('Redirecting to: ' . url()->previous());
-
             return redirect()->intended(default: $this->redirectTo);
-
         }
-
         } else {
-            // 🌐 Production: LDAP authentication
+             // 🌐 Production: LDAP authentication
             if (Adldap::auth()->attempt($username, $password)) {
                 $user = User::where('user_name', $username)->first();
-
                 if ($user) {
                     Auth::login($user);
                     return redirect()->intended($this->redirectTo);
                 }
             }
         }
-
     } catch (\Exception $e) {
         logger('Authentication failed: ' . $e->getMessage());
     }
-
     return redirect()->back()->with('error', 'Invalid username or password.');
 }
     protected function validateLogin(Request $request) {
