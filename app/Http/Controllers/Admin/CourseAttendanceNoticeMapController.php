@@ -82,6 +82,7 @@ class CourseAttendanceNoticeMapController extends Controller
                 ->where('student_memo_status.course_attendance_notice_map_pk', $notice->notice_id)
                 ->select(
                     'student_memo_status.pk as memo_id',
+                    'student_memo_status.pk as memo_notice_id',
                     'student_memo_status.course_attendance_notice_map_pk as notice_id',
                     'student_memo_status.student_pk',
                     'student_memo_status.communication_status',
