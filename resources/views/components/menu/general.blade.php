@@ -42,6 +42,7 @@
                                     <span class="hide-menu">Member</span>
                                 </a>
                             </li>
+                            
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="{{ route('calendar.index') }}" id="get-url"
                                     aria-expanded="false">
@@ -80,6 +81,12 @@
                                     <span class="hide-menu">MDO Escrot Exemption</span>
                                 </a>
                             </li>
+                            <li class="sidebar-item">
+            <a class="sidebar-link" href="{{ route('master.mdo_duty_type.index') }}" id="get-url" aria-expanded="false">
+                <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon>
+                <span class="hide-menu">MDO Duty Type</span>
+            </a>
+        </li>
 
                             <!-- Divider -->
                             <span class="sidebar-divider"></span>

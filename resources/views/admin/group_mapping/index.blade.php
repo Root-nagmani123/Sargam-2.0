@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Group Mapping')
+@section('title', 'Group Name Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
     <div class="container-fluid">
 
-        <x-breadcrum title="Group Mapping" />
+        <x-breadcrum title="Group Name Mapping" />
         <x-session_message />
 
         <div class="datatables">
@@ -14,7 +14,7 @@
                     <div class="table-responsive">
                         <div class="row mb-3">
                             <div class="col-6">
-                                <h4>Group Mapping</h4>
+                                <h4>Group Name Mapping</h4>
                             </div>
                             <div class="col-6 d-flex justify-content-end gap-2">
                                 <a href="{{ route('group.mapping.create') }}"
