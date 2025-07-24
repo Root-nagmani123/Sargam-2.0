@@ -23,9 +23,7 @@
 
         .sidebar {
             padding: 15px;
-            background-color: #f8f9fa;
             min-height: calc(100vh - 120px);
-            border-right: 1px solid #dee2e6;
         }
 
         .sidebar .nav-pills .nav-link.active {
@@ -275,7 +273,7 @@
                     <div class="card">
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-bordered table-striped align-middle text-center">
+                                <table class="table table-bordered table-striped align-middle text-center table-hover text-nowrap">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Serial Number</th>
