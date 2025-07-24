@@ -181,7 +181,7 @@
                         <h5 class="modal-title" id="eventModalLabel">
                             {{ $modalTitle ?? __('Add Calendar Event') }}
                         </h5>
-                        <input type="date" name="start_datetime" id="start_datetime" class="form-control w-50 me-5"
+                        <input type="date" name="start_datetime" id="start_datetime" class="form-control w-50 mx-2"
                             placeholder="Select Date" required>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
@@ -1129,7 +1129,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td rowspan="2">E-13 <br> Case Study : The Global Financial Crisis (Rajan Govil) (Full Group) (AC)</td>
                     <td rowspan="2">Election - 1 Overview of Elections (SW)</td>
                     <td rowspan="2">Election - 6 Model Code of Conduct & Election Expenditure (GSM) (Full Group</td>
-                </tr>`;
+                </tr>
+                <tr>
+                    <td>B</td>
+                    </tr>`;
                 tbody.innerHTML += row;
             });
         }
