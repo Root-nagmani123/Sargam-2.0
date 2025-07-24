@@ -4,16 +4,15 @@
 
 @section('content')
 
-
 <style>
-    .readonly-checkbox {
+.readonly-checkbox {
     pointer-events: none;
     opacity: 0.6;
 }
+
 /* Month ke har din ke box ki height/padding badhao */
 .fc .fc-daygrid-day-frame {
     min-height: 110px !important;
-    /* Height badhao (adjust as needed) */
     padding: 8px 4px !important;
 }
 
@@ -29,10 +28,56 @@
         min-height: 70px !important;
     }
 }
+
+/* Custom colored cards for each day */
+
+/* Assign different colors for each weekday */
+.fc-daygrid-day[data-day="0"] .fc-daygrid-day-frame {
+    background-color: #ffe5e5;
+}
+
+/* Sunday */
+.fc-daygrid-day[data-day="1"] .fc-daygrid-day-frame {
+    background-color: #e5f7ff;
+}
+
+/* Monday */
+.fc-daygrid-day[data-day="2"] .fc-daygrid-day-frame {
+    background-color: #e5ffe5;
+}
+
+/* Tuesday */
+.fc-daygrid-day[data-day="3"] .fc-daygrid-day-frame {
+    background-color: #fffbe5;
+}
+
+/* Wednesday */
+.fc-daygrid-day[data-day="4"] .fc-daygrid-day-frame {
+    background-color: #f5e5ff;
+}
+
+/* Thursday */
+.fc-daygrid-day[data-day="5"] .fc-daygrid-day-frame {
+    background-color: #e5eaff;
+}
+
+/* Friday */
+.fc-daygrid-day[data-day="6"] .fc-daygrid-day-frame {
+    background-color: #fff0e5;
+}
+
+/* Saturday */
+/* Card content styling */
+.fc-event-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    padding: 8px;
+    margin-bottom: 6px;
+    font-size: 15px;
+    color: #222;
+}
 </style>
-<!-- <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css' rel='stylesheet' />
-<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js'></script>
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script> -->
 
 <div class="container-fluid">
     <div class="card" style="border-left: 4px solid #004a93;">
@@ -60,13 +105,69 @@
         </div>
         </div>
     </div>
-    <div class="text-end mb-3">
-        <button type="button" class="btn btn-primary" id="createEventupperButton">
+    <div class="text-end mb-3 gap-3">
+        <button type="button" class="btn btn-primary btn-sm" id="createEventupperButton">
         <i class="bi bi-plus"></i> Add Event</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="btnMonthView">Month</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnWeekView">Week</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView">Day</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView">List</button>
     </div>
     <div class="card">
         <div class="card-body calender-sidebar app-calendar">
             <div id='calendar'></div>
+            <!-- List View Table -->
+                <div id="eventListView" style="display:none;">
+                    <div class="row mb-3">
+                        <div class="col-2">
+                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="lbsnaa logo" class="img-fluid mb-3"
+                                style="max-width: 100px;">
+                        </div>
+                        <div class="col-8">
+                            <h3 class="text-center" style="color:#af2910;">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी
+                            </h3>
+                            <h3 class="text-center" style="color:#af2910;">Lal Bahadur Shastri National Academy of
+                                Administration</h3>
+                            <h4 class="text-center" style="color:#af2910;">IAS Professional Course, Phase - I</h4>
+                            <h6 class="text-center">(Nov 06, 2023 to April 05, 2024)</h6>
+                        </div>
+                        <div class="col-2">
+                            <h5 class="text-center">Weekly Schedule</h5>
+                            <h3 class="text-center">19</h3>
+                        </div>
+                    </div>
+                    <table class="table table-bordered table-striped table-hover" id="eventListTable">
+                        <thead>
+                            <tr>
+                                <th rowspan="3" class="text-center align-middle">Time</th>
+                                <th rowspan="3" class="text-center align-middle">Group</th>
+                                <th class="text-center align-middle">HRM Module</th>
+                                <th class="text-center align-middle">Economics Module</th>
+                                <th class="text-center align-middle">Economics Module</th>
+                                <th class="text-center align-middle">Election Module</th>
+                                <th class="text-center align-middle">Election/Economics/Law Module</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center align-middle">Monday</th>
+                                <th class="text-center align-middle">Tuesday</th>
+                                <th class="text-center align-middle">Wednesday</th>
+                                <th class="text-center align-middle">Thursday</th>
+                                <th class="text-center align-middle">Friday</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center align-middle">11.03.2024</th>
+                                <th class="text-center align-middle">12.03.2024</th>
+                                <th class="text-center align-middle">13.03.2024</th>
+                                <th class="text-center align-middle">14.03.2024</th>
+                                <th class="text-center align-middle">15.03.2024</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Events will be inserted here -->
+                           
+                        </tbody>
+                    </table>
+                </div>
         </div>
     </div>
     <!-- BEGIN MODAL -->
@@ -693,6 +794,13 @@ document.addEventListener('DOMContentLoaded', function() {
     let calendarEl = document.getElementById('calendar');
     let calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
+          headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        slotMinTime: '09:00:00', // Start time for week/day view
+        slotMaxTime: '18:00:00', // End time for week/day view
         editable: true,
         selectable: true,
         displayEventTime: false,
@@ -720,10 +828,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Design: topic (bold), venue (italic), start, end (each on new line)
             let html = `
-        <div style="line-height:1.3">
-            <b>${topic}</b><br>
-            <span style="font-size:0.95em;color:#444;"><i>${venue}</i></span><br>
-            <span style="font-size:0.9em;">Date: ${start}</span><br>
+        <div class="text-start p-2 text-dark fs-6 text-truncate">
+            <span>${topic}</span><br>
+            <span>${venue}</span><br>
+            <span>Date: ${start}</span><br>
         </div>
     `;
             return {
@@ -957,7 +1065,70 @@ document.addEventListener('DOMContentLoaded', function() {
          }
     });
     calendar.render();
+// View switch handlers
+    document.getElementById('btnMonthView').addEventListener('click', function() {
+        calendar.changeView('dayGridMonth');
+        document.getElementById('calendar').style.display = '';
+        document.getElementById('eventListView').style.display = 'none';
+    });
+    document.getElementById('btnWeekView').addEventListener('click', function() {
+        calendar.changeView('timeGridWeek');
+        document.getElementById('calendar').style.display = '';
+        document.getElementById('eventListView').style.display = 'none';
+    });
+    document.getElementById('btnDayView').addEventListener('click', function() {
+        calendar.changeView('timeGridDay');
+        document.getElementById('calendar').style.display = '';
+        document.getElementById('eventListView').style.display = 'none';
+    });
 
+    // List View handler
+    document.getElementById('btnListView').addEventListener('click', function() {
+        document.getElementById('calendar').style.display = 'none';
+        document.getElementById('eventListView').style.display = '';
+        let events = calendar.getEvents();
+        let tbody = document.querySelector('#eventListTable tbody');
+        tbody.innerHTML = '';
+        if (events.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center">No events found.</td></tr>';
+        } else {
+            events.forEach(function(event) {
+                let title = event.title || '';
+                let startDate = event.start ? event.start.toLocaleDateString() : '';
+                let startTime = event.start ? event.start.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '';
+                let endTime = event.end ? event.end.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '';
+                let venue = event.extendedProps.vanue || '';
+                let faculty = event.extendedProps.faculty_name || '';
+                let topic = event.extendedProps.topic || '';
+                let row = `<tr>
+                    <td>${title}</td>
+                    <td>${startDate}</td>
+                    <td>${startTime}</td>
+                    <td>${endTime}</td>
+                    <td>${venue}</td>
+                    <td>${faculty}</td>
+                    <td>${topic}</td>
+                </tr>
+                  <tr>
+                    <td rowspan="2">9:30 to 10:20</td>
+                    <td>A</td>
+                    <td rowspan="2">Recruitment in state (SPM) (Full Group) (0930-1030 hrs)</td>
+                    <td rowspan="2">E-7 <br> Economics Growth (Rajan Govil) (Full Group) (SN)</td>
+                    <td rowspan="2">E-13 <br> Case Study : The Global Financial Crisis (Rajan Govil) (Full Group) (AC)</td>
+                    <td rowspan="2">Election - 1 Overview of Elections (SW)</td>
+                    <td rowspan="2">Election - 6 Model Code of Conduct & Election Expenditure (GSM) (Full Group</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        }
+    });
+    // ...existing code...
 
     $(document).on('click', '#deleteEventBtn', function() {
         let eventId = $(this).attr('data-id');
