@@ -145,7 +145,7 @@
                                     <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
                                         data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}"><i
-                                            class="material-icons md-18">crisis_alert</i></a>
+                                            class="material-icons md-18" style="vertical-align: middle; line-height: 1;color: #af2910;">mark_unread_chat_alt</i></a>
                                     @if($memo->type_notice_memo == 'Notice')
                                               
                                                 <a href="script:void(0)" class="btn btn-secondary btn-sm">Memo Conversation</a>
