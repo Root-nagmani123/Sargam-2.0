@@ -97,11 +97,11 @@
                     <tbody>
                         @forelse ($memoNotice as $row)
                         <tr>
-                            <td class="{{ $loop->first ? 'fw-bold text-danger' : '' }}">
+                            <td class="{{ $loop->first ? ' ' : '' }}">
                                 {{ $row->display_name ?? 'N/A' }}
                             </td>
 
-                            <td class="{{ $loop->first ? 'text-danger' : '' }}">
+                            <td class="{{ $loop->first ? '' : '' }}">
                                 {{ $row->student_decip_incharge_msg }}
                             </td>
 
