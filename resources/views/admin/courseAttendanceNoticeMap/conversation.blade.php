@@ -9,6 +9,9 @@
     <x-session_message />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
+            <div class="gap-2 text-end">
+                    <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
+                </div>
             <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
