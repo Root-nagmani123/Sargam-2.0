@@ -40,11 +40,24 @@
 
 
         @if( $conversations->isNotEmpty() && $conversations->last()->notice_status == 1)
-            <div class="mb-3">
+            <!-- <div class="mb-3">
                 <label for="message" class="form-label">Your Message</label>
                 <textarea class="form-control" id="message" name="student_decip_incharge_msg" rows="3" required></textarea>
-            </div>
-             <button class="btn btn-primary" type="submit">Send</button>
+                <button class="btn btn-primary" type="submit">Send</button>
+            </div> -->
+            <div class="border-top p-3">
+    <form id="chatForm" enctype="multipart/form-data">
+      <div class="d-flex align-items-center gap-2">
+        <!-- Attachment -->
+        <input class="form-control form-control-sm" type="file" id="attachment" name="attachment" style="max-width: 180px;">
+
+        <!-- Message input -->
+        <textarea class="form-control" id="message" name="student_decip_incharge_msg" rows="1" placeholder="Type your message..." required style="resize: none;"></textarea>
+
+        <!-- Send Button -->
+        <button class="btn btn-primary" type="submit">Send</button>
+      </div>
+             
         @elseif($conversations->isNotEmpty() && $conversations->last()->notice_status == 2) 
 
             <div class="alert alert-warning">
