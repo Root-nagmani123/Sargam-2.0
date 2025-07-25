@@ -52,8 +52,12 @@ class UserController extends Controller
     {
         try {
             DB::beginTransaction();
-
-            $user = User::where('pk', $request->pk)->first();
+            
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
             
             if ($request->has('roles')) {
                 $user->assignRole($request->roles);
@@ -79,7 +83,6 @@ class UserController extends Controller
     public function show(User $user)
     {
         $user->load('roles', 'permissions');
-        // dd($user);
         return view('admin.user_management.users.show', compact('user'));
     }
 
@@ -108,11 +111,16 @@ class UserController extends Controller
         try {
             DB::beginTransaction();
             
-            $user = User::where('pk', $request->pk)->first();
+            $userData = [
+                'name' => $request->name,
+                'email' => $request->email,
+            ];
             
-            // if ($request->has('roles')) {
-            //     $user->syncRoles($request->roles);
-            // }
+            if ($request->filled('password')) {
+                $userData['password'] = Hash::make($request->password);
+            }
+            
+            $user->update($userData);
             
             if ($request->has('roles')) {
                 $roleNames = \Spatie\Permission\Models\Role::whereIn('id', $request->roles)->pluck('name')->toArray();
@@ -120,10 +128,7 @@ class UserController extends Controller
             } else {
                 $user->roles()->detach();
             }
-
             
-            // dd($user->can('HR.INDEX')); // true or false
-
             DB::commit();
             
             return redirect()->route('admin.users.index')

@@ -22,7 +22,8 @@ class RoleController extends Controller
     }
     public function index(RoleDataTable $dataTable)
     {
-        return $dataTable->render('admin.user_management.roles.index');
+        $roles = Role::with('permissions')->get();
+        return view('admin.user_management.roles.index', compact('roles'));
     }
 
     public function create()
