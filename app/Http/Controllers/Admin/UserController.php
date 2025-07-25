@@ -107,7 +107,7 @@ class UserController extends Controller
             // if ($request->has('roles')) {
             //     $user->syncRoles($request->roles);
             // }
-            dd
+            
             if ($request->has('roles')) {
                 $roleNames = \Spatie\Permission\Models\Role::whereIn('id', $request->roles)->pluck('name')->toArray();
                 $user->syncRoles($roleNames);
