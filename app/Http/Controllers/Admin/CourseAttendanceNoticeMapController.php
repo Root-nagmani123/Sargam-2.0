@@ -264,7 +264,7 @@ $memo_conclusion_master = collect(); // default empty collection
           
             
     }
-// print_r($memoNotice);die;
+
     // Common: map display_name based on role
     $memoNotice->transform(function ($item) {
         if ($item->role_type == 'f') {
@@ -278,6 +278,7 @@ $memo_conclusion_master = collect(); // default empty collection
         }
         return $item;
     });
+
 // print_r($memoNotice);die;
     return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type', 'memo_conclusion_master'));
 }
@@ -802,44 +803,7 @@ public function noticedeleteMessage($id,$type)
 }
 
 public function conversation_student($id ,$type, Request $request){
-//      if (!$id || !is_numeric($id)) {
-//         return redirect()->back()->with('error', 'Invalid Memo/Notice ID.');
-//     }
- 
-// $memoNotice = DB::table('notice_message_student_decip_incharge as nmsdi')
-//     ->join('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
-//     ->join('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
-//     ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
-//     ->where('nmsdi.student_notice_status_pk', $id)
-//     ->orderBy('nmsdi.created_date', 'asc')
-//     ->select(
-//         'nmsdi.*',
-//         'sns.pk as notice_id',
-//         'sns.status as notice_status',
-//         'sm.pk as student_id',
-//         'sm.display_name as student_name'
-//     )
-//     ->get();
 
-// $memoNotice->transform(function ($item) {
-//     if ($item->role_type == 'f') {
-//         // Admin (From users table)
-//         $creator = DB::table('users')
-//             ->where('id', $item->created_by)
-//             ->first();
-//         $item->display_name = $creator ? $creator->name : 'Admin';
-//     } elseif ($item->role_type == 's') {
-//         // Student (From student_master table)
-//         $student = DB::table('student_master')
-//             ->where('pk', $item->created_by)
-//             ->first();
-//         $item->display_name = $student ? $student->display_name : 'Student';
-//     } else {
-//         $item->display_name = 'Unknown';
-//     }
-
-//     return $item;
-// });
 if (!$id || !is_numeric($id)) {
         return redirect()->back()->with('error', 'Invalid Memo/Notice ID.');
     }

@@ -96,11 +96,11 @@
                 <tbody>
                     @forelse ($memoNotice as $row)
                     <tr>
-                        <td class="{{ $loop->first ? 'fw-bold text-danger' : '' }}">
+                        <td class="{{ $loop->first ? '' : '' }}">
                             {{ $row->display_name ?? 'N/A' }}
                         </td>
 
-                        <td class="{{ $loop->first ? 'text-danger' : '' }}">
+                        <td class="{{ $loop->first ? '' : '' }}">
                             {{ $row->student_decip_incharge_msg }}
                         </td>
 
@@ -132,8 +132,7 @@
         </div>
 
         <!-- Reply Form -->
-        @if($memoNotice->isNotEmpty())
-        @if($memoNotice->first()->notice_status == 1)
+      @if($memoNotice->isEmpty() || optional($memoNotice->first())->notice_status == 1)
         <div class="border p-3 bg-light rounded">
             <form id="memo_notice_conversation" method="POST" enctype="multipart/form-data"
                 action="{{ route('memo.notice.management.memo_notice_conversation_student') }}">
@@ -184,7 +183,7 @@
             <div class="alert alert-warning mt-3">
                 <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
                 @endif
-                @endif
+              
 
         </div>
     </div>
