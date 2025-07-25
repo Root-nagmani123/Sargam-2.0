@@ -175,6 +175,7 @@ return [
                 'title' => 'Faculty',
                 'route' => 'faculty.index',
                 'icon' => 'solar:document-text-line-duotone',
+                'permission' => 'faculty.index',
             ],
             [
                 'title' => 'Faculty Topic Mapping',
