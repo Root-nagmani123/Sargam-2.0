@@ -14,8 +14,8 @@ use Spatie\Permission\Models\Role;
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
-
     protected $table = 'user_credentials';
+    protected $primaryKey = 'pk';
 
 
     /**
@@ -53,6 +53,12 @@ class User extends Authenticatable
         return 'pk';
     }
 
+    public function getMorphClass()
+    {
+        return self::class;
+    }
+
+
     public static function getpermissionGroups()
     {
         return DB::table('permissions')
@@ -83,10 +89,5 @@ class User extends Authenticatable
     public function actionLogs()
     {
         return $this->hasMany(ActionLog::class, 'action_by');
-    }
-
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class);
     }
 }

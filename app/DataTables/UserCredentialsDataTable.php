@@ -44,8 +44,11 @@ class UserCredentialsDataTable extends DataTable
             ->filterColumn('mobile_no', function ($query, $keyword) {
                 $query->where('mobile_no', 'like', "%{$keyword}%");
             })
-
-            ->rawColumns(['user_name', 'first_name', 'last_name', 'email', 'mobile_no']);
+            ->addColumn('action', function ($row) {
+                return '<a href="' . route('admin.users.show', $row->pk) . '" class="btn btn-sm btn-primary">View</a>
+                <a href="' . route('admin.users.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>';
+            })
+            ->rawColumns(['user_name', 'first_name', 'last_name', 'email', 'mobile_no', 'action']);
     }
 
     /**
@@ -126,6 +129,11 @@ class UserCredentialsDataTable extends DataTable
 
             Column::make('mobile_no')
                 ->title('Mobile No')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(true),
+            Column::make('action')
+                ->title('Action')
                 ->addClass('text-center')
                 ->orderable(false)
                 ->searchable(true),

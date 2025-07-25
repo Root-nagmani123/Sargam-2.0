@@ -72,26 +72,10 @@ return [
     ],
 
     'column_names' => [
-        /*
-         * Change this if you want to name the related pivots other than defaults
-         */
         'role_pivot_key' => null, // default 'role_id',
         'permission_pivot_key' => null, // default 'permission_id',
-
-        /*
-         * Change this if you want to name the related model primary key other than
-         * `model_id`.
-         *
-         * For example, this would be nice if your primary keys are all UUIDs. In
-         * that case, name this `model_uuid`.
-         */
-
-        'model_morph_key' => 'model_id',
-
-        /*
-         * Change this if you want to use the teams feature and your related model's
-         * foreign key is other than `team_id`.
-         */
+        // 'model_morph_key' => 'model_id',
+        'model_morph_key' => 'pk',
 
         'team_foreign_key' => 'team_id',
     ],
