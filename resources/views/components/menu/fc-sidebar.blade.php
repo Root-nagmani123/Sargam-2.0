@@ -109,13 +109,13 @@
         </li>
         <ul class="collapse list-unstyled ps-3" id="collapseDocuments">
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('fc.joining.index', ['formId' => 1]) }}">
+                <a class="sidebar-link" href="{{ route('fc.joining.index', ['formId' => 30]) }}">
                     <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
                     <span class="hide-menu">Joining Documents (User)</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.joining-documents.index', ['formId' => 1]) }}">
+                <a class="sidebar-link" href="{{ route('admin.joining-documents.index', ['formId' => 30]) }}">
                     <iconify-icon icon="mdi:table-column-plus-after"></iconify-icon>
                     <span class="hide-menu">Report (Admin Only)</span>
                 </a>

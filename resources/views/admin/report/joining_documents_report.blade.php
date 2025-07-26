@@ -290,13 +290,13 @@
                                     <tbody>
                                         @foreach ($students as $index => $student)
                                             @php
-                                                $upload = $uploads[$student->id] ?? null;
+                                                $upload = $uploads[$student->pk] ?? null;
                                             @endphp
                                             <tr>
                                                 <td>{{ ($students->currentPage() - 1) * $students->perPage() + $loop->iteration }}
                                                 </td>
-                                                <td>{{ $student->name }}</td>
-                                                <td>{{ $student->id }}</td>
+                                                <td>{{ $student->display_name }}</td>
+                                                <td>{{ $student->pk }}</td>
 
                                                 @foreach ($fields as $fieldKey => $fieldLabel)
                                                     <td>
@@ -326,14 +326,14 @@
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route('admin.joining-documents.download-all', $student->id) }}"
+                                                    <a href="{{ route('admin.joining-documents.download-all', $student->pk) }}"
                                                         class="btn btn-sm btn-outline-primary">
                                                         <i class="fa fa-download"></i> Download All
                                                     </a>
                                                 </td>
                                                 <td style="min-width: 250px;">
                                                     <form method="POST"
-                                                        action="{{ route('admin.joining-documents.save-remark', $student->id) }}">
+                                                        action="{{ route('admin.joining-documents.save-remark', $student->pk) }}">
                                                         @csrf
                                                         <textarea name="remark" class="form-control form-control-sm text-center" rows="1"
                                                             style="width: 100%; min-height: 60px; resize: vertical;" onchange="this.form.submit()"
