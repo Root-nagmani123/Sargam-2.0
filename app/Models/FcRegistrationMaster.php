@@ -11,14 +11,19 @@ class FcRegistrationMaster extends Model
     public $primaryKey = 'pk';
 
     protected $fillable = [
+        'email',
+        'contact_no',
+        'display_name',
+        'schema_id',
         'first_name',
         'middle_name',
         'last_name',
-        'email',
-        'contact_no',
         'rank',
+        'exam_year',
+        'service_master_pk',
         'web_auth',
     ];
+
 
     public $timestamps = false; // or true if you're using created_date
 }

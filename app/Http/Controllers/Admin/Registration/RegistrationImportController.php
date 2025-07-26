@@ -45,13 +45,16 @@ class RegistrationImportController extends Controller
             FcRegistrationMaster::updateOrCreate(
                 ['email' => $row['email']],
                 [
-                    'contact_no'        => $row['contact_no'],
-                    'first_name'        => $row['first_name'],
-                    'middle_name'       => $row['middle_name'],
-                    'last_name'         => $row['last_name'],
-                    'rank'              => $row['rank'],
-                    'web_auth'          => $row['web_auth'],
-                    'service_master_pk' => 0,
+                    'contact_no'        => $row['contact_no'] ?? null,
+                    'display_name'      => $row['display_name'] ?? null,
+                    'schema_id'         => $row['schema_id'] ?? null,
+                    'first_name'        => $row['first_name'] ?? null,
+                    'middle_name'       => $row['middle_name'] ?? null,
+                    'last_name'         => $row['last_name'] ?? null,
+                    'rank'              => $row['rank'] ?? null,
+                    'exam_year'         => $row['exam_year'] ?? null,
+                    'service_master_pk' => $row['service_master_pk'] ?? 0,
+                    'web_auth'          => $row['web_auth'] ?? null,
                 ]
             );
         }
@@ -63,7 +66,7 @@ class RegistrationImportController extends Controller
 
     public function fc_masterindex()
     {
-        $registrations = FcRegistrationMaster::select('pk', 'email', 'contact_no', 'first_name', 'middle_name', 'last_name', 'rank', 'exam_year', 'web_auth', 'dob')->get();
+        $registrations = FcRegistrationMaster::select('pk', 'email', 'contact_no','display_name','schema_id','first_name', 'middle_name', 'last_name', 'rank', 'exam_year','service_master_pk', 'web_auth', 'dob')->get();
         return view('admin.registration.fcregistrationmaster_list', compact('registrations'));
     }
     public function fc_masteredit($id)
@@ -73,20 +76,29 @@ class RegistrationImportController extends Controller
     }
 
 
-    public function fc_masterupdate(Request $request, $id)
-    {
-        $request->validate([
-            'email' => 'required|email',
-            'contact_no' => 'required',
-            'first_name' => 'required',
-            'dob' => 'nullable|date',
-        ]);
+   public function fc_masterupdate(Request $request, $id)
+{
+    $request->validate([
+        'email' => 'required|email',
+        'contact_no' => 'required',
+        'first_name' => 'required',
+        'dob' => 'nullable|date',
+        'display_name' => 'nullable|string|max:255',
+        'schema_id' => 'nullable|string|max:255',
+        'service_master_pk' => 'nullable|string|max:255',
+        'exam_year' => 'nullable|string|max:255',
+    ]);
 
-        $record = FcRegistrationMaster::findOrFail($id);
-        $record->update($request->only(['email', 'contact_no', 'first_name', 'middle_name', 'last_name', 'rank', 'exam_year', 'web_auth', 'dob']));
+    $record = FcRegistrationMaster::findOrFail($id);
+    $record->update($request->only([
+        'email', 'contact_no', 'first_name', 'middle_name', 'last_name',
+        'rank', 'exam_year', 'web_auth', 'dob',
+        'display_name', 'schema_id', 'service_master_pk'
+    ]));
 
-        return redirect()->route('admin.registration.index')->with('success', 'Record updated successfully.');
-    }
+    return redirect()->route('admin.registration.index')->with('success', 'Record updated successfully.');
+}
+
 
     public function fc_masterdestroy($id)
     {
