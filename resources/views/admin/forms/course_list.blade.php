@@ -59,7 +59,6 @@
                                 @if (isset($users[$uid]))
                                     <tr>
                                         <td>{{ $loop->iteration }}</td> {{-- S.No column --}}
-
                                         @foreach ($fields as $field)
                                             <td>
                                                 @php

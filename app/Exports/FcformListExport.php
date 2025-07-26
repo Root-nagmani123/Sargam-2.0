@@ -19,15 +19,39 @@ class FcformListExport implements FromArray, WithHeadings
     }
 
     // Return the actual data rows
-    public function array(): array
+    // public function array(): array
+    // {
+    //     $data = [];
+
+    //     foreach ($this->records as $record) {
+    //         $row = [];
+    //         foreach ($this->fields as $field) {
+    //             $row[] = $record->$field ?? '';
+    //         }
+    //         $data[] = $row;
+    //     }
+
+    //     return $data;
+    // }
+
+      public function array(): array
     {
         $data = [];
 
         foreach ($this->records as $record) {
             $row = [];
+
             foreach ($this->fields as $field) {
-                $row[] = $record->$field ?? '';
+                // Use property_exists or check for object/array compatibility
+                if (is_object($record)) {
+                    $row[] = $record->{$field} ?? '';
+                } elseif (is_array($record)) {
+                    $row[] = $record[$field] ?? '';
+                } else {
+                    $row[] = '';
+                }
             }
+
             $data[] = $row;
         }
 
