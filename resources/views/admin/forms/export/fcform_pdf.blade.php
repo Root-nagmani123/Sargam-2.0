@@ -16,7 +16,6 @@
     </style>
 </head>
 <body>
-    {{-- <h3>Form Submission List</h3> --}}
     <h3>{{ $formName ?? 'Form Submission List' }}</h3>
 
     <table>
@@ -31,7 +30,7 @@
             @foreach($records as $record)
                 <tr>
                     @foreach($fields as $field)
-                        <td>{{ $record->$field ?? '' }}</td>
+                        <td>{{ $record[$field] ?? '' }}</td>
                     @endforeach
                 </tr>
             @endforeach
