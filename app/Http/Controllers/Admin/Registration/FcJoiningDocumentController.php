@@ -150,16 +150,16 @@ class FcJoiningDocumentController extends Controller
             ->where('visible', 1)
             ->orderBy('sortorder')
             ->get();
-        // $query = DB::table('student_master')->select('pk', 'display_name', 'schema_id');
-        $query = DB::table('users')->select('id', 'name', 'id');
+        $query = DB::table('student_master')->select('pk', 'display_name', 'schema_id');
+        // $query = DB::table('users')->select('id', 'name', 'id');
 
 
         $search = $request->input('search');
         $status = $request->input('status');
 
         if ($search) {
-            // $query->where('display_name', 'like', '%' . $search . '%');
-            $query->where('name', 'like', '%' . $search . '%');
+            $query->where('display_name', 'like', '%' . $search . '%');
+            // $query->where('name', 'like', '%' . $search . '%');
         }
 
         // Get all uploads (needed before status filtering)
@@ -168,8 +168,8 @@ class FcJoiningDocumentController extends Controller
         if ($request->filled('status')) {
             $fieldsKeys = array_keys($fields);
 
-            // $allStudentIds = $query->pluck('pk')->toArray();
-            $allStudentIds = $query->pluck('id')->toArray();
+            $allStudentIds = $query->pluck('pk')->toArray();
+            // $allStudentIds = $query->pluck('id')->toArray();
 
             $filteredUserIds = [];
 
@@ -184,18 +184,18 @@ class FcJoiningDocumentController extends Controller
                 }
             }
 
-            // $query->whereIn('pk', $filteredUserIds);
-            $query->whereIn('id', $filteredUserIds);
+            $query->whereIn('pk', $filteredUserIds);
+            // $query->whereIn('id', $filteredUserIds);
         }
 
         // Finally paginate
-        // $students = $query->orderBy('display_name')->paginate(20);
-        $students = $query->orderBy('name')->paginate(20);
+        $students = $query->orderBy('display_name')->paginate(20);
+        // $students = $query->orderBy('name')->paginate(20);
 
 
         // Get uploads only for paginated students
-        // $studentIds = $students->pluck('pk')->toArray();
-        $studentIds = $students->pluck('id')->toArray();
+        $studentIds = $students->pluck('pk')->toArray();
+        // $studentIds = $students->pluck('id')->toArray();
         $uploads = $allUploads->only($studentIds);
 
         return view('admin.report.joining_documents_report', compact('fields', 'students', 'uploads', 'form', 'childForms', 'formId'))
@@ -206,18 +206,18 @@ class FcJoiningDocumentController extends Controller
 
     public function downloadAll($userId)
     {
-        // $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
-        // $student = DB::table('student_master')->where('pk', $userId)->first();
-
         $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
-        $student = DB::table('users')->where('id', $userId)->first();
+        $student = DB::table('student_master')->where('pk', $userId)->first();
+
+        // $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
+        // $student = DB::table('users')->where('id', $userId)->first();
 
         if (!$user || !$student) {
             return redirect()->back()->with('error', 'No uploaded documents found for this user.');
         }
 
-        // $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->display_name);
-        $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->name);
+        $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->display_name);
+        // $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->name);
         $zipFileName = $cleanName . '_joining_documents.zip';
         $tempFile = storage_path("app/temp/{$zipFileName}");
 
