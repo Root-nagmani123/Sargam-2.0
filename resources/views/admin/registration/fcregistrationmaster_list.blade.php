@@ -56,17 +56,17 @@
                             <thead>
                                 <tr>
                                     <th scope="col">S No</th>
-                                    <th scope="col">Display Name</th> {{-- NEW --}}
+                                    <th scope="col">Service Master PK</th> 
+                                    <th scope="col">Schema ID</th> 
+                                    <th scope="col">Display Name</th> 
                                     <th scope="col">First Name</th>
                                     <th scope="col">Middle Name</th>
                                     <th scope="col">Last Name</th>
                                     <th scope="col">Email</th>
                                     <th scope="col">Contact No</th>
-                                    <th scope="col">Schema ID</th> {{-- NEW --}}
-                                    <th scope="col">Service Master PK</th> {{-- NEW --}}
                                     <th scope="col">Rank</th>
-                                    <th scope="col">Exam Year</th>
                                     <th scope="col">Web Auth</th>
+                                    <th scope="col">Exam Year</th>
                                     <th scope="col">Action</th>
                                 </tr>
                             </thead>
@@ -76,17 +76,17 @@
                                 @foreach ($registrations as $reg)
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $reg->display_name }}</td> {{-- NEW --}}
+                                    <td>{{ $reg->service_master_pk }}</td>
+                                    <td>{{ $reg->schema_id }}</td>
+                                    <td>{{ $reg->display_name }}</td> 
                                     <td>{{ $reg->first_name }}</td>
                                     <td>{{ $reg->middle_name }}</td>
                                     <td>{{ $reg->last_name }}</td>
                                     <td>{{ $reg->email }}</td>
                                     <td>{{ $reg->contact_no }}</td>
-                                    <td>{{ $reg->schema_id }}</td> {{-- NEW --}}
-                                    <td>{{ $reg->service_master_pk }}</td> {{-- NEW --}}
                                     <td>{{ $reg->rank }}</td>
-                                    <td>{{ $reg->exam_year }}</td>
                                     <td>{{ $reg->web_auth }}</td>
+                                    <td>{{ $reg->exam_year }}</td>
                                     <td>
                                         <a href="{{ route('admin.registration.edit', $reg->pk) }}"
                                             class="btn btn-sm btn-primary">Edit</a>
