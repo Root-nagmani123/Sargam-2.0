@@ -11,6 +11,16 @@ class FcRegistrationExportMaster extends Model
     public $timestamps = false; // Optional
 
     protected $fillable = [
-        'first_name', 'middle_name', 'last_name', 'email', 'contact_no', 'rank', 'web_auth'
+        'email',
+        'contact_no',
+        'display_name',
+        'schema_id',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'rank',
+        'exam_year',
+        'service_master_pk',
+        'web_auth'
     ];
 }
