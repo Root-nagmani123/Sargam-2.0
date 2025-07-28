@@ -11,8 +11,7 @@
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
+                <div class="row">
                         <div class="col-6">
                             <h4>Users</h4>
                         </div>
@@ -26,10 +25,8 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        {{ $dataTable->table(['class' => 'table  table-hover ']) }}
+                        {{ $dataTable->table(['class' => 'table  table-hover table-check table-bordered table-striped ']) }}
                     </div>
-
-                </div>
             </div>
         </div>
         <!-- end Zero Configuration -->

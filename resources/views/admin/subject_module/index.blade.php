@@ -33,11 +33,11 @@
                             aria-describedby="zero_config_info">
                             <thead>
                                 <!-- start row -->
-                                <tr>
-                                    <th class="col">S.No.</th>
-                                    <th class="col">Stream Name</th>
-                                    <th class="col">Status</th>
-                                    <th class="col">Action</th>
+                                <tr >
+                                    <th class="col text-center">S.No.</th>
+                                    <th class="col text-center">Stream Name</th>
+                                    <th class="col text-center">Status</th>
+                                    <th class="col text-center">Action</th>
 
 
                                 </tr>
@@ -45,12 +45,10 @@
                             </thead>
                             <tbody>
                                 @foreach($modules as $key => $modules)
-                                <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                    <td>{{ $key + 1 }}</td>
-                                    <td class="sorting_1">
-                                        <div class="d-flex align-items-center gap-6">
-                                            <h6 class="mb-0">{{ $modules->module_name }}</h6>
-                                        </div>
+                                <tr class="{{ $loop->odd ? 'odd' : 'even' }} ">
+                                    <td class="text-center">{{ $key + 1 }}</td>
+                                    <td class="text-center">
+                                        {{ $modules->module_name }}
                                     </td>
                                     <td>
                                         @can('subject-module.active_inactive')
@@ -62,7 +60,7 @@
                                             </div>    
                                         @endcan
                                     </td>
-                                     <td>
+                                     <td class="text-center">
                                         <div class="d-flex justify-content-start align-items-start gap-2">
                                             @can('subject-module.edit')
                                                 <a href="{{ route('subject-module.edit', $modules->pk) }}"
