@@ -1,6 +1,6 @@
 @foreach(config($config) as $section)
 
-    @if(!isset($section['permission']) || auth()->user()->can(abilities: $section['permission']))
+    {{-- @if(!isset($section['route']) || auth()->user()->can(abilities: $section['route'])) --}}
         <li class="sidebar-item">
             <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                 href="#{{ $section['id'] }}" role="button" aria-expanded="false" aria-controls="{{ $section['id'] }}"
@@ -14,7 +14,7 @@
         <ul class="collapse list-unstyled ps-3" id="{{ $section['id'] }}">
 
             @foreach($section['items'] as $item)
-                @if(!isset($item['route']) || auth()->user()->can($item['route']))
+                {{-- @if(!isset($item['route']) || auth()->user()->can(abilities: $item['route'])) --}}
                     <li class="sidebar-item {{ request()->routeIs($item['route']) ? 'selected' : '' }}">
                         <a class="sidebar-link" href="{{ route($item['route']) }}">
                             <iconify-icon icon="{{ $item['icon'] }}"></iconify-icon>
@@ -23,8 +23,8 @@
                             @endif
                         </a>
                     </li>
-                @endif
+                {{-- @endif --}}
             @endforeach
         </ul>
-    @endif
+    {{-- @endif --}}
 @endforeach

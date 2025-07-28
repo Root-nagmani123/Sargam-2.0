@@ -16,11 +16,11 @@ class CheckRoutePermission
         // if (in_array($routeName, $excluded)) {
         //     return $next($request);
         // }
+        return $next($request);
+        // if ($user && $user->can($routeName)) {
+        //     return $next($request);
+        // }
 
-        if ($user && $user->can($routeName)) {
-            return $next($request);
-        }
-
-        abort(403, 'Unauthorized action.');
+        // abort(403, 'Unauthorized action.');
     }
 }
