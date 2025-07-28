@@ -33,18 +33,18 @@ class RoleController extends Controller
             'verification',
         ];
 
-        $permissions = Permission::all()->reject(function ($perm) use ($removePrefixes) {
-            foreach ($removePrefixes as $prefix) {
-                if (str_starts_with($perm->name, $prefix)) {
-                    return true;
-                }
-            }
-            return false;
-        });
-        $grouped = $permissions->groupBy(function ($item) {
-            return explode('.', $item->name)[0];
-        });
-
+        // $permissions = Permission::all()->reject(function ($perm) use ($removePrefixes) {
+        //     foreach ($removePrefixes as $prefix) {
+        //         if (str_starts_with($perm->name, $prefix)) {
+        //             return true;
+        //         }
+        //     }
+        //     return false;
+        // });
+        // $grouped = $permissions->groupBy(function ($item) {
+        //     return explode('.', $item->name)[0];
+        // });
+        $grouped = Permission::get()->groupBy(['permission_group', 'permission_sub_group']);
 
         return view('admin.user_management.roles.create', compact('grouped'));
     }
@@ -71,10 +71,9 @@ class RoleController extends Controller
 
     public function edit(Role $role)
     {
-        $all_permissions = Permission::all();
+        $grouped = Permission::get()->groupBy(['permission_group', 'permission_sub_group']);
         $rolePermissions = $role->permissions->pluck('id')->toArray();
-        
-        return view('admin.user_management.roles.edit', compact('role', 'all_permissions', 'rolePermissions'));
+        return view('admin.user_management.roles.edit', compact('role', 'grouped', 'rolePermissions'));
     }
 
     public function update(Request $request, Role $role)

@@ -33,7 +33,9 @@ class RoleDataTable extends DataTable
                 return implode(' ', $permissions ?? []);
                 
             })
-            
+            ->editColumn('action', function($row){
+                return '<a href="' . route('admin.roles.edit', $row->id) . '" class="btn btn-primary btn-sm">Edit</a>';
+            })
             ->filterColumn('name', function ($query, $keyword) {
                 $query->where('name', 'like', "%{$keyword}%");
             })
@@ -44,7 +46,7 @@ class RoleDataTable extends DataTable
             })
             
 
-            ->rawColumns(['name', 'permissions']);
+            ->rawColumns(['name', 'permissions', 'action']);
     }
 
     /**
@@ -111,6 +113,10 @@ class RoleDataTable extends DataTable
                 ->addClass('text-center')
                 ->orderable(false)
                 ->searchable(true),
+            Column::computed('action')
+                ->addClass('text-center')
+                ->exportable(false)
+                ->printable(false),
         ];
     }
 

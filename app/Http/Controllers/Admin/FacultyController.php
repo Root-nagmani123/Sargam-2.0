@@ -13,8 +13,21 @@ use App\Http\Requests\FacultyUpdateRequest;
 use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificationMap, FacultyExperienceMap, FacultyExpertiseMaster, FacultyExpertiseMap, FacultyTypeMaster};
 use App\DataTables\FacultyDataTable;
 use Maatwebsite\Excel\Facades\Excel;
+use Spatie\Permission\Middlewares\PermissionMiddleware;
+use Spatie\Permission\Middlewares\RoleMiddleware;
+
+
 class FacultyController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:faculty.index', ['only' => ['index']]);
+        $this->middleware('permission:faculty.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:faculty.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:faculty.delete', ['only' => ['destroy']]);
+        $this->middleware('permission:faculty.export-excel', ['only' => ['excelExportFaculty']]);
+        $this->middleware('permission:faculty.show', ['only' => ['show']]);
+    }
     public function index(FacultyDataTable $dataTable)
     {
         return $dataTable->render('admin.faculty.index');

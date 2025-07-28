@@ -27,9 +27,10 @@ class PermissionDataTable extends DataTable
             ->setRowId('id')
             
             ->editColumn('name', fn($row) => '<label class="text-dark">' . $row->name . '</label>')
+            ->editColumn('permission_group', fn($row) => '<label class="text-dark">' . $row->permission_group . '</label>')
             ->editColumn('created_at', fn($row) => $row->created_at->format('Y-m-d H:i:s'))
             ->editColumn('updated_at', fn($row) => $row->updated_at->format('Y-m-d H:i:s'))
-            ->rawColumns(['name', 'created_at', 'updated_at']);
+            ->rawColumns(['name', 'permission_group', 'created_at', 'updated_at']);
     }
 
     /**
@@ -78,6 +79,7 @@ class PermissionDataTable extends DataTable
             
             Column::make('id'),
             Column::make('name'),
+            Column::make('permission_group')->title('Permission Group'),
             Column::make('created_at'),
             Column::make('updated_at'),
         ];

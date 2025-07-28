@@ -145,7 +145,7 @@ class UserCredentialsDataTable extends DataTable
                 ->title('Role')
                 ->addClass('text-center')
                 ->orderable(false)
-                ->searchable(true),
+                ->searchable(false),
             Column::make('action')
                 ->title('Action')
                 ->addClass('text-center')

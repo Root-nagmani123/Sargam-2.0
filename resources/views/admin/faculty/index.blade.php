@@ -19,10 +19,14 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{route('faculty.create')}}" class="btn btn-primary">+ Add Faculty</a>
-                                <a href="{{ route('faculty.excel.export') }}" class="btn btn-primary">
-                                    <iconify-icon icon="material-symbols:sim-card-download-rounded" ></iconify-icon> Export Excel
-                                </a>
+                                @can('faculty.create')
+                                    <a href="{{route('faculty.create')}}" class="btn btn-primary">+ Add Faculty</a>
+                                @endcan
+                                @can('faculty.export-excel')
+                                    <a href="{{ route('faculty.excel.export') }}" class="btn btn-primary">
+                                        <iconify-icon icon="material-symbols:sim-card-download-rounded" ></iconify-icon> Export Excel
+                                    </a>
+                                @endcan
                             </div>
                         </div>
                     </div>

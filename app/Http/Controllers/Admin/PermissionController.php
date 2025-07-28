@@ -16,7 +16,7 @@ class PermissionController extends Controller
     public function create()
     {
         return view('admin.user_management.permissions.create', [
-            'all_permissions' => Permission::all(),
+            'all_permissions' => Permission::get()->groupBy('permission_group'),
         ]);
     }
     

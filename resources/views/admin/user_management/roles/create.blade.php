@@ -29,24 +29,68 @@
                             <p class="text-danger">{{ $message }}</p>
                         @enderror
                         <h3>Permissions:</h3>
-                        @foreach($grouped as $group => $permissions)
-                            <div class="mb-4">
-                                <h5 style="text-transform: capitalize;">{{ $group }} Module</h5>
-                                <div class="row">
-                                    @foreach($permissions as $permission)
-                                        <div class="col-md-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="permission[]"
-                                                    value="{{ $permission->id }}" id="perm-{{ $permission->id }}">
-                                                <label class="form-check-label" for="perm-{{ $permission->id }}">
-                                                    {{ $permission->name }}
-                                                </label>
+                        <div class="accordion my-3" id="permissionAccordion">
+                            @foreach ($grouped as $groupName => $subGroups)
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading-{{ Str::slug($groupName) }}">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                            data-bs-target="#collapse-{{ Str::slug($groupName) }}">
+                                            <i class="bi bi-dash-square text-warning me-2"></i>
+                                            {{ ucfirst($groupName) }} <em class="ms-2">({{ ucfirst($groupName) }}
+                                                Management)</em>
+                                        </button>
+                                    </h2>
+                                    <div id="collapse-{{ Str::slug($groupName) }}" class="accordion-collapse collapse show">
+                                        <div class="accordion-body ps-4">
+
+                                            {{-- Subgroups --}}
+                                            <div class="accordion" id="accordion-{{ Str::slug($groupName) }}">
+                                                @foreach ($subGroups as $subGroupName => $items)
+                                                    <div class="accordion-item mb-2">
+                                                        <h2 class="accordion-header" id="heading-{{ Str::slug($subGroupName) }}">
+                                                            <button class="accordion-button collapsed" type="button"
+                                                                data-bs-toggle="collapse"
+                                                                data-bs-target="#collapse-{{ Str::slug($groupName . '-' . $subGroupName) }}">
+                                                                <i class="bi bi-dash-square text-success me-2"></i>
+                                                                {{ ucfirst(str_replace('-', ' ', $subGroupName)) }}
+                                                                {{-- <em
+                                                                    class="ms-2">({{ ucfirst(str_replace('-', ' ', $subGroupName)) }})</em> --}}
+                                                            </button>
+                                                        </h2>
+                                                        <div id="collapse-{{ Str::slug($groupName . '-' . $subGroupName) }}"
+                                                            class="accordion-collapse collapse">
+                                                            <div class="accordion-body row">
+                                                                @foreach ($items as $perm)
+                                                                    @php
+                                                                        $baseName = explode('.', $perm->name)[0] ?? '';
+                                                                        $action = explode('.', $perm->name)[1] ?? '';
+                                                                      @endphp
+                                                                    <div class="col-md-3 mb-2">
+                                                                        {{-- <div class="col-md-6"> --}}
+                                                                            <div class="form-check">
+                                                                                <input class="form-check-input" type="checkbox"
+                                                                                    id="{{ $perm->name }}">
+                                                                                <label class="form-check-label" for="{{ $perm->name }}">
+                                                                                    {{-- {{ ucwords(str_replace('-', ' ', $perm->permission_sub_group)) }} --}}
+                                                                                    {{-- <em>({{ $perm->name }})</em> --}}
+                                                                                    <strong>{{ $perm->display_name }}</strong>
+                                                                                </label>
+                                                                            </div>
+                                                                        {{-- </div> --}}
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
                                             </div>
+
                                         </div>
-                                    @endforeach
+                                    </div>
                                 </div>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>
+
 
                         @error('permission')
                             <p class="text-danger">{{ $message }}</p>

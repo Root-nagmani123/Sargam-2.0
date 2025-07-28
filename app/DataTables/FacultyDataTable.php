@@ -25,49 +25,45 @@ class FacultyDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('faculty_type', function($row) {
+            ->addColumn('faculty_type', function ($row) {
 
-                return match((int)$row->faculty_type) {
+                return match ((int) $row->faculty_type) {
                     1 => '<span class="badge bg-success">Internal</span>',
                     2 => '<span class="badge bg-warning">Guest</span>',
                     3 => '<span class="badge bg-info">Research</span>',
                     default => null,
                 };
             })
-            ->addColumn('full_name', function($row) {
+            ->addColumn('full_name', function ($row) {
                 return $row->full_name ?? '';
             })
-            ->addColumn('mobile_number', function($row) {
+            ->addColumn('mobile_number', function ($row) {
                 return $row->mobile_no ?? '';
             })
-            ->addColumn('designation', function($row) {
+            ->addColumn('designation', function ($row) {
                 return $row->designation ?? '';
             })
-            ->addColumn('current_sector', function($row) {
-                return match((int)$row->current_sector) {
+            ->addColumn('current_sector', function ($row) {
+                return match ((int) $row->current_sector) {
                     1 => '<span class="badge bg-success">Government</span>',
                     default => '<span class="badge bg-danger">Private</span>',
                 };
-                
+
             })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
-                $csrf = csrf_token();
+                $actions = [];
 
-                $editUrl = route('faculty.edit', ['id' => $id]);
-                $viewUrl = route('faculty.show', ['id' => $id]);
-                // $deleteUrl = route('faculty.delete', ['id' => $id]);
+                if (auth()->user()->can('faculty.edit')) {
+                    $actions[] = '<a href="' . route('faculty.edit', ['id' => $id]) . '" class="btn btn-primary btn-sm">Edit</a>';
+                }
 
-                return '
-                    <a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>
-                    <a href="'.$viewUrl.'" class="btn btn-info btn-sm">View</a>
-                ';
-                // <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
-                //         <input type="hidden" name="_token" value="'.$csrf.'">
-                //         <input type="hidden" name="_method" value="DELETE">
-                //         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                //     </form>    
+                if (auth()->user()->can('faculty.show')) { // optional: use this if you have separate 'faculty.view' permission
+                    $actions[] = '<a href="' . route('faculty.show', ['id' => $id]) . '" class="btn btn-info btn-sm">View</a>';
+                } 
+                return implode(' ', $actions);
             })
+
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return "
@@ -85,7 +81,7 @@ class FacultyDataTable extends DataTable
             ->filterColumn('mobile_number', function ($query, $keyword) {
                 $query->where('mobile_no', 'like', "%{$keyword}%");
             })
-            ->rawColumns(['faculty_type','action', 'status', 'current_sector']);
+            ->rawColumns(['faculty_type', 'action', 'status', 'current_sector']);
     }
 
     /**
@@ -108,23 +104,23 @@ class FacultyDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         return $this->builder()
-                    ->setTableId('faculty-table')
-                    ->columns($this->getColumns())
-                    ->minifiedAjax()
-                    //->dom('Bfrtip')
-                    ->orderBy(1)
-                    ->selectStyleSingle()
-                    ->parameters([
-                        'order' => [],
-                    ])
-                    ->buttons([
-                        Button::make('excel'),
-                        Button::make('csv'),
-                        Button::make('pdf'),
-                        Button::make('print'),
-                        Button::make('reset'),
-                        Button::make('reload')
-                    ]);
+            ->setTableId('faculty-table')
+            ->columns($this->getColumns())
+            ->minifiedAjax()
+            //->dom('Bfrtip')
+            ->orderBy(1)
+            ->selectStyleSingle()
+            ->parameters([
+                'order' => [],
+            ])
+            ->buttons([
+                Button::make('excel'),
+                Button::make('csv'),
+                Button::make('pdf'),
+                Button::make('print'),
+                Button::make('reset'),
+                Button::make('reload')
+            ]);
     }
 
     /**
@@ -161,7 +157,7 @@ class FacultyDataTable extends DataTable
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false),
-           Column::computed('action')
+            Column::computed('action')
                 ->addClass('text-center')
                 ->exportable(false)
                 ->printable(false),
