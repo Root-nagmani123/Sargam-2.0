@@ -171,11 +171,22 @@
                                     <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate
                                         Memo</button>
                                     @elseif($memo->status == 2)
-                                    <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn"
-                                        data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal"
-                                        data-bs-target="#memo_generate">
-                                        Generate Memo
-                                    </a>
+                                  <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn" 
+   data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal" data-bs-target="#memo_generate">
+   Generate Memo
+</a>
+
+                                    @endif
+                                </td>
+                                <td>
+                                     @if($memo->type_notice_memo == 'Memo')
+                                    @if ($memo->communication_status == 2)
+                                   {{ $memo->discussion_name }}
+                                    @endif
+                                    @endif
+                                </td>
+                                <td>
+                                     @if($memo->type_notice_memo == 'Memo')
 
                                     @endif
                                     @elseif($memo->type_notice_memo == 'Memo')
