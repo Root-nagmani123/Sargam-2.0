@@ -515,7 +515,7 @@
         }
     </script>
 
-    <style>
+    <!-- <style>
         .section-group {
             margin-bottom: 2rem;
             padding: 1.5rem;
@@ -564,5 +564,5 @@
             float: left;
             margin-left: -1.813em;
         }
-    </style>
+    </style> -->
 @endsection
