@@ -134,7 +134,7 @@
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
                                     @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
-                                    @if( $memo->notice_id != null)
+                                        @if( $memo->notice_id != null)
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
                                         class="btn btn-primary btn-sm">Notice Conversation</a>
                                     @else
