@@ -114,7 +114,7 @@ $radioOptions = explode(',', $field->field_radio_options ?? $field->field_option
 
 @foreach($radioOptions as $option)
 @php $option = trim($option); @endphp
-<div class="py-1 form-check form-check-inline">
+<div class="py-1 form-check">
     <input type="radio" id="{{ $fieldName }}_{{ $loop->index }}" name="{{ $fieldName }}" class="form-check-input" value="{{ $option }}"
         {{ $value == $option ? 'checked' : '' }} {{ $required ? 'required' : '' }}>
     <label class="form-check-label" for="{{ $fieldName }}_{{ $loop->index }}">{{ $option }}</label>

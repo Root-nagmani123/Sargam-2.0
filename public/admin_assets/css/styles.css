@@ -16149,7 +16149,7 @@ textarea.form-control-lg {
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
-    border: 1.25px solid #bdc3cd;
+    border: 1.25px solid #000000;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
 }
