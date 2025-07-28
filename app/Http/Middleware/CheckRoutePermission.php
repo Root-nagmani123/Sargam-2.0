@@ -12,7 +12,6 @@ class CheckRoutePermission
         $user = Auth::user();
         $routeName = Route::currentRouteName();
 
-        // // Skip permission check for some routes (like dashboard, profile etc.)
         // $excluded = ['dashboard', 'profile.index']; // add more if needed
         // if (in_array($routeName, $excluded)) {
         //     return $next($request);

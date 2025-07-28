@@ -23,13 +23,36 @@ class RoleController extends Controller
 
     public function create()
     {
-        $all_permissions = Permission::all();
-        
-        return view('admin.user_management.roles.create', compact('all_permissions'));
+        $removePrefixes = [
+            'log-viewer::',
+            'livewire',
+            'ignition',
+            'login',
+            'post_login',
+            'logout',
+            'password',
+            'verification',
+        ];
+
+        $permissions = Permission::all()->reject(function ($perm) use ($removePrefixes) {
+            foreach ($removePrefixes as $prefix) {
+                if (str_starts_with($perm->name, $prefix)) {
+                    return true;
+                }
+            }
+            return false;
+        });
+        $grouped = $permissions->groupBy(function ($item) {
+            return explode('.', $item->name)[0];
+        });
+
+
+        return view('admin.user_management.roles.create', compact('grouped'));
     }
 
     public function store(Request $request): RedirectResponse
     {
+        // dd($request->all());
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:roles,name'],
             'permission' => ['required', 'array', 'min:1'],

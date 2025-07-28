@@ -27,6 +27,12 @@ class UserCredentialsDataTable extends DataTable
             ->editColumn('last_name', fn($row) => '<label class="text-dark">' . $row->last_name . '</label>')
             ->editColumn('email', fn($row) => '<label class="text-dark">' . $row->email_id . '</label>')
             ->editColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile_no . '</label>')
+            ->editColumn('role', function($row) {
+
+                $roleName = $row->getRoleNames()->first();
+
+                return '<label class="text-dark">' . ($roleName ?? 'N/A') . '</label>';
+            })
 
             // Filtering columns
             ->filterColumn('user_name', function ($query, $keyword) {
@@ -48,7 +54,7 @@ class UserCredentialsDataTable extends DataTable
                 return '<a href="' . route('admin.users.show', $row->pk) . '" class="btn btn-sm btn-primary">View</a>
                 <a href="' . route('admin.users.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>';
             })
-            ->rawColumns(['user_name', 'first_name', 'last_name', 'email', 'mobile_no', 'action']);
+            ->rawColumns(['user_name', 'first_name', 'last_name', 'email', 'mobile_no', 'action', 'role']);
     }
 
     /**
@@ -129,6 +135,11 @@ class UserCredentialsDataTable extends DataTable
 
             Column::make('mobile_no')
                 ->title('Mobile No')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(true),
+            Column::make('role')
+                ->title('Role')
                 ->addClass('text-center')
                 ->orderable(false)
                 ->searchable(true),

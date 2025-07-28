@@ -3,7 +3,7 @@
 return [
     [
         'title' => 'General',
-        'permission' => 'HR.INDEX',
+        // 'permission' => 'HR.INDEX',
         'id' => 'generalCollapse',
         'icon' => 'bi-chevron-down',
         'items' => [
@@ -12,7 +12,7 @@ return [
                 'route' => 'admin.dashboard',
                 'icon' => 'solar:notification-unread-bold-duotone',
                 'visible' => true,
-                'permission' => 'HR.INDEX',
+                // 'permission' => 'HR.INDEX',
             ],
         ],
     ],
@@ -175,7 +175,7 @@ return [
                 'title' => 'Faculty',
                 'route' => 'faculty.index',
                 'icon' => 'solar:document-text-line-duotone',
-                'permission' => 'faculty.index',
+                // 'permission' => 'faculty.index',
             ],
             [
                 'title' => 'Faculty Topic Mapping',

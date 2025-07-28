@@ -14,7 +14,7 @@
         <ul class="collapse list-unstyled ps-3" id="{{ $section['id'] }}">
 
             @foreach($section['items'] as $item)
-                @if(!isset($item['permission']) || auth()->user()->can($item['permission']))
+                @if(!isset($item['route']) || auth()->user()->can($item['route']))
                     <li class="sidebar-item {{ request()->routeIs($item['route']) ? 'selected' : '' }}">
                         <a class="sidebar-link" href="{{ route($item['route']) }}">
                             <iconify-icon icon="{{ $item['icon'] }}"></iconify-icon>

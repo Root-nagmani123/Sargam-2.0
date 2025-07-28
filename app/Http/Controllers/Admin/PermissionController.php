@@ -7,11 +7,9 @@ use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
 class PermissionController extends Controller
 {
-    public function index()
+    public function index(PermissionDataTable $dataTable)
     {
-        return view('admin.user_management.permissions.index', [
-            'permissions' => Permission::all(),
-        ]);
+        return $dataTable->render('admin.user_management.permissions.index');
     }
 
     public function create()

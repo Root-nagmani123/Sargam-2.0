@@ -43,7 +43,7 @@ Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
 // Protected Routes
-Route::middleware(['auth', 'check.permission'])->group(function () {
+Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('roles', RoleController::class);
