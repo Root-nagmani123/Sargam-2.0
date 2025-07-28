@@ -134,11 +134,7 @@
                                 <td>{{ $memo->topic_name }}</td>
                                 <td>
                                     @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
-<<<<<<< HEAD
                                     @if( $memo->notice_id != null)
-=======
-                                        @if( $memo->notice_id != null)
->>>>>>> f03c4913 (memo bug solve)
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
                                         class="btn btn-primary btn-sm">Notice Conversation</a>
                                     @else
@@ -173,30 +169,11 @@
                                     <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate
                                         Memo</button>
                                     @elseif($memo->status == 2)
-<<<<<<< HEAD
                                     <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn"
                                         data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal"
                                         data-bs-target="#memo_generate">
                                         Generate Memo
                                     </a>
-=======
-                                  <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn" 
-   data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal" data-bs-target="#memo_generate">
-   Generate Memo
-</a>
-
-                                    @endif
-                                </td>
-                                <td>
-                                     @if($memo->type_notice_memo == 'Memo')
-                                    @if ($memo->communication_status == 2)
-                                   {{ $memo->discussion_name }}
-                                    @endif
-                                    @endif
-                                </td>
-                                <td>
-                                     @if($memo->type_notice_memo == 'Memo')
->>>>>>> f03c4913 (memo bug solve)
 
                                     @endif
                                     @elseif($memo->type_notice_memo == 'Memo')
