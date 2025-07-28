@@ -113,7 +113,7 @@
             <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView">Day</button>
             <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView">List</button>
     </div>
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body calender-sidebar app-calendar">
             <div id='calendar'></div>
             <!-- List View Table -->
