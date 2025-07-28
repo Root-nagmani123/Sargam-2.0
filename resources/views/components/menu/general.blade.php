@@ -201,6 +201,10 @@
                                         <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span
                                             class="hide-menu">Caste Category</span>
                                     </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('member.index') }}">
+                                        <iconify-icon icon="solar:shield-user-line-duotone"></iconify-icon><span
+                                            class="hide-menu">Member</span>
+                                    </a></li>
                             </ul>
 
                             {{-- FACULTY --}}
