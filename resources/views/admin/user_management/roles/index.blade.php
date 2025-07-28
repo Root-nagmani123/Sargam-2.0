@@ -47,17 +47,7 @@
                         </div>
                     </div>
 
-                    @foreach ($roles as $role)
-                        <div class="role-item">
-                            <h5>{{ $role->name }}</h5>
-                            <p>Permissions:</p>
-                            <ul>
-                                @foreach ($role->permissions as $permission)
-                                    <li>{{ $permission->name }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    @endforeach
+                    {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}
                 </div>
             </div>
         </div>
@@ -67,4 +57,6 @@
 
 
 @endsection
-
+@section('scripts')
+	{{ $dataTable->scripts() }}
+@endsection

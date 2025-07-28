@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\UserRoleMaster;
+use Spatie\Permission\Models\Role;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -24,18 +24,27 @@ class RoleDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->editColumn('USER_ROLE_NAME', fn($row) => '<label class="text-dark">' . $row->USER_ROLE_NAME . '</label>')
-            ->editColumn('USER_ROLE_DISPLAY_NAME', fn($row) => '<label class="text-dark">' . $row->USER_ROLE_DISPLAY_NAME . '</label>')
-
-            // Filtering columns
-            ->filterColumn('USER_ROLE_NAME', function ($query, $keyword) {
-                $query->where('USER_ROLE_NAME', 'like', "%{$keyword}%");
+            ->editColumn('name', fn($row) => '<label class="text-dark">' . $row->name . '</label>')
+            
+            ->editColumn('permissions', function ($row) {
+                foreach($row->permissions as $permission) {
+                    $permissions[] = '<span class="badge bg-primary">' . $permission->name . '</span>';
+                }
+                return implode(' ', $permissions ?? []);
+                
             })
-            ->filterColumn('USER_ROLE_DISPLAY_NAME', function ($query, $keyword) {
-                $query->where('USER_ROLE_DISPLAY_NAME', 'like', "%{$keyword}%");
+            
+            ->filterColumn('name', function ($query, $keyword) {
+                $query->where('name', 'like', "%{$keyword}%");
             })
+            ->filterColumn('permissions', function ($query, $keyword) {
+                $query->whereHas('permissions', function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%");
+                });
+            })
+            
 
-            ->rawColumns(['USER_ROLE_NAME', 'USER_ROLE_DISPLAY_NAME']);
+            ->rawColumns(['name', 'permissions']);
     }
 
     /**
@@ -44,9 +53,9 @@ class RoleDataTable extends DataTable
      * @param \App\Models\Role $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function query(UserRoleMaster $model): QueryBuilder
+    public function query(Role $model): QueryBuilder
     {
-        return $model->orderBy('PK')->newQuery();
+        return $model->with('permissions')->orderBy('id')->newQuery();
     }
 
     /**
@@ -90,17 +99,18 @@ class RoleDataTable extends DataTable
                 ->orderable(false)
                 ->searchable(false),
 
-            Column::make('USER_ROLE_NAME')
-                ->title('User Role Name')
+            Column::make('name')
+                ->title('Name')
                 ->addClass('text-center')
                 ->orderable(false)
                 ->searchable(true),
 
-            Column::make('USER_ROLE_DISPLAY_NAME')
-                ->title('User Role Display Name')
+
+            Column::make('permissions')
+                ->title('Permissions')
                 ->addClass('text-center')
                 ->orderable(false)
-                ->searchable(true)
+                ->searchable(true),
         ];
     }
 

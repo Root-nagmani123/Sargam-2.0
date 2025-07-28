@@ -58,6 +58,13 @@ class User extends Authenticatable
         return self::class;
     }
 
+    public function getInitialsAttribute()
+    {
+        $first = $this->first_name;
+        $last = $this->last_name;
+
+        return strtoupper($first[0] . $last[0]);
+    }
 
     public static function getpermissionGroups()
     {

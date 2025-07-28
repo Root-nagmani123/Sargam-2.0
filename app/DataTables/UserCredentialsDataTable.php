@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\UserCredential;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -29,9 +29,12 @@ class UserCredentialsDataTable extends DataTable
             ->editColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile_no . '</label>')
             ->editColumn('role', function($row) {
 
-                $roleName = $row->getRoleNames()->first();
-
-                return '<label class="text-dark">' . ($roleName ?? 'N/A') . '</label>';
+                $roleName = $row->getRoleNames()->all();
+                $array = [];
+                foreach ($roleName as $role) {
+                    $array[] = '<span class="badge bg-primary">' . $role . '</span>';
+                }
+                return implode('', $array);
             })
 
             // Filtering columns
@@ -63,9 +66,9 @@ class UserCredentialsDataTable extends DataTable
      * @param \App\Models\UserCredential $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function query(UserCredential $model): QueryBuilder
+    public function query(User $model): QueryBuilder
     {
-        return $model->orderBy('pk')->newQuery();
+        return $model->with('roles')->orderBy('pk')->newQuery();
     }
 
     /**

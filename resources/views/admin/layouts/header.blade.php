@@ -46,8 +46,12 @@
                         <li class="nav-item dropdown">
                             <a class="nav-link" href="javascript:void(0)" id="drop1" aria-expanded="false">
                                 <div class="d-flex align-items-center gap-2 lh-base">
-                                    <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
-                                        class="rounded-circle" width="35" height="35" alt="matdash-img">
+                                    {{-- <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
+                                        class="rounded-circle" width="35" height="35" alt="matdash-img"> --}}
+
+                                    <span class="rounded-circle fw-bolder border p-2 text-white bg-dark" width="35" height="35">
+                                        {{ Auth::user()->getInitialsAttribute() }}
+                                    </span>
                                     <iconify-icon icon="solar:alt-arrow-down-bold" class="fs-2"></iconify-icon>
                                 </div>
                             </a>
@@ -58,9 +62,9 @@
                                         <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
                                             class="rounded-circle" width="56" height="56" alt="matdash-img">
                                         <div>
-                                            <h5 class="mb-0 fs-12">Admin</h5>
+                                            <h5 class="mb-0 fs-12">{{ Auth::user()->user_name }}</h5>
                                             <p class="mb-0 text-dark">
-                                                admin@gmail.com
+                                                {{ Auth::user()->email_id }}
                                             </p>
                                         </div>
                                     </div>

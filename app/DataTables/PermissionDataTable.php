@@ -40,7 +40,7 @@ class PermissionDataTable extends DataTable
      */
     public function query(Permission $model): QueryBuilder
     {
-        return $model->newQuery();
+        return $model->orderBy('id')->newQuery();
     }
 
     /**
