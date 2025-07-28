@@ -265,6 +265,29 @@
                                             class="hide-menu">Permissions</span>
                                     </a></li>
                             </ul>
+                             {{-- USER Feedback --}}
+                            <li class="sidebar-item">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#userFeedbackCollapse" role="button"
+                                    aria-expanded="false" aria-controls="userFeedbackCollapse"
+                                    style="background-color: #af2910 !important; color: #fff; border-radius: 10px;">
+                                    <span class="hide-menu fw-bold">User Feedback</span>
+                                    <i class="bi bi-chevron-down ms-2 text-white"></i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="userFeedbackCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.feedbackList') }}">
+                                        <iconify-icon icon="solar:atom-line-duotone"></iconify-icon><span
+                                            class="hide-menu">Feedback</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.studentFeedback') }}">
+                                        <iconify-icon icon="solar:atom-line-duotone"></iconify-icon><span
+                                            class="hide-menu">Student Feedback</span>
+                                    </a></li>
+                               
+                            </ul>
 
                         </ul>
 
