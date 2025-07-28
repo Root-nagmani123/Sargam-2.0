@@ -83,6 +83,7 @@ class FcJoiningDocumentController extends Controller
     public function store(Request $request)
     {
         $userId = Auth::id();
+        // dd($userId);    
 
         // Build validation rules dynamically
         $rules = [];
@@ -115,7 +116,7 @@ class FcJoiningDocumentController extends Controller
     }
 
     // Assuming student_master table has OT user info
-    public function fc_report_index(Request $request , $formId)
+    public function fc_report_index(Request $request, $formId)
     {
         // Define document fields with readable labels
         $fields = [
@@ -150,17 +151,25 @@ class FcJoiningDocumentController extends Controller
             ->where('visible', 1)
             ->orderBy('sortorder')
             ->get();
-        $query = DB::table('student_master')->select('pk', 'display_name', 'schema_id');
+        // $query = DB::table('user_credentials')->select('pk', 'first_name', 'last_name');
         // $query = DB::table('users')->select('id', 'name', 'id');
+        $query = DB::table('user_credentials')
+            ->select('pk', DB::raw("CONCAT(first_name, ' ', last_name) as full_name"))
+            ->orderByRaw("CONCAT(first_name, ' ', last_name)");
 
 
         $search = $request->input('search');
         $status = $request->input('status');
 
+        // if ($search) {
+        //     $query->where('first_name', 'like', '%' . $search . '%');
+        //     // $query->where('name', 'like', '%' . $search . '%');
+        // }
+
         if ($search) {
-            $query->where('display_name', 'like', '%' . $search . '%');
-            // $query->where('name', 'like', '%' . $search . '%');
+            $query->where(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', '%' . $search . '%');
         }
+
 
         // Get all uploads (needed before status filtering)
         $allUploads = DB::table('fc_joining_documents_user_uploads')->get()->keyBy('user_id');
@@ -189,7 +198,7 @@ class FcJoiningDocumentController extends Controller
         }
 
         // Finally paginate
-        $students = $query->orderBy('display_name')->paginate(20);
+        $students = $query->paginate(20);
         // $students = $query->orderBy('name')->paginate(20);
 
 
@@ -204,20 +213,77 @@ class FcJoiningDocumentController extends Controller
     }
 
 
+    // public function downloadAll($userId)
+    // {
+    //     $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
+    //     $student = DB::table('user_credentials')->where('pk', $userId)->first();
+
+    //     // $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
+    //     // $student = DB::table('users')->where('id', $userId)->first();
+
+    //     if (!$user || !$student) {
+    //         return redirect()->back()->with('error', 'No uploaded documents found for this user.');
+    //     }
+
+    //     // Combine first and last name
+    //     $fullName = trim($student->first_name . ' ' . $student->last_name);
+
+    //     // Clean for filename usage
+    //     $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $fullName);
+    //     // $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->display_name);
+    //     $zipFileName = $cleanName . '_joining_documents.zip';
+    //     $tempFile = storage_path("app/temp/{$zipFileName}");
+
+    //     $zip = new \ZipArchive;
+    //     if ($zip->open($tempFile, \ZipArchive::CREATE) === TRUE) {
+    //         $hasFiles = false;
+
+    //         foreach ((array) $user as $key => $value) {
+    //             if (!empty($value) && Storage::disk('public')->exists($value)) {
+    //                 $zip->addFile(storage_path("app/public/{$value}"), basename($value));
+    //                 $hasFiles = true;
+    //             }
+    //         }
+
+    //         $zip->close();
+
+    //         if (!$hasFiles) {
+    //             return redirect()->back()->with('error', 'No documents available to download.');
+    //         }
+
+    //         return response()->download($tempFile, $zipFileName)->deleteFileAfterSend(true);
+    //     }
+
+    //     return redirect()->back()->with('error', 'Could not create ZIP file.');
+    // }
+
+
+    //finall
+
     public function downloadAll($userId)
     {
         $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
-        $student = DB::table('student_master')->where('pk', $userId)->first();
-
-        // $user = DB::table('fc_joining_documents_user_uploads')->where('user_id', $userId)->first();
-        // $student = DB::table('users')->where('id', $userId)->first();
+        $student = DB::table('user_credentials')->where('pk', $userId)->first();
 
         if (!$user || !$student) {
             return redirect()->back()->with('error', 'No uploaded documents found for this user.');
         }
 
-        $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->display_name);
-        // $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $student->name);
+        $fields = [
+            'admin_family_details_form' => 'Family Details',
+            'admin_close_relation_declaration' => 'Close Relation Declaration',
+            'admin_dowry_declaration' => 'Dowry Declaration',
+            'admin_marital_status' => 'Marital Declaration',
+            'admin_home_town_declaration' => 'Home Town Declaration',
+            'admin_property_declaration' => 'Property Declaration',
+            'accounts_bank_details' => 'Bank Details',
+            'accounts_mobile_number_form' => 'Mobile Number Declaration',
+            'accounts_pan_card' => 'PAN Card',
+            'accounts_cancelled_cheque' => 'Cancelled Cheque',
+        ];
+
+        $fullName = trim($student->first_name . ' ' . $student->last_name);
+        $cleanName = preg_replace('/[^A-Za-z0-9_\-]/', '_', $fullName);
         $zipFileName = $cleanName . '_joining_documents.zip';
         $tempFile = storage_path("app/temp/{$zipFileName}");
 
@@ -227,7 +293,11 @@ class FcJoiningDocumentController extends Controller
 
             foreach ((array) $user as $key => $value) {
                 if (!empty($value) && Storage::disk('public')->exists($value)) {
-                    $zip->addFile(storage_path("app/public/{$value}"), basename($value));
+                    $label = $fields[$key] ?? $key;
+                    $extension = pathinfo($value, PATHINFO_EXTENSION);
+                    $fileNameInZip = preg_replace('/[^A-Za-z0-9_\-]/', '_', $label) . '.' . $extension;
+
+                    $zip->addFile(storage_path("app/public/{$value}"), $fileNameInZip);
                     $hasFiles = true;
                 }
             }
@@ -243,6 +313,7 @@ class FcJoiningDocumentController extends Controller
 
         return redirect()->back()->with('error', 'Could not create ZIP file.');
     }
+
 
     // Function to save remarks for a user
     // This function allows the admin to save remarks for a specific user.

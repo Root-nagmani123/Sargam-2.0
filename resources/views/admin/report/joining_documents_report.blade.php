@@ -273,7 +273,8 @@
                     <div class="card">
                         <div class="card-body">
                             <div class="table-responsive">
-                                <table class="table table-bordered table-striped align-middle text-center table-hover text-nowrap">
+                                <table
+                                    class="table table-bordered table-striped align-middle text-center table-hover text-nowrap">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Serial Number</th>
@@ -295,7 +296,7 @@
                                             <tr>
                                                 <td>{{ ($students->currentPage() - 1) * $students->perPage() + $loop->iteration }}
                                                 </td>
-                                                <td>{{ $student->display_name }}</td>
+                                                <td>{{ $student->full_name }}</td>
                                                 <td>{{ $student->pk }}</td>
 
                                                 @foreach ($fields as $fieldKey => $fieldLabel)
@@ -304,8 +305,12 @@
                                                             <a href="{{ asset('storage/' . $upload->$fieldKey) }}"
                                                                 target="_blank"
                                                                 class="btn btn-link p-0 text-primary">View</a> |
-                                                            <a href="{{ asset('storage/' . $upload->$fieldKey) }}"
+                                                            {{-- <a href="{{ asset('storage/' . $upload->$fieldKey) }}"
                                                                 download
+                                                                class="btn btn-link p-0 text-primary">Download</a> --}}
+                                                            {{-- Fix: use download attribute with human-readable name --}}
+                                                            <a href="{{ asset('storage/' . $upload->$fieldKey) }}"
+                                                                download="{{ preg_replace('/[^A-Za-z0-9_\-]/', '_', $fieldLabel) . '.' . pathinfo($upload->$fieldKey, PATHINFO_EXTENSION) }}"
                                                                 class="btn btn-link p-0 text-primary">Download</a>
                                                         @else
                                                             <span class="text-danger">Pending</span>
@@ -371,8 +376,7 @@
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"
-         crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous">
     </script>
 </body>
 
