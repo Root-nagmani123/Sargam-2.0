@@ -92,6 +92,7 @@
                         </table>
                         
                     </div>
+                    {{-- {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }} --}}
                 </div>
             </div>
         </div>
@@ -101,3 +102,7 @@
 
 
 @endsection
+{{-- 
+@push('scripts')
+    {{ $dataTable->scripts() }}
+@endpush --}}

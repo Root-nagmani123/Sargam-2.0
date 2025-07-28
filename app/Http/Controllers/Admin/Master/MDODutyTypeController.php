@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Master;
 
+use App\DataTables\MDODutyTypeMasterDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MDODutyTypeMaster;
@@ -16,11 +17,14 @@ class MDODutyTypeController extends Controller
         $this->middleware('permission:master.mdo_duty_type.delete', ['only' => ['delete']]);
     }
 
-    public function index()
+    public function index(MDODutyTypeMasterDataTable $dataTable)
     {
-        $mdoDutyTypes = MDODutyTypeMaster::latest('pk')->get();
-        return view('admin.master.mdo_duty_type.index', compact('mdoDutyTypes'));
+        return $dataTable->render('admin.master.mdo_duty_type.index');
     }
+    // {
+    //     // $mdoDutyTypes = MDODutyTypeMaster::latest('pk')->get();
+    //     // return view('admin.master.mdo_duty_type.index', compact('mdoDutyTypes'));
+    // }
 
     public function create()
     {
