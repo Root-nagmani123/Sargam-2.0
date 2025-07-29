@@ -76,14 +76,14 @@ class CourseAttendanceNoticeMapController extends Controller
             // print_r($notice);die;
             $memoData = DB::table('student_memo_status')
                 ->leftjoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
-                ->leftjoin('student_notice_status as sns', 'student_memo_status.course_attendance_notice_map_pk', '=', 'sns.pk')
+                ->leftjoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
                 ->leftjoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
                 ->leftjoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
-                ->where('student_memo_status.course_attendance_notice_map_pk', $notice->notice_id)
+                ->where('student_memo_status.student_notice_status_pk', $notice->notice_id)
                 ->select(
                     'student_memo_status.pk as memo_id',
                     'student_memo_status.pk as memo_notice_id',
-                    'student_memo_status.course_attendance_notice_map_pk as notice_id',
+                    'student_memo_status.student_notice_status_pk as notice_id',
                     'student_memo_status.student_pk',
                     'student_memo_status.communication_status',
                     'student_memo_status.course_master_pk',
@@ -762,12 +762,12 @@ public function noticedeleteMessage($id,$type)
         if ($notice->status == 2) {
             $memoData = DB::table('student_memo_status')
                 ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
-                ->leftJoin('student_notice_status as sns', 'student_memo_status.course_attendance_notice_map_pk', '=', 'sns.pk')
+                ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
                 ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-                ->where('student_memo_status.course_attendance_notice_map_pk', $notice->notice_id)
+                ->where('student_memo_status.student_notice_status_pk', $notice->notice_id)
                 ->select(
                     'student_memo_status.pk as memo_id',
-                     'student_memo_status.course_attendance_notice_map_pk as notice_id',
+                     'student_memo_status.student_notice_status_pk as notice_id',
                     'student_memo_status.student_pk',
                     'student_memo_status.course_master_pk',
                     'student_memo_status.date as date_',
@@ -1051,7 +1051,7 @@ public function memo_notice_conversation_model(Request $request){
     return response()->json([
         'course_master_name' => $memo->course_name,
         'course_master_pk' => $memo->course_master_pk,
-        'course_attendance_notice_map_pk' => $memo->pk,
+        'student_notice_status_pk' => $memo->pk,
        
         'date_' => $memo->date_,
         'subject_master_name' => $memo->subject_name,
@@ -1101,7 +1101,7 @@ public function getMemoData(Request $request)
         'course_master_name' => $memo->course_name,
         'course_master_pk' => $memo->course_master_pk,
         'student_pk' => $memo->student_pk,
-        'course_attendance_notice_map_pk' => $memo->pk,
+        'student_notice_status_pk' => $memo->pk,
         'date_' => $memo->date_,
         'subject_master_name' => $memo->subject_name,
         'subject_master_pk' => $memo->subject_master_pk,
@@ -1119,7 +1119,7 @@ public function store_memo_status(Request $request)
 {
     // print_r($request->all());die;
     $validated = $request->validate([
-        'course_attendance_notice_map_pk' => 'required|integer',
+        'student_notice_status_pk' => 'required|integer',
         'memo_type_master_pk'             => 'required|integer',
         'student_pk'                      => 'required|integer',
         'course_master_pk'                => 'required|integer',
@@ -1132,7 +1132,7 @@ public function store_memo_status(Request $request)
     ]);
 
     DB::table('student_memo_status')->insert([
-        'course_attendance_notice_map_pk' => $validated['course_attendance_notice_map_pk'],
+        'student_notice_status_pk' => $validated['student_notice_status_pk'],
         'memo_type_master_pk'             => $validated['memo_type_master_pk'],
         'student_pk'                      => $validated['student_pk'],
         'course_master_pk'                => $validated['course_master_pk'],

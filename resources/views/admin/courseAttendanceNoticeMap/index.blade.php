@@ -258,8 +258,8 @@
                                 <input type="text" id="course_master_name" class="form-control"
                                     name="course_master_name" readonly>
                                 <input type="hidden" id="course_master_pk" name="course_master_pk">
-                                <input type="hidden" id="course_attendance_notice_map_pk"
-                                    name="course_attendance_notice_map_pk">
+                                <input type="hidden" id="student_notice_status_pk"
+                                    name="student_notice_status_pk">
                                 <input type="hidden" id="memo_count" name="memo_count">
                                 <input type="hidden" id="student_pk" name="student_pk">
                                 @error('course_master_name')
@@ -445,8 +445,8 @@ $(document).ready(function() {
                 $('#subject_master_id').val(res.student_name);
                 $('#topic_id').val(res.subject_topic);
                 $('#venue_id').val(res.venue_id);
-                $('#course_attendance_notice_map_pk').val(res
-                    .course_attendance_notice_map_pk);
+                $('#student_notice_status_pk').val(res
+                    .student_notice_status_pk);
                 $('#course_master_pk').val(res.course_master_pk);
                 $('#memo_count').val(res.memo_count + 1);
 
