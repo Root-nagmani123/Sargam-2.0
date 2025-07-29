@@ -8,7 +8,7 @@
     <x-breadcrum title="Hostel Building Floor Room Mapping" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">
                 {{ !empty($hostelFloorMappingRoom) ? 'Edit Hostel Building Floor Room Mapping' : 'Create Hostel Building Floor Room Mapping' }}
@@ -21,7 +21,7 @@
                 @endif
                 <div class="row">
                     
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="mb-3">
 
                             <x-select 
@@ -34,7 +34,7 @@
                                         />
                         </div>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="mb-3">
                             
                                 <x-select 
@@ -52,11 +52,9 @@
                 <hr>
                 <div class="mb-3">
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit" id="saveClassSessionForm">
-                        <i class="material-icons menu-icon">save</i>
                         {{ !empty($hostelFloorMappingRoom) ? 'Update' : 'Save' }}
                     </button>
                     <a href="{{ route('hostel.building.floor.room.map.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
-                        <i class="material-icons menu-icon">arrow_back</i>
                         Back
                     </a>
                 </div>

@@ -10,7 +10,7 @@
 
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
@@ -31,11 +31,11 @@
                             <table class="table table-bordered dataTables dataTable w-100 table-striped nowrap" id="zero_config" style="width: 100%;">
                                 <thead>
                                     <tr>
-                                        <th>#</th>
-                                        <th>Memo Type Name</th>
-                                        <th>Document</th>
-                                        <th>Status</th>
-                                        <th>Action</th>
+                                        <th class="col">#</th>
+                                        <th class="col">Memo Type Name</th>
+                                        <th class="col">Document</th>
+                                        <th class="col">Status</th>
+                                        <th class="col">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>

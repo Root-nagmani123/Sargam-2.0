@@ -8,8 +8,7 @@
     <x-breadcrum title="Memo Conclusion Master" />
     <x-session_message />
 
-    <div class="datatables">
-        <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
@@ -26,14 +25,14 @@
                     </div>
                     <hr>
 
-                    <table class="table table-bordered" id="zero_config" style="width: 100%;">
+                    <table class="table table-bordered table-striped" id="zero_config" style="width: 100%;">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Discussion Name</th>
-                                <th>PT Discussion</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <th class="col">#</th>
+                                <th class="col">Discussion Name</th>
+                                <th class="col">PT Discussion</th>
+                                <th class="col">Status</th>
+                                <th class="col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -85,6 +84,5 @@
                 </div>
             </div>
         </div>
-    </div>
 </div>
 @endsection

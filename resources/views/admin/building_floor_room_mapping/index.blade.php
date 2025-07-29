@@ -10,7 +10,7 @@
 
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
@@ -24,7 +24,7 @@
                         </div>
                     </div>
                     <hr>
-                    {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}
+                    {{ $dataTable->table(['class' => 'table table-striped table-bordered ']) }}
                 </div>
             </div>
         </div>
