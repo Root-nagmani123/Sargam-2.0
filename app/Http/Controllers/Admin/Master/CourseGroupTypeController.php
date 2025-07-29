@@ -8,6 +8,13 @@ use App\Models\CourseGroupTypeMaster;
 
 class CourseGroupTypeController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.course.group.type.index', ['only' => ['index']]);
+        $this->middleware('permission:master.course.group.type.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.course.group.type.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:master.course.group.type.delete', ['only' => ['delete']]);
+    }
     function index()
     {
         $courseGroupTypeMaster = CourseGroupTypeMaster::all();

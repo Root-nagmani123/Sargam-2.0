@@ -20,21 +20,29 @@ return [
         'title' => 'Course',
         'id' => 'courseCollapse',
         'icon' => 'bi-chevron-down',
+        'allowedPermissions' => [
+            'programme.index',
+            'master.course.group.type.index',
+            'group.mapping.index',
+        ],
         'items' => [
             [
                 'title' => 'Course Master',
                 'route' => 'programme.index',
                 'icon' => 'solar:mask-happly-line-duotone',
+                'permission' => 'programme.index',
             ],
             [
                 'title' => 'Course Group Type',
                 'route' => 'master.course.group.type.index',
                 'icon' => 'solar:face-scan-square-broken',
+                'permission' => 'master.course.group.type.index',
             ],
             [
                 'title' => 'Group Name Mapping',
                 'route' => 'group.mapping.index',
                 'icon' => 'solar:calendar-mark-line-duotone',
+                'permission' => 'group.mapping.index',
             ],
             [
                 'title' => 'Subject Module',

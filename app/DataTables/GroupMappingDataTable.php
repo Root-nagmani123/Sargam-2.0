@@ -28,16 +28,16 @@ class GroupMappingDataTable extends DataTable
                 $id = encrypt($row->pk);
 
                 if( !empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
-                    return "
-                    <a 
-                        href='javascript:void(0)'
-                        class='btn btn-info btn-sm view-student'
-                        data-id='{$id}'
-                    >View Student</a>
-                    <a href='" . route('group.mapping.export.student.list', $id) . "' class='btn btn-sm btn-primary'>
-                        <i class='fa fa-download'></i> Download
-                    </a>
-                    ";
+                    $returnUrl = '';
+                    if(auth()->user()->can('group.mapping.view_student')) {
+                        $returnUrl .= "<a href='javascript:void(0)' class='btn btn-info btn-sm view-student' data-id='{$id}'>View Student</a>";
+                    }
+                    if(auth()->user()->can('group.mapping.download_student')) {
+                        $returnUrl .= "<a href='" . route('group.mapping.export.student.list', $id) . "' class='btn btn-sm btn-primary'>
+                                            <i class='fa fa-download'></i> Download
+                                        </a>";
+                    }
+                    return $returnUrl;
                 }
                 return "
                 <span class='text-muted'>No Students</span>
@@ -50,19 +50,28 @@ class GroupMappingDataTable extends DataTable
                 $editUrl = route('group.mapping.edit', ['id' => $id]);
                 $deleteUrl = route('group.mapping.delete', ['id' => $id]);
 
-                return '
-                    <a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>
-                    <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
+                if(auth()->user()->can('group.mapping.edit')) {
+                    $editUrl = '<a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>';
+                } else {
+                    $editUrl = '';
+                }
+
+                if(auth()->user()->can('group.mapping.delete')) {
+                    $deleteUrl = '<form action="'.$deleteUrl.'" method="POST" style="display:inline;">
                         <input type="hidden" name="_token" value="'.$csrf.'">
-                        <input type="hidden" name="_method" value="DELETE">
                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>    
-                ';
-                
+                    </form>';
+                } else {
+                    $deleteUrl = '';
+                }
+                return $editUrl . ' ' . $deleteUrl;
             })
 
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
+                if(auth()->user()->cannot('group.mapping.active_inactive')) {
+                    return '';
+                }
                 return "
                 <div class='form-check form-switch d-inline-block'>
                     <input class='form-check-input status-toggle' type='checkbox' role='switch'

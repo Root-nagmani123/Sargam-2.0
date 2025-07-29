@@ -17,11 +17,13 @@
                         <div class="col-6">
                             <h4>Course Group Type</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.course.group.type.create')}}" class="btn btn-primary">+ Add Course Group Type</a>
-                            </div>
-                        </div>
+                        @can('master.course.group.type.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.course.group.type.create')}}" class="btn btn-primary">+ Add Course Group Type</a>
+                                </div>
+                            </div>    
+                        @endcan
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -45,34 +47,41 @@
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $courseGroupType->type_name ?? 'N/A' }}</td>
                                             <td>
-                                                <a 
-                                                    href="{{ route('master.course.group.type.edit', 
-                                                    ['id' => encrypt(value: $courseGroupType->pk)]) }}"
-                                                    class="btn btn-primary btn-sm"
-                                                >Edit</a>
-                                                <form title="{{ $courseGroupType->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                                    action="{{ route('master.course.group.type.delete', 
-                                                    ['id' => encrypt($courseGroupType->pk)]) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="button" class="btn btn-danger btn-sm" 
-                                                        onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }"
+                                                @can('master.course.group.type.edit')
+                                                    <a 
+                                                        href="{{ route('master.course.group.type.edit', 
+                                                        ['id' => encrypt(value: $courseGroupType->pk)]) }}"
+                                                        class="btn btn-primary btn-sm"
+                                                    >Edit</a>
+                                                @endcan
+                                                @can('master.course.group.type.delete')
+                                                    <form title="{{ $courseGroupType->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
+                                                        action="{{ route('master.course.group.type.delete', 
+                                                        ['id' => encrypt($courseGroupType->pk)]) }}"
+                                                        method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="button" class="btn btn-danger btn-sm" 
+                                                            onclick="event.preventDefault(); 
+                                                            if(confirm('Are you sure you want to delete this record?')) {
+                                                                this.closest('form').submit();
+                                                            }"
 
-                                                        {{ $courseGroupType->active_inactive == 1 ? 'disabled' : '' }}
-                                                        >
-                                                        Delete
-                                                    </button>
-                                                </form>
+                                                            {{ $courseGroupType->active_inactive == 1 ? 'disabled' : '' }}
+                                                            >
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                @endcan
                                             </td>
                                             <td>
-                                                <div class="form-check form-switch d-inline-block">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                        data-table="course_group_type_master" data-column="active_inactive" data-id="{{ $courseGroupType->pk }}" {{ $courseGroupType->active_inactive == 1 ? 'checked' : '' }}>
-                                                </div>
+                                                @can('master.course.group.type.active_inactive')
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                            data-table="course_group_type_master" data-column="active_inactive" data-id="{{ $courseGroupType->pk }}" {{ $courseGroupType->active_inactive == 1 ? 'checked' : '' }}>
+                                                    </div>    
+                                                @endcan
+                                                
                                             </td>
                                         </tr>
                                     @endforeach

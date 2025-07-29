@@ -13,6 +13,15 @@ use App\DataTables\GroupMappingDataTable;
 
 class GroupMappingController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:group.mapping.index', ['only' => ['index']]);
+        $this->middleware('permission:group.mapping.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:group.mapping.edit', ['only' => ['edit', 'store']]);
+        $this->middleware('permission:group.mapping.delete', ['only' => ['delete']]);
+        $this->middleware('permission:group.mapping.import_excel', ['only' => ['importGroupMapping']]);
+        $this->middleware('permission:group.mapping.export_excel', ['only' => ['exportStudentList']]);
+    }
     public function index(GroupMappingDataTable $dataTable)
     {
         return $dataTable->render('admin.group_mapping.index');

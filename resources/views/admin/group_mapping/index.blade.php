@@ -17,21 +17,27 @@
                                 <h4>Group Name Mapping</h4>
                             </div>
                             <div class="col-6 d-flex justify-content-end gap-2">
-                                <a href="{{ route('group.mapping.create') }}"
-                                    class="btn btn-primary d-flex align-items-center">
-                                    <iconify-icon icon="ep:circle-plus-filled" width="1.2em" height="1.2em"
-                                        class="me-1"></iconify-icon> Add Group Mapping
-                                </a>
-                                <!-- Import Excel Button (opens modal) -->
-                                <button type="button" class="btn btn-success d-flex align-items-center"
-                                    data-bs-toggle="modal" data-bs-target="#importModal">
-                                    <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
-                                        class="me-1"></iconify-icon> Import Excel
-                                </button>
-                                <a href="{{ route('group.mapping.export.student.list') }}"
-                                    class="btn btn-primary d-flex align-items-center">
-                                    <iconify-icon icon="material-symbols:sim-card-download-rounded" width="24" height="24"></iconify-icon> Export Excel
-                                </a>
+                                @can('group.mapping.create')
+                                    <a href="{{ route('group.mapping.create') }}"
+                                        class="btn btn-primary d-flex align-items-center">
+                                        <iconify-icon icon="ep:circle-plus-filled" width="1.2em" height="1.2em"
+                                            class="me-1"></iconify-icon> Add Group Mapping
+                                    </a>
+                                @endcan
+                                @can('group.mapping.import_excel')
+                                    <button type="button" class="btn btn-success d-flex align-items-center"
+                                        data-bs-toggle="modal" data-bs-target="#importModal">
+                                        <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
+                                            class="me-1"></iconify-icon> Import Excel
+                                    </button>
+                                @endcan
+                                @can('group.mapping.export_excel')
+                                    <a href="{{ route('group.mapping.export.student.list') }}"
+                                        class="btn btn-primary d-flex align-items-center">
+                                        <iconify-icon icon="material-symbols:sim-card-download-rounded" width="24" height="24"></iconify-icon> Export Excel
+                                    </a>
+                                @endcan                                
+                                
                             </div>
                         </div>
                         
