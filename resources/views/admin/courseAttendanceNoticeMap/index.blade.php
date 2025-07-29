@@ -121,9 +121,9 @@
                             @foreach ($memos as $memo)
 
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $memo->student_name }}</td>
-                                <td>
+                                <td class="sno">{{ $loop->iteration }}</td>
+                                <td class="s_name">{{ $memo->student_name }}</td>
+                                <td class="type">
                                     @if ($memo->notice_memo == '1')
                                     <span class="badge bg-primary-subtle text-primary">Notice</span>
                                     @elseif ($memo->notice_memo == '2')
@@ -134,7 +134,7 @@
                                 </td>
                                 <td>{{ $memo->date_}}</td>
                                 <td>{{ $memo->topic_name }}</td>
-                                <td>
+                                <td class="conversation">
                                     @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
                                         @if( $memo->notice_id != null)
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
@@ -165,7 +165,7 @@
                                     @endif
 
                                 </td>
-                                <td>
+                                <td class="response">
                                      @if($memo->type_notice_memo == 'Notice')
                                     @if($memo->status == 1)
                                     <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate
@@ -178,14 +178,8 @@
 
                                     @endif
                                 </td>
-                                <td>
-                                     @if($memo->type_notice_memo == 'Memo')
-                                    @if ($memo->communication_status == 2)
-                                   {{ $memo->discussion_name }}
-                                    @endif
-                                    @endif
-                                </td>
-                                <td>
+                                 
+                                <td class="conclusion_type">
                                      @if($memo->type_notice_memo == 'Memo')
 
                                     @endif
@@ -195,24 +189,26 @@
 
                                     @endif
                                 </td>
-                                <td>
+                                <td class="discussion_name">
                                     @if($memo->type_notice_memo == 'Memo')
                                     @if ($memo->communication_status == 2)
                                     {{ $memo->discussion_name }}
                                     @endif
                                     @endif
                                 </td>
-                                <td>
-                                    @if($memo->type_notice_memo == 'Memo')
+                                @if($memo->type_notice_memo == 'Memo')
 
                                     @if( $memo->communication_status == 2)
+                                <td >
+                                    
                                     {{ $memo->conclusion_remark }}
-                                    @endif
-                                    @endif
+                                    
                                 </td>
+                                @endif
+                                    @endif
                                 <!-- Offcanvas Chat Component -->
 
-                                <td>
+                                <td class="status">
                                     @if ($memo->status == 1)
                                     <span class="badge bg-success-subtle text-success">Open</span>
                                     @else
