@@ -9,6 +9,12 @@ use Stringable;
 
 class FacultyExpertiseMasterController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:master.faculty.expertise.index', ['only' => ['index']]);
+        $this->middleware('permission:master.faculty.expertise.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.faculty.expertise.edit', ['only' => ['edit', 'store']]);
+        $this->middleware('permission:master.faculty.expertise.delete', ['only' => ['delete']]);
+    }
     public function index() {
         $faculties = FacultyExpertiseMaster::latest('pk')->get();
         return view("admin.master.faculty_expertise_master.index", compact('faculties'));

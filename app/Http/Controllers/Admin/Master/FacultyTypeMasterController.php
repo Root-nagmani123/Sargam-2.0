@@ -9,6 +9,13 @@ use PhpParser\Node\Stmt\Catch_;
 
 class FacultyTypeMasterController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:master.faculty-type-master.index', ['only' => ['index']]);
+        $this->middleware('permission:master.faculty-type-master.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.faculty-type-master.edit', ['only' => ['edit', 'store']]);
+        $this->middleware('permission:master.faculty-type-master.delete', ['only' => ['delete']]);
+    }
+
     function index()
     {
         $facultyTypes = FacultyTypeMaster::all();

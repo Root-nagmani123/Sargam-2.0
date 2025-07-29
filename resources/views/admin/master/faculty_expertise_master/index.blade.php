@@ -18,9 +18,11 @@
                             <h4>Faculty Expertise</h4>
                         </div>
                         <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.faculty.expertise.create')}}" class="btn btn-primary">+ Add Faculty Expertise</a>
-                            </div>
+                            @can('master.faculty.expertise.create')
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.faculty.expertise.create')}}" class="btn btn-primary">+ Add Faculty Expertise</a>
+                                </div>
+                            @endcan
                         </div>
                     </div>
                     <hr>
@@ -45,11 +47,14 @@
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $faculty->expertise_name ?? 'N/A' }}</td>
                                             <td>
+                                                @can('master.faculty.expertise.edit')
                                                 <a 
                                                     href="{{ route('master.faculty.expertise.edit', 
                                                     ['id' => encrypt($faculty->pk)]) }}"
                                                     class="btn btn-primary btn-sm"
                                                 >Edit</a>
+                                                @endcan
+                                                @can('master.faculty.expertise.delete')
                                                 <form title="{{ $faculty->active_inactive == 1 ? 'Cannot delete active faculty expertise' : 'Delete' }}"
                                                     action="{{ route('master.faculty.expertise.delete', 
                                                     ['id' => encrypt($faculty->pk)]) }}"
@@ -66,12 +71,15 @@
                                                         Delete
                                                     </button>
                                                 </form>
+                                                @endcan
                                             </td>
                                             <td>
-                                                <div class="form-check form-switch d-inline-block">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                        data-table="faculty_expertise_master" data-column="active_inactive" data-id="{{ $faculty->pk }}" {{ $faculty->active_inactive == 1 ? 'checked' : '' }}>
-                                                </div>
+                                                @can('master.faculty.expertise.active_inactive')
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                            data-table="faculty_expertise_master" data-column="active_inactive" data-id="{{ $faculty->pk }}" {{ $faculty->active_inactive == 1 ? 'checked' : '' }}>
+                                                    </div>    
+                                                @endcan
                                             </td>
                                         </tr>
                                     @endforeach

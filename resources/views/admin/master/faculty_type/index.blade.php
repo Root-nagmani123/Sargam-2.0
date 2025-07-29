@@ -17,11 +17,14 @@
                         <div class="col-6">
                             <h4>Faculty Type</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.faculty.type.master.create')}}" class="btn btn-primary">+ Add Faculty Type</a>
-                            </div>
-                        </div>
+                        @can('master.faculty-type-master.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.faculty.type.master.create')}}" class="btn btn-primary">+ Add Faculty Type</a>
+                                </div>
+                            </div>    
+                        @endcan
+                        
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -47,33 +50,40 @@
                                             <td>{{ $facultyType->faculty_type_name ?? 'N/A' }}</td>
                                             <td>{{ $facultyType->shot_faculty_type_name ?? 'N/A' }}</td>
                                             <td>
-                                                <a 
-                                                    href="{{ route('master.faculty.type.master.edit', 
-                                                    ['id' => encrypt($facultyType->pk)]) }}"
-                                                    class="btn btn-primary btn-sm"
-                                                >Edit</a>
-                                                <form title="{{ $facultyType->active_inactive == 1 ? 'Cannot delete active Faculty Type' : 'Delete' }}"
-                                                    action="{{ route('master.faculty.type.master.delete', 
-                                                    ['id' => encrypt($facultyType->pk)]) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="button" class="btn btn-danger btn-sm" 
-                                                        onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }"
-                                                        {{ $facultyType->active_inactive == 1 ? 'disabled' : '' }}
-                                                        >
-                                                        Delete
-                                                    </button>
-                                                </form>
+                                                @can('master.faculty-type-master.edit')
+                                                    <a 
+                                                        href="{{ route('master.faculty.type.master.edit', 
+                                                        ['id' => encrypt($facultyType->pk)]) }}"
+                                                        class="btn btn-primary btn-sm"
+                                                    >Edit</a>
+                                                @endcan
+                                                @can('master.faculty-type-master.delete')
+                                                    <form title="{{ $facultyType->active_inactive == 1 ? 'Cannot delete active Faculty Type' : 'Delete' }}"
+                                                        action="{{ route('master.faculty.type.master.delete', 
+                                                        ['id' => encrypt($facultyType->pk)]) }}"
+                                                        method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="button" class="btn btn-danger btn-sm" 
+                                                            onclick="event.preventDefault(); 
+                                                            if(confirm('Are you sure you want to delete this record?')) {
+                                                                this.closest('form').submit();
+                                                            }"
+                                                            {{ $facultyType->active_inactive == 1 ? 'disabled' : '' }}
+                                                            >
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                @endcan
                                             </td>
                                             <td>
-                                                <div class="form-check form-switch d-inline-block">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                        data-table="faculty_type_master" data-column="active_inactive" data-id="{{ $facultyType->pk }}" {{ $facultyType->active_inactive == 1 ? 'checked' : '' }}>
-                                                </div>
+                                                @can('master.faculty-type-master.active_inactive')
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                            data-table="faculty_type_master" data-column="active_inactive" data-id="{{ $facultyType->pk }}" {{ $facultyType->active_inactive == 1 ? 'checked' : '' }}>
+                                                    </div>    
+                                                @endcan
+                                                
                                             </td>
                                         </tr>
                                     @endforeach

@@ -44,7 +44,7 @@ class RoleController extends Controller
         // $grouped = $permissions->groupBy(function ($item) {
         //     return explode('.', $item->name)[0];
         // });
-        $grouped = Permission::get()->groupBy(['permission_group', 'permission_sub_group']);
+        $grouped = Permission::where('is_visible', 1)->get()->groupBy(['permission_group', 'permission_sub_group']);
 
         return view('admin.user_management.roles.create', compact('grouped'));
     }
@@ -71,7 +71,7 @@ class RoleController extends Controller
 
     public function edit(Role $role)
     {
-        $grouped = Permission::get()->groupBy(['permission_group', 'permission_sub_group']);
+        $grouped = Permission::where('is_visible', 1)->get()->groupBy(['permission_group', 'permission_sub_group']);
         $rolePermissions = $role->permissions->pluck('id')->toArray();
         return view('admin.user_management.roles.edit', compact('role', 'grouped', 'rolePermissions'));
     }
