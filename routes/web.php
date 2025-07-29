@@ -236,6 +236,7 @@ Route::middleware(['auth'])->group(function () {
 
    Route::prefix('student-medical-exemption')->name('student.medical.exemption.')->controller(StudentMedicalExemptionController::class)->group(function () {
     Route::get('/', 'index')->name('index');
+    Route::get('/get-students-by-course', 'getStudentsByCourse')->name('getStudentsByCourse');
     Route::get('/create', 'create')->name('create');
     Route::post('/store', 'store')->name('store');
     Route::get('/edit/{id}', 'edit')->name('edit');

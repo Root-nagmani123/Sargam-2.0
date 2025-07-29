@@ -53,7 +53,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Course <span class="text-danger">*</span></label>
-                            <select name="course_master_pk" class="form-control col-form-label" required>
+                            <select name="course_master_pk" class="form-control col-form-label" id="courseDropdown" required>
                                 <option value="">Select Course</option>
                                 @foreach($courses as $course)
                                 <option value="{{ $course->pk }}"
@@ -68,30 +68,22 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Student Name <span class="text-danger">*</span></label>
-                            <select name="student_master_pk" class="form-control select2" id="studentDropdown" required>
-                                <option value="">Search Student</option>
-                                @foreach($students as $student)
-                                <option value="{{ $student->pk }}" data-ot_code="{{ $student->generated_OT_code }}"
-                                    {{ old('student_master_pk') == $student->pk ? 'selected' : '' }}>
-                                    {{ $student->display_name }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        @error('student_master_pk')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
+                  <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Student Name <span class="text-danger">*</span></label>
+                        <select name="student_master_pk" class="form-control select2" id="studentDropdown" required>
+                            <option value="">Search Student</option>
+                            {{-- Student options will be populated by AJAX --}}
+                        </select>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">OT Code</label>
-                            <input type="text" class="form-control" name="ot_code" id="otCodeField" readonly>
-                        </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">OT Code</label>
+                        <input type="text" class="form-control" name="ot_code" id="otCodeField" readonly>
                     </div>
+                </div>
 
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -217,8 +209,35 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // Course to Student AJAX
+    $('#courseDropdown').on('change', function() {
+        let courseId = $(this).val();
+        $('#studentDropdown').html('<option value="">Loading...</option>');
+
+        if (courseId !== '') {
+            $.ajax({
+                url: '{{ route("student.medical.exemption.getStudentsByCourse") }}',
+                type: 'GET',
+                data: { course_id: courseId },
+                success: function(response) {
+                    let options = '<option value="">Search Student</option>';
+                    $.each(response.students, function(index, student) {
+                        options += `<option value="${student.pk}" data-ot_code="${student.generated_OT_code}">
+                                        ${student.display_name}
+                                    </option>`;
+                    });
+                    $('#studentDropdown').html(options).trigger('change');
+                }
+            });
+        } else {
+            $('#studentDropdown').html('<option value="">Select Course First</option>');
+        }
+    });
+
+    // Student to OT Code Display
     $('#studentDropdown').on('change', function() {
-        var otCode = $(this).find(':selected').data('ot_code') || '';
+        let selectedOption = $(this).find('option:selected');
+        let otCode = selectedOption.data('ot_code') || '';
         $('#otCodeField').val(otCode);
     });
 });

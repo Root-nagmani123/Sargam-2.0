@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
+use Illuminate\Support\Facades\DB;
 
 
 class StudentMedicalExemptionController extends Controller
@@ -23,13 +24,11 @@ class StudentMedicalExemptionController extends Controller
    public function create()
 {
     $courses = CourseMaster::where('active_inactive', '1')->get();
-    $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
-        ->where('status', '1')
-        ->get();
+  
     $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
     $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
 
-    return view('admin.student_medical_exemption.create', compact('courses', 'students', 'categories', 'specialities'));
+    return view('admin.student_medical_exemption.create', compact('courses', 'categories', 'specialities'));
 }
 
 
@@ -109,5 +108,18 @@ public function update(Request $request, $id)
     {
         StudentMedicalExemption::destroy(decrypt($id));
         return redirect()->route('student.medical.exemption.index')->with('success', 'Deleted successfully.');
+    }
+    public function getStudentsByCourse(Request $request)
+    {
+        $courseId = $request->input('course_id');
+        $students = DB::table('student_master_course__map')
+            ->join('student_master', 'student_master_course__map.student_master_pk', '=', 'student_master.pk')
+            ->where('student_master_course__map.course_master_pk', $courseId)
+            ->where('student_master.status', '1')
+            ->select('student_master.pk', 'student_master.generated_OT_code', 'student_master.display_name')
+            ->get();
+       
+       return response()->json(['students' => $students]);
+
     }
 }
