@@ -35,16 +35,23 @@ class CourseMasterDataTable extends DataTable
                 return $row->end_date ? Carbon::parse($row->end_date)->format('Y-m-d') : '';
             })
             ->addColumn('action', function ($row) {
-                $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>';
+                if (auth()->user()->can('programme.edit')) {
+                    $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
+                    return '<a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>';
+                }
+                return '';
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                        data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
-                </div>';
+
+                if (auth()->user()->can('programme.active_inactive')) {
+                    $checked = $row->active_inactive == 1 ? 'checked' : '';
+                    return '
+                    <div class="form-check form-switch d-inline-block">
+                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                            data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
+                    </div>';
+                }
+                return '';                  
             })
             ->filterColumn('course_name', function ($query, $keyword) {
                 $query->where('course_name', 'like', "%{$keyword}%");

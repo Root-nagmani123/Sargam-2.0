@@ -27,12 +27,28 @@ class RoleDataTable extends DataTable
             ->editColumn('name', fn($row) => '<label class="text-dark">' . $row->name . '</label>')
             
             ->editColumn('permissions', function ($row) {
-                foreach($row->permissions as $permission) {
-                    $permissions[] = '<span class="badge bg-primary">' . $permission->name . '</span>';
+                $badges = [];
+
+                foreach ($row->permissions as $permission) {
+                    $group = e($permission->permission_group);
+                    $subGroup = e($permission->permission_sub_group);
+                    $name = e($permission->display_name);
+
+                    $badges[] = <<<HTML
+                        <div class="mb-1">
+                            <span class="text-muted fw-semibold">{$group}</span>
+                            <span class="text-muted"> &raquo; </span>
+                            <span class="text-muted fw-semibold">{$subGroup}</span>
+                            <span class="text-muted"> &raquo; </span>
+                            <span class="badge bg-primary">{$name}</span>
+                        </div>
+                    HTML;
                 }
-                return implode(' ', $permissions ?? []);
-                
+
+                return implode('', $badges);
             })
+
+
             ->editColumn('action', function($row){
                 return '<a href="' . route('admin.roles.edit', $row->id) . '" class="btn btn-primary btn-sm">Edit</a>';
             })

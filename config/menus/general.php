@@ -160,28 +160,35 @@ return [
         'title' => 'Faculty',
         'id' => 'facultyCollapse',
         'icon' => 'bi-chevron-down',
+        'allowedPermissions' => [
+            'master.faculty.expertise.index',
+            'master.faculty-type-master.index',
+            'faculty.index',
+        ],
         'items' => [
             [
                 'title' => 'Faculty Expertise',
                 'route' => 'master.faculty.expertise.index',
                 'icon' => 'solar:face-scan-square-broken',
+                'permission' => 'master.faculty.expertise.index',
             ],
             [
                 'title' => 'Faculty Type',
                 'route' => 'master.faculty.type.master.index',
                 'icon' => 'solar:face-scan-square-broken',
+                'permission' => 'master.faculty-type-master.index',
             ],
             [
                 'title' => 'Faculty',
                 'route' => 'faculty.index',
                 'icon' => 'solar:document-text-line-duotone',
-                // 'permission' => 'faculty.index',
+                'permission' => 'faculty.index',
             ],
-            [
-                'title' => 'Faculty Topic Mapping',
-                'route' => 'mapping.index',
-                'icon' => 'solar:map-arrow-up-bold-duotone',
-            ],
+            // [
+            //     'title' => 'Faculty Topic Mapping',
+            //     'route' => 'mapping.index',
+            //     'icon' => 'solar:map-arrow-up-bold-duotone',
+            // ],
         ],
     ],
     [

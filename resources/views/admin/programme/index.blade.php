@@ -16,11 +16,13 @@
                         <div class="col-6">
                             <h4>Course Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('programme.create')}}" class="btn btn-primary">+ Add Course</a>
-                            </div>
-                        </div>
+                        @can('programme.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('programme.create')}}" class="btn btn-primary">+ Add Course</a>
+                                </div>
+                            </div>    
+                        @endcan
                     </div>
                     <hr>
                     <div class="table-responsive">

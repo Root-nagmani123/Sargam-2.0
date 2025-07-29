@@ -15,6 +15,12 @@ use App\DataTables\CourseMasterDataTable;
 
 class CourseController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('can:programme.index')->only(['index']);
+        $this->middleware('can:programme.create')->only(['create', 'store']);
+        $this->middleware('can:programme.edit')->only(['edit', 'update']);
+    }
     public function index(CourseMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.programme.index');
