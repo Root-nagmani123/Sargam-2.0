@@ -17,11 +17,14 @@
                     <div class="col-6">
                         <h4>Employee Type Master</h4>
                     </div>
-                    <div class="col-6">
-                        <div class="float-end gap-2">
-                            <a href="{{route('master.employee.type.create')}}" class="btn btn-primary">+ Add Employee Type</a>
+                    @can('master.employee.type.create')
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <a href="{{route('master.employee.type.create')}}" class="btn btn-primary">+ Add Employee Type</a>
+                            </div>
                         </div>
-                    </div>
+                    @endcan
+                    
                 </div>
                 <hr>
                 <div class="table-responsive">

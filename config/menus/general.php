@@ -166,11 +166,19 @@ return [
         'title' => 'Employee',
         'id' => 'employeeCollapse',
         'icon' => 'bi-chevron-down',
+        'allowedPermissions' => [
+            'master.employee.type.index',
+            // 'master.employee.group.index',
+            // 'master.department.master.index',
+            // 'master.designation.index',
+            // 'master.caste.category.index',
+        ],
         'items' => [
             [
                 'title' => 'Employee Type',
                 'route' => 'master.employee.type.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.employee.type.index',
             ],
             [
                 'title' => 'Employee Group',

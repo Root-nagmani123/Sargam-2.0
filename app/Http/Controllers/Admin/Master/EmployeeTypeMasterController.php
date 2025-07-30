@@ -10,6 +10,12 @@ use Illuminate\Validation\Rule;
 
 class EmployeeTypeMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.employee.type.index', ['only' => ['index']]);
+        $this->middleware('permission:master.employee.type.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.employee.type.edit', ['only' => ['edit', 'update']]);
+    }
     function index()
     {
         $employeeTypeMaster = new EmployeeTypeMasterDataTable;

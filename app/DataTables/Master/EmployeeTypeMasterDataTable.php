@@ -26,15 +26,21 @@ class EmployeeTypeMasterDataTable extends DataTable
             ->addIndexColumn()
             ->addColumn('category_type_name', fn($row) => $row->category_type_name ?? '-')
             ->addColumn('action', function ($row) {
-                $editUrl = route('master.employee.type.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
+                if(auth()->user()->can('master.employee.type.edit')) {
+                    $editUrl = route('master.employee.type.edit', ['id' => encrypt($row->pk)]);
+                    return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
+                }
+                return '';
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="employee_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                if(auth()->user()->can('master.employee.type.active_inactive')) {
+                    $checked = $row->active_inactive == 1 ? 'checked' : '';
+                    return '<div class="form-check form-switch d-inline-block ms-2">
+                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                        data-table="employee_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                </div>';
+                }
+                return '';
             })
 
             ->setRowId('pk')
