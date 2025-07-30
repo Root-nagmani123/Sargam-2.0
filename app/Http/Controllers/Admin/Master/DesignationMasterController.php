@@ -9,6 +9,13 @@ use App\DataTables\Master\DesignationMasterDataTable;
 use Illuminate\Validation\Rule; 
 class DesignationMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.designation.index', ['only' => ['index']]);
+        $this->middleware('permission:master.designation.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.designation.edit', ['only' => ['edit', 'store']]);
+    }
+
     function index()
     {
         $designationMaster = new DesignationMasterDataTable;

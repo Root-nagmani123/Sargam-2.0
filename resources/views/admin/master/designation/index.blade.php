@@ -17,11 +17,14 @@
                         <div class="col-6">
                             <h4>Designation Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.designation.create')}}" class="btn btn-primary">+ Add Designation</a>
+                        @can('master.designation.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.designation.create')}}" class="btn btn-primary">+ Add Designation</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
+                        
                     </div>
                     <hr>
                     <div class="table-responsive">
