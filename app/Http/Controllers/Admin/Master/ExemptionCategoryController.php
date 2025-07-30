@@ -16,10 +16,10 @@ class ExemptionCategoryController extends Controller
         $this->middleware('permission:master.exemption.category.master.edit', ['only' => ['edit', 'store']]);
         $this->middleware('permission:master.exemption.category.master.delete', ['only' => ['delete']]);
 
-        // $this->middleware('permission:master.exemption.medical.speciality.index', ['only' => ['medicalSpecialityIndex']]);
-        // $this->middleware('permission:master.exemption.medical.speciality.create', ['only' => ['medicalSpecialityCreate', 'medicalSpecialityStore']]);
-        // $this->middleware('permission:master.exemption.medical.speciality.edit', ['only' => ['medicalSpecialityEdit']]);
-        // $this->middleware('permission:master.exemption.medical.speciality.delete', ['only' => ['medicalSpecialityDelete']]);
+        $this->middleware('permission:master.exemption.medical.speciality.index', ['only' => ['medicalSpecialityIndex']]);
+        $this->middleware('permission:master.exemption.medical.speciality.create', ['only' => ['medicalSpecialityCreate', 'medicalSpecialityStore']]);
+        $this->middleware('permission:master.exemption.medical.speciality.edit', ['only' => ['medicalSpecialityEdit']]);
+        $this->middleware('permission:master.exemption.medical.speciality.delete', ['only' => ['medicalSpecialityDelete']]);
     }
     public function index()
     {

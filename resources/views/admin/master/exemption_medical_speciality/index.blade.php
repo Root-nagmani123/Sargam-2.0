@@ -17,12 +17,15 @@
                         <div class="col-6">
                             <h4>Exemption Medical Speciality Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.exemption.medical.speciality.create')}}"
-                                    class="btn btn-primary">+ Add Speciality</a>
-                            </div>
-                        </div>
+                        @can('master.exemption.medical.speciality.index')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.exemption.medical.speciality.create')}}"
+                                        class="btn btn-primary">+ Add Speciality</a>
+                                </div>
+                            </div>    
+                        @endcan
+                        
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -46,32 +49,40 @@
                                         <td>{{ $speciality->created_date }}</td>
 
                                         <td>
-                                            <div class="form-check form-switch d-inline-block">
-                                                <input class="form-check-input status-toggle" type="checkbox"
-                                                    role="switch" data-table="exemption_medical_speciality_master"
-                                                    data-column="active_inactive" data-id="{{ $speciality->pk }}"
-                                                    {{ $speciality->active_inactive == 1 ? 'checked' : '' }}>
-                                            </div>
+                                            @can('master.exemption.medical.speciality.active_inactive')
+                                                <div class="form-check form-switch d-inline-block">
+                                                    <input class="form-check-input status-toggle" type="checkbox"
+                                                        role="switch" data-table="exemption_medical_speciality_master"
+                                                        data-column="active_inactive" data-id="{{ $speciality->pk }}"
+                                                        {{ $speciality->active_inactive == 1 ? 'checked' : '' }}>
+                                                </div>
+                                            @endcan
+                                            
                                         </td>
 
                                         <td>
-                                            <a href="{{ route('master.exemption.medical.speciality.edit', 
+                                            @can('master.exemption.medical.speciality.edit')
+                                                <a href="{{ route('master.exemption.medical.speciality.edit', 
                                                     ['id' => encrypt(value: $speciality->pk)]) }}"
                                                 class="btn btn-primary btn-sm">Edit</a>
-                                            <form
-                                                title="{{ $speciality->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                                action="{{ route('master.exemption.medical.speciality.delete', 
-                                                    ['id' => encrypt($speciality->pk)]) }}" method="POST"
-                                                class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }" {{ $speciality->active_inactive == 1 ? 'disabled' : '' }}>
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @endcan
+                                            @can('master.exemption.medical.speciality.delete')
+                                                <form
+                                                    title="{{ $speciality->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
+                                                    action="{{ route('master.exemption.medical.speciality.delete', 
+                                                        ['id' => encrypt($speciality->pk)]) }}" method="POST"
+                                                    class="d-inline">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
+                                                            if(confirm('Are you sure you want to delete this record?')) {
+                                                                this.closest('form').submit();
+                                                            }" {{ $speciality->active_inactive == 1 ? 'disabled' : '' }}>
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            @endcan
+                                            
                                         </td>
                                     </tr>
                                     @empty

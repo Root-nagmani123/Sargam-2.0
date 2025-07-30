@@ -66,6 +66,7 @@ return [
         'icon' => 'bi-chevron-down',
         'permissions' => [
             'master.exemption.category.master.index',
+            'master.exemption.medical.speciality.index'
         ],
         'items' => [
             [
@@ -78,6 +79,7 @@ return [
                 'title' => 'Exemption Medical Speciality',
                 'route' => 'master.exemption.medical.speciality.index',
                 'icon' => 'solar:face-scan-square-broken',
+                'permission' => 'master.exemption.medical.speciality.index',
             ],
         ],
     ],
