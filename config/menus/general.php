@@ -245,6 +245,11 @@ return [
         'title' => 'User Management',
         'id' => 'userManagementCollapse',
         'icon' => 'bi-chevron-down',
+        'allowedPermissions' => [
+            'admin.users.index',
+            'admin.roles.index',
+            'admin.permissions.index',
+        ],
         'items' => [
             [
                 'title' => 'Users',

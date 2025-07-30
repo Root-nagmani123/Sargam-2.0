@@ -16,11 +16,13 @@
                         <div class="col-6">
                             <h4>Users</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{ route('admin.users.create') }}" class="btn btn-primary">+ Add Users</a>
-                            </div>
-                        </div>
+                        @can('admin.users.create')
+                            {{-- <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{ route('admin.users.create') }}" class="btn btn-primary">+ Add Users</a>
+                                </div>
+                            </div> --}}
+                        @endcan
                     </div>
                     <hr>
                     <div class="table-responsive">

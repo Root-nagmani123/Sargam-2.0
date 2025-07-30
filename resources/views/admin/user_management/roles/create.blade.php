@@ -68,9 +68,12 @@
                                                                     <div class="col-md-3 mb-2">
                                                                         {{-- <div class="col-md-6"> --}}
                                                                             <div class="form-check">
-                                                                                <input class="form-check-input" type="checkbox"
-                                                                                    id="{{ $perm->name }}">
-                                                                                <label class="form-check-label" for="{{ $perm->name }}">
+                                                                                <input class="form-check-input" 
+                                                                                    type="checkbox"
+                                                                                    name="permission[{{ $perm->id }}]"
+                                                                                    value="{{ $perm->id }}"
+                                                                                    id="perm_{{ $perm->id }}">
+                                                                                <label class="form-check-label" for="perm_{{ $perm->id }}">
                                                                                     {{-- {{ ucwords(str_replace('-', ' ', $perm->permission_sub_group)) }} --}}
                                                                                     {{-- <em>({{ $perm->name }})</em> --}}
                                                                                     <strong>{{ $perm->display_name }}</strong>

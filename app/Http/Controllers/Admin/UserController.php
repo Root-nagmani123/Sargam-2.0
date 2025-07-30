@@ -15,6 +15,12 @@ use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:admin.users.index', ['only' => ['index']]);
+        $this->middleware('permission:admin.users.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:admin.users.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:admin.users.show', ['only' => ['show']]);
+    }
     /**
      * Display a listing of users.
      *

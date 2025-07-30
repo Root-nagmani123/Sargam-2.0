@@ -54,8 +54,14 @@ class UserCredentialsDataTable extends DataTable
                 $query->where('mobile_no', 'like', "%{$keyword}%");
             })
             ->addColumn('action', function ($row) {
-                return '<a href="' . route('admin.users.show', $row->pk) . '" class="btn btn-sm btn-primary">View</a>
-                <a href="' . route('admin.users.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>';
+                $html = '';
+                if(auth()->user()->can('admin.users.show')) {
+                    $html .= '<a href="' . route('admin.users.show', $row->pk) . '" class="btn btn-sm btn-primary">View</a> ';
+                }
+                if(auth()->user()->can('admin.users.edit')) {
+                    $html .= '<a href="' . route('admin.users.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>';
+                }
+                return $html;
             })
             ->rawColumns(['user_name', 'first_name', 'last_name', 'email', 'mobile_no', 'action', 'role']);
     }
