@@ -8,6 +8,14 @@ use App\Models\MDODutyTypeMaster;
 
 class MDODutyTypeController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.mdo_duty_type.index', ['only' => ['index']]);
+        $this->middleware('permission:master.mdo_duty_type.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.mdo_duty_type.edit', ['only' => ['edit', 'store']]);
+        $this->middleware('permission:master.mdo_duty_type.delete', ['only' => ['delete']]);
+    }
+
     public function index()
     {
         $mdoDutyTypes = MDODutyTypeMaster::latest('pk')->get();

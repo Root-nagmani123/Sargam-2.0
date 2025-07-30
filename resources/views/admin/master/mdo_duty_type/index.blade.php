@@ -17,11 +17,13 @@
                         <div class="col-6">
                             <h4>MDO Duty Type</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.mdo_duty_type.create')}}" class="btn btn-primary">+ Add MDO Duty Type</a>
+                        @can('master.mdo_duty_type.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.mdo_duty_type.create')}}" class="btn btn-primary">+ Add MDO Duty Type</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -45,33 +47,41 @@
                                             <td>{{ $loop->iteration }}</td>
                                             <td>{{ $mdoDutyType->mdo_duty_type_name ?? 'N/A' }}</td>
                                             <td>
-                                                <a 
-                                                    href="{{ route('master.mdo_duty_type.edit', 
-                                                    ['id' => encrypt($mdoDutyType->pk)]) }}"
-                                                    class="btn btn-primary btn-sm"
-                                                >Edit</a>
-                                                <form title="{{ $mdoDutyType->active_inactive == 1 ? 'Cannot delete active MDO Duty Type' : 'Delete' }}"
-                                                    action="{{ route('master.mdo_duty_type.delete', 
-                                                    ['id' => encrypt($mdoDutyType->pk)]) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="button" class="btn btn-danger btn-sm" 
-                                                        onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }"
-                                                        {{ $mdoDutyType->active_inactive == 1 ? 'disabled' : '' }}
-                                                        >
-                                                        Delete
-                                                    </button>
-                                                </form>
+                                                @can('master.mdo_duty_type.edit')
+                                                    <a 
+                                                        href="{{ route('master.mdo_duty_type.edit', 
+                                                        ['id' => encrypt($mdoDutyType->pk)]) }}"
+                                                        class="btn btn-primary btn-sm"
+                                                    >Edit</a>
+                                                @endcan
+                                                @can('master.mdo_duty_type.delete')
+                                                    <form title="{{ $mdoDutyType->active_inactive == 1 ? 'Cannot delete active MDO Duty Type' : 'Delete' }}"
+                                                        action="{{ route('master.mdo_duty_type.delete', 
+                                                        ['id' => encrypt($mdoDutyType->pk)]) }}"
+                                                        method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="button" class="btn btn-danger btn-sm" 
+                                                            onclick="event.preventDefault(); 
+                                                            if(confirm('Are you sure you want to delete this record?')) {
+                                                                this.closest('form').submit();
+                                                            }"
+                                                            {{ $mdoDutyType->active_inactive == 1 ? 'disabled' : '' }}
+                                                            >
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                @endcan
+                                                
                                             </td>
                                             <td>
-                                                <div class="form-check form-switch d-inline-block">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                        data-table="mdo_duty_type_master" data-column="active_inactive" data-id="{{ $mdoDutyType->pk }}" {{ $mdoDutyType->active_inactive == 1 ? 'checked' : '' }}>
-                                                </div>
+                                                @can('master.mdo_duty_type.active_inactive')
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                            data-table="mdo_duty_type_master" data-column="active_inactive" data-id="{{ $mdoDutyType->pk }}" {{ $mdoDutyType->active_inactive == 1 ? 'checked' : '' }}>
+                                                    </div>
+                                                @endcan
+                                                
                                             </td>
                                         </tr>
                                     @endforeach
