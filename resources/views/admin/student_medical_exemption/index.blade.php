@@ -15,12 +15,14 @@
                         <div class="col-6">
                             <h4>Student Medical Exemption</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('student.medical.exemption.create')}}" class="btn btn-primary">+ Add
-                                    Student Medical Exemption</a>
+                        @can('student-medical-exemption.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('student.medical.exemption.create')}}" class="btn btn-primary">+ Add
+                                        Student Medical Exemption</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     <div class="table-responsive">
@@ -47,30 +49,37 @@
                                     <td>{{ $row->from_date }} to {{ $row->to_date }}</td>
                                     <td>{{ $row->opd_category }}</td>
                                     <td>
-                                        <a href="{{ route('student.medical.exemption.edit', ['id' => encrypt(value: $row->pk)])  }}"
+                                        @can('student-medical-exemption.edit')
+                                            <a href="{{ route('student.medical.exemption.edit', ['id' => encrypt(value: $row->pk)])  }}"
                                             class="btn btn-sm btn-info">Edit</a>
-
-                                        <form
-                                            title="{{ $row->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                            action="{{ route('student.medical.exemption.delete', 
-                                                    ['id' => encrypt($row->pk)]) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }" {{ $row->active_inactive == 1 ? 'disabled' : '' }}>
-                                                Delete
-                                            </button>
-                                        </form>
+                                        @endcan
+                                        
+                                        @can('student-medical-exemption.delete')
+                                            <form
+                                                title="{{ $row->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
+                                                action="{{ route('student.medical.exemption.delete', 
+                                                        ['id' => encrypt($row->pk)]) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
+                                                            if(confirm('Are you sure you want to delete this record?')) {
+                                                                this.closest('form').submit();
+                                                            }" {{ $row->active_inactive == 1 ? 'disabled' : '' }}>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        @endcan
+                                        
                                     </td>
                                     <td>
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="student_medical_exemption" data-column="active_inactive"
-                                                data-id="{{ $row->pk }}"
-                                                {{ $row->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
+                                        @can('student-medical-exemption.active_inactive')
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                    data-table="student_medical_exemption" data-column="active_inactive"
+                                                    data-id="{{ $row->pk }}"
+                                                    {{ $row->active_inactive == 1 ? 'checked' : '' }}>
+                                            </div>
+                                        @endcan
                                     </td>
                                 </tr>
                                 @empty

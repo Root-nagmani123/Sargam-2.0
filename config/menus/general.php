@@ -87,11 +87,17 @@ return [
         'title' => 'Exemption Duty',
         'id' => 'exemptionDutyCollapse',
         'icon' => 'bi-chevron-down',
+        'permissions' => [
+            'student-medical-exemption.index',
+            // 'mdo-escrot-exemption.index',
+            // 'master.mdo_duty_type.index',
+        ],
         'items' => [
             [
                 'title' => 'Student Medical Exemption',
                 'route' => 'student.medical.exemption.index',
                 'icon' => 'solar:feed-bold-duotone',
+                'permission' => 'student-medical-exemption.index',
             ],
             [
                 'title' => 'MDO Escrot Exemption',

@@ -13,6 +13,14 @@ use App\Models\ExemptionMedicalSpecialityMaster;
 
 class StudentMedicalExemptionController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:student-medical-exemption.index', ['only' => ['index']]);
+        $this->middleware('permission:student-medical-exemption.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:student-medical-exemption.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:student-medical-exemption.delete', ['only' => ['delete']]);
+    }
+
     public function index()
     {
        $records = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course'])->get();
