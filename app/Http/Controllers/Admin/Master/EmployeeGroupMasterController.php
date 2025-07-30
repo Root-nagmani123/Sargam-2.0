@@ -10,6 +10,12 @@ use Illuminate\Validation\Rule;
 
 class EmployeeGroupMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.employee.group.index', ['only' => ['index']]);
+        $this->middleware('permission:master.employee.group.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.employee.group.edit', ['only' => ['edit', 'store']]);
+    }
     public function index()
     {
         return (new EmployeeGroupMasterDataTable())->render('admin.master.employee_group.index');
@@ -50,7 +56,6 @@ class EmployeeGroupMasterController extends Controller
     public function edit($id)
     {
         $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
-        // dd($employeeGroupMaster);
         return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
     }
 

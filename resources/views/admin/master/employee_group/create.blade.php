@@ -20,7 +20,7 @@
                     <input type="hidden" name="pk" value="{{ encrypt($employeeGroupMaster->pk) }}">
                 @endif
                 <div class="row">
-                    
+                    {{-- @dump($employeeGroupMaster->emp_group_name) --}}
                     <div class="col-md-4">
                         <div class="mb-3">
                             <x-input
@@ -29,7 +29,7 @@
                                 placeholder="Name" 
                                 formLabelClass="form-label"
                                 required="true"
-                                value="{{ old('group_name', $employeeGroupMaster->group_name ?? '') }}"
+                                value="{{ old('group_name', $employeeGroupMaster->emp_group_name) }}"
                                 />
                         </div>
                     </div>

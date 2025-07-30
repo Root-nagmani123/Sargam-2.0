@@ -17,11 +17,13 @@
                     <div class="col-6">
                         <h4>Employee Group Master</h4>
                     </div>
-                    <div class="col-6">
-                        <div class="float-end gap-2">
-                            <a href="{{route('master.employee.group.create')}}" class="btn btn-primary">+ Add Employee Group</a>
+                    @can('master.employee.group.create')
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <a href="{{route('master.employee.group.create')}}" class="btn btn-primary">+ Add Employee Group</a>
+                            </div>
                         </div>
-                    </div>
+                    @endcan
                 </div>
                 <hr>
                 <div class="table-responsive">

@@ -168,7 +168,7 @@ return [
         'icon' => 'bi-chevron-down',
         'allowedPermissions' => [
             'master.employee.type.index',
-            // 'master.employee.group.index',
+            'master.employee.group.index',
             // 'master.department.master.index',
             // 'master.designation.index',
             // 'master.caste.category.index',
@@ -184,6 +184,7 @@ return [
                 'title' => 'Employee Group',
                 'route' => 'master.employee.group.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.employee.group.index',
             ],
             [
                 'title' => 'Department Master',
