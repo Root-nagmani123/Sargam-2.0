@@ -169,7 +169,7 @@ return [
         'allowedPermissions' => [
             'master.employee.type.index',
             'master.employee.group.index',
-            // 'master.department.master.index',
+            'master.department.master.index',
             // 'master.designation.index',
             // 'master.caste.category.index',
         ],
@@ -190,6 +190,7 @@ return [
                 'title' => 'Department Master',
                 'route' => 'master.department.master.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.department.master.index',
             ],
             [
                 'title' => 'Designation Master',

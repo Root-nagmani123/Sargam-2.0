@@ -17,11 +17,13 @@
                         <div class="col-6">
                             <h4>Department Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.department.master.create')}}" class="btn btn-primary">+ Add Department</a>
+                        @can('master.department.master.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.department.master.create')}}" class="btn btn-primary">+ Add Department</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     <div class="table-responsive">

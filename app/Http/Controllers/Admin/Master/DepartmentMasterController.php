@@ -11,6 +11,13 @@ use Illuminate\Validation\Rule;
 
 class DepartmentMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.department.master.index', ['only' => ['index']]);
+        $this->middleware('permission:master.department.master.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.department.master.edit', ['only' => ['edit', 'store']]);
+    }
+    
     function index()
     {
         $departmentMaster = new DepartmentMasterDataTable;
