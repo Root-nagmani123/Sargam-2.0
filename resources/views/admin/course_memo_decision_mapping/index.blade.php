@@ -15,11 +15,13 @@
                         <div class="col-6">
                             <h4>Course Memo Decision Mapping</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New Mapping</a>
+                        @can('course.memo.decision.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New Mapping</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -45,10 +47,12 @@
  
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
-                                       
-                                             <a href="{{ route('course.memo.decision.edit', ['id' => encrypt($mapping->pk)]) }}"
+                                            @can('course.memo.decision.edit')
+                                                <a href="{{ route('course.memo.decision.edit', ['id' => encrypt($mapping->pk)]) }}"
                                                 class="btn btn-primary btn-sm">Edit</a>
-                                          
+                                            @endcan
+                                             
+                                            @can('course.memo.decision.delete')
                                             <form action="{{ route('course.memo.decision.delete', ['id' => encrypt($mapping->pk)]) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
@@ -60,15 +64,18 @@
                                                     Delete
                                                 </button>
                                             </form>
+                                            @endcan
                                         </div>
                                     </td> 
                                     <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="course_memo_decision_mapp" data-column="active_inactive"
-                                                data-id="{{ $mapping->pk }}" data-id_column="pk"
-                                                {{ $mapping->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
+                                        @can('course.memo.decision.active_inactive')
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                    data-table="course_memo_decision_mapp" data-column="active_inactive"
+                                                    data-id="{{ $mapping->pk }}" data-id_column="pk"
+                                                    {{ $mapping->active_inactive == 1 ? 'checked' : '' }}>
+                                            </div>
+                                        @endcan
                                     </td>
                                 </tr>
                                 @endforeach

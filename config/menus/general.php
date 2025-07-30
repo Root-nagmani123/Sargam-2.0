@@ -120,9 +120,9 @@ return [
         'allowedPermissions' => [
             'master.memo.type.master.index',
             'master.memo.conclusion.master.index',
-            // 'memo.notice.management.index',
+            'memo.notice.management.index',
             // 'memo.notice.management.user',
-            // 'course.memo.decision.index',
+            'course.memo.decision.index',
             // 'admin.courseAttendanceNoticeMap.memo_notice'
         ],
         'items' => [
@@ -136,11 +136,13 @@ return [
                 'title' => 'Memo Conclusion Master',
                 'route' => 'master.memo.conclusion.master.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.memo.conclusion.master.index'
             ],
             [
                 'title' => 'Memo Notice Management',
                 'route' => 'memo.notice.management.index',
                 'icon' => 'solar:feed-bold-duotone',
+                'permission' => 'memo.notice.management.index'
             ],
             [
                 'title' => 'Memo Notice Chat (User)',
@@ -151,6 +153,7 @@ return [
                 'title' => 'Memo Course Mapping',
                 'route' => 'course.memo.decision.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'course.memo.decision.index',
             ],
             [
                 'title' => 'Memo / Notice Creation (Admin)',

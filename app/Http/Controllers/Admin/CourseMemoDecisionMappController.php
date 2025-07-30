@@ -7,6 +7,12 @@ use App\Http\Controllers\Controller;
 use App\Models\{CourseMemoDecisionMapp,CourseMaster, MemoTypeMaster, MemoConclusionMaster};
 class CourseMemoDecisionMappController extends Controller
 {
+    function __construct(){
+        $this->middleware('permission:course.memo.decision.index', ['only' => ['index']]);
+        $this->middleware('permission:course.memo.decision.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:course.memo.decision.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:course.memo.decision.delete', ['only' => ['destroy']]);
+    }
      public function index()
     { 
         // $mappings = CourseMemoDecisionMapp::all();

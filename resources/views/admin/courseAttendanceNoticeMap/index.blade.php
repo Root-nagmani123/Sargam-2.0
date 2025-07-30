@@ -49,12 +49,14 @@
                 <div class="col-6">
                     <h4 class="card-title">Notice /Memo Management</h4>
                 </div>
-                <div class="col-6">
-                    <div class="float-end gap-2">
-                        <a href="{{ route('memo.notice.management.create') }}" class="btn btn-primary">+ Add
-                            Notice</a>
+                @can('memo.notice.management.create')
+                     <div class="col-6">
+                        <div class="float-end gap-2">
+                            <a href="{{ route('memo.notice.management.create') }}" class="btn btn-primary">+ Add
+                                Notice</a>
+                        </div>
                     </div>
-                </div>
+                @endcan
             </div>
             <div class="row">
                 <div class="col-4">
