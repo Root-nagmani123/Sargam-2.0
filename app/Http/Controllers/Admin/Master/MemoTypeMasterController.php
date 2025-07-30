@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\Storage;
 
 class MemoTypeMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.memo.type.master.index')->only(['index']);
+        $this->middleware('permission:master.memo.type.master.create')->only(['create', 'store']);
+        $this->middleware('permission:master.memo.type.master.edit')->only(['edit', 'store']);
+        $this->middleware('permission:master.memo.type.master.delete')->only(['delete']);
+    }
     public function index()
     {
         $memoTypes = MemoTypeMaster::all();

@@ -17,11 +17,13 @@
                         <div class="col-6">
                             <h4>Memo Type Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{ route('master.memo.type.master.create') }}" class="btn btn-primary">+ Add Memo Type</a>
+                        @can('master.memo.type.master.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{ route('master.memo.type.master.create') }}" class="btn btn-primary">+ Add Memo Type</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -49,19 +51,25 @@
                                             @endif
                                         </td>
                                          <td>
-                                            <div class="form-check form-switch d-inline-block">
-                                                <input class="form-check-input status-toggle" type="checkbox"
-                                                    role="switch"
-                                                    data-table="memo_type_master"
-                                                    data-column="active_inactive"
-                                                    data-id="{{ $memo->pk }}"
-                                                    {{ $memo->active_inactive == 1 ? 'checked' : '' }}>
-                                            </div>
+                                            @can('master.memo.type.master.active_inactive')
+                                                <div class="form-check form-switch d-inline-block">
+                                                    <input class="form-check-input status-toggle" type="checkbox"
+                                                        role="switch"
+                                                        data-table="memo_type_master"
+                                                        data-column="active_inactive"
+                                                        data-id="{{ $memo->pk }}"
+                                                        {{ $memo->active_inactive == 1 ? 'checked' : '' }}>
+                                                </div>
+                                            @endcan
+                                            
                                         </td>
                                         <td>
-                                            <a href="{{ route('master.memo.type.master.edit', ['id' => encrypt($memo->pk)]) }}"
+                                            @can('master.memo.type.master.edit')
+                                                <a href="{{ route('master.memo.type.master.edit', ['id' => encrypt($memo->pk)]) }}"
                                                 class="btn btn-primary btn-sm">Edit</a>
-                                            <form action="{{ route('master.memo.type.master.delete', ['id' => encrypt($memo->pk)]) }}"
+                                            @endcan
+                                            @can('master.memo.type.master.delete')
+                                                <form action="{{ route('master.memo.type.master.delete', ['id' => encrypt($memo->pk)]) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
                                                 @method('DELETE')
@@ -72,6 +80,8 @@
                                                     Delete
                                                 </button>
                                             </form>
+                                            @endcan
+                                            
                                         </td>
                                     </tr>
                                     @empty

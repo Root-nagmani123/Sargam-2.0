@@ -8,6 +8,13 @@ use App\Models\MemoConclusionMaster;
 
 class MemoConclusionMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.memo.conclusion.master.index')->only(['index']);
+        $this->middleware('permission:master.memo.conclusion.master.create')->only(['create', 'store']);
+        $this->middleware('permission:master.memo.conclusion.master.edit')->only(['edit', 'store']);
+        $this->middleware('permission:master.memo.conclusion.master.delete')->only(['destroy']);
+    }
     public function index()
     {
         $conclusions = MemoConclusionMaster::all();

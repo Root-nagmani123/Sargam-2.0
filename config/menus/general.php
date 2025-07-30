@@ -64,7 +64,7 @@ return [
         'title' => 'Exemption',
         'id' => 'exemptionCollapse',
         'icon' => 'bi-chevron-down',
-        'permissions' => [
+        'allowedPermissions' => [
             'master.exemption.category.master.index',
             'master.exemption.medical.speciality.index'
         ],
@@ -87,10 +87,10 @@ return [
         'title' => 'Exemption Duty',
         'id' => 'exemptionDutyCollapse',
         'icon' => 'bi-chevron-down',
-        'permissions' => [
+        'allowedPermissions' => [
             'student-medical-exemption.index',
             'mdo-escrot-exemption.index',
-            // 'master.mdo_duty_type.index',
+            'master.mdo_duty_type.index',
         ],
         'items' => [
             [
@@ -109,6 +109,7 @@ return [
                 'title' => 'MDO Duty Type',
                 'route' => 'master.mdo_duty_type.index',
                 'icon' => 'solar:face-scan-square-broken',
+                'permission' => 'master.mdo_duty_type.index',
             ],
         ],
     ],
@@ -116,11 +117,20 @@ return [
         'title' => 'Memo',
         'id' => 'memoCollapse',
         'icon' => 'bi-chevron-down',
+        'allowedPermissions' => [
+            'master.memo.type.master.index',
+            'master.memo.conclusion.master.index',
+            // 'memo.notice.management.index',
+            // 'memo.notice.management.user',
+            // 'course.memo.decision.index',
+            // 'admin.courseAttendanceNoticeMap.memo_notice'
+        ],
         'items' => [
             [
                 'title' => 'Memo Type Master',
                 'route' => 'master.memo.type.master.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.memo.type.master.index',
             ],
             [
                 'title' => 'Memo Conclusion Master',
