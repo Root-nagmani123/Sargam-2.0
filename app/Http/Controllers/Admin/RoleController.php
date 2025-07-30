@@ -15,6 +15,11 @@ use Illuminate\Validation\Rule;
 
 class RoleController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:admin.roles.index', ['only' => ['index']]);
+        $this->middleware('permisson:admin.roles.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:admin.roles.edit', ['only' => ['edit', 'update']]);
+    }
     public function index(RoleDataTable $dataTable)
     {
         return $dataTable->render('admin.user_management.roles.index');

@@ -40,11 +40,13 @@
                         <div class="col-6">
                             <h4>Roles</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">+ Add Roles</a>
+                        @can('admin.roles.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{ route('admin.roles.create') }}" class="btn btn-primary">+ Add Roles</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <div class="table-responsive">
                         {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}

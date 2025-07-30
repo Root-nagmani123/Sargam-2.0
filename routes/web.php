@@ -47,7 +47,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::resource('roles', RoleController::class);
-        Route::resource('permissions', PermissionController::class);
+        // Route::resource('permissions', PermissionController::class);
         Route::resource('users', UserController::class);
     });
 

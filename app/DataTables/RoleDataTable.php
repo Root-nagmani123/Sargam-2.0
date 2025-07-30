@@ -50,7 +50,10 @@ class RoleDataTable extends DataTable
 
 
             ->editColumn('action', function($row){
-                return '<a href="' . route('admin.roles.edit', $row->id) . '" class="btn btn-primary btn-sm">Edit</a>';
+                if(auth()->user()->can('admin.roles.edit')) {
+                    return '<a href="' . route('admin.roles.edit', $row->id) . '" class="btn btn-primary btn-sm">Edit</a>';
+                }
+                return '';
             })
             ->filterColumn('name', function ($query, $keyword) {
                 $query->where('name', 'like', "%{$keyword}%");

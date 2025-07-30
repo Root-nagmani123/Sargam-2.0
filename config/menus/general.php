@@ -248,24 +248,27 @@ return [
         'allowedPermissions' => [
             'admin.users.index',
             'admin.roles.index',
-            'admin.permissions.index',
+            // 'admin.permissions.index',
         ],
         'items' => [
             [
                 'title' => 'Users',
                 'route' => 'admin.users.index',
                 'icon' => 'solar:atom-line-duotone',
+                'permission' => 'admin.users.index',
             ],
             [
                 'title' => 'Roles',
                 'route' => 'admin.roles.index',
                 'icon' => 'solar:atom-line-duotone',
+                'permission' => 'admin.roles.index',
             ],
-            [
-                'title' => 'Permissions',
-                'route' => 'admin.permissions.index',
-                'icon' => 'solar:atom-line-duotone',
-            ],
+            // [
+            //     'title' => 'Permissions',
+            //     'route' => 'admin.permissions.index',
+            //     'icon' => 'solar:atom-line-duotone',
+            //     'permission' => 'admin.permissions.index',
+            // ],
         ],
     ],
 ];
