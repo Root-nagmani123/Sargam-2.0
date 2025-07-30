@@ -12,11 +12,14 @@
                 <div class="col-6">
                     <h4>Subject</h4>
                 </div>
-                <div class="col-6">
-                    <div class="float-end gap-2">
-                        <a href="{{ route('subject.create') }}" class="btn btn-primary">+ Add Subject</a>
+                @can('subject.create')
+                    <div class="col-6">
+                        <div class="float-end gap-2">
+                            <a href="{{ route('subject.create') }}" class="btn btn-primary">+ Add Subject</a>
+                        </div>
                     </div>
-                </div>
+                @endcan
+                
             </div>
             <hr>
             <div class="table-responsive">
@@ -41,29 +44,35 @@
                             <td>{{ $subject->module->module_name ?? 'N/A' }}</td>
                             <td>
                                 <div class="d-flex justify-content-start align-items-start gap-2">
-                                    <a href="{{ route('subject.edit', $subject->pk) }}"
+                                    @can('subject.edit')
+                                        <a href="{{ route('subject.edit', $subject->pk) }}"
                                         class="btn btn-primary text-white btn-sm">Edit</a>
-                                    <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
-                                        class="m-0 delete-form" data-status="{{ $subject->active_inactive }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-danger text-white btn-sm" onclick="event.preventDefault();
-                                                if(confirm('Are you sure you want to delete this subject?')) {
-                                                    this.closest('form').submit();
-                                                }"
-                                                {{ $subject->active_inactive == 1 ? 'disabled' : '' }}>
-                                            Delete
-                                        </button>
-                                    </form>
+                                    @endcan
+                                    @can('subject.delete')
+                                        <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
+                                            class="m-0 delete-form" data-status="{{ $subject->active_inactive }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-danger text-white btn-sm" onclick="event.preventDefault();
+                                                    if(confirm('Are you sure you want to delete this subject?')) {
+                                                        this.closest('form').submit();
+                                                    }"
+                                                    {{ $subject->active_inactive == 1 ? 'disabled' : '' }}>
+                                                Delete
+                                            </button>
+                                        </form>
+                                    @endcan
                                 </div>
                             </td>
                             <td>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                        data-table="subject_master" data-column="active_inactive"
-                                        data-id="{{ $subject->pk }}"
-                                        {{ $subject->active_inactive == 1 ? 'checked' : '' }}>
-                                </div>
+                                @can('subject.active_inactive')
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                            data-table="subject_master" data-column="active_inactive"
+                                            data-id="{{ $subject->pk }}"
+                                            {{ $subject->active_inactive == 1 ? 'checked' : '' }}>
+                                    </div>
+                                @endcan
                             </td>
                         </tr>
                         @endforeach

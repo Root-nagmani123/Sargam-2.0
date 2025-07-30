@@ -9,6 +9,12 @@ use Illuminate\Http\Request;
 
 class SubjectMasterController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:subject.index', ['only' => ['index']]);
+        $this->middleware('permission:subject.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:subject.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:subject.delete', ['only' => ['destroy']]);
+    }
     public function index()
     {
         $subjects = SubjectMaster::all();

@@ -8,6 +8,12 @@ use Illuminate\Http\Request;
 
 class SubjectModuleController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:subject-module.index', ['only' => ['index']]);
+        $this->middleware('permission:subject-module.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:subject-module.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:subject-module.delete', ['only' => ['destroy']]);
+    }
     public function index()
     {
         $modules = SubjectModuleMaster::all();

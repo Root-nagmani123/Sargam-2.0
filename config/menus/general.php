@@ -24,6 +24,8 @@ return [
             'programme.index',
             'master.course.group.type.index',
             'group.mapping.index',
+            'subject-module.index',
+            'subject.index'
         ],
         'items' => [
             [
@@ -48,11 +50,13 @@ return [
                 'title' => 'Subject Module',
                 'route' => 'subject-module.index',
                 'icon' => 'solar:widget-4-line-duotone',
+                'permission' => 'subject-module.index',
             ],
             [
                 'title' => 'Subject',
                 'route' => 'subject.index',
                 'icon' => 'solar:speaker-minimalistic-line-duotone',
+                'permission' => 'subject.index',
             ],
         ],
     ],
