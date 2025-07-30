@@ -89,7 +89,7 @@ return [
         'icon' => 'bi-chevron-down',
         'permissions' => [
             'student-medical-exemption.index',
-            // 'mdo-escrot-exemption.index',
+            'mdo-escrot-exemption.index',
             // 'master.mdo_duty_type.index',
         ],
         'items' => [
@@ -103,6 +103,7 @@ return [
                 'title' => 'MDO Escrot Exemption',
                 'route' => 'mdo-escrot-exemption.index',
                 'icon' => 'solar:calendar-mark-line-duotone',
+                'permission' => 'mdo-escrot-exemption.index',
             ],
             [
                 'title' => 'MDO Duty Type',

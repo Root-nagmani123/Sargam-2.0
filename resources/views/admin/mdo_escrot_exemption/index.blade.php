@@ -17,12 +17,15 @@
                             <div class="col-6">
                                 <h4>MDO Escrot Exemption</h4>
                             </div>
-                            <div class="col-6">
-                                <div class="float-end gap-2">
-                                    <a href="{{route('mdo-escrot-exemption.create')}}" class="btn btn-primary">+ Add MDO
-                                        Escrot Exemption</a>
+                            @can('mdo-escrot-exemption.create')
+                                <div class="col-6">
+                                    <div class="float-end gap-2">
+                                        <a href="{{route('mdo-escrot-exemption.create')}}" class="btn btn-primary">+ Add MDO
+                                            Escrot Exemption</a>
+                                    </div>
                                 </div>
-                            </div>
+                            @endcan
+                            
                         </div>
                         <hr>
                         

@@ -38,12 +38,15 @@ class MDOEscrotExemptionDataTable extends DataTable
             //     });
             // })
             ->addColumn('actions', function ($row) {
+
                 $editUrl = route('mdo-escrot-exemption.edit', $row->pk);
+                if(auth()->user()->can('mdo-escrot-exemption.edit')) {
+                    return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
+                } else {
+                    return '';
+                }
+
                 // $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
-                return '
-                    <a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>
-                    
-                ';
                 // <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
                 //         ' . csrf_field() . '
                 //         <input type="hidden" name="_method" value="DELETE">

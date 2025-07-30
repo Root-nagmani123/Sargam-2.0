@@ -11,6 +11,11 @@ use App\Http\Requests\MDOEscrotExemptionRequest;
 
 class MDOEscrotExemptionController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:mdo-escrot-exemption.index', ['only' => ['index']]);
+        $this->middleware('permission:mdo-escrot-exemption.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:mdo-escrot-exemption.edit', ['only' => ['edit', 'update']]);
+    }
     public function index(MDOEscrotExemptionDataTable $dataTable)
     {
         return $dataTable->render('admin.mdo_escrot_exemption.index');
