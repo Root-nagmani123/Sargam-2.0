@@ -171,7 +171,7 @@ return [
             'master.employee.group.index',
             'master.department.master.index',
             'master.designation.index',
-            // 'master.caste.category.index',
+            'master.caste.category.index',
         ],
         'items' => [
             [
@@ -202,6 +202,7 @@ return [
                 'title' => 'Caste Category',
                 'route' => 'master.caste.category.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.caste.category.index',
             ],
         ],
     ],

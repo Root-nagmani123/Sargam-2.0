@@ -10,6 +10,13 @@ use Illuminate\Validation\Rule;
 
 class CasteCategoryMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.caste.category.index', ['only' => ['index']]);
+        $this->middleware('permission:master.caste.category.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.caste.category.edit', ['only' => ['edit', 'store']]);
+    }
+    
     public function index()
     {
         return (new CasteCategoryMasterDataTable())->render('admin.master.caste_category.index');

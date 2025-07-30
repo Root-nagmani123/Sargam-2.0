@@ -17,11 +17,14 @@
                     <div class="col-6">
                         <h4>Caste Master</h4>
                     </div>
-                    <div class="col-6">
-                        <div class="float-end gap-2">
-                            <a href="{{route('master.caste.category.create')}}" class="btn btn-primary">+ Add Caste</a>
+                    @can('master.caste.category.create')
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <a href="{{route('master.caste.category.create')}}" class="btn btn-primary">+ Add Caste</a>
+                            </div>
                         </div>
-                    </div>
+                    @endcan
+                    
                 </div>
                 <hr>
                 <div class="table-responsive">
