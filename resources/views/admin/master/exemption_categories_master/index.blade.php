@@ -17,12 +17,14 @@
                         <div class="col-6">
                             <h4>Exemption categories</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.exemption.category.master.create')}}" class="btn btn-primary">+
-                                    Add Exemption categories</a>
+                        @can('master.exemption.category.master.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.exemption.category.master.create')}}" class="btn btn-primary">+
+                                        Add Exemption categories</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -48,30 +50,36 @@
                                     <td>{{ $cat->exemp_category_name }}</td>
                                     <td>{{ $cat->exemp_cat_short_name }}</td>
                                     <td>
-                                        <a href="{{ route('master.exemption.category.master.edit', 
+                                        @can('master.exemption.category.master.edit')
+                                            <a href="{{ route('master.exemption.category.master.edit', 
                                                     ['id' => encrypt(value: $cat->pk)]) }}"
                                             class="btn btn-primary btn-sm">Edit</a>
-                                        <form
-                                            title="{{ $cat->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                            action="{{ route('master.exemption.category.master.delete', 
-                                                    ['id' => encrypt($cat->pk)]) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }" {{ $cat->active_inactive == 1 ? 'disabled' : '' }}>
-                                                Delete
-                                            </button>
-                                        </form>
+                                        @endcan
+                                        @can('master.exemption.category.master.delete')
+                                            <form
+                                                title="{{ $cat->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
+                                                action="{{ route('master.exemption.category.master.delete', 
+                                                        ['id' => encrypt($cat->pk)]) }}" method="POST" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
+                                                            if(confirm('Are you sure you want to delete this record?')) {
+                                                                this.closest('form').submit();
+                                                            }" {{ $cat->active_inactive == 1 ? 'disabled' : '' }}>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        @endcan
                                     </td>
                                     <td>
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="exemption_category_master" data-column="active_inactive"
-                                                data-id="{{ $cat->pk }}"
-                                                {{ $cat->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
+                                        @can('master.exemption.category.master.active_inactive')
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                    data-table="exemption_category_master" data-column="active_inactive"
+                                                    data-id="{{ $cat->pk }}"
+                                                    {{ $cat->active_inactive == 1 ? 'checked' : '' }}>
+                                            </div>
+                                        @endcan
                                     </td>
                                 </tr>
                                 @endforeach

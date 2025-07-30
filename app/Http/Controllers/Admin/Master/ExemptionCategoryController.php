@@ -9,7 +9,18 @@ use App\Models\ExemptionMedicalSpecialityMaster;
 
 class ExemptionCategoryController extends Controller
 {
-   
+    function __construct()
+    {
+        $this->middleware('permission:master.exemption.category.master.index', ['only' => ['index']]);
+        $this->middleware('permission:master.exemption.category.master.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.exemption.category.master.edit', ['only' => ['edit', 'store']]);
+        $this->middleware('permission:master.exemption.category.master.delete', ['only' => ['delete']]);
+
+        // $this->middleware('permission:master.exemption.medical.speciality.index', ['only' => ['medicalSpecialityIndex']]);
+        // $this->middleware('permission:master.exemption.medical.speciality.create', ['only' => ['medicalSpecialityCreate', 'medicalSpecialityStore']]);
+        // $this->middleware('permission:master.exemption.medical.speciality.edit', ['only' => ['medicalSpecialityEdit']]);
+        // $this->middleware('permission:master.exemption.medical.speciality.delete', ['only' => ['medicalSpecialityDelete']]);
+    }
     public function index()
     {
         $categories = ExemptionCategoryMaster::all();

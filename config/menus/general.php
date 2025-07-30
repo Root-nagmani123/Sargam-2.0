@@ -64,11 +64,15 @@ return [
         'title' => 'Exemption',
         'id' => 'exemptionCollapse',
         'icon' => 'bi-chevron-down',
+        'permissions' => [
+            'master.exemption.category.master.index',
+        ],
         'items' => [
             [
                 'title' => 'Exemption Category',
                 'route' => 'master.exemption.category.master.index',
                 'icon' => 'solar:face-scan-square-broken',
+                'permission' => 'master.exemption.category.master.index',
             ],
             [
                 'title' => 'Exemption Medical Speciality',
