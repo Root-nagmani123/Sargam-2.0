@@ -62,6 +62,7 @@ return [
                 'title' => 'Hostel Room',
                 'route' => 'master.hostel.room.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.hostel-room-master.index',
             ],
             [
                 'title' => 'Hostel Floor',
