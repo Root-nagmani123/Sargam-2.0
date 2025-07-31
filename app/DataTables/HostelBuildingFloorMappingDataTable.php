@@ -30,16 +30,18 @@ class HostelBuildingFloorMappingDataTable extends DataTable
             })
             ->addColumn('hostel_floor_name', fn($row) => '<label class="text-dark">' . $row->floor->hostel_floor_name . '</label>')
             ->addColumn('actions', function($row) {
-                return '<a href="' . route('hostel.building.map.edit', encrypt($row->pk)) . '" class="btn btn-sm btn-primary">Edit</a>
-                ';
-
+                if(auth()->user()->can('hostel.building.map.edit')) {
+                    return '<a href="' . route('hostel.building.map.edit', encrypt($row->pk)) . '" class="btn btn-sm btn-primary">Edit</a>';
+                }
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="hostel_building_floor_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                if(auth()->user()->can('hostel.building.map.active_inactive')) {
+                    $checked = $row->active_inactive == 1 ? 'checked' : '';
+                        return '<div class="form-check form-switch d-inline-block ms-2">
+                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                            data-table="hostel_building_floor_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                    </div>';
+                }
             })
             ->rawColumns(['hostel_building_name', 'hostel_floor_name', 'actions', 'status']);
     }

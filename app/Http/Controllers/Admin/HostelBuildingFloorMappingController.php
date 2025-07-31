@@ -17,6 +17,12 @@ use App\DataTables\OTHostelRoomDetailsDataTable;
 
 class HostelBuildingFloorMappingController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:hostel.building.map.index', ['only' => ['index']]);
+        $this->middleware('permission:hostel.building.map.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:hostel.building.map.edit', ['only' => ['edit', 'store']]);
+    }
     public function index(HostelBuildingFloorMappingDataTable $dataTable)
     {
         return $dataTable->render('admin.building_floor_mapping.index');
