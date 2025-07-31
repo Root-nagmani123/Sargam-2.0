@@ -9,6 +9,12 @@ use App\Http\Requests\ClassSessionMasterRequest;
 
 class ClassSessionMasterController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:master.class-session.index', ['only' => ['index']]);
+        $this->middleware('permission:master.class-session.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.class-session.edit', ['only' => ['edit', 'store']]);
+        $this->middleware('permission:master.class-session.delete', ['only' => ['delete']]);
+    }
     function index() {
 
         $classSessionMaster = ClassSessionMaster::all();

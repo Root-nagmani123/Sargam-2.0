@@ -17,11 +17,13 @@
                         <div class="col-6">
                             <h4>Class Session Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.class.session.create')}}" class="btn btn-primary">+ Add Class Session</a>
+                        @can('master.class-session.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.class.session.create')}}" class="btn btn-primary">+ Add Class Session</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -49,40 +51,43 @@
                                             <td>{{ $classSession->start_time ?? 'N/A' }}</td>
                                             <td>{{ $classSession->end_time ?? 'N/A' }}</td>
                                             <td>
-                                                <a 
-                                                    href="{{ route('master.class.session.edit', 
-                                                    ['id' => encrypt(value: $classSession->pk)]) }}"
-                                                    class="btn btn-primary btn-sm"
-                                                >Edit</a>
+                                                @can('master.class-session.edit')
+                                                    <a 
+                                                        href="{{ route('master.class.session.edit', 
+                                                        ['id' => encrypt(value: $classSession->pk)]) }}"
+                                                        class="btn btn-primary btn-sm"
+                                                    >Edit</a>
+                                                @endcan
+                                                @can('master.class-session.delete')
+                                                    <form title="{{ $classSession->active_inactive == 1 ? 'Cannot delete active session' : 'Delete' }}"
+                                                        action="{{ route('master.class.session.delete', 
+                                                        ['id' => encrypt($classSession->pk)]) }}"
+                                                        method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="button" 
+                                                                class="btn btn-danger btn-sm" 
+                                                                data-bs-toggle="tooltip" 
+                                                                data-bs-placement="top" 
+                                                                
+                                                                onclick="event.preventDefault(); 
+                                                                        if(confirm('Are you sure you want to delete this record?')) {
+                                                                            this.closest('form').submit();
+                                                                        }"
+                                                                {{ $classSession->active_inactive == 1 ? 'disabled' : '' }}>
+                                                            Delete
+                                                        </button>
 
-                                                
-
-                                                <form title="{{ $classSession->active_inactive == 1 ? 'Cannot delete active session' : 'Delete' }}"
-                                                    action="{{ route('master.class.session.delete', 
-                                                    ['id' => encrypt($classSession->pk)]) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="button" 
-                                                            class="btn btn-danger btn-sm" 
-                                                            data-bs-toggle="tooltip" 
-                                                            data-bs-placement="top" 
-                                                            
-                                                            onclick="event.preventDefault(); 
-                                                                    if(confirm('Are you sure you want to delete this record?')) {
-                                                                        this.closest('form').submit();
-                                                                    }"
-                                                            {{ $classSession->active_inactive == 1 ? 'disabled' : '' }}>
-                                                        Delete
-                                                    </button>
-
-                                                </form>
+                                                    </form>
+                                                @endcan
                                             </td>
                                             <td>
-                                                <div class="form-check form-switch d-inline-block">
-                                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                        data-table="class_session_master" data-column="active_inactive" data-id="{{ $classSession->pk }}" {{ $classSession->active_inactive == 1 ? 'checked' : '' }}>
-                                                </div>
+                                                @can('master.class-session.active_inactive')
+                                                    <div class="form-check form-switch d-inline-block">
+                                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                            data-table="class_session_master" data-column="active_inactive" data-id="{{ $classSession->pk }}" {{ $classSession->active_inactive == 1 ? 'checked' : '' }}>
+                                                    </div>
+                                                @endcan
                                             </td>
                                         </tr>
                                     @endforeach

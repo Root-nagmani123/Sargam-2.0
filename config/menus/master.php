@@ -8,7 +8,7 @@ return [
         'icon' => 'bi bi-chevron-down',
         'allowedPermissions' => [
             'venue-master.index',
-            // 'master.class.session.index',
+            'master.class-session.index',
             // 'stream.index',
             // 'section.index',
         ],
@@ -23,6 +23,7 @@ return [
                 'title' => 'Class Session',
                 'route' => 'master.class.session.index',
                 'icon' => 'solar:face-scan-square-broken',
+                'permission' => 'master.class-session.index',
             ],
             [
                 'title' => 'Stream',
