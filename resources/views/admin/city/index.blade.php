@@ -16,11 +16,14 @@
                             <div class="col-6">
                                 <h4>City</h4>
                             </div>
-                            <div class="col-6">
-                                <div class="float-end gap-2">
-                                    <a href="{{ route('master.city.create') }}" class="btn btn-primary">+ Add City</a>
+                            @can('master.city.create')
+                                <div class="col-6">
+                                    <div class="float-end gap-2">
+                                        <a href="{{ route('master.city.create') }}" class="btn btn-primary">+ Add City</a>
+                                    </div>
                                 </div>
-                            </div>
+                            @endcan
+                            
                         </div>
                         <hr>
                         <table id="zero_config"
@@ -47,6 +50,7 @@
                                         <td>{{ optional($city->state)->state_name ?? 'N/A' }}</td>
                                         <td>{{ $city->district?->district_name ?? 'N/A' }}</td>
  <td>
+                                            @can('master.city.active_inactive')
                                         <div class="form-check form-switch d-inline-block">
                                             <input class="form-check-input status-toggle" type="checkbox"
                                                 role="switch"
@@ -55,11 +59,17 @@
                                                 data-id="{{ $city->pk }}"
                                                 {{ $city->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
+                                        @endcan
                                     </td>
                                         <td>
-                                            <a href="{{ route('master.city.edit', $city->pk) }}"
+                                            @can('master.city.edit')
+                                                <a href="{{ route('master.city.edit', $city->pk) }}"
                                                 class="btn btn-success btn-sm">Edit</a>
-                                           
+                                            @endcan
+                                            
+                                                    @can('master.city.delete')
+                                                        
+                                                    
                                               <form action="{{ route('master.city.delete', $city->pk) }}"
                                             method="POST" class="d-inline">
                                             @csrf
@@ -72,6 +82,7 @@
                                                 Delete
                                             </button>
                                         </form>
+                                        @endcan
                                         </td>
                                     </tr>
                                 @endforeach

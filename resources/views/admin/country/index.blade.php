@@ -13,9 +13,12 @@
             <div class="col-8">
                 <h4>Country List</h4>
             </div>
-            <div class="col-4 text-end">
-                <a href="{{ route('master.country.create') }}" class="btn btn-primary">Add Country</a>
-            </div>
+            @can('master.country.create')
+                <div class="col-4 text-end">
+                    <a href="{{ route('master.country.create') }}" class="btn btn-primary">Add Country</a>
+                </div>
+            @endcan
+            
         </div>
     </div>
     
@@ -40,30 +43,37 @@
                                 <td>{{ $country->country_name }}</td>
                                
                                <td>
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox"
-                                                role="switch"
-                                                data-table="country_master"
-                                                data-column="active_inactive"
-                                                data-id="{{ $country->pk }}"
-                                                {{ $country->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
+                                @can('master.country.active_inactive')
+                                    <div class="form-check form-switch d-inline-block">
+                                        <input class="form-check-input status-toggle" type="checkbox"
+                                            role="switch"
+                                            data-table="country_master"
+                                            data-column="active_inactive"
+                                            data-id="{{ $country->pk }}"
+                                            {{ $country->active_inactive == 1 ? 'checked' : '' }}>
+                                    </div>
+                                @endcan
+                                        
                                     </td>
                                      <td>
-                                    <a href="{{ route('master.country.edit', $country->pk) }}" class="btn btn-success btn-sm">Edit</a>
-
-                                    <form action="{{ route('master.country.delete', $country->pk) }}"
+                                        @can('master.country.edit')
+                                            <a href="{{ route('master.country.edit', $country->pk) }}" class="btn btn-success btn-sm">Edit</a>
+                                        @endcan
+                                        @can('master.country.delete')
+                                            <form action="{{ route('master.country.delete', $country->pk) }}"
                                             method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault();
-                                                if(confirm('Are you sure you want to delete this ?')) {
-                                                    this.closest('form').submit();
-                                                }"
-                                                {{ $country->active_inactive == 1 ? 'disabled' : '' }}>
-                                                Delete
-                                            </button>
-                                        </form>
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault();
+                                                    if(confirm('Are you sure you want to delete this ?')) {
+                                                        this.closest('form').submit();
+                                                    }"
+                                                    {{ $country->active_inactive == 1 ? 'disabled' : '' }}>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    
                                 </td>
                             </tr>
                         @endforeach

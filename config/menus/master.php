@@ -95,26 +95,36 @@ return [
         'title' => 'Address',
         'id' => 'addressMenu',
         'icon' => 'bi bi-chevron-down',
+        'allowedPermissions' => [
+            'master.country.index',
+            'master.state.index',
+            'master.district.index',
+            'master.city.index',
+        ],
         'items' => [
             [
                 'title' => 'Country',
                 'route' => 'master.country.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.country.index',
             ],
             [
                 'title' => 'State',
                 'route' => 'master.state.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.state.index',
             ],
             [
                 'title' => 'District',
                 'route' => 'master.district.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.district.index',
             ],
             [
                 'title' => 'City',
                 'route' => 'master.city.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.city.index',
             ],
         ],
     ],

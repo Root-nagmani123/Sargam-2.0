@@ -7,6 +7,32 @@ use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
+    function __construct()
+    {
+        // Country
+        $this->middleware('permission:master.country.index', ['only' => ['countryIndex']]);
+        $this->middleware('permission:master.country.create', ['only' => ['countryCreate', 'countryStore']]);
+        $this->middleware('permission:master.country.edit', ['only' => ['countryEdit', 'countryUpdate']]);
+        $this->middleware('permission:master.country.delete', ['only' => ['countryDelete']]);
+        
+        // State
+        $this->middleware('permission:master.state.index', ['only' => ['stateIndex']]);
+        $this->middleware('permission:master.state.create', ['only' => ['stateCreate', 'stateStore']]);
+        $this->middleware('permission:master.state.edit', ['only' => ['stateEdit', 'stateUpdate']]);
+        $this->middleware('permission:master.state.delete', ['only' => ['stateDelete']]);
+        
+        // District
+        $this->middleware('permission:master.district.index', ['only' => ['districtIndex']]);
+        $this->middleware('permission:master.district.create', ['only' => ['districtCreate', 'districtStore']]);
+        $this->middleware('permission:master.district.edit', ['only' => ['districtEdit', 'districtUpdate']]);
+        $this->middleware('permission:master.district.delete', ['only' => ['districtDelete']]);
+
+        // City
+        $this->middleware('permission:master.city.index', ['only' => ['cityIndex']]);
+        $this->middleware('permission:master.city.create', ['only' => ['cityCreate', 'cityStore']]);
+        $this->middleware('permission:master.city.edit', ['only' => ['cityEdit', 'cityUpdate']]);
+        $this->middleware('permission:master.city.delete', ['only' => ['cityDelete']]);
+    }
     public function countryIndex()
     {
         $countries = Country::paginate(10);

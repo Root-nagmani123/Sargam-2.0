@@ -15,11 +15,14 @@
                         <div class="col-6">
                             <h4>State</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.state.create')}}" class="btn btn-primary">+ Add State</a>
+                        @can('master.state.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.state.create')}}" class="btn btn-primary">+ Add State</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
+                        
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -45,21 +48,28 @@
                                         {{ $state->state_name }}
                                     </td>
                                      <td>
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox"
-                                                role="switch"
-                                                data-table="state_master"
-                                                data-column="active_inactive"
-                                                data-id="{{ $state->pk }}"
-                                                {{ $state->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
+                                        @can('master.state.active_inactive')
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input status-toggle" type="checkbox"
+                                                    role="switch"
+                                                    data-table="state_master"
+                                                    data-column="active_inactive"
+                                                    data-id="{{ $state->pk }}"
+                                                    {{ $state->active_inactive == 1 ? 'checked' : '' }}>
+                                            </div>
+                                        @endcan
+                                        
                                     </td>
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
+                                            @can('master.state.edit')
                                             <a href="{{ route('master.state.edit', $state->pk) }}"
                                                 class="btn btn-success text-white btn-sm">
                                                 Edit
                                             </a>
+                                            @endcan
+                                            @can('master.state.delete')
+                                                
                                             
                                              <form action="{{ route('master.state.delete', $state->pk) }}"
                                             method="POST" class="d-inline">
@@ -73,6 +83,7 @@
                                                 Delete
                                             </button>
                                         </form>
+                                        @endcan
                                         </div>
                                     </td>
                                     <!-- <td>

@@ -16,12 +16,14 @@
                     <div class="col-6">
                         <h4>District</h4>
                     </div>
-                    <div class="col-6">
-                        <div class="float-end gap-2">
-                            <a href="{{ route('master.district.create') }}" class="btn btn-primary">+ Add
-                                District</a>
+                    @can('master.district.create')
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <a href="{{ route('master.district.create') }}" class="btn btn-primary">+ Add
+                                    District</a>
+                            </div>
                         </div>
-                    </div>
+                    @endcan
                 </div>
                 <hr>
                 <div class="dataTables_wrapper">
@@ -48,36 +50,41 @@
                                         </div>
                                     </td>
                                       <td>
-                                        <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox"
-                                                role="switch"
-                                                data-table="state_district_mapping"
-                                                data-column="active_inactive"
-                                                data-id="{{ $district->pk }}"
-                                                {{ $district->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
+                                        @can('master.district.active_inactive')
+                                            <div class="form-check form-switch d-inline-block">
+                                                <input class="form-check-input status-toggle" type="checkbox"
+                                                    role="switch"
+                                                    data-table="state_district_mapping"
+                                                    data-column="active_inactive"
+                                                    data-id="{{ $district->pk }}"
+                                                    {{ $district->active_inactive == 1 ? 'checked' : '' }}>
+                                            </div>
+                                        @endcan
                                     </td>
                                     
 
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
+                                        @can('master.district.edit')
                                             <a href="{{ route('master.district.edit', $district->pk) }}"
                                                             class="btn btn-success text-white btn-sm">
                                                             Edit
                                                         </a>
-                                           
-                                             <form action="{{ route('master.district.delete', $district->pk) }}"
-                                            method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault();
-                                                if(confirm('Are you sure you want to delete this ?')) {
-                                                    this.closest('form').submit();
-                                                }"
-                                                {{ $district->active_inactive == 1 ? 'disabled' : '' }}>
-                                                Delete
-                                            </button>
-                                        </form>
+                                        @endcan
+                                        @can('master.district.delete')
+                                            <form action="{{ route('master.district.delete', $district->pk) }}"
+                                                method="POST" class="d-inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault();
+                                                    if(confirm('Are you sure you want to delete this ?')) {
+                                                        this.closest('form').submit();
+                                                    }"
+                                                    {{ $district->active_inactive == 1 ? 'disabled' : '' }}>
+                                                    Delete
+                                                </button>
+                                            </form> 
+                                        @endcan
                                         </div>
                                     </td>
 
