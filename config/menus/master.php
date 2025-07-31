@@ -45,8 +45,8 @@ return [
         'icon' => 'bi bi-chevron-down',
         'allowedPermissions' => [
             'master.hostel-building-master.index',
-            // 'hostel.room.index',
-            // 'hostel.floor.index',
+            'master.hostel-room-master.index',
+            'master.hostel-floor-master.index',
             // 'hostel.building.map.index',
             // 'hostel.building.floor.room.map.index',
             // 'hostel.building.map.assign.student',
@@ -68,6 +68,7 @@ return [
                 'title' => 'Hostel Floor',
                 'route' => 'master.hostel.floor.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.hostel-floor-master.index',
             ],
             [
                 'title' => 'Hostel Floor Mapping',

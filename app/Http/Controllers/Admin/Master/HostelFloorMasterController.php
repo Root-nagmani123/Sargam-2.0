@@ -9,6 +9,12 @@ use App\Models\HostelFloorMaster;
 
 class HostelFloorMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.hostel-floor-master.index', ['only' => ['index']]);
+        $this->middleware('permission:master.hostel-floor-master.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.hostel-floor-master.edit', ['only' => ['edit', 'store']]);
+    }
     public function index(HostelFloorMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.hostel_floor.index');

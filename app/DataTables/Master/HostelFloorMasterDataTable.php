@@ -26,15 +26,20 @@ class HostelFloorMasterDataTable extends DataTable
             ->addIndexColumn()
             ->addColumn('hostel_floor_name', fn($row) => $row->hostel_floor_name ?? '-')
             ->addColumn('action', function ($row) {
-                $editUrl = route('master.hostel.floor.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
+                if(auth()->user()->can('master.hostel-floor-master.edit')) {
+                    $editUrl = route('master.hostel.floor.edit', ['id' => encrypt($row->pk)]);
+                    return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
+                }
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="hostel_floor_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                if(auth()->user()->can('master.hostel-floor-master.active_inactive')) {
+                    
+                    $checked = $row->active_inactive == 1 ? 'checked' : '';
+                    return '<div class="form-check form-switch d-inline-block ms-2">
+                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                        data-table="hostel_floor_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                </div>';
+                }
             })
 
             ->setRowId('pk')
