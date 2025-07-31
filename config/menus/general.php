@@ -278,4 +278,27 @@ return [
             // ],
         ],
     ],
+    [
+        'title' => 'User Feedback',
+        'id' => 'userFeedbackCollapse',
+        'icon' => 'bi-chevron-down',
+        'allowedPermissions' => [
+            'feedback.get.feedbackList',
+            'feedback.get.studentFeedback',
+        ],
+        'items' => [
+            [
+                'title' => 'Feedback',
+                'route' => 'feedback.get.feedbackList',
+                'icon' => 'solar:atom-line-duotone',
+                'permission' => 'feedback.get.feedbackList',
+            ],
+            [
+                'title' => 'Student Feedback',
+                'route' => 'feedback.get.studentFeedback',
+                'icon' => 'solar:atom-line-duotone',
+                'permission' => 'feedback.get.studentFeedback',
+            ],
+        ],
+    ],
 ];

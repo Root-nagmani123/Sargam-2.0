@@ -12,6 +12,10 @@ use Carbon\Carbon;
 
 class CalendarController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:feedback.get.feedbackList', ['only' => ['feedbackList']]);
+        $this->middleware('permission:feedback.get.studentFeedback', ['only' => ['studentFeedback']]);
+    }
     public function index()
     {
         $courseMaster = CourseMaster::where('active_inactive', 1)

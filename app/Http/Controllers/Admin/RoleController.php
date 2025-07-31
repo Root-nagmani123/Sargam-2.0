@@ -86,6 +86,7 @@ class RoleController extends Controller
     public function update(Request $request, Role $role)
     {
         try {
+            // Validate input
             $this->validate($request, [
                 'name' => [
                     'required', 
@@ -93,24 +94,29 @@ class RoleController extends Controller
                     'max:255', 
                     Rule::unique('roles', 'name')->ignore($role->id)
                 ],
-                'permission' => ['required', 'array', 'min:1'],
+                // 'permission' field is optional; allow empty selection
+                'permission' => ['nullable', 'array'],
                 'permission.*' => ['exists:permissions,id']
             ]);
 
+            // Get permission IDs or default to empty array
             $permissionsID = array_map(
-                function($value) { return (int)$value; },
-                $request->input('permission')
+                'intval',
+                $request->input('permission', [])
             );
 
+            // Update role name
             $role->update(['name' => $request->input('name')]);
 
+            // Sync permissions (empty array will remove all)
             $role->syncPermissions($permissionsID);
 
-            return redirect()->route('admin.roles.index')->with('success','Role updated successfully');
+            return redirect()->route('admin.roles.index')->with('success', 'Role updated successfully');
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.roles.index')
-                ->with('error', 'Failed to delete role: ' . $e->getMessage());
+                ->with('error', 'Failed to update role: ' . $e->getMessage());
         }
     }
+
 }

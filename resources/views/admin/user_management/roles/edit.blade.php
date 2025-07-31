@@ -55,7 +55,8 @@
                                                                 <div class="col-md-3 mb-2">
                                                                     <div class="form-check">
                                                                         <input class="form-check-input" type="checkbox"
-                                                                            name="permission[{{ $perm->id }}]"
+                                                                            {{-- name="permission[{{ $perm->id }}]" --}}
+                                                                            name="permission[]"
                                                                             value="{{ $perm->id }}"
                                                                             id="perm_{{ $perm->id }}"
                                                                             {{ in_array($perm->id, $rolePermissions) ? 'checked' : '' }}>
