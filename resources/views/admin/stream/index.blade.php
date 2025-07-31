@@ -16,11 +16,14 @@
                         <div class="col-6">
                             <h4>Stream</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('stream.create')}}" class="btn btn-primary">+ Add Stream</a>
+                        @can('stream.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('stream.create')}}" class="btn btn-primary">+ Add Stream</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
+                        
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -48,32 +51,37 @@
                                     </td>
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
-                                            <a href="{{ route('stream.edit', $stream->pk) }}"
-                                                class="btn btn-primary text-white btn-sm">
-                                                Edit
-                                            </a>
-                                            <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST"
-                                                class="m-0">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-danger text-white btn-sm" onclick="event.preventDefault();
-                                                if(confirm('Are you sure you want to delete this stream?')) {
-                                                    this.closest('form').submit();
-                                                }"
-                                                {{ $stream->status == 1 ? 'disabled' : '' }}>
-                                                    Delete
-                                                </button>
-                                            </form>
+                                            @can('stream.edit')
+                                                <a href="{{ route('stream.edit', $stream->pk) }}"
+                                                    class="btn btn-primary text-white btn-sm">
+                                                    Edit
+                                                </a>
+                                            @endcan
+                                            @can('stream.delete')
+                                                <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST"
+                                                    class="m-0">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-danger text-white btn-sm" onclick="event.preventDefault();
+                                                    if(confirm('Are you sure you want to delete this stream?')) {
+                                                        this.closest('form').submit();
+                                                    }"
+                                                    {{ $stream->status == 1 ? 'disabled' : '' }}>
+                                                        Delete
+                                                    </button>
+                                                </form>
+                                            @endcan
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="stream_master" data-column="status"
-                                                data-id="{{ $stream->pk }}" {{ $stream->status == 1 ? 'checked' : '' }}>
-                                        </div>
+                                        @can('stream.active_inactive')
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                    data-table="stream_master" data-column="status"
+                                                    data-id="{{ $stream->pk }}" {{ $stream->status == 1 ? 'checked' : '' }}>
+                                            </div>
+                                        @endcan
                                     </td>
-
                                 </tr>
                                 @endforeach
                             </tbody>

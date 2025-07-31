@@ -9,7 +9,7 @@ return [
         'allowedPermissions' => [
             'venue-master.index',
             'master.class-session.index',
-            // 'stream.index',
+            'stream.index',
             // 'section.index',
         ],
         'items' => [
@@ -29,6 +29,7 @@ return [
                 'title' => 'Stream',
                 'route' => 'stream.index',
                 'icon' => 'solar:widget-4-line-duotone',
+                'permission' => 'stream.index',
             ],
             [
                 'title' => 'Section',

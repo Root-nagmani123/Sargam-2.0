@@ -7,6 +7,14 @@ use Illuminate\Http\Request;
 
 class StreamController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:stream.index', ['only' => ['index']]);
+        $this->middleware('permission:stream.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:stream.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:stream.delete', ['only' => ['destroy']]);
+    }
+    
     public function index()
     {
         $streams = Stream::all();
