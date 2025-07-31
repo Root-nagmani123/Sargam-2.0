@@ -31,11 +31,11 @@ return [
                 'icon' => 'solar:widget-4-line-duotone',
                 'permission' => 'stream.index',
             ],
-            [
-                'title' => 'Section',
-                'route' => 'section.index',
-                'icon' => 'solar:calendar-mark-line-duotone',
-            ],
+            // [
+            //     'title' => 'Section',
+            //     'route' => 'section.index',
+            //     'icon' => 'solar:calendar-mark-line-duotone',
+            // ],
         ],
     ],
 
@@ -43,11 +43,20 @@ return [
         'title' => 'Hostel',
         'id' => 'hostelMenu',
         'icon' => 'bi bi-chevron-down',
+        'allowedPermissions' => [
+            'master.hostel-building-master.index',
+            // 'hostel.room.index',
+            // 'hostel.floor.index',
+            // 'hostel.building.map.index',
+            // 'hostel.building.floor.room.map.index',
+            // 'hostel.building.map.assign.student',
+        ],
         'items' => [
             [
                 'title' => 'Hostel Building',
                 'route' => 'master.hostel.building.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'master.hostel-building-master.index',
             ],
             [
                 'title' => 'Hostel Room',

@@ -17,11 +17,13 @@
                         <div class="col-6">
                             <h4>Hostel Building</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('master.hostel.building.create')}}" class="btn btn-primary">+ Add Hostel Building</a>
+                        @can('master.hostel-building-master.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{route('master.hostel.building.create')}}" class="btn btn-primary">+ Add Hostel Building</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}

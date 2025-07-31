@@ -9,6 +9,13 @@ use App\Models\HostelBuildingMaster;
 
 class HostelBuildingMasterController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:master.hostel-building-master.index', ['only' => ['index']]);
+        $this->middleware('permission:master.hostel-building-master.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:master.hostel-building-master.edit', ['only' => ['edit', 'store']]);
+    }
+
     public function index(HostelBuildingMasterDataTable $dataTable){
         return $dataTable->render('admin.master.hostel_building.index');
     }
