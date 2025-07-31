@@ -106,8 +106,11 @@
         </div>
     </div>
     <div class="text-end mb-3 gap-3">
-        <button type="button" class="btn btn-primary btn-sm" id="createEventupperButton">
-        <i class="bi bi-plus"></i> Add Event</button>
+        @can('calendar.event.add')
+            <button type="button" class="btn btn-primary btn-sm" id="createEventupperButton">
+            <i class="bi bi-plus"></i> Add Event</button>
+        @endcan
+        
         <button type="button" class="btn btn-outline-primary btn-sm" id="btnMonthView">Month</button>
             <button type="button" class="btn btn-outline-primary btn-sm" id="btnWeekView">Week</button>
             <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView">Day</button>
@@ -422,12 +425,17 @@
                         <small class="text-muted" id="eventDate">Event Date</small><br>
                     </div>
                     <div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="editEventBtn">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger me-1" id="deleteEventBtn">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                        @can('calendar.event.edit')
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="editEventBtn">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        @endcan
+                        @can('calendar.event.delete')
+                            <button type="button" class="btn btn-sm btn-outline-danger me-1" id="deleteEventBtn">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        @endcan
+                        
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>

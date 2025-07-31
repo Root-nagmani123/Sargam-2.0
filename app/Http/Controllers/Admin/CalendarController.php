@@ -15,6 +15,11 @@ class CalendarController extends Controller
     function __construct() {
         $this->middleware('permission:feedback.get.feedbackList', ['only' => ['feedbackList']]);
         $this->middleware('permission:feedback.get.studentFeedback', ['only' => ['studentFeedback']]);
+
+        $this->middleware('permission:calendar.index', ['only' => ['index']]);
+        // $this->middleware('permission:calendar.event.add', ['only' => ['index']]);
+        // $this->middleware('permission:calendar.event.edit', ['only' => ['event_edit']]);
+        // $this->middleware('permission:calendar.event.delete', ['only' => ['index']]);
     }
     public function index()
     {
