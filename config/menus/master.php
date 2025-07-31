@@ -48,8 +48,8 @@ return [
             'master.hostel-room-master.index',
             'master.hostel-floor-master.index',
             'hostel.building.map.index',
-            // 'hostel.building.floor.room.map.index',
-            // 'hostel.building.map.assign.student',
+            'hostel.building.floor.room.map.index',
+            'hostel.building.map.assign.student.index',
         ],
         'items' => [
             [
@@ -80,11 +80,13 @@ return [
                 'title' => 'Building Floor Room Mapping',
                 'route' => 'hostel.building.floor.room.map.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'hostel.building.floor.room.map.index',
             ],
             [
                 'title' => 'Assign Hostel',
                 'route' => 'hostel.building.map.assign.student',
                 'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'hostel.building.map.assign.student.index',
             ],
         ],
     ],

@@ -22,6 +22,9 @@ class HostelBuildingFloorMappingController extends Controller
         $this->middleware('permission:hostel.building.map.index', ['only' => ['index']]);
         $this->middleware('permission:hostel.building.map.create', ['only' => ['create', 'store']]);
         $this->middleware('permission:hostel.building.map.edit', ['only' => ['edit', 'store']]);
+
+        $this->middleware('permission:hostel.building.map.assign.student.index', ['only' => ['assignStudent']]);
+        $this->middleware('permission:hostel.building.map.assign.student.excel.import', ['only' => ['assignHostelToStudent']]);
     }
     public function index(HostelBuildingFloorMappingDataTable $dataTable)
     {

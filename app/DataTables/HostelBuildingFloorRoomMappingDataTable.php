@@ -28,15 +28,18 @@ class HostelBuildingFloorRoomMappingDataTable extends DataTable
                 return '<label class="text-dark">' . optional($row->room)->hostel_room_name ?? '—' . '</label>';
             })
             ->addColumn('actions', function ($row) {
-                return '<a href="' . route('hostel.building.floor.room.map.edit', encrypt($row->pk)) . '" class="btn btn-sm btn-primary">Edit</a>
-                ';
+                if(auth()->user()->can('hostel.building.floor.room.map.edit')) {
+                    return '<a href="' . route('hostel.building.floor.room.map.edit', encrypt($row->pk)) . '" class="btn btn-sm btn-primary">Edit</a>';
+                }
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="hostel_floor_room_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                if(auth()->user()->can('hostel.building.floor.room.map.active_inactive')) {
+                    $checked = $row->active_inactive == 1 ? 'checked' : '';
+                        return '<div class="form-check form-switch d-inline-block ms-2">
+                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                            data-table="hostel_floor_room_mapping" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                    </div>';
+                }
             })
             ->filterColumn('hostel_building_floor_mapping_pk', function ($query, $keyword) {
                 $query->whereHas('buildingFloor', function ($q) use ($keyword) {

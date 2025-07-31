@@ -13,6 +13,12 @@ use App\Models\{
 
 class HostelBuildingFloorRoomMappingController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:hostel.building.floor.room.map.index', ['only' => ['index']]);
+        $this->middleware('permission:hostel.building.floor.room.map.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:hostel.building.floor.room.map.edit', ['only' => ['edit', 'store']]);
+    }
     public function index(HostelBuildingFloorRoomMappingDataTable $dataTable)
     {
         return $dataTable->render('admin.building_floor_room_mapping.index');

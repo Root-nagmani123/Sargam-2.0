@@ -17,13 +17,15 @@
                             <div class="col-6">
                                 <h4>Hostel Building Assign Student</h4>
                             </div>
-                            <div class="col-6 d-flex justify-content-end gap-2">
-                                <button type="button" class="btn btn-success d-flex align-items-center"
-                                    data-bs-toggle="modal" data-bs-target="#importModal">
-                                    <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
-                                        class="me-1"></iconify-icon> Import Excel
-                                </button>
-                            </div>
+                            @can('hostel.building.map.assign.student.excel.import')
+                                <div class="col-6 d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-success d-flex align-items-center"
+                                        data-bs-toggle="modal" data-bs-target="#importModal">
+                                        <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
+                                            class="me-1"></iconify-icon> Import Excel
+                                    </button>
+                                </div>
+                            @endcan
                         </div>
                         <hr>
                         {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
