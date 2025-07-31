@@ -133,6 +133,9 @@ return [
         'title' => 'Time Table',
         'id' => 'timeTableMenu',
         'icon' => 'bi bi-chevron-down',
+        'allowedPermissions' => [
+            'attendance.index'
+        ],
         'items' => [
             [
                 'title' => 'Calendar',

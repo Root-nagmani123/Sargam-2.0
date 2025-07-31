@@ -12,6 +12,11 @@ use App\DataTables\StudentAttendanceListDataTable;
 
 class AttendanceController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:attendance.index', ['only' => ['index']]);
+        $this->middleware('permission:attendance.mark.attendance', ['only' => ['markAttendanceView', 'save']]);
+    }
     function index()
     {
         try {
@@ -103,8 +108,11 @@ class AttendanceController extends Controller
                 ->addColumn('subject_topic', fn($row) => optional($row->timetable)->subject_topic ?? 'N/A')
                 ->addColumn('faculty_name', fn($row) => optional($row->timetable)->faculty->full_name ?? 'N/A')
                 ->addColumn('actions', function ($row) {
+                    if(auth()->user()->can('attendance.mark.attendance')) {
                     $actions = '<a href="' . route('attendance.mark', ['group_pk' => $row->group_pk, 'course_pk' => $row->Programme_pk, 'timetable_pk' => $row->timetable_pk]) . '" class="btn btn-primary btn-sm" data-id="' . $row->pk . '">Mark Attendance</a>';
                     return $actions;
+                    }
+                    return '';
                 })
                 ->rawColumns(['actions'])
                 ->make(true);
