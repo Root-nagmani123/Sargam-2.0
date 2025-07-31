@@ -17,13 +17,14 @@ class RoleController extends Controller
 {
     function __construct() {
         $this->middleware('permission:admin.roles.index', ['only' => ['index']]);
-        $this->middleware('permisson:admin.roles.create', ['only' => ['create', 'store']]);
-        $this->middleware('permission:admin.roles.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:admin.roles.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:admin.roles.edit', ['only' => ['edit', 'update', 'store']]);
     }
     public function index(RoleDataTable $dataTable)
     {
-        $roles = Role::with('permissions')->get();
-        return view('admin.user_management.roles.index', compact('roles'));
+        return $dataTable->render('admin.user_management.roles.index');
+        // $roles = Role::with('permissions')->get();
+        // return view('admin.user_management.roles.index', compact('roles'));
     }
 
     public function create()
@@ -51,7 +52,7 @@ class RoleController extends Controller
         //     return explode('.', $item->name)[0];
         // });
         $grouped = Permission::where('is_visible', 1)->get()->groupBy(['permission_group', 'permission_sub_group']);
-
+        
         return view('admin.user_management.roles.create', compact('grouped'));
     }
 

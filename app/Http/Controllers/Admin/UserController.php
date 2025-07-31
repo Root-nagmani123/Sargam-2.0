@@ -110,17 +110,8 @@ class UserController extends Controller
     {
         try {
             DB::beginTransaction();
-            
-            $userData = [
-                'name' => $request->name,
-                'email' => $request->email,
-            ];
-            
-            if ($request->filled('password')) {
-                $userData['password'] = Hash::make($request->password);
-            }
-            
-            $user->update($userData);
+
+            $user = User::where('pk', $user->pk)->first();
             
             if ($request->has('roles')) {
                 $roleNames = \Spatie\Permission\Models\Role::whereIn('id', $request->roles)->pluck('name')->toArray();

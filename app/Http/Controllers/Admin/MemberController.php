@@ -17,6 +17,14 @@ use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
 class MemberController extends Controller
 {
+    function __construct()
+    {
+        $this->middleware('permission:member.index', ['only' => ['index']]);
+        $this->middleware('permission:member.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:member.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:member.show', ['only' => ['show']]);
+        $this->middleware('permission:member.excel.export', ['only' => ['excelExport']]);
+    }
     public function index(MemberDataTable $dataTable)
     {
         return $dataTable->render('admin.member.index');

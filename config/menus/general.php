@@ -172,6 +172,7 @@ return [
             'master.department.master.index',
             'master.designation.index',
             'master.caste.category.index',
+            'member.index'
         ],
         'items' => [
             [
@@ -203,6 +204,12 @@ return [
                 'route' => 'master.caste.category.index',
                 'icon' => 'solar:airbuds-case-line-duotone',
                 'permission' => 'master.caste.category.index',
+            ],
+            [
+                'title' => 'Member',
+                'route' => 'member.index',
+                'icon' => 'solar:airbuds-case-line-duotone',
+                'permission' => 'member.index',
             ],
         ],
     ],

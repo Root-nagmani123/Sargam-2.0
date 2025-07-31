@@ -76,7 +76,7 @@ class RoleDataTable extends DataTable
      */
     public function query(Role $model): QueryBuilder
     {
-        return $model->with('permissions')->orderBy('id')->newQuery();
+        return $model->with('permissions')->orderBy('id', 'desc')->newQuery();
     }
 
     /**

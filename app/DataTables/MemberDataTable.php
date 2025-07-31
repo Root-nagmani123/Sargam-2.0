@@ -32,10 +32,17 @@ class MemberDataTable extends DataTable
             ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
             ->addColumn('email', fn($row) => '<label class="text-dark">' . $row->email . '</label>')
             ->addColumn('actions', function($row) {
-                return '<a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
-                    <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-secondary">View</a>
-                ';
 
+                $actions = '';
+                if(auth()->user()->can('member.edit')) {
+                    $actions .= '<a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>';
+                }
+
+                if(auth()->user()->can('member.show')) {
+                    $actions .= '<a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-secondary">View</a>';
+                }
+
+                return $actions;
             })
             ->filterColumn('employee_name', function ($query, $keyword) {
                 $query->where('first_name', 'like', "%{$keyword}%")

@@ -17,10 +17,14 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{ route('member.create') }}" class="btn btn-primary">+ Add Member</a>
+                                @can('member.create')
+                                    <a href="{{ route('member.create') }}" class="btn btn-primary">+ Add Member</a>
+                                @endcan
+                                @can('member.excel.export')
+                                    <a href="{{ route('member.excel.export') }}" class="btn btn-secondary">Export</a>
+                                @endcan
                                 {{-- <a href="#" class="btn btn-success" data-bs-toggle="modal"
                                     data-bs-target="#vertical-center-scroll-modal">Bulk Upload</a> --}}
-                                <a href="{{ route('member.excel.export') }}" class="btn btn-secondary">Export</a>
                             </div>
                         </div>
                     </div>
