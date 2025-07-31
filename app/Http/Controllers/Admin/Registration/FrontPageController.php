@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
+use App\Models\FoundationCourseStatus;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -70,7 +71,6 @@ class FrontPageController extends Controller
     public function authindex()
     {
         return view('fc.login');
-
     }
 
     //validates user exists 
@@ -284,7 +284,6 @@ class FrontPageController extends Controller
             //     ->with('success', 'Login successful!');
             // return redirect()->route('fc.register_form')->with('success', 'Login successful!');
             return redirect()->route('forms.show', ['formId' => 20])->with('success', 'Login successful!');
-
         }
 
 
@@ -748,5 +747,130 @@ class FrontPageController extends Controller
             'success' => true,
             'user_name' => $credentials->user_name,
         ]);
+    }
+
+    // app/Http/Controllers/FoundationCourseController.php
+
+
+
+    // public function student_status()
+    // {
+    //     // Get counts for each status
+    //     $notResponded = DB::table('fc_registration_master')
+    //                     ->where('admission_status', 0)
+    //                     ->count();
+
+    //     $registered = DB::table('fc_registration_master')
+    //                   ->where('admission_status', 1)
+    //                   ->count();
+
+    //     $exemption = DB::table('fc_registration_master')
+    //                  ->where('application_type', 2)
+    //                  ->count();
+
+    //     $incomplete = DB::table('fc_registration_master')
+    //                   ->where('final_submit', 1)
+    //                   ->count();
+
+    //     // Get service-wise counts
+    //     $services = DB::table('fc_registration_master')
+    //                 ->select('service_master_pk', DB::raw('count(*) as count'))
+    //                 ->groupBy('service_master_pk')
+    //                 ->get();
+
+    //     // Get data for each tab
+    //     $notRespondedData = DB::table('fc_registration_master')
+    //                         ->where('admission_status', 0)
+    //                         ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+    //                         ->get();
+
+    //     $registeredData = DB::table('fc_registration_master')
+    //                      ->where('admission_status', 1)
+    //                      ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+    //                      ->get();
+
+    //     $exemptionData = DB::table('fc_registration_master')
+    //                     ->where('application_type', 2)
+    //                     ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+    //                     ->get();
+
+    //     $incompleteData = DB::table('fc_registration_master')
+    //                     ->where('final_submit', 1)
+    //                     ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+    //                     ->get();
+
+    //     return view('fc.foundation_course_status', compact(
+    //         'notResponded',
+    //         'registered',
+    //         'exemption',
+    //         'incomplete',
+    //         'services',
+    //         'notRespondedData',
+    //         'registeredData',
+    //         'exemptionData',
+    //         'incompleteData'
+    //     ));
+    // }
+
+    public function student_status()
+    {
+        // Get counts for each status using model constants
+        $notResponded = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_NOT_RESPONDED)
+            ->count();
+
+        $registered = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_REGISTERED)
+            ->count();
+
+        $exemption = FoundationCourseStatus::where('application_type', FoundationCourseStatus::APPLICATION_EXEMPTION)
+            ->count();
+
+        $incomplete = FoundationCourseStatus::where('final_submit', FoundationCourseStatus::SUBMISSION_DRAFT)
+            ->count();
+
+        // Get service-wise counts with eager loading
+        // $services = FoundationCourseStatus::with('service')
+        //     ->select('service_master_pk', \DB::raw('count(*) as count'))
+        //     ->groupBy('service_master_pk')
+        //     ->get();
+        $services = FoundationCourseStatus::with(['service' => function($query) {
+            $query->select('pk', 'service_short_name'); // Only select needed columns
+        }])
+        ->select('service_master_pk', DB::raw('count(*) as count'))
+        ->groupBy('service_master_pk')
+        ->get();
+            // @dd($services);
+
+        // Get data for each tab with pagination
+        // $notRespondedData = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_NOT_RESPONDED)
+        //     ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+        //     ->paginate(10);
+        $notRespondedData = FoundationCourseStatus::with('service')
+    ->where('admission_status', 0) // Directly using the status value
+    ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+    ->paginate(10);
+
+        $registeredData = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_REGISTERED)
+            ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+            ->paginate(10);
+
+        $exemptionData = FoundationCourseStatus::where('application_type', FoundationCourseStatus::APPLICATION_EXEMPTION)
+            ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+            ->paginate(10);
+
+        $incompleteData = FoundationCourseStatus::where('final_submit', FoundationCourseStatus::SUBMISSION_DRAFT)
+            ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+            ->paginate(10);
+
+        return view('fc.status', compact(
+            'notResponded',
+            'registered',
+            'exemption',
+            'incomplete',
+            'services',
+            'notRespondedData',
+            'registeredData',
+            'exemptionData',
+            'incompleteData'
+        ));
     }
 }
