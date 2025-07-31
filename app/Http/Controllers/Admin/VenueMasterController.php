@@ -10,6 +10,12 @@ use Illuminate\Support\Facades\Crypt;
 
 class VenueMasterController extends Controller
 {
+    function __construct() {
+        $this->middleware('permission:venue-master.index', ['only' => ['index']]);
+        $this->middleware('permission:venue-master.create', ['only' => ['create', 'store']]);
+        $this->middleware('permission:venue-master.edit', ['only' => ['edit', 'update']]);
+        $this->middleware('permission:venue-master.delete', ['only' => ['destroy']]);
+    }
     public function index() {
         $venues = VenueMaster::all();
         return view('admin.venueMaster.index', compact('venues'));

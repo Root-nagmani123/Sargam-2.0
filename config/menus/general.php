@@ -3,7 +3,6 @@
 return [
     [
         'title' => 'General',
-        // 'permission' => 'HR.INDEX',
         'id' => 'generalCollapse',
         'icon' => 'bi-chevron-down',
         'items' => [

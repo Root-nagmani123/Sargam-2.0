@@ -16,11 +16,13 @@
                         <div class="col-6">
                             <h4>Venue Master</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{ route('Venue-Master.create') }}" class="btn btn-primary">+Add New Venue</a>
+                        @can('venue-master.create')
+                            <div class="col-6">
+                                <div class="float-end gap-2">
+                                    <a href="{{ route('Venue-Master.create') }}" class="btn btn-primary">+Add New Venue</a>
+                                </div>
                             </div>
-                        </div>
+                        @endcan
                     </div>
                     <hr>
                     <div id="zero_config_wrapper" class="dataTables_wrapper">
@@ -53,10 +55,13 @@
                                     </td>
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
-                                            <a href="{{ route('Venue-Master.edit', $venue->venue_id) }}"
-                                                class="btn btn-primary text-white btn-sm">
-                                                Edit
-                                            </a>
+                                            @can('venue-master.edit')
+                                                <a href="{{ route('Venue-Master.edit', $venue->venue_id) }}"
+                                                    class="btn btn-primary text-white btn-sm">
+                                                    Edit
+                                                </a>
+                                            @endcan
+                                            @can('venue-master.delete')
                                             <form action="{{ route('Venue-Master.destroy', $venue->venue_id) }}"
                                                     method="POST" class="m-0 delete-form"
                                                     data-status="{{ $venue->active_inactive }}">
@@ -70,16 +75,19 @@
                                                         Delete
                                                     </button>
                                                 </form>
+                                            @endcan
 
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="venue_master" data-column="active_inactive"
-                                                data-id="{{ $venue->venue_id }}" data-id_column="venue_id"
-                                                {{ $venue->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
+                                        @can('venue-master.active_inactive')
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                    data-table="venue_master" data-column="active_inactive"
+                                                    data-id="{{ $venue->venue_id }}" data-id_column="venue_id"
+                                                    {{ $venue->active_inactive == 1 ? 'checked' : '' }}>
+                                            </div>
+                                        @endcan
                                     </td>
 
                                 </tr>

@@ -6,16 +6,18 @@ return [
         'title' => 'General Master',
         'id' => 'generalMasterMenu',
         'icon' => 'bi bi-chevron-down',
+        'allowedPermissions' => [
+            'venue-master.index',
+            // 'master.class.session.index',
+            // 'stream.index',
+            // 'section.index',
+        ],
         'items' => [
-            [
-                'title' => 'Member',
-                'route' => 'member.index',
-                'icon' => 'solar:shield-user-line-duotone',
-            ],
             [
                 'title' => 'Venue Master',
                 'route' => 'Venue-Master.index',
                 'icon' => 'solar:face-scan-square-broken',
+                'permission' => 'venue-master.index',
             ],
             [
                 'title' => 'Class Session',
