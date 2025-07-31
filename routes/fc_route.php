@@ -219,3 +219,7 @@ Route::get('/admin/reports/joining-documents/download-all/{userId}', [FcJoiningD
 
 //remark
 Route::post('/admin/joining-documents/save-remark/{user_id}', [FcJoiningDocumentController::class, 'saveRemark'])->name('admin.joining-documents.save-remark');
+
+//student page status
+
+Route::get('/foundation-course/status', [FrontPageController::class, 'student_status'])->name('foundation.course.status');
