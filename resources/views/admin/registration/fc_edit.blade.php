@@ -30,7 +30,12 @@
                         @endphp
 
                         <div id="fields-container_{{ $index }}">
-                            @if ($has_table_format)
+                            {{-- First display table fields if any exist --}}
+                            @php
+                                $table_fields = $section_fields->where('format', 'table');
+                            @endphp
+
+                            @if ($table_fields->isNotEmpty())
                                 <table class="table table-bordered table-striped">
                                     <thead>
                                         <tr>
@@ -43,118 +48,119 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach ($section_fields as $field)
-                                            @if ($field->format === 'table')
-                                                <tr class="odd">
-                                                    <input type="hidden" name="field_id[]" value="{{ $field->id }}">
-                                                    <input type="hidden" name="field_section[]"
-                                                        value="{{ $section->id }}">
+                                        @foreach ($table_fields as $field)
+                                            <tr class="odd">
+                                                <input type="hidden" name="field_id[]" value="{{ $field->id }}">
+                                                <input type="hidden" name="field_section[]" value="{{ $section->id }}">
 
-                                                    <td><input type="text" name="field_label[]"
-                                                            value="{{ $field->formlabel }}" required class="form-control">
-                                                    </td>
-                                                    <td><input type="text" name="field_name[]"
-                                                            value="{{ $field->field_title ?? $field->formname }}" required
-                                                            class="form-control"></td>
-                                                    <td>
-                                                        <select name="field_type[]" class="form-control">
-                                                            @foreach (['Label', 'Text', 'Date', 'Email', 'Textarea', 'Checkbox', 'Radio Button', 'Select Box', 'File Upload', 'View/Download'] as $type)
-                                                                <option value="{{ $type }}"
-                                                                    {{ ($field->field_type ?? $field->formtype) === $type ? 'selected' : '' }}>
-                                                                    {{ $type }}</option>
-                                                            @endforeach
-                                                        </select>
-                                                    </td>
-                                                    <td><input type="text" name="field_options[]"
-                                                            value="{{ $field->field_options ?? ($field->fieldoption ?? $field->field_url) }}"
-                                                            class="form-control"></td>
-                                                    <td><input type="checkbox" name="is_required[]"
-                                                            {{ $field->required ? 'checked' : '' }} class="form-control">
-                                                    </td>
-                                                    <td><input type="checkbox" name="delete_fields[]"
-                                                            value="{{ $field->id }}" class="form-control"></td>
-                                                </tr>
-                                            @endif
+                                                <td><input type="text" name="field_label[]"
+                                                        value="{{ $field->formlabel }}"  class="form-control">
+                                                </td>
+                                                <td><input type="text" name="field_name[]"
+                                                        value="{{ $field->field_title ?? $field->formname }}" 
+                                                        class="form-control"></td>
+                                                <td>
+                                                    <select name="field_type[]" class="form-control">
+                                                        @foreach (['Label', 'Text', 'Date', 'Email', 'Textarea', 'Checkbox', 'Radio Button', 'Select Box', 'File Upload', 'View/Download'] as $type)
+                                                            <option value="{{ $type }}"
+                                                                {{ ($field->field_type ?? $field->formtype) === $type ? 'selected' : '' }}>
+                                                                {{ $type }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td><input type="text" name="field_options[]"
+                                                        value="{{ $field->field_options ?? ($field->fieldoption ?? $field->field_url) }}"
+                                                        class="form-control"></td>
+                                                <td><input type="checkbox" name="is_required[]"
+                                                        {{ $field->required ? 'checked' : '' }} class="form-control">
+                                                </td>
+                                                <td><input type="checkbox" name="delete_fields[]"
+                                                        value="{{ $field->id }}" class="form-control"></td>
+                                            </tr>
                                         @endforeach
                                     </tbody>
                                 </table>
-                            @else
-                                @foreach ($section_fields as $fieldIndex => $field)
-                                    @if ($field->format !== 'table')
-                                        <div class="form-group border p-3 mb-4 rounded shadow-sm bg-light">
-                                            <input type="hidden" name="field_id[{{ $fieldIndex }}]"
-                                                value="{{ $field->id }}">
-                                            <input type="hidden" name="field_section[{{ $fieldIndex }}]"
-                                                value="{{ $section->id }}">
+                            @endif
 
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Label:
-                                                        @if ($field->required)
-                                                            <span class="text-danger">*</span>
-                                                        @endif
-                                                    </label>
-                                                    <input type="text" name="field_label[{{ $fieldIndex }}]"
-                                                        value="{{ $field->formlabel }}" required class="form-control">
-                                                </div>
+                            {{-- Then display regular fields (non-table) --}}
+                            @php
+                                $regular_fields = $section_fields
+                                    ->where('format', '!=', 'table')
+                                    ->whereNotNull('formname');
+                            @endphp
 
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Field Name:</label>
-                                                    <select class="form-control" name="field_name[{{ $fieldIndex }}]"
-                                                        required>
-                                                        @foreach ($columns as $column)
-                                                            <option value="{{ $column }}"
-                                                                {{ $field->formname == $column ? 'selected' : '' }}>
-                                                                {{ ucfirst(str_replace('_', ' ', $column)) }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                            </div>
+                            @foreach ($regular_fields as $fieldIndex => $field)
+                                <div class="form-group border p-3 mb-4 rounded shadow-sm bg-light">
+                                    <input type="hidden" name="field_id[{{ $fieldIndex }}]"
+                                        value="{{ $field->id }}">
+                                    <input type="hidden" name="field_section[{{ $fieldIndex }}]"
+                                        value="{{ $section->id }}">
 
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Type:</label>
-                                                    <select name="field_type[{{ $fieldIndex }}]" class="form-control">
-                                                        @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file', 'textarea', 'email', 'number', 'time'] as $type)
-                                                            <option value="{{ $type }}"
-                                                                {{ $field->formtype === $type ? 'selected' : '' }}>
-                                                                {{ ucfirst($type) }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Label:
+                                                @if ($field->required)
+                                                    <span class="text-danger">*</span>
+                                                @endif
+                                            </label>
+                                            <input type="text" name="field_label[{{ $fieldIndex }}]"
+                                                value="{{ $field->formlabel }}" required class="form-control">
+                                        </div>
 
-                                                <div class="col-md-6">
-                                                    <label class="form-label">Options (comma separated):</label>
-                                                    <input type="text" name="field_options[{{ $fieldIndex }}]"
-                                                        value="{{ $field->fieldoption }}" class="form-control">
-                                                </div>
-                                            </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Field Name:</label>
+                                            <select class="form-control" name="field_name[{{ $fieldIndex }}]" required>
+                                                @foreach ($columns as $column)
+                                                    <option value="{{ $column }}"
+                                                        {{ $field->formname == $column ? 'selected' : '' }}>
+                                                        {{ ucfirst(str_replace('_', ' ', $column)) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
 
-                                            <div class="row align-items-center">
-                                                <div class="col-md-6">
-                                                    <div class="form-check" style="padding-left: 0 !important;">
-                                                        <input type="checkbox" name="is_required[{{ $field->id }}]"
-                                                            id="required_{{ $field->id }}"
-                                                            {{ $field->required ? 'checked' : '' }}>
-                                                        <label class="form-check-label"
-                                                            for="required_{{ $field->id }}">Required</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-check" style="padding-left: 0 !important;">
-                                                        <input type="checkbox" name="delete_fields[{{ $fieldIndex }}]"
-                                                            value="{{ $field->id }}" id="delete_{{ $fieldIndex }}">
-                                                        <label class="form-check-label text-danger"
-                                                            for="delete_{{ $fieldIndex }}">Delete</label>
-                                                    </div>
-                                                </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Type:</label>
+                                            <select name="field_type[{{ $fieldIndex }}]" class="form-control">
+                                                @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file', 'textarea', 'email', 'number', 'time'] as $type)
+                                                    <option value="{{ $type }}"
+                                                        {{ $field->formtype === $type ? 'selected' : '' }}>
+                                                        {{ ucfirst($type) }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <label class="form-label">Options (comma separated):</label>
+                                            <input type="text" name="field_options[{{ $fieldIndex }}]"
+                                                value="{{ $field->fieldoption }}" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <div class="form-check" style="padding-left: 0 !important;">
+                                                <input type="checkbox" name="is_required[{{ $field->id }}]"
+                                                    id="required_{{ $field->id }}"
+                                                    {{ $field->required ? 'checked' : '' }}>
+                                                <label class="form-check-label"
+                                                    for="required_{{ $field->id }}">Required</label>
                                             </div>
                                         </div>
-                                    @endif
-                                @endforeach
-                            @endif
+                                        <div class="col-md-6">
+                                            <div class="form-check" style="padding-left: 0 !important;">
+                                                <input type="checkbox" name="delete_fields[{{ $fieldIndex }}]"
+                                                    value="{{ $field->id }}" id="delete_{{ $fieldIndex }}">
+                                                <label class="form-check-label text-danger"
+                                                    for="delete_{{ $fieldIndex }}">Delete</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
 
                         <button type="button" class="btn btn-primary btn-add-field"
@@ -225,100 +231,7 @@
         let sectionCounter = {{ count($sections) }};
         let fieldCounter = {{ count($fields) }};
 
-        // function addField(sectionIndex, sectionId) {
-        //     const fieldsContainer = document.querySelector(`#fields-container_${sectionIndex}`);
-        //     const isTableFormat = fieldsContainer.querySelector('table') !== null;
-        //     const newFieldIndex = fieldCounter;
 
-        //     let fieldHtml;
-
-        //     if (isTableFormat) {
-        //         fieldHtml = `
-    //     <tr>
-    //         <input type="hidden" name="field_id[${newFieldIndex}]" value="new">
-    //         <input type="hidden" name="field_section[${newFieldIndex}]" value="${sectionId}">
-    //         <td><input type="text" name="field_label[${newFieldIndex}]" required></td>
-    //         <td><input type="text" name="field_name[${newFieldIndex}]" required></td>
-    //         <td>
-    //             <select name="field_type[${newFieldIndex}]" class="form-control">
-    //                 @foreach (['Label', 'Text', 'Date', 'Email', 'Textarea', 'Checkbox', 'Radio Button', 'Select Box', 'File Upload', 'View/Download'] as $type)
-    //                     <option value="{{ $type }}">{{ $type }}</option>
-    //                 @endforeach
-    //             </select>
-    //         </td>
-    //         <td><input type="text" name="field_options[${newFieldIndex}]"></td>
-    //         <td><input type="checkbox" name="is_required[${newFieldIndex}]"></td>
-    //         <td><input type="checkbox" name="delete_fields[${newFieldIndex}]" value="new"></td>
-    //     </tr>
-    // `;
-        //     } else {
-        //         let optionsHtml = '<option value="" selected disabled>Choose an option</option>';
-        //         @foreach ($columns as $column)
-        //             optionsHtml +=
-        //                 `<option value="{{ $column }}">{{ ucfirst(str_replace('_', ' ', $column)) }}</option>`;
-        //         @endforeach
-
-        //         fieldHtml = `
-    //     <div class="form-group border p-3 mb-4 rounded shadow-sm">
-    //         <input type="hidden" name="field_id[${newFieldIndex}]" value="new">
-    //         <input type="hidden" name="field_section[${newFieldIndex}]" value="${sectionId}">
-
-    //         <div class="row mb-3">
-    //             <div class="col-md-6">
-    //                 <label class="form-label">Label:</label>
-    //                 <input type="text" name="field_label[${newFieldIndex}]" class="form-control" required>
-    //             </div>
-
-    //             <div class="col-md-6">
-    //                 <label class="form-label">Name:</label>
-    //                 <select class="form-control" name="field_name[${newFieldIndex}]" required>
-    //                     ${optionsHtml}
-    //                 </select>
-    //             </div>
-    //         </div>
-
-    //         <div class="row mb-3">
-    //             <div class="col-md-6">
-    //                 <label class="form-label">Type:</label>
-    //                 <select name="field_type[${newFieldIndex}]" class="form-control">
-    //                     @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file', 'textarea', 'email', 'number', 'time'] as $type)
-    //                         <option value="{{ $type }}">{{ ucfirst($type) }}</option>
-    //                     @endforeach
-    //                 </select>
-    //             </div>
-
-    //             <div class="col-md-6">
-    //                 <label class="form-label">Options (comma separated):</label>
-    //                 <input type="text" name="field_options[${newFieldIndex}]" class="form-control">
-    //             </div>
-    //         </div>
-
-    //         <div class="row align-items-center">
-    //             <div class="col-md-6">
-    //                 <div class="form-check">
-    //                     <input type="checkbox" name="is_required[${newFieldIndex}]" class="form-check-input" id="required_${newFieldIndex}">
-    //                     <label class="form-check-label" for="required_${newFieldIndex}">Required</label>
-    //                 </div>
-    //             </div>
-    //             <div class="col-md-6">
-    //                 <div class="form-check">
-    //                     <input type="checkbox" name="delete_fields[${newFieldIndex}]" class="form-check-input" value="new" id="delete_${newFieldIndex}">
-    //                     <label class="form-check-label text-danger" for="delete_${newFieldIndex}">Delete</label>
-    //                 </div>
-    //             </div>
-    //         </div>
-    //     </div>
-    // `;
-        //     }
-
-        //     if (isTableFormat) {
-        //         fieldsContainer.querySelector('tbody').insertAdjacentHTML('beforeend', fieldHtml);
-        //     } else {
-        //         fieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
-        //     }
-
-        //     fieldCounter++;
-        // }
 
         function addField(sectionIndex, sectionId) {
             const fieldsContainer = document.querySelector(`#fields-container_${sectionIndex}`);
@@ -516,53 +429,53 @@
     </script>
 
     <!-- <style>
-        .section-group {
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-            background-color: #f8f9fa;
-        }
+            .section-group {
+                margin-bottom: 2rem;
+                padding: 1.5rem;
+                border: 1px solid #dee2e6;
+                border-radius: 0.25rem;
+                background-color: #f8f9fa;
+            }
 
-        .form-group {
-            margin-bottom: 1rem;
-        }
+            .form-group {
+                margin-bottom: 1rem;
+            }
 
-        .checkbox-container {
-            display: flex;
-            gap: 1rem;
-            margin-top: 0.5rem;
-        }
+            .checkbox-container {
+                display: flex;
+                gap: 1rem;
+                margin-top: 0.5rem;
+            }
 
-        .btn-group {
-            display: inline-flex;
-            margin-left: 0.5rem;
-        }
+            .btn-group {
+                display: inline-flex;
+                margin-left: 0.5rem;
+            }
 
-        .form-group label {
-            /* font-weight: bold !important; */
-            color: #000 !important;
-            /* Pure black */
-        }
+            .form-group label {
+                /* font-weight: bold !important; */
+                color: #000 !important;
+                /* Pure black */
+            }
 
-        table {
-            width: 100%;
-            margin-bottom: 1rem;
-        }
+            table {
+                width: 100%;
+                margin-bottom: 1rem;
+            }
 
-        table th,
-        table td {
-            padding: 0.75rem;
-            vertical-align: top;
-        }
+            table th,
+            table td {
+                padding: 0.75rem;
+                vertical-align: top;
+            }
 
-        .form-check .form-check-input {
-            width: 1%;
-            height: 1.5em;
-            margin-top: 0.3em;
-            margin-right: 0.5em;
-            float: left;
-            margin-left: -1.813em;
-        }
-    </style> -->
+            .form-check .form-check-input {
+                width: 1%;
+                height: 1.5em;
+                margin-top: 0.3em;
+                margin-right: 0.5em;
+                float: left;
+                margin-left: -1.813em;
+            }
+        </style> -->
 @endsection
