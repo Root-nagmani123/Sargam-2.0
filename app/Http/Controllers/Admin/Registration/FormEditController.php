@@ -182,8 +182,8 @@ class FormEditController extends Controller
     {
         $request->validate([
             'section_title.*' => 'required|string',
-            'field_label.*' => 'required|string',
-            'field_name.*' => 'required|string',
+            // 'field_label.*' => 'required|string',
+            // 'field_name.*' => 'required|string',
         ]);
 
         DB::beginTransaction();
@@ -220,17 +220,7 @@ class FormEditController extends Controller
 
             // Handle Fields
             if ($request->has('field_id') && is_array($request->field_id)) {
-                // foreach ($request->field_id as $index => $field_id) {
-                //     $field_type = $request->field_type[$index];
-                //     $is_required = ($field_id === 'new')
-                //         ? (isset($request->is_required[$index]) ? 1 : 0)
-                //         : (isset($request->is_required[$field_id]) ? 1 : 0);
-
-                //     // Resolve section_id (new section mapping or existing)
-                //     $temp_section_id = $request->field_section[$index];
-                //     $section_id = (str_starts_with($temp_section_id, 'new'))
-                //         ? ($newSectionMap[$temp_section_id] ?? null)
-                //         : $temp_section_id;
+              
                  foreach ($request->field_id as $index => $field_id) {
                 $field_type = $request->field_type[$index];
 
