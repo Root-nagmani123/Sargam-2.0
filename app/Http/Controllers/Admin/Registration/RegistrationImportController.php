@@ -10,6 +10,7 @@ use App\Models\FcRegistrationMaster;
 use Illuminate\Support\Facades\Session;
 use App\Exports\FcRegistrationExport;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\DataTables\FC\FcRegistrationMasterListDaTable;
 use App\Models\FcRegistrationExportMaster as ModelsFcRegistrationExportMaster;
 
 class RegistrationImportController extends Controller
@@ -64,11 +65,14 @@ class RegistrationImportController extends Controller
         return redirect()->route('admin.registration.index')->with('success', 'Data imported successfully.');
     }
 
-    public function fc_masterindex()
+    public function fc_masterindex(FcRegistrationMasterListDaTable $dataTable)
     {
-        $registrations = FcRegistrationMaster::select('pk', 'email', 'contact_no','display_name','schema_id','first_name', 'middle_name', 'last_name', 'rank', 'exam_year','service_master_pk', 'web_auth', 'dob')->get();
-        return view('admin.registration.fcregistrationmaster_list', compact('registrations'));
+        return $dataTable->render('admin.registration.fcregistrationmaster_list');
     }
+    // {
+    //     $registrations = FcRegistrationMaster::select('pk', 'email', 'contact_no','display_name','schema_id','first_name', 'middle_name', 'last_name', 'rank', 'exam_year','service_master_pk', 'web_auth', 'dob')->get();
+    //     return view('admin.registration.fcregistrationmaster_list', compact('registrations'));
+    // }
     public function fc_masteredit($id)
     {
         $registration = FcRegistrationMaster::findOrFail($id);
