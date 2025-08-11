@@ -292,14 +292,52 @@ class FrontPageController extends Controller
     }
 
     //choose path
+    // public function choosePath()
+    // {
+    //     $pathPage = PathPage::with(['faqs' => function ($query) {
+    //         $query->take(5); // Load only 5 FAQs
+    //     }])->first();
+
+    //     return view('fc.path', compact('pathPage'));
+    // }
+
+
     public function choosePath()
     {
-        $pathPage = PathPage::with(['faqs' => function ($query) {
-            $query->take(5); // Load only 5 FAQs
-        }])->first();
+        $pathPage = PathPage::first();
 
-        return view('fc.path', compact('pathPage'));
+        // Defaults
+        $showRegistration = false;
+        $showExemption    = false;
+
+        if ($pathPage) {
+            $today = Carbon::today();
+
+            // Only allow registration if course dates are valid
+            if (
+                $pathPage->course_start_date &&
+                $pathPage->course_end_date &&
+                $pathPage->registration_start_date &&
+                $pathPage->registration_end_date &&
+                $pathPage->course_end_date->gt($pathPage->course_start_date) &&
+                $today->between($pathPage->registration_start_date, $pathPage->registration_end_date)
+            ) {
+                $showRegistration = true;
+            }
+
+            // Only allow exemption if registration start exists and within course
+            if (
+                $pathPage->exemption_start_date &&
+                $pathPage->exemption_end_date &&
+                $today->between($pathPage->exemption_start_date, $pathPage->exemption_end_date)
+            ) {
+                $showExemption = true;
+            }
+        }
+
+        return view('fc.path', compact('pathPage', 'showRegistration', 'showExemption'));
     }
+
 
 
     // path page method
@@ -310,41 +348,138 @@ class FrontPageController extends Controller
         return view('admin.forms.path', compact('pathPage'));
     }
 
+    // public function pathPageSave(Request $request)
+    // {
+    //     $request->validate([
+    //         'register_course' => 'required|string',
+    //         'apply_exemption' => 'required|string',
+    //         'already_registered' => 'required|string',
+    //         'guidelines' => 'required|string',
+
+    //         'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+    //         'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
+
+    //         'exemption_start_date' => ['nullable', 'date', 'after_or_equal:today'],
+    //         'exemption_end_date' => ['nullable', 'date', 'after_or_equal:exemption_start_date'],
+
+    //         'faq_header.*' => 'nullable|string',
+    //         'faq_content.*' => 'nullable|string',
+    //     ]);
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Check if record exists
+    //         $existingPage = PathPage::first();
+
+    //         // Update or create the Path Page
+    //         $pathPage = PathPage::updateOrCreate(
+    //             ['id' => $existingPage?->id], // use null-safe operator
+    //             [
+    //                 'register_course' => $request->register_course,
+    //                 'apply_exemption' => $request->apply_exemption,
+    //                 'already_registered' => $request->already_registered,
+    //                 'guidelines' => $request->guidelines,
+    //                 'registration_start_date' => $request->registration_start_date ? Carbon::parse($request->registration_start_date)->format('Y-m-d') : null,
+    //                 'registration_end_date' => $request->registration_end_date ? Carbon::parse($request->registration_end_date)->format('Y-m-d') : null,
+    //                 'exemption_start_date' => $request->exemption_start_date ? Carbon::parse($request->exemption_start_date)->format('Y-m-d') : null,
+    //                 'exemption_end_date' => $request->exemption_end_date ? Carbon::parse($request->exemption_end_date)->format('Y-m-d') : null,
+    //             ]
+    //         );
+
+    //         // Remove old FAQs
+    //         $pathPage->faqs()->delete();
+
+    //         // Re-insert FAQs
+    //         foreach ($request->faq_header ?? [] as $index => $header) {
+    //             $content = $request->faq_content[$index] ?? null;
+
+    //             if ($header || $content) {
+    //                 PathPageFaq::create([
+    //                     'path_page_id' => $pathPage->id,
+    //                     'header' => $header,
+    //                     'content' => $content,
+    //                 ]);
+    //             }
+    //         }
+
+    //         DB::commit();
+    //         return back()->with('success', 'Path Page saved successfully.');
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+
+    //         // Optional: log the error for debugging
+    //         \Log::error('PathPage Save Error: ' . $e->getMessage());
+
+    //         return back()->with('error', 'An error occurred while saving the Path Page.');
+    //     }
+    // }
     public function pathPageSave(Request $request)
     {
         $request->validate([
-            'register_course' => 'required|string',
-            'apply_exemption' => 'required|string',
+            'register_course'    => 'required|string',
+            'apply_exemption'    => 'required|string',
             'already_registered' => 'required|string',
-            'guidelines' => 'required|string',
+            'guidelines'         => 'required|string',
 
-            'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
-            'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
+            // Course Dates
+            'course_start_date'  => ['required', 'date', 'after_or_equal:today'],
+            'course_end_date'    => ['required', 'date', 'after:course_start_date'],
 
-            'exemption_start_date' => ['nullable', 'date', 'after_or_equal:today'],
-            'exemption_end_date' => ['nullable', 'date', 'after_or_equal:exemption_start_date'],
+            // Registration Dates (must fall within course period)
+            'registration_start_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:course_start_date',
+                'before_or_equal:course_end_date',
+            ],
+            'registration_end_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:registration_start_date',
+                'before_or_equal:course_end_date',
+            ],
 
-            'faq_header.*' => 'nullable|string',
+            // Exemption Dates (must be after registration start & within course period)
+            'exemption_start_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:registration_start_date',
+                'before_or_equal:course_end_date',
+            ],
+            'exemption_end_date' => [
+                'nullable',
+                'date',
+                'after_or_equal:exemption_start_date',
+                'before_or_equal:course_end_date',
+            ],
+
+            // FAQs
+            'faq_header.*'  => 'nullable|string',
             'faq_content.*' => 'nullable|string',
         ]);
+
+
         DB::beginTransaction();
 
         try {
-            // Check if record exists
             $existingPage = PathPage::first();
 
-            // Update or create the Path Page
             $pathPage = PathPage::updateOrCreate(
-                ['id' => $existingPage?->id], // use null-safe operator
+                ['id' => $existingPage?->id],
                 [
-                    'register_course' => $request->register_course,
-                    'apply_exemption' => $request->apply_exemption,
-                    'already_registered' => $request->already_registered,
-                    'guidelines' => $request->guidelines,
+                    'register_course'       => $request->register_course,
+                    'apply_exemption'       => $request->apply_exemption,
+                    'already_registered'    => $request->already_registered,
+                    'guidelines'            => $request->guidelines,
+
+                    'course_start_date'     => $request->course_start_date ? Carbon::parse($request->course_start_date)->format('Y-m-d') : null,
+                    'course_end_date'       => $request->course_end_date ? Carbon::parse($request->course_end_date)->format('Y-m-d') : null,
+
                     'registration_start_date' => $request->registration_start_date ? Carbon::parse($request->registration_start_date)->format('Y-m-d') : null,
-                    'registration_end_date' => $request->registration_end_date ? Carbon::parse($request->registration_end_date)->format('Y-m-d') : null,
+                    'registration_end_date'   => $request->registration_end_date ? Carbon::parse($request->registration_end_date)->format('Y-m-d') : null,
+
                     'exemption_start_date' => $request->exemption_start_date ? Carbon::parse($request->exemption_start_date)->format('Y-m-d') : null,
-                    'exemption_end_date' => $request->exemption_end_date ? Carbon::parse($request->exemption_end_date)->format('Y-m-d') : null,
+                    'exemption_end_date'   => $request->exemption_end_date ? Carbon::parse($request->exemption_end_date)->format('Y-m-d') : null,
                 ]
             );
 
@@ -354,12 +489,11 @@ class FrontPageController extends Controller
             // Re-insert FAQs
             foreach ($request->faq_header ?? [] as $index => $header) {
                 $content = $request->faq_content[$index] ?? null;
-
                 if ($header || $content) {
                     PathPageFaq::create([
                         'path_page_id' => $pathPage->id,
-                        'header' => $header,
-                        'content' => $content,
+                        'header'       => $header,
+                        'content'      => $content,
                     ]);
                 }
             }
@@ -368,13 +502,11 @@ class FrontPageController extends Controller
             return back()->with('success', 'Path Page saved successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-
-            // Optional: log the error for debugging
             \Log::error('PathPage Save Error: ' . $e->getMessage());
-
             return back()->with('error', 'An error occurred while saving the Path Page.');
         }
     }
+
 
     //destroy method for path page faq
     public function destroyFaq($id)
@@ -832,22 +964,22 @@ class FrontPageController extends Controller
         //     ->select('service_master_pk', \DB::raw('count(*) as count'))
         //     ->groupBy('service_master_pk')
         //     ->get();
-        $services = FoundationCourseStatus::with(['service' => function($query) {
+        $services = FoundationCourseStatus::with(['service' => function ($query) {
             $query->select('pk', 'service_short_name'); // Only select needed columns
         }])
-        ->select('service_master_pk', DB::raw('count(*) as count'))
-        ->groupBy('service_master_pk')
-        ->get();
-            // @dd($services);
+            ->select('service_master_pk', DB::raw('count(*) as count'))
+            ->groupBy('service_master_pk')
+            ->get();
+        // @dd($services);
 
         // Get data for each tab with pagination
         // $notRespondedData = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_NOT_RESPONDED)
         //     ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
         //     ->paginate(10);
         $notRespondedData = FoundationCourseStatus::with('service')
-    ->where('admission_status', 0) // Directly using the status value
-    ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
-    ->paginate(10);
+            ->where('admission_status', 0) // Directly using the status value
+            ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')
+            ->paginate(10);
 
         $registeredData = FoundationCourseStatus::where('admission_status', FoundationCourseStatus::STATUS_REGISTERED)
             ->select('first_name', 'middle_name', 'last_name', 'service_master_pk', 'rank')

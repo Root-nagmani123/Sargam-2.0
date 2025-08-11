@@ -48,11 +48,26 @@
 
                     <div class="row mb-4">
                         <div class="col-md-6">
+                            <label for="course_start_date" class="form-label fw-semibold">Course Start Date</label>
+                            <input type="date" name="course_start_date" id="course_start_date" class="form-control"
+                                min="{{ $today }}"
+                                value="{{ old('course_start_date', $pathPage->course_start_date?->format('Y-m-d')) ?? '' }}">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="course_end_date" class="form-label fw-semibold">Course End Date</label>
+                            <input type="date" name="course_end_date" id="course_end_date" class="form-control"
+                                min="{{ old('course_start_date', $pathPage->course_start_date ?? $today) }}"
+                                value="{{ old('course_end_date', $pathPage->course_end_date?->format('Y-m-d')) ?? '' }}">
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
                             <label for="registration_start_date" class="form-label fw-semibold">Registration Start
                                 Date</label>
                             <input type="date" name="registration_start_date" id="registration_start_date"
                                 class="form-control" min="{{ $today }}"
-                                value="{{ old('registration_start_date', $pathPage->registration_start_date ?? '') }}">
+                                value="{{ old('registration_start_date', $pathPage->registration_start_date?->format('Y-m-d')) ?? '' }}">
                         </div>
 
                         <div class="col-md-6">
@@ -61,7 +76,7 @@
                             <input type="date" name="registration_end_date" id="registration_end_date"
                                 class="form-control"
                                 min="{{ old('registration_start_date', $pathPage->registration_start_date ?? $today) }}"
-                                value="{{ old('registration_end_date', $pathPage->registration_end_date ?? '') }}">
+                                value="{{ old('registration_end_date', $pathPage->registration_end_date?->format('Y-m-d')) ?? '' }}">
                         </div>
                     </div>
 
@@ -71,14 +86,14 @@
                                 Date</label>
                             <input type="date" name="exemption_start_date" id="exemption_start_date" class="form-control"
                                 min="{{ $today }}"
-                                value="{{ old('exemption_start_date', $pathPage->exemption_start_date ?? '') }}">
+                                value="{{ old('exemption_start_date', $pathPage->exemption_start_date?->format('Y-m-d')) ?? '' }}">
                         </div>
 
                         <div class="col-md-6">
                             <label for="exemption_end_date" class="form-label fw-semibold">Exemption End Date</label>
                             <input type="date" name="exemption_end_date" id="exemption_end_date" class="form-control"
                                 min="{{ old('exemption_start_date', $pathPage->exemption_start_date ?? $today) }}"
-                                value="{{ old('exemption_end_date', $pathPage->exemption_end_date ?? '') }}">
+                                value="{{ old('exemption_end_date', $pathPage->exemption_end_date?->format('Y-m-d')) ?? '' }}">
                         </div>
                     </div>
                     <div class="mb-4">
@@ -114,14 +129,14 @@
                                         <label for="" class="form-label">Question</label>
                                         <div class="mb-3">
                                             <input type="text" name="faq_header[]" class="form-control"
-                                            value="{{ $faq->header }}">
+                                                value="{{ $faq->header }}">
                                         </div>
                                     </div>
                                     <div class="col-12">
                                         <label for="" class="form-label">Answer</label>
-                                       <div class="mb-3">
-                                         <textarea name="faq_content[]" class="form-control" rows="2">{{ $faq->content }}</textarea>
-                                       </div>
+                                        <div class="mb-3">
+                                            <textarea name="faq_content[]" class="form-control" rows="2">{{ $faq->content }}</textarea>
+                                        </div>
                                     </div>
                                     <div class="text-end align-self-end">
                                         <button type="button" class="btn btn-sm btn-danger delete-faq-btn"
@@ -133,15 +148,15 @@
                             @endforeach
                         @else
                             <!-- <div class="row faq-item align-items-end">
-                                                            <div class="col-md-5 mb-3">
-                                                                <label class="form-label fw-semibold">Question</label>
-                                                                <input type="text" name="faq_header[]" class="form-control">
-                                                            </div>
-                                                            <div class="col-md-5 mb-3">
-                                                                <label class="form-label fw-semibold">Answer</label>
-                                                                <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
-                                                            </div>
-                                                        </div> -->
+                                                                    <div class="col-md-5 mb-3">
+                                                                        <label class="form-label fw-semibold">Question</label>
+                                                                        <input type="text" name="faq_header[]" class="form-control">
+                                                                    </div>
+                                                                    <div class="col-md-5 mb-3">
+                                                                        <label class="form-label fw-semibold">Answer</label>
+                                                                        <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                                                                    </div>
+                                                                </div> -->
                             <div class="row mb-3">
                                 <div class="col-md-5">
                                     <label class="form-label">Question</label>
@@ -244,6 +259,34 @@
                     $('body').append(form);
                     form.submit();
                 }
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const courseStart = document.getElementById('course_start_date');
+            const courseEnd = document.getElementById('course_end_date');
+            const regStart = document.getElementById('registration_start_date');
+            const regEnd = document.getElementById('registration_end_date');
+            const exStart = document.getElementById('exemption_start_date');
+            const exEnd = document.getElementById('exemption_end_date');
+
+            courseStart.addEventListener('change', function() {
+                courseEnd.min = courseStart.value;
+                regStart.max = courseStart.value; // Registration start must be <= course start
+                regEnd.max = courseStart.value; // Registration end must be <= course start
+            });
+
+            courseEnd.addEventListener('change', function() {
+                exEnd.max = courseEnd.value; // Exemption end must be <= course end
+            });
+
+            regStart.addEventListener('change', function() {
+                exStart.min = regStart.value; // Exemption start must be >= registration start
+            });
+
+            exStart.addEventListener('change', function() {
+                exEnd.min = exStart.value;
             });
         });
     </script>

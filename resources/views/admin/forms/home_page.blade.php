@@ -10,12 +10,12 @@
     <div class="container-fluid">
         <x-session_message />
          <x-breadcrum title="Front Page" />
-        @if (session('success'))
+        {{-- @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
                 {{ session('success') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        @endif
+        @endif --}}
 
         <!--display errors if any -->
         @if ($errors->any())
@@ -38,7 +38,7 @@
                     @csrf
                     <div class="row">
                         <!-- Course Duration -->
-                        <div class="col-md-6">
+                        {{-- <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Course Start Date</label>
                                 <input type="date" name="course_start_date" class="form-control"
@@ -50,10 +50,10 @@
                                     value="{{ old('course_end_date', isset($data) ? $data->course_end_date : '') }}"
                                     required>
                             </div>
-                        </div>
+                        </div> --}}
 
                         <!-- Registration Duration -->
-                        <div class="col-md-6">
+                        {{-- <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Registration Start Date</label>
                                 <input type="date" name="registration_start_date" class="form-control"
@@ -65,7 +65,7 @@
                                     value="{{ old('registration_end_date', isset($data) ? $data->registration_end_date : '') }}"
                                     required>
                             </div>
-                        </div>
+                        </div> --}}
 
                         <!-- Course Title -->
                         <div class="col-md-6">
