@@ -148,15 +148,15 @@
                             @endforeach
                         @else
                             <!-- <div class="row faq-item align-items-end">
-                                                                    <div class="col-md-5 mb-3">
-                                                                        <label class="form-label fw-semibold">Question</label>
-                                                                        <input type="text" name="faq_header[]" class="form-control">
-                                                                    </div>
-                                                                    <div class="col-md-5 mb-3">
-                                                                        <label class="form-label fw-semibold">Answer</label>
-                                                                        <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
-                                                                    </div>
-                                                                </div> -->
+                                                                            <div class="col-md-5 mb-3">
+                                                                                <label class="form-label fw-semibold">Question</label>
+                                                                                <input type="text" name="faq_header[]" class="form-control">
+                                                                            </div>
+                                                                            <div class="col-md-5 mb-3">
+                                                                                <label class="form-label fw-semibold">Answer</label>
+                                                                                <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
+                                                                            </div>
+                                                                        </div> -->
                             <div class="row mb-3">
                                 <div class="col-md-5">
                                     <label class="form-label">Question</label>
@@ -263,31 +263,14 @@
         });
     </script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const courseStart = document.getElementById('course_start_date');
-            const courseEnd = document.getElementById('course_end_date');
-            const regStart = document.getElementById('registration_start_date');
-            const regEnd = document.getElementById('registration_end_date');
-            const exStart = document.getElementById('exemption_start_date');
-            const exEnd = document.getElementById('exemption_end_date');
-
-            courseStart.addEventListener('change', function() {
-                courseEnd.min = courseStart.value;
-                regStart.max = courseStart.value; // Registration start must be <= course start
-                regEnd.max = courseStart.value; // Registration end must be <= course start
-            });
-
-            courseEnd.addEventListener('change', function() {
-                exEnd.max = courseEnd.value; // Exemption end must be <= course end
-            });
-
-            regStart.addEventListener('change', function() {
-                exStart.min = regStart.value; // Exemption start must be >= registration start
-            });
-
-            exStart.addEventListener('change', function() {
-                exEnd.min = exStart.value;
-            });
-        });
+        (function() {
+            let today = new Date().toISOString().split('T')[0];
+            document.querySelectorAll(
+                    '#course_start_date, #course_end_date, #registration_start_date, #registration_end_date, #exemption_start_date, #exemption_end_date'
+                    )
+                .forEach(el => el.min = today);
+        })();
     </script>
+
+
 @endsection
