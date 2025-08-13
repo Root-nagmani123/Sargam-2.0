@@ -20,22 +20,6 @@
             <div class="card-body">
                 <h4 class="card-title mb-3">Create Path Page</h4>
                 <hr>
-                @if (session('success'))
-                    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-                        {{ session('success') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                @endif
-
-                @if ($errors->any())
-                    <div class="alert alert-danger mb-3">
-                        <ul class="mb-0">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
 
                 <form method="POST" action="{{ route('admin.path.page.save') }}" enctype="multipart/form-data">
                     @csrf
@@ -147,16 +131,6 @@
                                 </div>
                             @endforeach
                         @else
-                            <!-- <div class="row faq-item align-items-end">
-                                                                            <div class="col-md-5 mb-3">
-                                                                                <label class="form-label fw-semibold">Question</label>
-                                                                                <input type="text" name="faq_header[]" class="form-control">
-                                                                            </div>
-                                                                            <div class="col-md-5 mb-3">
-                                                                                <label class="form-label fw-semibold">Answer</label>
-                                                                                <textarea name="faq_content[]" class="form-control" rows="2"></textarea>
-                                                                            </div>
-                                                                        </div> -->
                             <div class="row mb-3">
                                 <div class="col-md-5">
                                     <label class="form-label">Question</label>
@@ -267,10 +241,52 @@
             let today = new Date().toISOString().split('T')[0];
             document.querySelectorAll(
                     '#course_start_date, #course_end_date, #registration_start_date, #registration_end_date, #exemption_start_date, #exemption_end_date'
-                    )
+                )
                 .forEach(el => el.min = today);
         })();
     </script>
+    <!-- SweetAlert2 CSS & JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    @if ($errors->any())
+        <script>
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error',
+                html: `
+                <ul style="text-align: left;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            `,
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+
+    @if (session('success'))
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: '{{ session('success') }}',
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+
+    @if (session('error'))
+        <script>
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: '{{ session('error') }}',
+                confirmButtonText: 'OK'
+            });
+        </script>
+    @endif
+
 
 
 @endsection
