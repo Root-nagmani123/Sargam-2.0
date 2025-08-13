@@ -348,73 +348,18 @@ class FrontPageController extends Controller
         return view('admin.forms.path', compact('pathPage'));
     }
 
-    // public function pathPageSave(Request $request)
-    // {
-    //     $request->validate([
-    //         'register_course' => 'required|string',
-    //         'apply_exemption' => 'required|string',
-    //         'already_registered' => 'required|string',
-    //         'guidelines' => 'required|string',
-
-    //         'registration_start_date' => ['nullable', 'date', 'after_or_equal:today'],
-    //         'registration_end_date' => ['nullable', 'date', 'after_or_equal:registration_start_date'],
-
-    //         'exemption_start_date' => ['nullable', 'date', 'after_or_equal:today'],
-    //         'exemption_end_date' => ['nullable', 'date', 'after_or_equal:exemption_start_date'],
-
-    //         'faq_header.*' => 'nullable|string',
-    //         'faq_content.*' => 'nullable|string',
-    //     ]);
-    //     DB::beginTransaction();
-
-    //     try {
-    //         // Check if record exists
-    //         $existingPage = PathPage::first();
-
-    //         // Update or create the Path Page
-    //         $pathPage = PathPage::updateOrCreate(
-    //             ['id' => $existingPage?->id], // use null-safe operator
-    //             [
-    //                 'register_course' => $request->register_course,
-    //                 'apply_exemption' => $request->apply_exemption,
-    //                 'already_registered' => $request->already_registered,
-    //                 'guidelines' => $request->guidelines,
-    //                 'registration_start_date' => $request->registration_start_date ? Carbon::parse($request->registration_start_date)->format('Y-m-d') : null,
-    //                 'registration_end_date' => $request->registration_end_date ? Carbon::parse($request->registration_end_date)->format('Y-m-d') : null,
-    //                 'exemption_start_date' => $request->exemption_start_date ? Carbon::parse($request->exemption_start_date)->format('Y-m-d') : null,
-    //                 'exemption_end_date' => $request->exemption_end_date ? Carbon::parse($request->exemption_end_date)->format('Y-m-d') : null,
-    //             ]
-    //         );
-
-    //         // Remove old FAQs
-    //         $pathPage->faqs()->delete();
-
-    //         // Re-insert FAQs
-    //         foreach ($request->faq_header ?? [] as $index => $header) {
-    //             $content = $request->faq_content[$index] ?? null;
-
-    //             if ($header || $content) {
-    //                 PathPageFaq::create([
-    //                     'path_page_id' => $pathPage->id,
-    //                     'header' => $header,
-    //                     'content' => $content,
-    //                 ]);
-    //             }
-    //         }
-
-    //         DB::commit();
-    //         return back()->with('success', 'Path Page saved successfully.');
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-
-    //         // Optional: log the error for debugging
-    //         \Log::error('PathPage Save Error: ' . $e->getMessage());
-
-    //         return back()->with('error', 'An error occurred while saving the Path Page.');
-    //     }
-    // }
+    // Save or update path page
     public function pathPageSave(Request $request)
     {
+
+        $oneDayBeforeEnd   = $request->course_end_date
+            ? Carbon::parse($request->course_end_date)->subDay()->toDateString()
+            : null;
+
+        $oneDayBeforeStart = $request->course_start_date
+            ? Carbon::parse($request->course_start_date)->subDay()->toDateString()
+            : null;
+
         $request->validate([
             'register_course'    => 'required|string',
             'apply_exemption'    => 'required|string',
@@ -423,34 +368,34 @@ class FrontPageController extends Controller
 
             // Course Dates
             'course_start_date'  => ['required', 'date', 'after_or_equal:today'],
-            'course_end_date'    => ['required', 'date', 'after:course_start_date'],
+            'course_end_date'    => ['required', 'date', 'after:course_start_date', 'after_or_equal:today'],
 
-            // Registration Dates (must fall within course period)
+            // Registration Dates
             'registration_start_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:course_start_date',
-                'before_or_equal:course_end_date',
+                'before:course_start_date', // strictly before course start date
             ],
             'registration_end_date' => [
                 'nullable',
                 'date',
+                'after_or_equal:today',
                 'after_or_equal:registration_start_date',
-                'before_or_equal:course_end_date',
+                'before_or_equal:' . $oneDayBeforeStart, // course_start_date - 1 day
             ],
 
-            // Exemption Dates (must be after registration start & within course period)
+
+            // Exemption Dates
             'exemption_start_date' => [
                 'nullable',
                 'date',
-                'after_or_equal:registration_start_date',
-                'before_or_equal:course_end_date',
+                'after_or_equal:today',
             ],
             'exemption_end_date' => [
                 'nullable',
                 'date',
                 'after_or_equal:exemption_start_date',
-                'before_or_equal:course_end_date',
+                'before_or_equal:' . $oneDayBeforeEnd, // <= course_end_date - 1
             ],
 
             // FAQs
