@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\Registration\RegistrationImportController;
 use App\Http\Controllers\Admin\Registration\FcRegistrationMasterController;
 use App\Http\Controllers\Admin\Registration\FrontPageController;
 use App\Http\Controllers\Admin\Registration\FcJoiningDocumentController;
+use App\Http\Controllers\Admin\Registration\StudentImportController;
 
 
 
@@ -223,3 +224,11 @@ Route::post('/admin/joining-documents/save-remark/{user_id}', [FcJoiningDocument
 //student page status
 
 Route::get('/foundation-course/status', [FrontPageController::class, 'student_status'])->name('foundation.course.status');
+
+//admin migration route
+Route::get('/admin/migrate-students', [StudentImportController::class, 'index'])->name('students.index'); // index page
+Route::post('/admin/migrate-fc-registration', [StudentImportController::class, 'migrate'])->name('admin.migrate.fc');
+
+
+
+

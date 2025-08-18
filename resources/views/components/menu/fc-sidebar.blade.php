@@ -97,6 +97,12 @@
                     <span class="hide-menu">Manage Logo</span>
                 </a>
             </li>
+             <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('students.index') }}">
+                    <iconify-icon icon="mdi:image-outline"></iconify-icon>
+                    <span class="hide-menu">Import Data</span>
+                </a>
+            </li>
         </ul>
 
         <!-- ======= DOCUMENTS ======= -->
