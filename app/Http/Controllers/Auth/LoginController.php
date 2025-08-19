@@ -74,8 +74,8 @@ class LoginController extends Controller
     $serverHost = request()->getHost(); // gets hostname like localhost or domain.com
 
     try {
-       
-            if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local'])) {
+
+            if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local','98.70.99.215'])) {
             // 👨‍💻 Localhost: Normal DB-based login
             $user = User::where('user_name', $username)->first();
 
