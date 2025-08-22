@@ -103,6 +103,13 @@
                     <span class="hide-menu">Import Data</span>
                 </a>
             </li>
+
+               <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('enrollment.create') }}">
+                    <iconify-icon icon="mdi:image-outline"></iconify-icon>
+                    <span class="hide-menu">Enrollment</span>
+                </a>
+            </li>
         </ul>
 
         <!-- ======= DOCUMENTS ======= -->

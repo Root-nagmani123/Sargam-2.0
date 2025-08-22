@@ -14,4 +14,10 @@ class StudentMasterCourseMap extends Model
     {
         return $this->belongsTo(StudentMaster::class, 'student_master_pk', 'pk');
     }
+
+    // course enrollment relationship
+    public function course()
+    {
+        return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
+    }
 }
