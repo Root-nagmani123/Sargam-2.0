@@ -11,10 +11,7 @@ use App\Http\Controllers\Admin\Registration\FcRegistrationMasterController;
 use App\Http\Controllers\Admin\Registration\FrontPageController;
 use App\Http\Controllers\Admin\Registration\FcJoiningDocumentController;
 use App\Http\Controllers\Admin\Registration\StudentImportController;
-
-
-
-
+use App\Http\Controllers\Admin\Registration\EnrollementController;
 
 
 //Registration
@@ -229,6 +226,13 @@ Route::get('/foundation-course/status', [FrontPageController::class, 'student_st
 Route::get('/admin/migrate-students', [StudentImportController::class, 'index'])->name('students.index'); // index page
 Route::post('/admin/migrate-fc-registration', [StudentImportController::class, 'migrate'])->name('admin.migrate.fc');
 
+// course enrollment route
+// routes/web.php
+Route::get('/enrollment/create', [EnrollementController::class, 'create'])->name('enrollment.create');
+Route::post('/enrollment/store', [EnrollementController::class, 'store'])->name('enrollment.store');
+Route::post('/enrollment/filter-students', [EnrollementController::class, 'filterStudents'])->name('enrollment.filterStudents');
 
 
 
+
+// EnrollementController
