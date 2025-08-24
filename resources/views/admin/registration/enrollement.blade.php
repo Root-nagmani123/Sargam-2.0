@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Create Form - Sargam | Lal Bahadur')
+@section('title', 'Enrollment - Sargam | Lal Bahadur')
 
 @section('content')
     <div class="container-fluid">
@@ -128,7 +128,9 @@
                                 <div class="col-12">
                                     <div class="card">
                                         <div class="card-header d-flex justify-content-between align-items-center">
-                                            <h5 class="mb-0">Student List</h5>
+                                            <h5 class="mb-0">
+                                                Student List (<span id="studentCount">0</span>)
+                                            </h5>
                                             <div class="d-flex">
                                                 <input type="text" id="studentSearch"
                                                     class="form-control form-control-sm me-2"
@@ -147,7 +149,9 @@
                                                             <th width="50px">
                                                                 <input type="checkbox" id="selectAll" checked>
                                                             </th>
-                                                            <th>Course Name</th>
+                                                             <th>Student PK</th> 
+                                                             <th>Course PK</th>
+                                                             <th>Course Name</th>
                                                             <th>Student Name</th>
                                                             <th>OT Code</th>
                                                             <th>Service</th>
@@ -186,6 +190,17 @@
 
 @section('scripts')
     <script>
+        function updateSelectedStudents() {
+            var selectedStudents = [];
+            $('.student-checkbox:checked').each(function() {
+                selectedStudents.push($(this).val());
+            });
+            $('#selectedStudents').val(selectedStudents.join(','));
+
+            // Also update selected count if you want
+            $('#studentCount').text($('.student-checkbox').length); // total students
+            $('#selectedCount').text($('.student-checkbox:checked').length); // selected students
+        }
         $(document).ready(function() {
             // Select all checkbox functionality
             $('#selectAll').change(function() {
@@ -277,36 +292,6 @@
             });
         }
 
-        // Function to populate the student table
-        // function populateStudentTable(students) {
-        //     var tableBody = $('#studentTable tbody');
-        //     tableBody.empty();
-
-        //     if (students.length === 0) {
-        //         tableBody.html(
-        //             '<tr id="noDataRow"><td colspan="5" class="text-center">No students found for the selected filters</td></tr>'
-        //         );
-        //         return;
-        //     }
-
-        //     students.forEach(function(student) {
-        //         var row = '<tr>' +
-        //             '<td><input type="checkbox" name="students[]" value="' + student.student_pk +
-        //             '" class="student-checkbox" checked></td>' +
-        //             '<td>' + student.course_name + '</td>' +
-        //             '<td>' + student.student_name + '</td>' +
-        //             '<td>' + student.ot_code + '</td>' +
-        //             '<td>' + (student.service_name ?? '') + '</td>' +
-        //             '</tr>';
-
-        //         tableBody.append(row);
-        //     });
-
-        //     // Ensure select all is checked
-        //     $('#selectAll').prop('checked', true);
-        //     updateSelectedStudents();
-        // }
-
         function populateStudentTable(students) {
             var tableBody = $('#studentTable tbody');
             tableBody.empty();
@@ -323,6 +308,8 @@
                 var row = '<tr>' +
                     '<td><input type="checkbox" name="students[]" value="' + student.student_pk +
                     '" class="student-checkbox" checked></td>' +
+                    '<td>' + student.student_pk + '</td>' + 
+                    '<td>' + student.course_pk + '</td>' +
                     '<td>' + student.course_name + '</td>' +
                     '<td>' + student.student_name + '</td>' +
                     '<td>' + student.ot_code + '</td>' +
