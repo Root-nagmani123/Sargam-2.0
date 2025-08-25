@@ -232,6 +232,9 @@ Route::get('/enrollment/create', [EnrollementController::class, 'create'])->name
 Route::post('/enrollment/store', [EnrollementController::class, 'store'])->name('enrollment.store');
 Route::post('/enrollment/filter-students', [EnrollementController::class, 'filterStudents'])->name('enrollment.filterStudents');
 
+// student master course map route
+Route::get('/student-courses', [EnrollementController::class, 'studentCourses'])->name('student.courses');
+
 
 
 

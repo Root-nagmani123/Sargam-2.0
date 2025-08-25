@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\CourseMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\ServiceMaster;
+use App\Models\StudentMaster;
 use Illuminate\Support\Facades\DB;
 
 
@@ -114,5 +115,42 @@ class EnrollementController extends Controller
                 'message' => 'Error filtering students: ' . $e->getMessage()
             ]);
         }
+    }
+
+    /**
+     * Student–Course list (simple listing with pk values)
+     */
+    // public function studentCourses()
+    // {
+    //     // Get students with courses and service, eager load everything
+    //     $students = StudentMaster::with(['courses', 'service'])->get();
+    //     $courses = CourseMaster::pluck('name', 'id'); // id => name
+
+
+    //     return view('admin.registration.student_courselist', compact('students', 'courses'));
+    // }
+
+    public function studentCourses(Request $request)
+    {
+        // If course filter is applied
+        $courseId = $request->input('course_id');
+        $students = StudentMaster::with(['courses', 'service'])
+            ->when($courseId, function ($query) use ($courseId) {
+                $query->whereHas('courses', function ($q) use ($courseId) {
+                    $q->where('course_master.pk', $courseId);
+                });
+            })
+            ->get();
+
+        // Count total students (all records, without filter)
+        $totalStudents = StudentMaster::count();
+
+        // Count filtered students (with filter or all if no filter)
+        $filteredCount = $students->count();
+
+        // Get courses for filter dropdown
+        $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk'); // pk => course_name
+
+        return view('admin.registration.student_courselist', compact('students', 'courses', 'courseId', 'totalStudents', 'filteredCount'));
     }
 }
