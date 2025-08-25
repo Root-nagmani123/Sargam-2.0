@@ -235,6 +235,11 @@ Route::post('/enrollment/filter-students', [EnrollementController::class, 'filte
 // student master course map route
 Route::get('/student-courses', [EnrollementController::class, 'studentCourses'])->name('student.courses');
 
+// export student enrollment
+Route::get('admin/student-report', [EnrollementController::class, 'StudenEnroll_index'])->name('studentEnroll.report');
+Route::get('admin/student-report/export', [EnrollementController::class, 'StudenEnroll_export'])->name('studentEnroll.report.export');
+
+
 
 
 

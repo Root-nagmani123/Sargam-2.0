@@ -3,7 +3,8 @@
 
         <!-- ======= GENERAL ======= -->
         <li class="sidebar-item">
-            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseGeneral" role="button" aria-expanded="false" aria-controls="collapseGeneral"
+            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                href="#collapseGeneral" role="button" aria-expanded="false" aria-controls="collapseGeneral"
                 style="background-color: #af2910 !important; color: white; border-radius: 10px;">
                 <span class="fw-bold">General</span>
                 <i class="bi bi-chevron-down text-white"></i>
@@ -32,7 +33,8 @@
 
         <!-- ======= REGISTRATION MANAGEMENT ======= -->
         <li class="sidebar-item mt-2">
-            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseRegistration" role="button" aria-expanded="false" aria-controls="collapseRegistration"
+            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                href="#collapseRegistration" role="button" aria-expanded="false" aria-controls="collapseRegistration"
                 style="background-color: #af2910 !important; color: white; border-radius: 10px;">
                 <span class="fw-bold">Registration Management</span>
                 <i class="bi bi-chevron-down text-white"></i>
@@ -40,7 +42,8 @@
         </li>
         <ul class="collapse list-unstyled ps-3" id="collapseRegistration">
             <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
-                <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}" href="{{ route('forms.index') }}">
+                <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
+                    href="{{ route('forms.index') }}">
                     <iconify-icon icon="mdi:form-textbox"></iconify-icon>
                     <span class="hide-menu">Registration Forms</span>
                 </a>
@@ -55,7 +58,8 @@
 
         <!-- ======= EXEMPTION ======= -->
         <li class="sidebar-item mt-2">
-            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseExemption" role="button" aria-expanded="false" aria-controls="collapseExemption"
+            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                href="#collapseExemption" role="button" aria-expanded="false" aria-controls="collapseExemption"
                 style="background-color: #af2910 !important; color: white; border-radius: 10px;">
                 <span class="fw-bold">Exemption</span>
                 <i class="bi bi-chevron-down text-white"></i>
@@ -78,7 +82,8 @@
 
         <!-- ======= DATABASE TOOLS ======= -->
         <li class="sidebar-item mt-2">
-            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseDatabase" role="button" aria-expanded="false" aria-controls="collapseDatabase"
+            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                href="#collapseDatabase" role="button" aria-expanded="false" aria-controls="collapseDatabase"
                 style="background-color: #af2910 !important; color: white; border-radius: 10px;">
                 <span class="fw-bold">Database Tools</span>
                 <i class="bi bi-chevron-down text-white"></i>
@@ -97,24 +102,32 @@
                     <span class="hide-menu">Manage Logo</span>
                 </a>
             </li>
-             <li class="sidebar-item">
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('students.index') }}">
                     <iconify-icon icon="mdi:image-outline"></iconify-icon>
-                    <span class="hide-menu">Import Data</span>
+                    <span class="hide-menu">Data Migration</span>
                 </a>
             </li>
 
-               <li class="sidebar-item">
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('enrollment.create') }}">
                     <iconify-icon icon="mdi:image-outline"></iconify-icon>
-                    <span class="hide-menu">Enrollment</span>
+                    <span class="hide-menu">Course Enrollment</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('student.courses') }}">
+                    <iconify-icon icon="mdi:image-outline"></iconify-icon>
+                    <span class="hide-menu">Assign Courses</span>
                 </a>
             </li>
         </ul>
 
         <!-- ======= DOCUMENTS ======= -->
         <li class="sidebar-item mt-2">
-            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#collapseDocuments" role="button" aria-expanded="false" aria-controls="collapseDocuments"
+            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                href="#collapseDocuments" role="button" aria-expanded="false" aria-controls="collapseDocuments"
                 style="background-color: #af2910 !important; color: white; border-radius: 10px;">
                 <span class="fw-bold">Documents</span>
                 <i class="bi bi-chevron-down text-white"></i>
