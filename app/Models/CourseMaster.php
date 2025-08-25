@@ -30,5 +30,11 @@ class CourseMaster extends Model
     {
         return $this->hasMany(StudentMasterCourseMap::class, 'course_master_pk', 'pk');
     }
+
+       public function students()
+    {
+        return $this->belongsToMany(StudentMaster::class, 'student_master_course_map', 'course_master_pk', 'student_master_pk')
+            ->withPivot('active_inactive', 'created_date', 'modified_date');
+    }
     
 }
