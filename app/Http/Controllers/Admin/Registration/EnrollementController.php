@@ -13,6 +13,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StudentEnrollmentExport as StudentsExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Exports\StudentEnrollmentExport;
+use Mpdf\Mpdf;
 
 
 class EnrollementController extends Controller
@@ -272,4 +273,136 @@ class EnrollementController extends Controller
 
         return back()->with('error', 'Invalid export format selected.');
     }
+
+    // EnrollmentController.php
+    public function getEnrolledStudents(Request $request)
+{
+    try {
+        $query = StudentMaster::with(['courses'])
+            ->whereHas('courses');
+
+        // Filter by course
+        if ($request->has('course') && !empty($request->course)) {
+            $query->whereHas('courses', function ($q) use ($request) {
+                $q->where('course_master_pk', $request->course);
+            });
+        }
+
+        // Search by name or email
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('first_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('last_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('email', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        $perPage = $request->per_page ?? 10;
+        $students = $query->paginate($perPage);
+
+        // Format the data
+        $formattedStudents = $students->map(function ($student) {
+            $latestCourse = $student->courses->sortByDesc('pivot.created_date')->first();
+
+            return [
+                'id' => $student->pk,
+                'name' => trim($student->first_name . ' ' . $student->last_name),
+                'email' => $student->email,
+                'phone' => $student->contact_no,
+                'course_name' => $latestCourse->course_name ?? null,
+                'enrollment_date' => $latestCourse->pivot->created_date 
+                                        ? date('M d, Y', strtotime($latestCourse->pivot->created_date)) 
+                                        : null,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $formattedStudents,
+            'total' => $students->total(),
+            'current_page' => $students->currentPage(),
+            'last_page' => $students->lastPage(),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error fetching enrolled students',
+            'error'   => $e->getMessage(), // <-- add this to debug
+        ], 500);
+    }
+}
+
+
+
+public function exportEnrolledStudents(Request $request)
+{
+    try {
+        $query = StudentMaster::with(['courses'])
+            ->whereHas('courses');
+
+        // Apply filters
+        if ($request->has('course') && !empty($request->course)) {
+            $query->whereHas('courses', function ($q) use ($request) {
+                $q->where('course_master_pk', $request->course);
+            });
+        }
+
+        if ($request->has('search') && !empty($request->search)) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('first_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('last_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('email', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        $students = $query->get();
+
+        // Build HTML for PDF
+        $html = '
+        <h2 style="text-align:center;">Enrolled Students</h2>
+        <table border="1" cellspacing="0" cellpadding="6" width="100%">
+            <thead>
+                <tr style="background-color:#f2f2f2;">
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Course</th>
+                    <th>Enrollment Date</th>
+                </tr>
+            </thead>
+            <tbody>';
+
+        foreach ($students as $student) {
+            $latestCourse = $student->courses->sortByDesc('pivot.created_date')->first();
+
+            $html .= '<tr>
+                <td>' . $student->pk . '</td>
+                <td>' . trim($student->first_name . ' ' . $student->last_name) . '</td>
+                <td>' . $student->email . '</td>
+                <td>' . $student->contact_no . '</td>
+                <td>' . ($latestCourse->course_name ?? 'N/A') . '</td>
+                <td>' . ($latestCourse->pivot->created_date 
+                            ? date('Y-m-d', strtotime($latestCourse->pivot->created_date)) 
+                            : 'N/A') . '</td>
+            </tr>';
+        }
+
+        $html .= '</tbody></table>';
+
+        // Generate PDF
+        $mpdf = new Mpdf();
+        $mpdf->WriteHTML($html);
+
+        $filename = 'enrolled_students_' . date('Y-m-d') . '.pdf';
+        return response($mpdf->Output($filename, 'S'))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Error exporting PDF: ' . $e->getMessage());
+    }
+}
+
 }

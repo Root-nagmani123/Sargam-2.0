@@ -239,6 +239,16 @@ Route::get('/student-courses', [EnrollementController::class, 'studentCourses'])
 Route::get('admin/student-report', [EnrollementController::class, 'StudenEnroll_index'])->name('studentEnroll.report');
 Route::get('admin/student-report/export', [EnrollementController::class, 'StudenEnroll_export'])->name('studentEnroll.report.export');
 
+//ajax list enrolled students
+// Get enrolled students with filtering
+Route::get('/enrollment/enrolled-students', [EnrollementController::class, 'getEnrolledStudents'])
+    ->name('enrollment.getEnrolled');
+
+// Export enrolled students
+Route::get('/enrollment/export-enrolled', [EnrollementController::class, 'exportEnrolledStudents'])
+    ->name('enrollment.exportEnrolled');
+
+
 
 
 
