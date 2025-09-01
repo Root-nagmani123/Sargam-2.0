@@ -1,86 +1,122 @@
 <!-- resources/views/forms/field-types.blade.php -->
 @php
-// $validFieldHeadings = [
-//     'country', 'state', 'district', 'language', 'admissioncategory',
-//     'stream', 'institution', 'jobtype', 'boardname', 'qualification',
-//     'religion', 'service', 'sports', 'size', 'fcscale', 'distinction',
-//     'fatherprofession', 'trouser', 'shoessize', 'studentskill'
-// ];
+    $validFieldHeadings = [
+        'country',
+        'state',
+        'district',
+        'language',
+        'admissioncategory',
+        'stream',
+        'institution',
+        'jobtype',
+        'boardname',
+        'qualification',
+        'religion',
+        'service',
+        'sports',
+        'size',
+        'fcscale',
+        'distinction',
+        'fatherprofession',
+        'trouser',
+        'shoessize',
+        'studentskill',
+        'birth_district',
+        'birth_state',
+        'birth_country',
+        'pdistrict_id',
+        'mdistrict_id',
+    ];
 
-$isTableField = isset($field->field_type);
-$fieldType = $isTableField ? $field->field_type : $field->formtype;
-$fieldLabel = $isTableField ? ($field->field_title ?? '') : ($field->formlabel ?? '');
-$fieldName = $name ?? ($isTableField ? "table_{$i}_{$j}" : "field_{$field->formname}");
-$required = $isTableField ? ($field->required ?? false) : ($field->required ?? false);
-$requiredAsterisk = $required ? '<span class="text-danger">*</span>' : '';
+    $isTableField = isset($field->field_type);
+    $fieldType = $isTableField ? $field->field_type : $field->formtype;
+    $fieldLabel = $isTableField ? $field->field_title ?? '' : $field->formlabel ?? '';
+    $fieldName = $name ?? ($isTableField ? "table_{$i}_{$j}" : "field_{$field->formname}");
+    $required = $isTableField ? $field->required ?? false : $field->required ?? false;
+    $requiredAsterisk = $required ? '<span class="text-danger">*</span>' : '';
 
-$isMappedField = false;
-$mappedHeading = '';
+    $mappedHeading = '';
+    $isMappedField = false;
 
-// foreach ($validFieldHeadings as $validHeading) {
-//     if (stripos($field->formname ?? $field->field_title ?? '', $validHeading) !== false) {
-//         $isMappedField = true;
-//         $mappedHeading = $validHeading;
-//         break;
-//     }
-// }
+    foreach ($validFieldHeadings as $validHeading) {
+        // Prefer exact match first
+        if (strcasecmp($field->formname ?? ($field->field_title ?? ''), $validHeading) === 0) {
+            $isMappedField = true;
+            $mappedHeading = $validHeading;
+            break;
+        }
+    }
+
+    // If no exact match, fall back to partial match
+    if (!$isMappedField) {
+        foreach ($validFieldHeadings as $validHeading) {
+            if (stripos($field->formname ?? ($field->field_title ?? ''), $validHeading) !== false) {
+                $isMappedField = true;
+                $mappedHeading = $validHeading;
+                break;
+            }
+        }
+    }
 @endphp
 
 @switch($fieldType)
+    @case('Text')
+    @case('text')
+        <div class="form-group">
+            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <input type="text" class="form-control" name="{{ $fieldName }}" value="{{ $value }}"
+                {{ $required ? 'required' : '' }} />
+        </div>
+    @break
 
-@case('Text')
-@case('text')
-<div class="form-group">
-    <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
-    <input type="text" class="form-control" name="{{ $fieldName }}" value="{{ $value }}" {{ $required ? 'required' : '' }} />
-</div>
-@break
+    @case('Label')
+    @case('label')
+        <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+    @break
 
-@case('Label')
-@case('label')
-<label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
-@break
+    @case('Date')
+    @case('date')
+        <div class="form-group">
+            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <input type="date" class="form-control" name="{{ $fieldName }}" value="{{ $value }}"
+                {{ $required ? 'required' : '' }} />
+        </div>
+    @break
 
-@case('Date')
-@case('date')
-<div class="form-group">
-    <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
-    <input type="date" class="form-control" name="{{ $fieldName }}" value="{{ $value }}" {{ $required ? 'required' : '' }} />
-</div>
-@break
+    @case('Email')
+    @case('email')
+        <div class="form-group">
+            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <input type="email" class="form-control" name="{{ $fieldName }}" value="{{ $value }}"
+                {{ $required ? 'required' : '' }} />
+        </div>
+    @break
 
-@case('Email')
-@case('email')
-<div class="form-group">
-    <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
-    <input type="email" class="form-control" name="{{ $fieldName }}" value="{{ $value }}" {{ $required ? 'required' : '' }} />
-</div>
-@break
+    @case('Textarea')
+    @case('textarea')
+        <div class="form-group">
+            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <textarea name="{{ $fieldName }}" class="form-control" {{ $required ? 'required' : '' }}>{{ $value }}</textarea>
+        </div>
+    @break
 
-@case('Textarea')
-@case('textarea')
-<div class="form-group">
-    <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
-    <textarea name="{{ $fieldName }}" class="form-control" {{ $required ? 'required' : '' }}>{{ $value }}</textarea>
-</div>
-@break
-
-@case('Select Box')
+    {{-- @case('Select Box')
 @case('dropdown')
 <div class="form-group">
     <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
     <select class="form-control" id="{{ $fieldName }}" name="{{ $fieldName }}" {{ $required ? 'required' : '' }}>
         <option value="">Choose Option</option>
 
-        @if($isMappedField)
+        @if ($isMappedField)
             @php
                 $tableName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $mappedHeading)) . '_master';
                 $options = DB::table($tableName)->get();
                 $valueField = $mappedHeading . '_name';
             @endphp
+            
 
-            @foreach($options as $option)
-                <option value="{{ $option->id }}" {{ old($fieldName, $value) == $option->id ? 'selected' : '' }}>
+            @foreach ($options as $option)
+                <option value="{{ $option->pk }}" {{ old($fieldName, $value) == $option->pk ? 'selected' : '' }}>
                     {{ $option->$valueField ?? $option->name }}
                 </option>
             @endforeach
@@ -94,7 +130,7 @@ $mappedHeading = '';
                 $options = explode(',', $optionsRaw);
             @endphp
 
-            @foreach($options as $option)
+            @foreach ($options as $option)
                 @php $option = trim($option); @endphp
                 <option value="{{ $option }}" {{ old($fieldName, $value) == $option ? 'selected' : '' }}>
                     {{ $option }}
@@ -103,85 +139,276 @@ $mappedHeading = '';
         @endif
     </select>
 </div>
-@break
+@break --}}
+    {{-- @case('Select Box')
+    @case('dropdown')
+        <div class="form-group">
+            <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <select class="form-control select2" id="{{ $fieldName }}" name="{{ $fieldName }}"
+                {{ $required ? 'required' : '' }}>
+                <option value="">Choose Option</option>
 
-@case('Radio Button')
-@case('radio')
-<label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label> <br>
-@php
-$radioOptions = explode(',', $field->field_radio_options ?? $field->field_options ?? $field->fieldoption ?? '');
-@endphp
+                @if ($isMappedField)
+                    @php
+                        // Mapping: heading → [table, pk_field, value_field]
+                        $specialMappings = [
+                            'country' => ['country_master', 'pk', 'country_name'],
+                            'postal_country' => ['country_master', 'pk', 'country_name'],
 
-@foreach($radioOptions as $option)
-@php $option = trim($option); @endphp
-<div class="py-1 form-check form-check-inline">
-    <input type="radio" id="{{ $fieldName }}_{{ $loop->index }}" name="{{ $fieldName }}" class="form-check-input" value="{{ $option }}"
-        {{ $value == $option ? 'checked' : '' }} {{ $required ? 'required' : '' }}>
-    <label class="form-check-label" for="{{ $fieldName }}_{{ $loop->index }}">{{ $option }}</label>
-</div>
-@endforeach
-@break
+                            'state' => ['state_master', 'pk', 'state_name'],
+                            'postal_state' => ['state_master', 'pk', 'state_name'],
+                            'domicile_state' => ['state_master', 'pk', 'state_name'],
+                            'birth_state' => ['state_master', 'pk', 'state_name'],
 
-@case('Checkbox')
-@case('checkbox')
-<label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label> <br>
-@php
-$checkboxOptions = explode(',', $field->field_checkbox_options ?? $field->fieldoption ?? '');
-$selectedValues = is_array($value) ? $value : explode(',', $value ?? '');
-@endphp
+                            'birth_district' => ['state_district_mapping', 'pk', 'district_name'],
+                            'pdistrict_id' => ['state_district_mapping', 'pk', 'district_name'],
+                            'mdistrict_id' => ['state_district_mapping', 'pk', 'district_name'],
 
-@foreach($checkboxOptions as $option)
-@php $option = trim($option); @endphp
-<div class="py-1 form-check form-check-inline">
-    <input type="checkbox" id="{{ $fieldName }}_{{ $loop->index }}" name="{{ $fieldName }}[]" class="form-check-input" value="{{ $option }}"
-        {{ in_array($option, $selectedValues) ? 'checked' : '' }} {{ $required ? 'required' : '' }}>
-    <label class="form-check-label" for="{{ $fieldName }}_{{ $loop->index }}">{{ $option }}</label>
-</div>
-@endforeach
-@break
+                            'admission_category' => ['admission_category_master', 'pk', 'category_name'],
+                            'highest_stream' => ['stream_master', 'pk', 'stream_name'],
 
-@case('number')
-<div class="form-group">
-    <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
-    <input class="form-control" type="number" name="{{ $fieldName }}" value="{{ $value }}" {{ $required ? 'required' : '' }} />
-</div>
-@break
+                            'religion' => ['religion_master', 'pk', 'religion_name'],
 
-@case('time')
-<div class="form-group">
-    <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
-    <input class="form-control" type="time" name="{{ $fieldName }}" value="{{ $value }}" {{ $required ? 'required' : '' }} />
-</div>
-@break
+                            'service' => ['service_master', 'pk', 'service_name'],
+                            'last_service' => ['service_master', 'pk', 'service_name'],
+                        ];
 
-@case('File Upload')
-@case('file')
-<div class="form-group">
-    <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
-    <input class="form-control" type="file" name="{{ $fieldName }}" id="{{ $fieldName }}" {{ $required ? 'required' : '' }} onchange="previewImage(event, this)" />
+                        $map = $specialMappings[$mappedHeading] ?? null;
 
-    <div class="file-preview mt-2" id="file-preview-{{ $fieldName }}">
-        @if($value)
-            @if(in_array(pathinfo($value, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif']))
-                <img src="{{ Storage::url($value) }}" alt="Uploaded Image" class="img-fluid" />
-            @elseif(pathinfo($value, PATHINFO_EXTENSION) === 'pdf')
-                <a href="{{ Storage::url($value) }}" target="_blank" class="btn btn-sm btn-primary">View PDF</a>
+                        if ($map) {
+                            @dump($map);
+                            [$tableName, $pkField, $valueField] = $map;
+                            $options = DB::table($tableName)->get();
+                        } else {
+                            $options = collect(); // empty
+                        }
+                    @endphp
+
+                    @foreach ($options as $option)
+                        <option value="{{ $option->$pkField }}"
+                            {{ old($fieldName, $value) == $option->$pkField ? 'selected' : '' }}>
+                            {{ $option->$valueField }}
+                        </option>
+                    @endforeach
+                @else
+                    @php
+                        $optionsRaw =
+                            $field->field_options ??
+                            ($field->field_checkbox_options ??
+                                ($field->field_radio_options ?? ($field->fieldoption ?? '')));
+                        $options = explode(',', $optionsRaw);
+                    @endphp
+
+                    @foreach ($options as $option)
+                        @php $option = trim($option); @endphp
+                        <option value="{{ $option }}" {{ old($fieldName, $value) == $option ? 'selected' : '' }}>
+                            {{ $option }}
+                        </option>
+                    @endforeach
+                @endif
+            </select>
+        </div>
+    @break --}}
+
+    @case('Select Box')
+@case('dropdown')
+    <div class="form-group">
+        <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
+        <select class="form-control dynamic-dropdown" 
+                id="{{ $fieldName }}" 
+                name="{{ $fieldName }}"
+                data-mapped="{{ $mappedHeading ?? '' }}"
+                {{ $required ? 'required' : '' }}>
+            <option value="">Choose Option</option>
+
+            @if ($isMappedField)
+                @php
+                    // Mapping: heading → [table, pk_field, value_field, parent_field(optional)]
+                    $specialMappings = [
+                        'country'         => ['country_master', 'pk', 'country_name', null],
+                        'postal_country'  => ['country_master', 'pk', 'country_name', null],
+
+                        'state'           => ['state_master', 'pk', 'state_name', 'country_id'],
+                        'postal_state'    => ['state_master', 'pk', 'state_name', 'country_id'],
+                        'domicile_state'  => ['state_master', 'pk', 'state_name', 'country_id'],
+                        'birth_state'     => ['state_master', 'pk', 'state_name', 'country_id'],
+
+                        'birth_district'  => ['state_district_mapping', 'pk', 'district_name', 'state_id'],
+                        'pdistrict_id'    => ['state_district_mapping', 'pk', 'district_name', 'state_id'],
+                        'mdistrict_id'    => ['state_district_mapping', 'pk', 'district_name', 'state_id'],
+
+                        'admission_category' => ['admission_category_master', 'pk', 'category_name', null],
+                        'highest_stream'     => ['stream_master', 'pk', 'stream_name', null],
+
+                        'religion'        => ['religion_master', 'pk', 'religion_name', null],
+
+                        'service'         => ['service_master', 'pk', 'service_name', null],
+                        'last_service'    => ['service_master', 'pk', 'service_name', null],
+                    ];
+
+                    $map = $specialMappings[$mappedHeading] ?? null;
+
+                    if ($map) {
+                        [$tableName, $pkField, $valueField] = $map;
+                        $options = DB::table($tableName)->get();
+                    } else {
+                        $options = collect();
+                    }
+                @endphp
+
+                {{-- Preload options (only for parent dropdowns like country, service, etc.) --}}
+                @if ($options->count())
+                    @foreach ($options as $option)
+                        <option value="{{ $option->$pkField }}" 
+                            {{ old($fieldName, $value) == $option->$pkField ? 'selected' : '' }}>
+                            {{ $option->$valueField }}
+                        </option>
+                    @endforeach
+                @endif
             @else
-                <span>{{ basename($value) }}</span>
+                @php
+                    $optionsRaw =
+                        $field->field_options ??
+                        ($field->field_checkbox_options ??
+                        ($field->field_radio_options ?? ($field->fieldoption ?? '')));
+
+                    $options = explode(',', $optionsRaw);
+                @endphp
+
+                @foreach ($options as $option)
+                    @php $option = trim($option); @endphp
+                    <option value="{{ $option }}" {{ old($fieldName, $value) == $option ? 'selected' : '' }}>
+                        {{ $option }}
+                    </option>
+                @endforeach
             @endif
-        @endif
+        </select>
     </div>
-</div>
 @break
 
-@case('View/Download')
-@php
-$label = $field->field_title ?? '';
-$url = $field->field_url ?? '';
-@endphp
-<label class="form-label"><a href="{{ $url }}" target="_blank">{{ $label }}</a></label>
-@break
 
-@default
-<p>Unknown field type: {{ $fieldType }}</p>
+    @case('Radio Button')
+    @case('radio')
+        <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label> <br>
+        @php
+            $radioOptions = explode(
+                ',',
+                $field->field_radio_options ?? ($field->field_options ?? ($field->fieldoption ?? '')),
+            );
+        @endphp
+
+        @foreach ($radioOptions as $option)
+            @php $option = trim($option); @endphp
+            <div class="py-1 form-check form-check-inline">
+                <input type="radio" id="{{ $fieldName }}_{{ $loop->index }}" name="{{ $fieldName }}"
+                    class="form-check-input" value="{{ $option }}" {{ $value == $option ? 'checked' : '' }}
+                    {{ $required ? 'required' : '' }}>
+                <label class="form-check-label" for="{{ $fieldName }}_{{ $loop->index }}">{{ $option }}</label>
+            </div>
+        @endforeach
+    @break
+
+    @case('Checkbox')
+    @case('checkbox')
+        <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label> <br>
+        @php
+            $checkboxOptions = explode(',', $field->field_checkbox_options ?? ($field->fieldoption ?? ''));
+            $selectedValues = is_array($value) ? $value : explode(',', $value ?? '');
+        @endphp
+
+        @foreach ($checkboxOptions as $option)
+            @php $option = trim($option); @endphp
+            <div class="py-1 form-check form-check-inline">
+                <input type="checkbox" id="{{ $fieldName }}_{{ $loop->index }}" name="{{ $fieldName }}[]"
+                    class="form-check-input" value="{{ $option }}"
+                    {{ in_array($option, $selectedValues) ? 'checked' : '' }} {{ $required ? 'required' : '' }}>
+                <label class="form-check-label" for="{{ $fieldName }}_{{ $loop->index }}">{{ $option }}</label>
+            </div>
+        @endforeach
+    @break
+
+    @case('number')
+        <div class="form-group">
+            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <input class="form-control" type="number" name="{{ $fieldName }}" value="{{ $value }}"
+                {{ $required ? 'required' : '' }} />
+        </div>
+    @break
+
+    @case('time')
+        <div class="form-group">
+            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <input class="form-control" type="time" name="{{ $fieldName }}" value="{{ $value }}"
+                {{ $required ? 'required' : '' }} />
+        </div>
+    @break
+
+    @case('File Upload')
+    @case('file')
+        <div class="form-group">
+            <label class="form-label">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <input class="form-control" type="file" name="{{ $fieldName }}" id="{{ $fieldName }}"
+                {{ $required ? 'required' : '' }} onchange="previewImage(event, this)" />
+
+            <div class="file-preview mt-2" id="file-preview-{{ $fieldName }}">
+                @if ($value)
+                    @if (in_array(pathinfo($value, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif']))
+                        <img src="{{ Storage::url($value) }}" alt="Uploaded Image" class="img-fluid" />
+                    @elseif(pathinfo($value, PATHINFO_EXTENSION) === 'pdf')
+                        <a href="{{ Storage::url($value) }}" target="_blank" class="btn btn-sm btn-primary">View PDF</a>
+                    @else
+                        <span>{{ basename($value) }}</span>
+                    @endif
+                @endif
+            </div>
+        </div>
+    @break
+
+    @case('View/Download')
+        @php
+            $label = $field->field_title ?? '';
+            $url = $field->field_url ?? '';
+        @endphp
+        <label class="form-label"><a href="{{ $url }}" target="_blank">{{ $label }}</a></label>
+    @break
+
+    @default
+        <p>Unknown field type: {{ $fieldType }}</p>
 @endswitch
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // When country changes → fetch states
+        $('#country').on('change', function() {
+            var countryId = this.value;
+            $("#state").html('<option value="">-- Select State --</option>');
+            $("#district").html('<option value="">-- Select District --</option>');
+            if (countryId) {
+                $.get('/get-states/' + countryId, function(data) {
+                    $.each(data, function(key, state) {
+                        $("#state").append('<option value="' + state.id + '">' + state
+                            .name + '</option>');
+                    });
+                });
+            }
+        });
+
+        // When state changes → fetch districts
+        $('#state').on('change', function() {
+            var stateId = this.value;
+            $("#district").html('<option value="">-- Select District --</option>');
+            if (stateId) {
+                $.get('/get-districts/' + stateId, function(data) {
+                    $.each(data, function(key, district) {
+                        $("#district").append('<option value="' + district.id + '">' +
+                            district.name + '</option>');
+                    });
+                });
+            }
+        });
+    });
+    
+</script>
+
+
