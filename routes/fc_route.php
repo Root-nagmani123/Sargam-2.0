@@ -248,6 +248,10 @@ Route::get('/enrollment/enrolled-students', [EnrollementController::class, 'getE
 Route::get('/enrollment/export-enrolled', [EnrollementController::class, 'exportEnrolledStudents'])
     ->name('enrollment.exportEnrolled');
 
+    // Inactive forms list
+Route::get('/forms/inactive', [FormController::class, 'inactive'])->name('forms.inactive');
+
+
 
 
 
