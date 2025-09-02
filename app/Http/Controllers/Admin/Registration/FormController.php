@@ -46,20 +46,20 @@ class FormController extends Controller
 
     // New method for inactive forms
     public function inactive(Request $request)
-{
-    $query = DB::table('local_form')
-        ->where('visible', 0) // Only inactive
-        ->orderBy('sortorder');
+    {
+        $query = DB::table('local_form')
+            ->where('visible', 0) // Only inactive
+            ->orderBy('sortorder');
 
-    if ($request->has('search') && $request->search != '') {
-        $query->where('name', 'like', '%' . $request->search . '%');
+        if ($request->has('search') && $request->search != '') {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // Get inactive forms
+        $forms = $query->get();
+
+        return view('admin.registration.inactive', compact('forms'));
     }
-
-    // Get inactive forms
-    $forms = $query->get();
-
-    return view('admin.registration.inactive', compact('forms'));
-}
 
 
 
@@ -764,59 +764,58 @@ class FormController extends Controller
     }
 
 
-    //final
+    // working 2 sepetmber
     // public function courseList(Request $request, $formid)
     // {
     //     $statusval = $request->input('statusval');
 
-    //     // Fetch records
-    //     $query = DB::table('form_submission')->where('formid', $formid);
-
+    //     // Fetch submission records
+    //     $query = DB::table('fc_registration_master')->where('formid', $formid);
     //     if ($statusval) {
     //         $query->where('confirm_status', $statusval);
     //     }
-
     //     $records = $query->get();
 
-    //     // Fetch column names in the order they are defined in the database
-    //     $columns = DB::select(
-    //         'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? ORDER BY ORDINAL_POSITION',
-    //         ['form_submission']
-    //     );
-    //     $allColumns = array_map(fn($col) => $col->COLUMN_NAME, $columns);
+    //     // Extract UIDs early
+    //     $uids = $records->pluck('uid')->unique()->toArray();
 
-    //     // Fields to exclude from dynamic listing (static fields will be handled separately)
-    //     $excluded = ['id', 'formid', 'uid', 'timecreated'];
+    //     // Get dynamic field names used in this form from form_data
+    //     $dynamicFieldNames = DB::table('form_data')
+    //         ->where('formid', $formid)
+    //         ->pluck('formname')
+    //         ->toArray();
 
-    //     // Preserve column order from DB, but exclude the static fields
-    //     $fields = [];
-    //     foreach ($allColumns as $column) {
-    //         if (!in_array($column, $excluded)) {
-    //             $fields[] = $column;
-    //         }
-    //     }
-    //     // Make sure 'uid' is at the beginning if you want it there
-    //     if (!in_array('uid', $fields)) {
-    //         array_unshift($fields, 'uid');
-    //     }
+    //     // Always include 'uid' for mapping user details
+    //     $fields = array_merge(['uid', 'Fullname'], $dynamicFieldNames);
 
-    //     // Group field values per UID
+    //     //fullnames for uid mapping
+    //     $fullnames = DB::table('user_credentials')
+    //         ->whereIn('pk', $uids) // use 'pk' if it maps to `uid` from your other table
+    //         ->select(DB::raw("CONCAT(first_name, ' ', last_name) as full_name"), 'pk')
+    //         ->pluck('full_name', 'pk'); // creates [pk => "First Last"] map
+
+    //     // Group values per UID
     //     $users = [];
+
     //     foreach ($records as $record) {
     //         $uid = $record->uid;
     //         foreach ($fields as $field) {
-    //             $users[$uid][$field] = $record->$field ?? '';
+    //             if ($field === 'Fullname') {
+    //                 $users[$uid]['Fullname'] = $fullnames[$uid] ?? '';
+    //             } else {
+    //                 $users[$uid][$field] = $record->$field ?? '';
+    //             }
     //         }
     //     }
 
     //     $uids = array_keys($users);
 
-    //     // Get related user data
+    //     // Get related user details
     //     $userDetails = DB::table('users')->whereIn('id', $uids)->get()->keyBy('id');
     //     $passwords = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
 
-    //     // Total student count
-    //     $total_students = DB::table('form_submission')
+    //     // Total student count (distinct users)
+    //     $total_students = DB::table('fc_registration_master')
     //         ->where('formid', $formid)
     //         ->distinct('uid')
     //         ->count('uid');
@@ -833,61 +832,129 @@ class FormController extends Controller
     //     ));
     // }
 
+
+
     public function courseList(Request $request, $formid)
     {
         $statusval = $request->input('statusval');
 
-        // Fetch submission records
+        // 1) Fetch submission records (optionally filter by confirm_status)
         $query = DB::table('fc_registration_master')->where('formid', $formid);
-        if ($statusval) {
+        if (!is_null($statusval) && $statusval !== '') {
             $query->where('confirm_status', $statusval);
         }
         $records = $query->get();
 
-        // Extract UIDs early
-        $uids = $records->pluck('uid')->unique()->toArray();
+        // 2) Extract UIDs
+        $uids = $records->pluck('uid')->filter()->unique()->values()->all();
 
-        // Get dynamic field names used in this form from form_data
+        // 3) Get dynamic field names for this form (so your grid knows what to show)
         $dynamicFieldNames = DB::table('form_data')
             ->where('formid', $formid)
             ->pluck('formname')
             ->toArray();
 
-        // Always include 'uid' for mapping user details
+        // 4) Always include uid + Fullname (computed below)
         $fields = array_merge(['uid', 'Fullname'], $dynamicFieldNames);
 
-        //fullnames for uid mapping
-        $fullnames = DB::table('user_credentials')
-            ->whereIn('pk', $uids) // use 'pk' if it maps to `uid` from your other table
-            ->select(DB::raw("CONCAT(first_name, ' ', last_name) as full_name"), 'pk')
-            ->pluck('full_name', 'pk'); // creates [pk => "First Last"] map
+        // 5) Full name map for uid → "First Last" (from user_credentials.pk)
+        $fullnames = collect();
+        if (!empty($uids)) {
+            $fullnames = DB::table('user_credentials')
+                ->whereIn('pk', $uids)        // pk maps to fc_registration_master.uid
+                ->select(DB::raw("CONCAT(first_name, ' ', last_name) as full_name"), 'pk')
+                ->pluck('full_name', 'pk');   // [uid => "First Last"]
+        }
 
-        // Group values per UID
+        $idToNameMappings = [
+            'service_master_pk'          => ['table' => 'service_master',           'id' => 'pk', 'name' => 'service_name'],
+            'last_service_pk'            => ['table' => 'service_master',           'id' => 'pk', 'name' => 'service_name'],
+            'cadre_master_pk'            => ['table' => 'cadre_master',             'id' => 'pk', 'name' => 'cadre_name'],
+            'admission_category_pk'      => ['table' => 'admission_category_master',       'id' => 'pk', 'name' => 'seat_name'],
+            'religion_master_pk'         => ['table' => 'religion_master',          'id' => 'pk', 'name' => 'religion_name'],
+            'country_master_pk'          => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+            'postal_country_pk'          => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+            'state_master_pk'            => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'postal_state_pk'            => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'domicile_state_pk'          => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'birth_state'                => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'state_district_mapping_pk'  => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'pdistrict_id'               => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'highest_stream_pk'          => ['table' => 'stream_master',           'id' => 'pk', 'name' => 'stream_name'],
+            'course_master_pk'           => ['table' => 'course_master',            'id' => 'pk', 'name' => 'course_name'],
+            'city'                       => ['table' => 'city_master',             'id' => 'pk', 'name' => 'city_name'],
+            'postal_city'                => ['table' => 'city_master',             'id' => 'pk', 'name' => 'city_name'],
+        ];
+
+        $lookupData = [];
+        foreach ($idToNameMappings as $field => $map) {
+            // Collect the set of IDs present in the current records for this field
+            $ids = $records->pluck($field)->filter()->unique()->values();
+            if ($ids->isEmpty()) {
+                continue;
+            }
+
+            $pairs = DB::table($map['table'])
+                ->whereIn($map['id'], $ids)
+                ->pluck($map['name'], $map['id'])
+                ->toArray(); // [id => name]
+
+            $lookupData[$field] = $pairs;
+        }
+
+        // 9) Build the users grid payload, applying mappings
         $users = [];
-
         foreach ($records as $record) {
             $uid = $record->uid;
             foreach ($fields as $field) {
                 if ($field === 'Fullname') {
                     $users[$uid]['Fullname'] = $fullnames[$uid] ?? '';
-                } else {
-                    $users[$uid][$field] = $record->$field ?? '';
+                    continue;
                 }
+
+                // Pull raw value from the row (dynamic fields may or may not exist as columns)
+                $raw = $record->$field ?? null;
+
+                // a) ID→Name (table) mapping
+                if (isset($lookupData[$field])) {
+                    $users[$uid][$field] = $raw !== null
+                        ? ($lookupData[$field][$raw] ?? $raw)
+                        : '';
+                    continue;
+                }
+
+                // b) Enum mapping (like gender/status) if the field name matches exactly
+                if (isset($enumMappings[$field])) {
+                    $users[$uid][$field] = $raw !== null
+                        ? ($enumMappings[$field][$raw] ?? $raw)
+                        : '';
+                    continue;
+                }
+
+                // c) Fallback: keep the original value
+                $users[$uid][$field] = $raw ?? '';
             }
         }
 
+        // 10) Refresh UIDs from the final users array (distinct users)
         $uids = array_keys($users);
 
-        // Get related user details
-        $userDetails = DB::table('users')->whereIn('id', $uids)->get()->keyBy('id');
-        $passwords = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
+        // 11) Load related user details / passwords (if you show them)
+        $userDetails = collect();
+        $passwords   = collect();
 
-        // Total student count (distinct users)
+        if (!empty($uids)) {
+            $userDetails = DB::table('users')->whereIn('id', $uids)->get()->keyBy('id');
+            $passwords   = DB::table('users')->whereIn('id', $uids)->pluck('password', 'id');
+        }
+
+        // 12) Count distinct students for the form
         $total_students = DB::table('fc_registration_master')
             ->where('formid', $formid)
             ->distinct('uid')
             ->count('uid');
 
+        // 13) Send everything to the view
         return view('admin.forms.course_list', compact(
             'records',
             'users',
@@ -899,6 +966,7 @@ class FormController extends Controller
             'statusval'
         ));
     }
+
 
 
 
@@ -983,39 +1051,141 @@ class FormController extends Controller
         return view('admin.forms.logo_page', compact('forms'));
     }
 
+    // wrking 2 september
     //export function 
+    // public function exportfcformList(Request $request, $formid)
+    // {
+    //     $formName = DB::table('local_form')->where('id', $formid)->value('name');
+    //     $statusval = $request->input('statusval');
+    //     $format = $request->input('format'); // 'xlsx', 'csv', or 'pdf'
+
+    //     // Fetch registration records
+    //     $query = DB::table('fc_registration_master')->where('formid', $formid);
+    //     if (!empty($statusval)) {
+    //         $query->where('confirm_status', $statusval);
+    //     }
+    //     $records = $query->get();
+
+    //     // Extract UIDs
+    //     $uids = $records->pluck('uid')->unique()->toArray();
+
+    //     // Get dynamic field names from form_data
+    //     $dynamicFieldNames = DB::table('form_data')
+    //         ->where('formid', $formid)
+    //         ->pluck('formname')
+    //         ->toArray();
+
+    //     // Fields for export (ensure order): uid, Fullname, dynamic fields...
+    //     $fields = array_merge(['uid', 'Fullname'], $dynamicFieldNames);
+
+    //     // Fetch fullnames for UIDs
+    //     $fullnames = DB::table('user_credentials')
+    //         ->whereIn('pk', $uids)
+    //         ->select('pk', DB::raw("CONCAT(first_name, ' ', last_name) as full_name"))
+    //         ->pluck('full_name', 'pk'); // [uid => full name]
+
+    //     // Format user data for export
+    //     $users = [];
+    //     foreach ($records as $record) {
+    //         $uid = $record->uid;
+    //         $row = [];
+
+    //         foreach ($fields as $field) {
+    //             if ($field === 'uid') {
+    //                 $row['uid'] = $uid;
+    //             } elseif ($field === 'Fullname') {
+    //                 $row['Fullname'] = $fullnames[$uid] ?? '';
+    //             } else {
+    //                 $row[$field] = $record->$field ?? '';
+    //             }
+    //         }
+
+    //         $users[] = $row;
+    //     }
+
+    //     // Handle export based on format
+    //     if ($format === 'csv') {
+    //         return Excel::download(new FcformListExport($users, $fields), $formName . '.csv', \Maatwebsite\Excel\Excel::CSV);
+    //     } elseif ($format === 'pdf') {
+    //         $pdf = Pdf::loadView('admin.forms.export.fcform_pdf', [
+    //             'records' => $users,
+    //             'fields' => $fields,
+    //             'formName' => $formName,
+    //         ])->setPaper('A3', 'landscape');
+    //         return $pdf->download($formName . '.pdf');
+    //     } else {
+    //         // Default to Excel (.xlsx)
+    //         return Excel::download(new FcformListExport($users, $fields), $formName . '.xlsx');
+    //     }
+    // }
+
+
+
     public function exportfcformList(Request $request, $formid)
     {
+        // 1. Get Form Name
         $formName = DB::table('local_form')->where('id', $formid)->value('name');
         $statusval = $request->input('statusval');
         $format = $request->input('format'); // 'xlsx', 'csv', or 'pdf'
 
-        // Fetch registration records
+        // 2. Fetch registration records
         $query = DB::table('fc_registration_master')->where('formid', $formid);
         if (!empty($statusval)) {
             $query->where('confirm_status', $statusval);
         }
         $records = $query->get();
 
-        // Extract UIDs
+        if ($records->isEmpty()) {
+            return back()->with('error', 'No records found for export.');
+        }
+
+        // 3. Extract UIDs
         $uids = $records->pluck('uid')->unique()->toArray();
 
-        // Get dynamic field names from form_data
+        // 4. Get dynamic field names
         $dynamicFieldNames = DB::table('form_data')
             ->where('formid', $formid)
             ->pluck('formname')
             ->toArray();
 
-        // Fields for export (ensure order): uid, Fullname, dynamic fields...
+        // 5. Fields for export: uid, Fullname, + dynamic fields
         $fields = array_merge(['uid', 'Fullname'], $dynamicFieldNames);
 
-        // Fetch fullnames for UIDs
+        // 6. Fetch fullnames for UIDs
         $fullnames = DB::table('user_credentials')
             ->whereIn('pk', $uids)
             ->select('pk', DB::raw("CONCAT(first_name, ' ', last_name) as full_name"))
             ->pluck('full_name', 'pk'); // [uid => full name]
 
-        // Format user data for export
+        // 7. Example mapping for ID → Name conversions (extend as needed)
+        $mappings = [
+            'service_master_pk'          => ['table' => 'service_master',           'id' => 'pk', 'name' => 'service_name'],
+            'last_service_pk'            => ['table' => 'service_master',           'id' => 'pk', 'name' => 'service_name'],
+            // 'cadre_master_pk'            => ['table' => 'cadre_master',             'id' => 'pk', 'name' => 'cadre_name'],
+            'admission_category_pk'      => ['table' => 'admission_category_master',       'id' => 'pk', 'name' => 'seat_name'],
+            'religion_master_pk'         => ['table' => 'religion_master',          'id' => 'pk', 'name' => 'religion_name'],
+            'country_master_pk'          => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+            'postal_country_pk'          => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+            'state_master_pk'            => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'postal_state_pk'            => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'domicile_state_pk'          => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'birth_state'                => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'state_district_mapping_pk'  => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'pdistrict_id'               => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'highest_stream_pk'          => ['table' => 'stream_master',           'id' => 'pk', 'name' => 'stream_name'],
+            'course_master_pk'           => ['table' => 'course_master',            'id' => 'pk', 'name' => 'course_name'],
+            'city'                       => ['table' => 'city_master',             'id' => 'pk', 'name' => 'city_name'],
+            'postal_city'                => ['table' => 'city_master',             'id' => 'pk', 'name' => 'city_name'],
+        ];
+
+        // Preload lookup values
+        $lookupValues = [];
+        foreach ($mappings as $field => $map) {
+            $lookupValues[$field] = DB::table($map['table'])
+                ->pluck($map['name'], $map['id']); // [id => name]
+        }
+
+        // 8. Format user data
         $users = [];
         foreach ($records as $record) {
             $uid = $record->uid;
@@ -1026,6 +1196,9 @@ class FormController extends Controller
                     $row['uid'] = $uid;
                 } elseif ($field === 'Fullname') {
                     $row['Fullname'] = $fullnames[$uid] ?? '';
+                } elseif (isset($mappings[$field])) {
+                    // Replace ID with Name
+                    $row[$field] = $lookupValues[$field][$record->$field] ?? '';
                 } else {
                     $row[$field] = $record->$field ?? '';
                 }
@@ -1034,7 +1207,7 @@ class FormController extends Controller
             $users[] = $row;
         }
 
-        // Handle export based on format
+        // 9. Handle export
         if ($format === 'csv') {
             return Excel::download(new FcformListExport($users, $fields), $formName . '.csv', \Maatwebsite\Excel\Excel::CSV);
         } elseif ($format === 'pdf') {
@@ -1051,6 +1224,167 @@ class FormController extends Controller
     }
 
 
+    // working 2 sepetmber
+    // public function generatePdf($form_id, $user_id)
+    // {
+    //     ini_set('pcre.backtrack_limit', '10000000');
+
+    //     if (!is_numeric($form_id) || !is_numeric($user_id) || $form_id <= 0 || $user_id <= 0) {
+    //         abort(400, 'Invalid ID parameters');
+    //     }
+
+    //     try {
+    //         // Get form metadata
+    //         $formInfo = DB::table('local_form')
+    //             ->where('id', $form_id)
+    //             ->first(['description', 'course_sdate', 'course_edate']);
+
+    //         if (!$formInfo) abort(404, 'Form not found');
+
+    //         $form_description = $formInfo->description;
+    //         $form_date_range = date('d-m-Y', strtotime($formInfo->course_sdate)) . " to " . date('d-m-Y', strtotime($formInfo->course_edate));
+
+    //         // Get submission (normal fields)
+    //         $submission = DB::table('fc_registration_master')
+    //             ->where('formid', $form_id)
+    //             ->where('uid', $user_id)
+    //             ->first();
+    //         $submissionArray = (array) $submission;
+
+    //         $user_name = $submissionArray['name'] ?? 'User';
+    //         $logo_path = '';
+    //         $base64 = '';
+    //         $sections = [];
+
+    //         // Profile image
+    //         if (!empty($submissionArray['profile'])) {
+    //             $path = storage_path("app/public/{$submissionArray['profile']}");
+    //             if (file_exists($path)) {
+    //                 $type = pathinfo($path, PATHINFO_EXTENSION);
+    //                 $data = base64_encode(file_get_contents($path));
+    //                 $base64 = "data:image/{$type};base64,{$data}";
+    //             }
+    //         }
+    //         // If no profile or invalid path, set default
+    //         if (empty($base64)) {
+    //             $defaultPath = public_path('images/dummypic.jpeg');
+    //             if (file_exists($defaultPath)) {
+    //                 $type = pathinfo($defaultPath, PATHINFO_EXTENSION);
+    //                 $data = base64_encode(file_get_contents($defaultPath));
+    //                 $base64 = "data:image/{$type};base64,{$data}";
+    //             }
+    //         }
+    //         // dd($base64);
+
+    //         // Fetch form structure
+    //         $formStructure = DB::table('form_sections AS s')
+    //             ->join('form_data AS f', 's.id', '=', 'f.section_id')
+    //             ->where('f.formid', $form_id)
+    //             ->select('s.id AS section_id', 's.section_title', 'f.formname', 'f.formlabel', 'f.format')
+    //             ->orderBy('s.id')
+    //             ->get();
+
+    //         $tableProcessed = [];
+
+    //         foreach ($formStructure as $item) {
+    //             $section = $item->section_title;
+    //             $fieldname = trim($item->formname);
+    //             $label = $item->formlabel;
+    //             $type = $item->format;
+
+    //             if (!isset($sections[$section])) {
+    //                 $sections[$section] = [];
+    //             }
+
+    //             // Handle table fields
+    //             if ($type === 'table') {
+    //                 $sectionId = $item->section_id;
+    //                 $tableKey = $sectionId . '_' . $fieldname;
+    //                 if (in_array($tableKey, $tableProcessed)) continue;
+
+    //                 $tableData = DB::table('form_submission_tabledata')
+    //                     ->where('formid', $form_id)
+    //                     ->where('uid', $user_id)
+    //                     ->where('section_id', $sectionId)
+    //                     ->get();
+
+    //                 if ($tableData->isNotEmpty()) {
+    //                     $grouped = $tableData->groupBy('row_index');
+    //                     $rows = [];
+    //                     $headers = [];
+
+    //                     foreach ($grouped as $row) {
+    //                         $rowData = [];
+    //                         foreach ($row as $cell) {
+    //                             $headers[$cell->column_key] = true;
+    //                             $rowData[$cell->column_key] = $cell->column_value;
+    //                         }
+    //                         $rows[] = $rowData;
+    //                     }
+
+    //                     $sections[$section][] = [
+    //                         'label_en' => $label,
+    //                         'type' => 'table',
+    //                         'headers' => array_keys($headers),
+    //                         'rows' => $rows,
+    //                     ];
+    //                 }
+
+    //                 $tableProcessed[] = $tableKey;
+    //                 continue;
+    //             }
+
+    //             // Handle normal fields
+    //             $value = $submissionArray[$fieldname] ?? null;
+    //             if (!is_null($value) && $value !== '') {
+    //                 $sections[$section][] = [
+    //                     'label_en' => $label,
+    //                     'fieldvalue' => $value,
+    //                 ];
+    //             }
+    //         }
+
+    //         // Render HTML
+    //         $html = view('admin.registration.form_template', [
+    //             'form_description' => $form_description,
+    //             'form_date_range' => $form_date_range,
+    //             'sections' => $sections,
+    //             'logo_path' => $base64,
+    //             'user_name' => $user_name,
+    //         ])->render();
+
+    //         // Setup mPDF
+    //         $tempDir = storage_path('temp/mpdf');
+    //         if (!is_dir($tempDir)) mkdir($tempDir, 0777, true);
+
+    //         $fontDir = base_path('vendor/mpdf/mpdf/ttfonts');
+    //         $mpdf = new \Mpdf\Mpdf([
+    //             'tempDir' => $tempDir,
+    //             'fontDir' => [$fontDir],
+    //             'default_font' => 'dejavusans',
+    //         ]);
+
+    //         // Optional: Devanagari font support
+    //         if (file_exists("{$fontDir}/NotoSansDevanagari-Regular.ttf")) {
+    //             $mpdf->fontdata['devanagari'] = [
+    //                 'R' => "{$fontDir}/NotoSansDevanagari-Regular.ttf",
+    //                 'B' => "{$fontDir}/NotoSansDevanagari-Bold.ttf",
+    //             ];
+    //             $mpdf->SetFont('devanagari');
+    //         }
+
+    //         $mpdf->WriteHTML($html);
+
+    //         return response($mpdf->Output('form.pdf', 'I'), 200)
+    //             ->header('Content-Type', 'application/pdf');
+    //     } catch (\Exception $e) {
+
+    //         \Log::error('PDF Generation Error: ' . $e->getMessage());
+    //         abort(500, 'An error occurred while generating the PDF.');
+    //     }
+    // }
+
+
 
     public function generatePdf($form_id, $user_id)
     {
@@ -1061,7 +1395,7 @@ class FormController extends Controller
         }
 
         try {
-            // Get form metadata
+            // 1) Get form metadata
             $formInfo = DB::table('local_form')
                 ->where('id', $form_id)
                 ->first(['description', 'course_sdate', 'course_edate']);
@@ -1071,7 +1405,7 @@ class FormController extends Controller
             $form_description = $formInfo->description;
             $form_date_range = date('d-m-Y', strtotime($formInfo->course_sdate)) . " to " . date('d-m-Y', strtotime($formInfo->course_edate));
 
-            // Get submission (normal fields)
+            // 2) Get submission (normal fields)
             $submission = DB::table('fc_registration_master')
                 ->where('formid', $form_id)
                 ->where('uid', $user_id)
@@ -1083,7 +1417,7 @@ class FormController extends Controller
             $base64 = '';
             $sections = [];
 
-            // Profile image
+            // 3) Profile image (or default)
             if (!empty($submissionArray['profile'])) {
                 $path = storage_path("app/public/{$submissionArray['profile']}");
                 if (file_exists($path)) {
@@ -1092,7 +1426,6 @@ class FormController extends Controller
                     $base64 = "data:image/{$type};base64,{$data}";
                 }
             }
-            // If no profile or invalid path, set default
             if (empty($base64)) {
                 $defaultPath = public_path('images/dummypic.jpeg');
                 if (file_exists($defaultPath)) {
@@ -1101,9 +1434,8 @@ class FormController extends Controller
                     $base64 = "data:image/{$type};base64,{$data}";
                 }
             }
-            // dd($base64);
 
-            // Fetch form structure
+            // 4) Fetch form structure
             $formStructure = DB::table('form_sections AS s')
                 ->join('form_data AS f', 's.id', '=', 'f.section_id')
                 ->where('f.formid', $form_id)
@@ -1111,8 +1443,47 @@ class FormController extends Controller
                 ->orderBy('s.id')
                 ->get();
 
-            $tableProcessed = [];
+            $idToNameMappings = [
+                'service_master_pk'          => ['table' => 'service_master',           'id' => 'pk', 'name' => 'service_name'],
+                'last_service_pk'            => ['table' => 'service_master',           'id' => 'pk', 'name' => 'service_name'],
+                'cadre_master_pk'            => ['table' => 'cadre_master',             'id' => 'pk', 'name' => 'cadre_name'],
+                'admission_category_pk'      => ['table' => 'admission_category_master',       'id' => 'pk', 'name' => 'seat_name'],
+                'religion_master_pk'         => ['table' => 'religion_master',          'id' => 'pk', 'name' => 'religion_name'],
+                'country_master_pk'          => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+                'postal_country_pk'          => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+                'state_master_pk'            => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+                'postal_state_pk'            => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+                'domicile_state_pk'          => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+                'birth_state'                => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+                'state_district_mapping_pk'  => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+                'pdistrict_id'               => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+                'highest_stream_pk'          => ['table' => 'stream_master',           'id' => 'pk', 'name' => 'stream_name'],
+                'course_master_pk'           => ['table' => 'course_master',            'id' => 'pk', 'name' => 'course_name'],
+                'city'                       => ['table' => 'city_master',             'id' => 'pk', 'name' => 'city_name'],
+                'postal_city'                => ['table' => 'city_master',             'id' => 'pk', 'name' => 'city_name'],
+            ];
 
+            $enumMappings = [
+                'gender' => [1 => 'Male', 2 => 'Female', 3 => 'Other'],
+                'status' => [0 => 'Inactive', 1 => 'Active'],
+            ];
+
+            // 6) Preload lookup data for this user's submission
+            $lookupData = [];
+            foreach ($idToNameMappings as $field => $map) {
+                if (empty($submissionArray[$field])) continue;
+                $ids = [$submissionArray[$field]];
+
+                $pairs = DB::table($map['table'])
+                    ->whereIn($map['id'], $ids)
+                    ->pluck($map['name'], $map['id'])
+                    ->toArray();
+
+                $lookupData[$field] = $pairs;
+            }
+
+            // 7) Process sections
+            $tableProcessed = [];
             foreach ($formStructure as $item) {
                 $section = $item->section_title;
                 $fieldname = trim($item->formname);
@@ -1123,7 +1494,7 @@ class FormController extends Controller
                     $sections[$section] = [];
                 }
 
-                // Handle table fields
+                // Handle tables separately
                 if ($type === 'table') {
                     $sectionId = $item->section_id;
                     $tableKey = $sectionId . '_' . $fieldname;
@@ -1144,7 +1515,17 @@ class FormController extends Controller
                             $rowData = [];
                             foreach ($row as $cell) {
                                 $headers[$cell->column_key] = true;
-                                $rowData[$cell->column_key] = $cell->column_value;
+
+                                $rawVal = $cell->column_value;
+
+                                // ID → Name replacement
+                                if (isset($lookupData[$cell->column_key])) {
+                                    $rowData[$cell->column_key] = $lookupData[$cell->column_key][$rawVal] ?? $rawVal;
+                                } elseif (isset($enumMappings[$cell->column_key])) {
+                                    $rowData[$cell->column_key] = $enumMappings[$cell->column_key][$rawVal] ?? $rawVal;
+                                } else {
+                                    $rowData[$cell->column_key] = $rawVal;
+                                }
                             }
                             $rows[] = $rowData;
                         }
@@ -1164,6 +1545,13 @@ class FormController extends Controller
                 // Handle normal fields
                 $value = $submissionArray[$fieldname] ?? null;
                 if (!is_null($value) && $value !== '') {
+                    // Apply ID→Name mapping if applicable
+                    if (isset($lookupData[$fieldname])) {
+                        $value = $lookupData[$fieldname][$value] ?? $value;
+                    } elseif (isset($enumMappings[$fieldname])) {
+                        $value = $enumMappings[$fieldname][$value] ?? $value;
+                    }
+
                     $sections[$section][] = [
                         'label_en' => $label,
                         'fieldvalue' => $value,
@@ -1171,7 +1559,7 @@ class FormController extends Controller
                 }
             }
 
-            // Render HTML
+            // 8) Render HTML
             $html = view('admin.registration.form_template', [
                 'form_description' => $form_description,
                 'form_date_range' => $form_date_range,
@@ -1180,7 +1568,7 @@ class FormController extends Controller
                 'user_name' => $user_name,
             ])->render();
 
-            // Setup mPDF
+            // 9) Setup mPDF
             $tempDir = storage_path('temp/mpdf');
             if (!is_dir($tempDir)) mkdir($tempDir, 0777, true);
 
@@ -1191,7 +1579,7 @@ class FormController extends Controller
                 'default_font' => 'dejavusans',
             ]);
 
-            // Optional: Devanagari font support
+            // Devanagari font support (optional)
             if (file_exists("{$fontDir}/NotoSansDevanagari-Regular.ttf")) {
                 $mpdf->fontdata['devanagari'] = [
                     'R' => "{$fontDir}/NotoSansDevanagari-Regular.ttf",
@@ -1205,16 +1593,10 @@ class FormController extends Controller
             return response($mpdf->Output('form.pdf', 'I'), 200)
                 ->header('Content-Type', 'application/pdf');
         } catch (\Exception $e) {
-
             \Log::error('PDF Generation Error: ' . $e->getMessage());
             abort(500, 'An error occurred while generating the PDF.');
         }
     }
-
-
-
-
-
 
 
 
