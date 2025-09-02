@@ -1,31 +1,10 @@
 <!-- resources/views/forms/field-types.blade.php -->
 @php
     $validFieldHeadings = [
-        'country',
-        'state',
-        'district',
-        'language',
-        'admissioncategory',
-        'stream',
-        'institution',
-        'jobtype',
-        'boardname',
-        'qualification',
-        'religion',
-        'service',
-        'sports',
-        'size',
-        'fcscale',
-        'distinction',
-        'fatherprofession',
-        'trouser',
-        'shoessize',
-        'studentskill',
-        'birth_district',
-        'birth_state',
-        'birth_country',
-        'pdistrict_id',
-        'mdistrict_id',
+        'country','state','district','language','admissioncategory','stream','institution','jobtype','boardname','qualification',
+        'religion_master_pk','last_service_pk','sports','size','fcscale','distinction','fatherprofession','trouser',
+        'shoessize','studentskill','birth_district','birth_state','birth_country','pdistrict_id','mdistrict_id','admission_category_pk',
+        'highest_stream_pk','city','postal_city','service_master_pk','last_service_pk'
     ];
 
     $isTableField = isset($field->field_type);
@@ -140,110 +119,39 @@
     </select>
 </div>
 @break --}}
-    {{-- @case('Select Box')
-    @case('dropdown')
-        <div class="form-group">
-            <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
-            <select class="form-control select2" id="{{ $fieldName }}" name="{{ $fieldName }}"
-                {{ $required ? 'required' : '' }}>
-                <option value="">Choose Option</option>
-
-                @if ($isMappedField)
-                    @php
-                        // Mapping: heading → [table, pk_field, value_field]
-                        $specialMappings = [
-                            'country' => ['country_master', 'pk', 'country_name'],
-                            'postal_country' => ['country_master', 'pk', 'country_name'],
-
-                            'state' => ['state_master', 'pk', 'state_name'],
-                            'postal_state' => ['state_master', 'pk', 'state_name'],
-                            'domicile_state' => ['state_master', 'pk', 'state_name'],
-                            'birth_state' => ['state_master', 'pk', 'state_name'],
-
-                            'birth_district' => ['state_district_mapping', 'pk', 'district_name'],
-                            'pdistrict_id' => ['state_district_mapping', 'pk', 'district_name'],
-                            'mdistrict_id' => ['state_district_mapping', 'pk', 'district_name'],
-
-                            'admission_category' => ['admission_category_master', 'pk', 'category_name'],
-                            'highest_stream' => ['stream_master', 'pk', 'stream_name'],
-
-                            'religion' => ['religion_master', 'pk', 'religion_name'],
-
-                            'service' => ['service_master', 'pk', 'service_name'],
-                            'last_service' => ['service_master', 'pk', 'service_name'],
-                        ];
-
-                        $map = $specialMappings[$mappedHeading] ?? null;
-
-                        if ($map) {
-                            @dump($map);
-                            [$tableName, $pkField, $valueField] = $map;
-                            $options = DB::table($tableName)->get();
-                        } else {
-                            $options = collect(); // empty
-                        }
-                    @endphp
-
-                    @foreach ($options as $option)
-                        <option value="{{ $option->$pkField }}"
-                            {{ old($fieldName, $value) == $option->$pkField ? 'selected' : '' }}>
-                            {{ $option->$valueField }}
-                        </option>
-                    @endforeach
-                @else
-                    @php
-                        $optionsRaw =
-                            $field->field_options ??
-                            ($field->field_checkbox_options ??
-                                ($field->field_radio_options ?? ($field->fieldoption ?? '')));
-                        $options = explode(',', $optionsRaw);
-                    @endphp
-
-                    @foreach ($options as $option)
-                        @php $option = trim($option); @endphp
-                        <option value="{{ $option }}" {{ old($fieldName, $value) == $option ? 'selected' : '' }}>
-                            {{ $option }}
-                        </option>
-                    @endforeach
-                @endif
-            </select>
-        </div>
-    @break --}}
-
-    @case('Select Box')
+  @case('Select Box')
 @case('dropdown')
     <div class="form-group">
         <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
-        <select class="form-control dynamic-dropdown" 
-                id="{{ $fieldName }}" 
-                name="{{ $fieldName }}"
-                data-mapped="{{ $mappedHeading ?? '' }}"
-                {{ $required ? 'required' : '' }}>
+        <select class="form-control select" id="{{ $fieldName }}" name="{{ $fieldName }}"
+            {{ $required ? 'required' : '' }}>
             <option value="">Choose Option</option>
 
             @if ($isMappedField)
                 @php
-                    // Mapping: heading → [table, pk_field, value_field, parent_field(optional)]
+                    // Mapping: heading → [table, pk_field, value_field]
                     $specialMappings = [
-                        'country'         => ['country_master', 'pk', 'country_name', null],
-                        'postal_country'  => ['country_master', 'pk', 'country_name', null],
+                        'country' => ['country_master', 'pk', 'country_name'],
+                        'postal_country' => ['country_master', 'pk', 'country_name'],
 
-                        'state'           => ['state_master', 'pk', 'state_name', 'country_id'],
-                        'postal_state'    => ['state_master', 'pk', 'state_name', 'country_id'],
-                        'domicile_state'  => ['state_master', 'pk', 'state_name', 'country_id'],
-                        'birth_state'     => ['state_master', 'pk', 'state_name', 'country_id'],
+                        'state' => ['state_master', 'pk', 'state_name'],
+                        'postal_state' => ['state_master', 'pk', 'state_name'],
+                        'domicile_state' => ['state_master', 'pk', 'state_name'],
+                        'birth_state' => ['state_master', 'pk', 'state_name'],
 
-                        'birth_district'  => ['state_district_mapping', 'pk', 'district_name', 'state_id'],
-                        'pdistrict_id'    => ['state_district_mapping', 'pk', 'district_name', 'state_id'],
-                        'mdistrict_id'    => ['state_district_mapping', 'pk', 'district_name', 'state_id'],
+                        'birth_district' => ['state_district_mapping', 'pk', 'district_name'],
+                        'pdistrict_id' => ['state_district_mapping', 'pk', 'district_name'],
+                        'mdistrict_id' => ['state_district_mapping', 'pk', 'district_name'],
 
-                        'admission_category' => ['admission_category_master', 'pk', 'category_name', null],
-                        'highest_stream'     => ['stream_master', 'pk', 'stream_name', null],
+                        'admission_category_pk' => ['admission_category_master', 'pk', 'Seat_name'],
+                        'highest_stream_pk' => ['stream_master', 'pk', 'stream_name'],
 
-                        'religion'        => ['religion_master', 'pk', 'religion_name', null],
+                        'religion_master_pk' => ['religion_master', 'pk', 'religion_name'],
 
-                        'service'         => ['service_master', 'pk', 'service_name', null],
-                        'last_service'    => ['service_master', 'pk', 'service_name', null],
+                        'service_master_pk' => ['service_master', 'pk', 'service_name'],
+                        'last_service_pk' => ['service_master', 'pk', 'service_name'],
+                        'city' => ['city_master', 'pk', 'city_name'],
+                        'postal_city' => ['city_master', 'pk', 'city_name'],
                     ];
 
                     $map = $specialMappings[$mappedHeading] ?? null;
@@ -252,26 +160,22 @@
                         [$tableName, $pkField, $valueField] = $map;
                         $options = DB::table($tableName)->get();
                     } else {
-                        $options = collect();
+                        $options = collect(); // empty
                     }
                 @endphp
 
-                {{-- Preload options (only for parent dropdowns like country, service, etc.) --}}
-                @if ($options->count())
-                    @foreach ($options as $option)
-                        <option value="{{ $option->$pkField }}" 
-                            {{ old($fieldName, $value) == $option->$pkField ? 'selected' : '' }}>
-                            {{ $option->$valueField }}
-                        </option>
-                    @endforeach
-                @endif
+                @foreach ($options as $option)
+                    <option value="{{ $option->$pkField }}"
+                        {{ old($fieldName, $value) == $option->$pkField ? 'selected' : '' }}>
+                        {{ $option->$valueField }}
+                    </option>
+                @endforeach
             @else
                 @php
                     $optionsRaw =
                         $field->field_options ??
                         ($field->field_checkbox_options ??
-                        ($field->field_radio_options ?? ($field->fieldoption ?? '')));
-
+                            ($field->field_radio_options ?? ($field->fieldoption ?? '')));
                     $options = explode(',', $optionsRaw);
                 @endphp
 
@@ -285,6 +189,7 @@
         </select>
     </div>
 @break
+
 
 
     @case('Radio Button')
@@ -375,40 +280,4 @@
     @default
         <p>Unknown field type: {{ $fieldType }}</p>
 @endswitch
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-    $(document).ready(function() {
-        // When country changes → fetch states
-        $('#country').on('change', function() {
-            var countryId = this.value;
-            $("#state").html('<option value="">-- Select State --</option>');
-            $("#district").html('<option value="">-- Select District --</option>');
-            if (countryId) {
-                $.get('/get-states/' + countryId, function(data) {
-                    $.each(data, function(key, state) {
-                        $("#state").append('<option value="' + state.id + '">' + state
-                            .name + '</option>');
-                    });
-                });
-            }
-        });
-
-        // When state changes → fetch districts
-        $('#state').on('change', function() {
-            var stateId = this.value;
-            $("#district").html('<option value="">-- Select District --</option>');
-            if (stateId) {
-                $.get('/get-districts/' + stateId, function(data) {
-                    $.each(data, function(key, district) {
-                        $("#district").append('<option value="' + district.id + '">' +
-                            district.name + '</option>');
-                    });
-                });
-            }
-        });
-    });
-    
-</script>
-
 
