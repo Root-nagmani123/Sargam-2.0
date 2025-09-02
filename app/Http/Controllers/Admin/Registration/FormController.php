@@ -25,7 +25,7 @@ class FormController extends Controller
 {
     public function index(Request $request)
     {
-        $query = DB::table('local_form')->orderBy('sortorder');
+        $query = DB::table('local_form')->where('visible', 1);
 
         if ($request->has('search') && $request->search != '') {
             $query->where('name', 'like', '%' . $request->search . '%');
@@ -43,6 +43,24 @@ class FormController extends Controller
             'groupedForms' => $groupedForms,
         ]);
     }
+
+    // New method for inactive forms
+    public function inactive(Request $request)
+{
+    $query = DB::table('local_form')
+        ->where('visible', 0) // Only inactive
+        ->orderBy('sortorder');
+
+    if ($request->has('search') && $request->search != '') {
+        $query->where('name', 'like', '%' . $request->search . '%');
+    }
+
+    // Get inactive forms
+    $forms = $query->get();
+
+    return view('admin.registration.inactive', compact('forms'));
+}
+
 
 
 

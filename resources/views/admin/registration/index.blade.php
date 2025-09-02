@@ -10,7 +10,8 @@
                     <h4>Registration</h4>
                 </div>
                 <div class="col-6 text-end">
-                    <a href="{{ route('forms.create') }}" class="btn btn-primary">+ Add Form</a>
+                    <a href="{{ route('forms.create') }}" class="btn btn-primary"> Add Form</a>
+                    <a href="{{ route('forms.inactive') }}" class="btn btn-secondary">Inactive Forms</a>
                 </div>
             </div>
         </div>
@@ -166,6 +167,7 @@
                     .then(data => {
                         if (data.success) {
                             alert('Visibility updated successfully.');
+                              location.reload();    
                         } else {
                             alert('Failed to update visibility.');
                         }
