@@ -1,10 +1,11 @@
 <!-- resources/views/forms/field-types.blade.php -->
-@php
+{{-- @php
     $validFieldHeadings = [
         'country','state','district','language','admissioncategory','stream','institution','jobtype','boardname','qualification',
-        'religion_master_pk','last_service_pk','sports','size','fcscale','distinction','fatherprofession','trouser',
+        'religion_master_pk','last_service_pk','sports','size','fcscale','distinction','fatherprofession',
         'shoessize','studentskill','birth_district','birth_state','birth_country','pdistrict_id','mdistrict_id','admission_category_pk',
-        'highest_stream_pk','city','postal_city','service_master_pk','last_service_pk'
+        'highest_stream_pk','city','postal_city','service_master_pk','last_service_pk','t-Shirt','Blazer','Trouser','Tracksuite','father_profession',
+        'mother_profession'
     ];
 
     $isTableField = isset($field->field_type);
@@ -13,10 +14,8 @@
     $fieldName = $name ?? ($isTableField ? "table_{$i}_{$j}" : "field_{$field->formname}");
     $required = $isTableField ? $field->required ?? false : $field->required ?? false;
     $requiredAsterisk = $required ? '<span class="text-danger">*</span>' : '';
-
     $mappedHeading = '';
     $isMappedField = false;
-
     foreach ($validFieldHeadings as $validHeading) {
         // Prefer exact match first
         if (strcasecmp($field->formname ?? ($field->field_title ?? ''), $validHeading) === 0) {
@@ -32,6 +31,62 @@
             if (stripos($field->formname ?? ($field->field_title ?? ''), $validHeading) !== false) {
                 $isMappedField = true;
                 $mappedHeading = $validHeading;
+                break;
+            }
+        }
+    }
+
+@endphp --}}
+
+@php
+    $validFieldHeadings = [
+        'country','state','district','language','admissioncategory','stream','institution','jobtype','boardname','qualification',
+        'religion_master_pk','last_service_pk','sports','size','fcscale','distinction','fatherprofession',
+        'shoessize','studentskill','birth_district','birth_state','birth_country','pdistrict_id','mdistrict_id','admission_category_pk',
+        'highest_stream_pk','city','postal_city','service_master_pk','last_service_pk','t-Shirt','Blazer','Trouser','Tracksuite','father_profession',
+        'mother_profession','Degree'
+    ];
+
+    $isTableField = isset($field->field_type);
+    $fieldType = $isTableField ? $field->field_type : $field->formtype;
+
+    // Label
+    $fieldLabel = $isTableField ? ($field->field_title ?? $field->header ?? '') : ($field->formlabel ?? '');
+
+    // ✅ Key for mapping (use header if table, else formname/title)
+    // $fieldKey = (trim(
+    //     $isTableField
+    //         ? ($field->header ?? $field->field_title ?? '')
+    //         : ($field->formname ?? $field->field_title ?? '')
+    // ));
+   $fieldKey = strtolower(
+    preg_replace('/[^a-z0-9]/i', '', trim(
+        $isTableField
+            ? ($field->header ?? $field->field_title ?? '')
+            : ($field->formname ?? $field->field_title ?? '')
+    ))
+);
+
+    $fieldName = $name ?? ($isTableField ? "table_{$i}_{$j}" : "field_{$field->formname}");
+    $required = $field->required ?? false;
+    $requiredAsterisk = $required ? '<span class="text-danger">*</span>' : '';
+
+    $mappedHeading = '';
+    $isMappedField = false;
+
+    foreach ($validFieldHeadings as $validHeading) {
+        if (strcasecmp($fieldKey, $validHeading) === 0) {
+            $isMappedField = true;
+            $mappedHeading = strtolower($validHeading);
+            break;
+        }
+    }
+
+    if (!$isMappedField) {
+        foreach ($validFieldHeadings as $validHeading) {
+            if (stripos($fieldKey, $validHeading) !== false) {
+                $isMappedField = true;
+                $mappedHeading = strtolower($validHeading);
                 break;
             }
         }
@@ -79,50 +134,10 @@
         </div>
     @break
 
-    {{-- @case('Select Box')
-@case('dropdown')
-<div class="form-group">
-    <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
-    <select class="form-control" id="{{ $fieldName }}" name="{{ $fieldName }}" {{ $required ? 'required' : '' }}>
-        <option value="">Choose Option</option>
-
-        @if ($isMappedField)
-            @php
-                $tableName = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $mappedHeading)) . '_master';
-                $options = DB::table($tableName)->get();
-                $valueField = $mappedHeading . '_name';
-            @endphp
-            
-
-            @foreach ($options as $option)
-                <option value="{{ $option->pk }}" {{ old($fieldName, $value) == $option->pk ? 'selected' : '' }}>
-                    {{ $option->$valueField ?? $option->name }}
-                </option>
-            @endforeach
-        @else
-            @php
-                $optionsRaw = $field->field_options 
-                            ?? $field->field_checkbox_options 
-                            ?? $field->field_radio_options 
-                            ?? $field->fieldoption 
-                            ?? '';
-                $options = explode(',', $optionsRaw);
-            @endphp
-
-            @foreach ($options as $option)
-                @php $option = trim($option); @endphp
-                <option value="{{ $option }}" {{ old($fieldName, $value) == $option ? 'selected' : '' }}>
-                    {{ $option }}
-                </option>
-            @endforeach
-        @endif
-    </select>
-</div>
-@break --}}
   @case('Select Box')
 @case('dropdown')
     <div class="form-group">
-        <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
+     <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
         <select class="form-control select" id="{{ $fieldName }}" name="{{ $fieldName }}"
             {{ $required ? 'required' : '' }}>
             <option value="">Choose Option</option>
@@ -152,9 +167,21 @@
                         'last_service_pk' => ['service_master', 'pk', 'service_name'],
                         'city' => ['city_master', 'pk', 'city_name'],
                         'postal_city' => ['city_master', 'pk', 'city_name'],
+                        't-Shirt'      => ['student_cloths_size_master',  'pk', 'cloth_size'],
+                        'Trouser'       => ['student_cloths_size_master',  'pk', 'cloth_size'],
+                        'Blazer'       => ['student_cloths_size_master',  'pk', 'cloth_size'],
+                        'Tracksuite'    => ['student_cloths_size_master',  'pk', 'cloth_size'],
+                        'father_profession' => ['parents_profession_master', 'pk', 'profession_name'],
+                        'mother_profession' => ['parents_profession_master', 'pk', 'profession_name'],
+                        'language' => ['language_master', 'pk', 'language_name'],
+                        'boardname' => ['university_board_name_master', 'pk', 'board_name'],
+                        'university' => ['university_board_name_master', 'pk', 'board_name'],
+                        'degree' => ['degree_master', 'Pk', 'degree_name'],
                     ];
 
-                    $map = $specialMappings[$mappedHeading] ?? null;
+                    // $map = $specialMappings[$mappedHeading] ?? null;
+                     $map = $specialMappings[strtolower($mappedHeading)] ?? null;
+
 
                     if ($map) {
                         [$tableName, $pkField, $valueField] = $map;
