@@ -1398,6 +1398,8 @@ class FormController extends Controller
                 'boardname'                  => ['table' => 'university_board_name_master', 'id' => 'pk', 'name' => 'board_name'],
                 'university'                 => ['table' => 'university_board_name_master', 'id' => 'pk', 'name' => 'board_name'],
                 'Degree'                     => ['table' => 'degree_master',            'id' => 'pk', 'name' => 'degree_name'],
+                'instituitontype'            => ['table' => 'institute_type_master',    'id' => 'pk', 'name' => 'type_name'],
+
             ];
 
             $enumMappings = [
@@ -1472,7 +1474,12 @@ class FormController extends Controller
                                 } elseif (stripos($cell->column_key, 'degree') !== false) {
                                     $name = DB::table('degree_master')
                                         ->where('pk', $rawVal)
-                                        ->value('degree_full_name'); // use degree_full_name for clarity
+                                        ->value('degree_name'); // use degree_full_name for clarity
+                                    $rowData[$cell->column_key] = $name ?? $rawVal;
+                                } elseif (stripos($cell->column_key, 'institution') !== false || stripos($cell->column_key, 'instituiton') !== false) {
+                                    $name = DB::table('institute_type_master')
+                                        ->where('pk', $rawVal)
+                                        ->value('type_name');
                                     $rowData[$cell->column_key] = $name ?? $rawVal;
 
                                     // 🔹 Normal ID → Name replacement

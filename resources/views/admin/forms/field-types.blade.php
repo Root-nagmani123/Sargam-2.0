@@ -44,7 +44,7 @@
         'religion_master_pk','last_service_pk','sports','size','fcscale','distinction','fatherprofession',
         'shoessize','studentskill','birth_district','birth_state','birth_country','pdistrict_id','mdistrict_id','admission_category_pk',
         'highest_stream_pk','city','postal_city','service_master_pk','last_service_pk','t-Shirt','Blazer','Trouser','Tracksuite','father_profession',
-        'mother_profession','Degree'
+        'mother_profession','Degree','instituitontype'
     ];
 
     $isTableField = isset($field->field_type);
@@ -177,6 +177,7 @@
                         'boardname' => ['university_board_name_master', 'pk', 'board_name'],
                         'university' => ['university_board_name_master', 'pk', 'board_name'],
                         'degree' => ['degree_master', 'Pk', 'degree_name'],
+                        'instituitontype' => ['institute_type_master', 'pk', 'type_name'],
                     ];
 
                     // $map = $specialMappings[$mappedHeading] ?? null;
