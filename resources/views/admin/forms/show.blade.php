@@ -276,14 +276,14 @@
                         <li class="nav-item"><a href="#content" class="text-white text-decoration-none"
                                 style=" font-size: 12px;">Skip to Main Content</a></li>
                         <span class="text-muted me-3 ms-3">|</span>
-                            <a id="uw-widget-custom-trigger" contenteditable="false" style="cursor: pointer;">
-                        <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
-                                    src="{{ asset('images/accessible.png') }}" alt="" width="20">
-                                <span class="text-white ms-1" style=" font-size: 12px;">
-                                    More
-                                </span>
-                            </a>
-                        </li>
+                        <a id="uw-widget-custom-trigger" contenteditable="false" style="cursor: pointer;">
+                            <li class="nav-item"><a href="#" class="text-white text-decoration-none"><img
+                                        src="{{ asset('images/accessible.png') }}" alt="" width="20">
+                                    <span class="text-white ms-1" style=" font-size: 12px;">
+                                        More
+                                    </span>
+                                </a>
+                            </li>
                     </ul>
                 </div>
             </div>
@@ -300,13 +300,11 @@
                     </a>
                     <span class="vr mx-2"></span>
                     <a class="navbar-brand" href="#">
-                        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2"
-                            height="80">
+                        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="80">
                     </a>
 
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
-                        aria-label="Toggle navigation">
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                         <span class="navbar-toggler-icon"></span>
                     </button>
 
@@ -320,8 +318,7 @@
                             </li>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#"
-                                    role="button" id="accountDropdown" data-bs-toggle="dropdown"
-                                    aria-expanded="false">
+                                    role="button" id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="material-icons" style="color: #004a93;">account_circle</i>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
@@ -341,33 +338,33 @@
     </div>
 
     <main style="flex: 1;">
-       <div class="container-fluid py-4">
-         <div class="row mb-4">
-     <div class="row align-items-center">
-                                    <!-- Left Logo -->
-                                    <div class="col-md-2 text-start">
-                                        <img src="{{ asset($data->logo1 ? 'storage/' . $data->logo1 : 'admin_assets/images/logos/logo.png') }}"
-                                            alt="logo1" style="max-height: 80px;" class="">
-                                    </div>
+        <div class="container-fluid py-4">
+            <div class="row mb-4">
+                <div class="row align-items-center">
+                    <!-- Left Logo -->
+                    <div class="col-md-2 text-start">
+                        <img src="{{ asset($data->logo1 ? 'storage/' . $data->logo1 : 'admin_assets/images/logos/logo.png') }}"
+                            alt="logo1" style="max-height: 80px;" class="">
+                    </div>
 
-                                    <!-- Center Heading -->
-                                    <div class="col-md-8 text-center">
-                                        <h3 class="mb-1">{!! $data->heading ?? '<b>Main Heading Here</b>' !!}</h3>
-                                        <div class="small fw-bold text-muted">
-                                            {{ $data->sub_heading ?? 'Sub Heading Here' }}
-                                        </div>
-                                    </div>
+                    <!-- Center Heading -->
+                    <div class="col-md-8 text-center">
+                        <h3 class="mb-1">{!! $data->heading ?? '<b>Main Heading Here</b>' !!}</h3>
+                        <div class="small fw-bold text-muted">
+                            {{ $data->sub_heading ?? 'Sub Heading Here' }}
+                        </div>
+                    </div>
 
-                                    <!-- Right Logo -->
-                                    <div class="col-md-2 text-end">
-                                        <img src="{{ asset($data->logo2 ? 'storage/' . $data->logo2 : 'images/azadi.png') }}"
-                                            alt="logo2" style="max-height: 80px;" class="img-fluid">
-                                    </div>
-                                </div>
-</div>
-       </div>
+                    <!-- Right Logo -->
+                    <div class="col-md-2 text-end">
+                        <img src="{{ asset($data->logo2 ? 'storage/' . $data->logo2 : 'images/azadi.png') }}"
+                            alt="logo2" style="max-height: 80px;" class="img-fluid">
+                    </div>
+                </div>
+            </div>
+        </div>
         <div class="container-fluid">
-            
+
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item active">Home</li>
@@ -423,7 +420,7 @@
                     <div class="card">
                         <div class="card-body">
                             <div class="card-title">
-                               
+
 
                                 <!-- Bottom Row Logos (Digital India & Swachh Bharat) -->
                                 <div class="row align-items-center">
@@ -641,6 +638,36 @@
             }
         }
 
+        // function replicateRow(event) {
+        //     event.preventDefault();
+        //     const table = event.target.closest('table').getElementsByTagName('tbody')[0];
+
+        //     const lastRow = table.rows[table.rows.length - 1];
+        //     const newRow = lastRow.cloneNode(true);
+
+        //     const isDuplicate = checkDropdownDuplicates(newRow);
+        //     if (isDuplicate) {
+        //         resetRowInputs(lastRow);
+        //     } else {
+        //         const newRowIndex = table.rows.length;
+        //         newRow.id = 'row-' + newRowIndex;
+
+        //         const inputs = newRow.querySelectorAll('input, select, textarea');
+        //         inputs.forEach(function(input) {
+        //             const match = input.name.match(/^table_(\d+)_\d+_(\d+)$/);
+        //             if (match) {
+        //                 const sectionId = match[1];
+        //                 const colIndex = match[2];
+        //                 input.name = `table_${sectionId}_${newRowIndex}_${colIndex}`;
+        //                 input.id = `table_${sectionId}_${newRowIndex}_${colIndex}`;
+        //             }
+        //         });
+
+        //         resetRowInputs(newRow);
+        //         table.appendChild(newRow);
+        //     }
+        // }
+
         function replicateRow(event) {
             event.preventDefault();
             const table = event.target.closest('table').getElementsByTagName('tbody')[0];
@@ -648,28 +675,35 @@
             const lastRow = table.rows[table.rows.length - 1];
             const newRow = lastRow.cloneNode(true);
 
-            const isDuplicate = checkDropdownDuplicates(newRow);
-            if (isDuplicate) {
-                resetRowInputs(lastRow);
-            } else {
-                const newRowIndex = table.rows.length;
-                newRow.id = 'row-' + newRowIndex;
+            const newRowIndex = table.rows.length;
+            newRow.id = 'row-' + newRowIndex;
 
-                const inputs = newRow.querySelectorAll('input, select, textarea');
-                inputs.forEach(function(input) {
-                    const match = input.name.match(/^table_(\d+)_\d+_(\d+)$/);
-                    if (match) {
-                        const sectionId = match[1];
-                        const colIndex = match[2];
-                        input.name = `table_${sectionId}_${newRowIndex}_${colIndex}`;
-                        input.id = `table_${sectionId}_${newRowIndex}_${colIndex}`;
-                    }
-                });
+            const inputs = newRow.querySelectorAll('input, select, textarea');
+            inputs.forEach(function(input) {
+                // Match names like: table_99_0_0 or table_99_0_1[]
+                const match = input.name.match(/^table_(\d+)_(\d+)_(\d+)(\[\])?$/);
+                if (match) {
+                    const sectionId = match[1];
+                    const rowIndex = newRowIndex;
+                    const colIndex = match[3];
+                    const suffix = match[4] || '';
 
-                resetRowInputs(newRow);
-                table.appendChild(newRow);
-            }
+                    input.name = `table_${sectionId}_${rowIndex}_${colIndex}${suffix}`;
+                    input.id = `table_${sectionId}_${rowIndex}_${colIndex}`;
+                }
+                // Reset values for new row
+                if (input.tagName === 'SELECT') {
+                    input.selectedIndex = 0;
+                } else if (input.type === 'checkbox' || input.type === 'radio') {
+                    input.checked = false;
+                } else {
+                    input.value = '';
+                }
+            });
+
+            table.appendChild(newRow);
         }
+
 
         function resetRowInputs(row) {
             row.querySelectorAll('input, select, textarea').forEach(input => {
