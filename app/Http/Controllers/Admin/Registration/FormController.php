@@ -187,10 +187,6 @@ class FormController extends Controller
 
     public function saveform(Request $request, $formid)
     {
-        // dd($request->all());
-        // dd($formid);
-        // $formId = $request->input('formid', 0);
-        // dd($formId);
         DB::beginTransaction();
 
         try {
@@ -225,31 +221,7 @@ class FormController extends Controller
                 }
             }
 
-            // Insert standard fields
-            // foreach ($fieldNames as $index => $name) {
-            //     $name = trim($name);
-            //     if (empty($name)) continue;
-
-            //     $sectionIndex = $fieldSections[$index] ?? 0;
-            //     if (!isset($sectionIds[$sectionIndex])) {
-            //         throw new \Exception("Invalid section index: $sectionIndex");
-            //     }
-
-            //     DB::table('form_data')->insert([
-            //         'formid'     => $formid,
-            //         'section_id' => $sectionIds[$sectionIndex],
-            //         'formname'   => $name,
-            //         'formtype'   => $fieldTypes[$index] ?? 'text',
-            //         'formlabel'  => $fieldLabels[$index] ?? '',
-            //         'fieldoption' => $fieldOptions[$index] ?? '',
-            //         // 'required'   => in_array($index, $isRequireds) ? 1 : 0,
-            //         'required'   => isset($isRequireds[$index]) && $isRequireds[$index] == 1 ? 1 : 0,
-            //         'layout'     => $fieldLayouts[$index] ?? 'vertical',
-            //         'created_at' => now(),
-            //         'updated_at' => now(),
-            //     ]);
-            // }
-
+            // Insert individual fields
             foreach ($fieldNames as $index => $name) {
                 $name = trim($name);
                 if (empty($name)) continue;
@@ -329,150 +301,6 @@ class FormController extends Controller
         }
     }
 
-    // public function show($formId)
-    // {
-    //     // Get form details
-    //     $form = DB::table('local_form')
-    //         ->where('id', $formId)
-    //         ->where('visible', 1)
-    //         ->first();
-
-    //     if (!$form) {
-    //         abort(404, 'Form not found');
-    //     }
-
-    //     // Get form sections
-    //     $sections = DB::table('form_sections')
-    //         ->where('formid', $formId)
-    //         ->orderBy('sort_order')
-    //         ->get();
-
-    //     // Get form fields organized by section
-    //     $fieldsBySection = [];
-    //     $gridFields = [];
-
-    //     $fields = DB::table('form_data')
-    //         ->where('formid', $formId)
-    //         ->orderBy('section_id')
-    //         ->orderBy('row_index')
-    //         ->orderBy('col_index')
-    //         ->get();
-
-    //     foreach ($fields as $field) {
-    //         if ($field->format === 'table') {
-    //             $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
-    //         } else {
-    //             $gridFields[$field->section_id][] = $field;
-    //         }
-    //     }
-
-    //     // Get headers for table sections
-    //     $headersBySection = [];
-    //     $headerFields = DB::table('form_data')
-    //         ->where('formid', $formId)
-    //         ->where('format', 'table')
-    //         ->get();
-
-    //     foreach ($headerFields as $field) {
-    //         if (!isset($headersBySection[$field->section_id][$field->col_index])) {
-    //             $headersBySection[$field->section_id][$field->col_index] = $field->header;
-    //         }
-    //     }
-
-    //     // Get user submissions
-    //     $submissions = DB::table('form_submission')
-    //         ->where('formid', $formId)
-    //         ->where('uid', Auth::id())
-    //         ->get()
-    //         ->keyBy('fieldname');
-
-    //     return view('admin.forms.show', compact(
-    //         'form',
-    //         'sections',
-    //         'fieldsBySection',
-    //         'gridFields',
-    //         'headersBySection',
-    //         'submissions'
-    //     ));
-    // }
-
-
-
-    // public function show($formId)
-    // {
-    //     // Get all visible forms (for sidebar)
-    //     $allForms = DB::table('local_form')
-    //         ->where('visible', 1)
-    //         ->orderBy('sortorder')
-    //         ->get();
-
-    //     //dynamic logo  
-
-    //     $data = DB::table('registration_logo')->first(); // Assumes single row
-    //     // return view('your_view_name', compact('form', 'allForms', 'data'));
-
-
-    //     // Get selected form details
-    //     $form = DB::table('local_form')->where('id', $formId)->first();
-
-    //     if (!$form) {
-    //         abort(404, 'Form not found');
-    //     }
-
-    //     // Fetch sections for the selected form
-    //     $sections = DB::table('form_sections')
-    //         ->where('formid', $formId)
-    //         // ->orderBy('sort_order')
-    //         ->get();
-
-    //     // Fetch fields
-    //     $fields = DB::table('form_data')
-    //         ->where('formid', $formId)
-    //         ->orderBy('id') // Ensure consistent ordering
-    //         // ->orderBy('section_id')
-    //         ->orderBy('row_index')
-    //         ->orderBy('col_index')
-    //         ->get();
-
-    //     // dd($fields);
-
-    //     $fieldsBySection = [];
-    //     $gridFields = [];
-
-    //     foreach ($fields as $field) {
-    //         if ($field->format === 'table') {
-    //             $fieldsBySection[$field->section_id][$field->row_index][$field->col_index] = $field;
-    //         } else {
-    //             $gridFields[$field->section_id][] = $field;
-    //         }
-    //     }
-
-    //     // Get headers
-    //     $headersBySection = [];
-    //     foreach ($fields as $field) {
-    //         if ($field->format === 'table') {
-    //             $headersBySection[$field->section_id][$field->col_index] = $field->header;
-    //         }
-    //     }
-
-    //     // Get user submissions
-    //     $submissions = DB::table('form_submission')
-    //         ->where('formid', $formId)
-    //         ->where('uid', Auth::id())
-    //         ->get()
-    //         ->keyBy('fieldname');
-    //     // dd($data);
-    //     return view('admin.forms.show', compact(
-    //         'form',
-    //         'data',
-    //         'allForms',
-    //         'sections',
-    //         'fieldsBySection',
-    //         'gridFields',
-    //         'headersBySection',
-    //         'submissions'
-    //     ));
-    // }
 
     public function show($formId)
     {
@@ -641,6 +469,11 @@ class FormController extends Controller
                 }
             }
 
+            // Delete old table data for this form and user before reinserting
+            DB::table('form_submission_tabledata')
+                ->where('formid', $formId)
+                ->where('uid', $userId)
+                ->delete();
 
             foreach ($headers_table_data_values as $sectionId => $sectionData) {
                 $headers = $sectionData['headers'] ?? [];
@@ -664,7 +497,9 @@ class FormController extends Controller
                             $columnValue = null;
                         } elseif (is_array($columnValue)) {
                             $fieldType = 'checkbox';
-                            $columnValue = json_encode($columnValue);
+                            // $columnValue = json_encode($columnValue);
+                                $columnValue = implode(',', array_map('trim', $columnValue));
+
                         } elseif (in_array($columnValue, ['on', 'off', '1', '0'], true)) {
                             $fieldType = 'checkbox';
                             $columnValue = ($columnValue === 'on' || $columnValue === '1') ? 1 : 0;
