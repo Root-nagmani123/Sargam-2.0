@@ -294,10 +294,12 @@
 
                         </div>
 
-                        <button type="button" class="btn btn-primary btn-add-field"
+                        <div class="gap-2 text-end">
+                            <button type="button" class="btn btn-primary btn-add-field"
                             onclick="addField({{ $index }}, {{ $section->id }})">Add New Field</button>
                         <button type="button" class="btn btn-danger btn-remove-section"
                             onclick="removeSection(this, '{{ $section->id }}')">Remove Section</button>
+                        </div>
                     </div>
                 @endforeach
             </div>
@@ -305,12 +307,16 @@
             <!--  Hidden container for deleted section IDs -->
             <div id="deleted-sections-container"></div>
 
-            <div class="gap-2 text-center mt-4">
+           <div class="card">
+            <div class="card-body">
+                 <div class="gap-2 text-end">
                 <button type="button" class="btn btn-success btn-add-section" onclick="addSection()">Add New
                     Section</button>
                 <button type="submit" class="btn btn-primary">Save Changes</button>
                 <a href="{{ route('forms.index') }}" class="btn btn-secondary">Cancel</a>
             </div>
+            </div>
+           </div>
 
     </div>
 @section('scripts')
@@ -405,7 +411,7 @@
          `;
             } else {
                 fieldHtml = `
-            <div class="form-group mb-4 rounded">
+            <div class="form-group border p-3 mb-4 rounded shadow-sm bg-light">
                 <input type="hidden" name="field_id[${newFieldIndex}]" value="new">
                 <input type="hidden" name="field_section[${newFieldIndex}]" value="${sectionId}">
 
@@ -452,12 +458,12 @@
             
                 <div class="row align-items-center">
                     <div class="col-md-6">
-                        <div class="form-check">
-                            <input type="checkbox" name="is_required[${newFieldIndex}]" class="form-check-input" id="required_${newFieldIndex}">
+                        <div class="form-check" style="padding-left: 0 !important;">
+                            <input type="checkbox" name="is_required[${newFieldIndex}]" id="required_${newFieldIndex}" >
                             <label class="form-check-label" for="required_${newFieldIndex}">Required</label>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 text-end">
                         <button type="button" class="btn btn-sm btn-danger" onclick="removeField(this)">Remove Field</button>
                     </div>
                 </div>
