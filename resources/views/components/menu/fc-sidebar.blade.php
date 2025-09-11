@@ -119,7 +119,7 @@
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('student.courses') }}">
                     <iconify-icon icon="mdi:image-outline"></iconify-icon>
-                    <span class="hide-menu">Assign Courses</span>
+                    <span class="hide-menu">Student Course Mapping</span>
                 </a>
             </li>
         </ul>
