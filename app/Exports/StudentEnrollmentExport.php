@@ -2,77 +2,18 @@
 
 namespace App\Exports;
 
-// use App\Models\StudentMaster;
-// use Maatwebsite\Excel\Concerns\FromCollection;
-// use Maatwebsite\Excel\Concerns\WithHeadings;
-// use Maatwebsite\Excel\Concerns\WithMapping;
-
-// class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMapping
-// {
-//     protected $course;
-//     protected $status;
-
-//     public function __construct($course = null, $status = null)
-//     {
-//         $this->course = $course;
-//         $this->status = $status;
-//     }
-
-//     public function collection()
-//     {
-//         $query = StudentMaster::with(['courses', 'service']);
-
-//         if ($this->course) {
-//             $query->whereHas('courses', function ($q) {
-//                 $q->where('pk', $this->course); // filter by course pk
-//             });
-//         }
-
-//         if ($this->status) {
-//             $query->whereHas('courses', function ($q) {
-//                 $q->where('active_inactive', $this->status);
-//             });
-//         }
-
-//         return $query->get();
-//     }
-
-//     public function map($student): array
-//     {
-//         // Get all courses joined by comma
-//         $courseNames = $student->courses->pluck('course_name')->join(', ');
-
-//         return [
-//             $student->pk,
-//             trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? '')),
-//             $courseNames,
-//             $student->service->service_name ?? 'N/A',
-//             $student->pivot->active_inactive ?? '-', // careful: pivot only when using courses()
-//             $student->created_date,
-//             $student->modified_date,
-//         ];
-//     }
-
-//     public function headings(): array
-//     {
-//         return [
-//             'ID',
-//             'Student',
-//             'Course(s)',
-//             'Service',
-//             'Status',
-//             'Created Date',
-//             'Modified Date',
-//         ];
-//     }
-// }
-
 use App\Models\StudentMaster;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
-class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMapping
+class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
     protected $courseId;
     protected $status;
@@ -144,6 +85,38 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
             'Status',
             'Created Date',
             'Modified Date',
+        ];
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        $lastRow    = $sheet->getHighestRow();
+        $lastColumn = $sheet->getHighestColumn();
+
+        // Borders + alignment for all cells
+        $sheet->getStyle("A1:{$lastColumn}{$lastRow}")
+            ->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['argb' => 'FF000000'],
+                    ],
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical'   => Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+
+        // Header styling
+        return [
+            1 => [
+                'font' => ['bold' => true],
+                'fill' => [
+                    'fillType'   => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'FFCC00'], // Light Yellow
+                ],
+            ],
         ];
     }
 }

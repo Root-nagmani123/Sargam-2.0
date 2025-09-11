@@ -55,7 +55,7 @@
                                                      </iconify-icon>
                                                  </a>
                                                  <span class="mini-nav-title fs-3 fw-bold text-center d-block mb-2 text-dark">FC
-                                                     Forms</span>
+                                                     Registration</span>
                                              </li>
 
                                          </div>
