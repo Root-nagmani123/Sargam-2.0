@@ -6,7 +6,7 @@
 @endsection
 @section('content')
     <div class="container-fluid">
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 @if (session('success') || session('error'))
                     <div class="container mt-3">
@@ -81,22 +81,41 @@
         // `;
 
             const sectionHtml = `
-    <div class="section-entry border p-4 rounded shadow-sm my-4" id="section_${index}">
-        <h3 class="mb-3">Section ${index + 1}</h3>
-        <div class="form-group mb-3">
-            <label for="section_title_${index}">Section Title:</label>
-            <input type="text" class="form-control" id="section_title_${index}" name="section_title[]" required>
-        </div>
-        <div id="elements-container_${index}">
-            <!-- Both fields and tables will be added here in sequence -->
-        </div>
-        <div class="text-center mt-3">
-            <button type="button" class="btn btn-primary" onclick="addField(${index})">Add Field</button>
-            <button type="button" class="btn btn-info" onclick="addTable(${index})">Add Table</button>
-            <button type="button" class="btn btn-danger" onclick="removeSection(${index})">Remove Section</button>
-        </div>
-        <hr>
+   <div class="section-entry my-2" id="section_${index}">
+    <h3 class="mb-3">Section ${index + 1}</h3>
+    
+    <!-- Section Title -->
+    <div class="form-group mb-3">
+        <label for="section_title_${index}" class="form-label">Section Title:</label>
+        <input type="text" class="form-control" id="section_title_${index}" name="section_title[]" required>
     </div>
+    
+    <!-- Grid Layout -->
+    <div class="form-group mb-3">
+        <label class="form-label">Grid Layout:</label>
+        <select class="form-control grid-select" onchange="updateGrid(${index}, this.value)">
+            <option value="1">1 Column</option>
+            <option value="2">2 Columns</option>
+            <option value="3">3 Columns</option>
+            <option value="4">4 Columns</option>
+            <option value="6">6 Columns</option>
+        </select>
+    </div>
+    
+    <!-- Fields Container -->
+    <div class="row g-3" id="elements-container_${index}">
+        <!-- Fields/Tables will be added here -->
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="text-center mt-3">
+        <button type="button" class="btn btn-primary" onclick="addField(${index})">Add Field</button>
+        <button type="button" class="btn btn-info" onclick="addTable(${index})">Add Table</button>
+        <button type="button" class="btn btn-danger" onclick="removeSection(${index})">Remove Section</button>
+    </div>
+</div>
+
+    <hr>
 `;
             container.insertAdjacentHTML("beforeend", sectionHtml);
         }
@@ -196,17 +215,17 @@
             });
 
             const fieldHtml = `
-        <div class="field-entry border p-4 rounded shadow-sm my-3" id="field_${sectionIndex}_${index}">
+        <div class="field-entry my-2" id="field_${sectionIndex}_${index}">
             <h4>Field ${index + 1}</h4>
             <input type="hidden" name="field_section[]" value="${sectionIndex}">
             <div class="form-group mb-3">
-                <label for="field_name_${sectionIndex}_${index}">Field Name:</label>
+                <label for="field_name_${sectionIndex}_${index}" class="form-label">Field Name:</label>
                 <select class="form-control" id="field_name_${sectionIndex}_${index}" name="field_name[]" required>
                     ${columnOptions}
                 </select>
             </div>
             <div class="form-group mb-3">
-                <label for="field_type_${sectionIndex}_${index}">Field Type:</label>
+                <label for="field_type_${sectionIndex}_${index}" class="form-label">Field Type:</label>
                 <select class="form-control" id="field_type_${sectionIndex}_${index}" name="field_type[]">
                     <option value="text">Text</option>
                     <option value="checkbox">Checkbox</option>
@@ -222,29 +241,26 @@
                 </select>
             </div>
             <div class="form-group mb-3">
-                <label for="field_label_${sectionIndex}_${index}">Field Label:</label>
+                <label for="field_label_${sectionIndex}_${index}" class="form-label">Field Label:</label>
                 <input type="text" class="form-control" id="field_label_${sectionIndex}_${index}" name="field_label[]" required>
             </div>
            <div class="form-group mb-3 field-options" id="field_options_group_${sectionIndex}_${index}" style="display:none;">
-                <label for="field_options_${sectionIndex}_${index}">Options (comma separated):</label>
+                <label for="field_options_${sectionIndex}_${index}" class="form-label">Options (comma separated):</label>
                 <input type="text" class="form-control" id="field_options_${sectionIndex}_${index}" name="field_options[]">
             </div>
-          <div class="form-group mb-3">
-    <label>Required:</label>
-    <input type="hidden" name="is_required[${sectionIndex}_${index}]" value="0">
-    <input type="checkbox" name="is_required[${sectionIndex}_${index}]" value="1">
+          <div class="form-check form-switch mb-3">
+  <input type="hidden" name="is_required[${sectionIndex}_${index}]" value="0">
+  <input class="form-check-input" type="checkbox" id="requiredSwitch_${sectionIndex}_${index}" name="is_required[${sectionIndex}_${index}]" value="1">
+  <label class="form-check-label" for="requiredSwitch_${sectionIndex}_${index}">
+    Required Field
+  </label>
 </div>
-
-          <!--  <div class="form-group mb-3">
-                <label for="field_layout_${sectionIndex}_${index}">Layout:</label>
-                <select class="form-control" id="field_layout_${sectionIndex}_${index}" name="field_layout[]">
-                    <option value="vertical">Vertical</option>
-                    <option value="horizontal">Horizontal</option>
-                </select> -->
             </div>
-            <button type="button" class="btn btn-danger" onclick="removeField(${sectionIndex}, ${index})">Remove Field</button>
-            <hr>
+            <div class="text-end">
+               <button type="button" class="btn btn-danger" onclick="removeField(${sectionIndex}, ${index})">Remove Field</button>
+            </div>
         </div>
+         <hr>
     `;
 
             container.insertAdjacentHTML("beforeend", fieldHtml);
@@ -339,15 +355,15 @@
 
 
             const tableHtml = `
-                <div class="table-entry border p-4 rounded shadow-sm my-3" id="table_${sectionIndex}_${index}">
+                <div class="table-entry my-3" id="table_${sectionIndex}_${index}">
                     <h4>Table ${index + 1}</h4>
                     <input type="hidden" name="table_section[]" value="${sectionIndex}">
                     <div class="form-group mb-3">
-                        <label for="table_rows_${sectionIndex}_${index}">Number of Rows:</label>
+                        <label for="table_rows_${sectionIndex}_${index}" class="form-label">Number of Rows:</label>
                         <input type="number" class="form-control" id="table_rows_${sectionIndex}_${index}" name="table_rows[]" required>
                     </div>
                     <div class="form-group mb-3">
-                        <label for="table_columns_${sectionIndex}_${index}">Number of Columns:</label>
+                        <label for="table_columns_${sectionIndex}_${index}" class="form-label">Number of Columns:</label>
                         <input type="number" class="form-control" id="table_columns_${sectionIndex}_${index}" name="table_columns[]" required>
                     </div>
                     <div id="table-container${sectionIndex}_${index}"></div>
