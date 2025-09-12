@@ -531,7 +531,8 @@
                                                 @if (isset($gridFields[$section->id]))
                                                     <div class="row">
                                                         @foreach ($gridFields[$section->id] as $field)
-                                                            <div class="col-md-4 mb-3">
+                                                            {{-- <div class="col-md-4 mb-3"> --}}
+                                                            <div class="{{ $section->layout ?? 'col-md-4' }} mb-3">
                                                                 @include('admin.forms.field-types', [
                                                                     'field' => $field,
                                                                     'value' =>

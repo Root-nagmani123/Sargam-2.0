@@ -196,6 +196,7 @@ class FormEditController extends Controller
                 foreach ($request->section_id as $index => $section_id) {
                     $title = trim($request->section_title[$index]);
                     $order = $request->sort_order[$index] ?? $index;
+                    $layout = $request->section_layout[$index] ?? 'col-4'; // New layout field
 
                     if (str_starts_with($section_id, 'new')) {
                         // Insert new section and map the "new-1" key to DB ID
@@ -203,6 +204,8 @@ class FormEditController extends Controller
                             'formid' => $form_id,
                             'section_title' => $title,
                             'sort_order' => $order,
+                            'layout' => $layout,
+
                             // 'created_at' => now(),
                             // 'updated_at' => now(),
                         ]);
@@ -212,6 +215,7 @@ class FormEditController extends Controller
                         DB::table('form_sections')->where('id', $section_id)->update([
                             'section_title' => $title,
                             'sort_order' => $order,
+                            'layout' => $layout,
                             // 'updated_at' => now(),
                         ]);
                     }
@@ -220,18 +224,18 @@ class FormEditController extends Controller
 
             // Handle Fields
             if ($request->has('field_id') && is_array($request->field_id)) {
-              
-                 foreach ($request->field_id as $index => $field_id) {
-                $field_type = $request->field_type[$index];
 
-                $is_required = ($field_id === 'new')
-                    ? (isset($request->is_required[$index]) ? 1 : 0)
-                    : (isset($request->is_required[$field_id]) ? 1 : 0);
+                foreach ($request->field_id as $index => $field_id) {
+                    $field_type = $request->field_type[$index];
 
-                $temp_section_id = $request->field_section[$index];
-                $section_id = (str_starts_with($temp_section_id, 'new'))
-                    ? ($newSectionMap[$temp_section_id] ?? null)
-                    : $temp_section_id;
+                    $is_required = ($field_id === 'new')
+                        ? (isset($request->is_required[$index]) ? 1 : 0)
+                        : (isset($request->is_required[$field_id]) ? 1 : 0);
+
+                    $temp_section_id = $request->field_section[$index];
+                    $section_id = (str_starts_with($temp_section_id, 'new'))
+                        ? ($newSectionMap[$temp_section_id] ?? null)
+                        : $temp_section_id;
 
                     // Define field data
                     $common_data = [
