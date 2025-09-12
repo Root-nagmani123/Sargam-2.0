@@ -3,39 +3,6 @@
 @section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
-<style>
-.chat-body {
-    height: 400px;
-    overflow-y: auto;
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
-}
-
-.chat-message {
-    margin-bottom: 0.75rem;
-}
-
-.chat-message.user {
-    text-align: right;
-}
-
-.chat-message .message {
-    display: inline-block;
-    padding: 0.5rem 0.75rem;
-    border-radius: 1rem;
-    max-width: 75%;
-}
-
-.chat-message.bot .message {
-    background-color: #e9ecef;
-}
-
-.chat-message.user .message {
-    background-color: #0d6efd;
-    color: white;
-}
-</style>
 <div class="container-fluid">
 
     <x-breadcrum title="Notice /Memo Management" />
@@ -53,83 +20,89 @@
             <hr>
             <div class="dataTables_wrapper" id="alt_pagination_wrapper">
                 <div class="table-responsive">
-                    <table class="table table-striped table-bordered text-nowrap" id="alt_pagination"
-                        data-toggle="data-table">
-                        <thead>
-                            <!-- start row -->
+                    <table class="table table-striped table-bordered text-nowrap" id="alt_pagination" data-toggle="data-table">
+                        <thead class="table-light">
                             <tr>
                                 <th class="col">S.No.</th>
-                                <th class="col">Participant Name</th>
+                                <th class="col">Participant</th>
                                 <th class="col">Type</th>
-                                <th class="col">Session Date</th>
+                                <th class="col">Date</th>
                                 <th class="col">Topic</th>
-                                <th class="col">Conversation Response</th>
+                                <th class="col">Conversation</th>
                                 <th class="col">Status</th>
                             </tr>
-                            <!-- end row -->
                         </thead>
                         <tbody>
-                            @if (count($memos) == 0)
-                            <tr>
-                                <td colspan="9" class="text-center">No records found</td>
-                            </tr>
+                            @if ($memos->isEmpty())
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-4">
+                                        <i class="bi bi-inbox me-1"></i> No records found
+                                    </td>
+                                </tr>
                             @else
-                            @php
-                            $grouped = $memos->groupBy('type_notice_memo');
-                            @endphp
+                                @php $grouped = $memos->groupBy('type_notice_memo'); @endphp
 
-                            @foreach ($grouped as $type => $group)
-                            {{-- Section Heading --}}
-                           
+                                @foreach ($grouped as $type => $group)
+                                    @foreach ($group as $memo)
+                                        <tr>
+                                            <td>{{ $loop->iteration }}</td>
+                                            <td>{{ $memo->student_name }}</td>
+                                            <td>
+                                                @if ($memo->notice_memo == '1')
+                                                    <span class="badge rounded-pill bg-primary-subtle text-primary">Notice</span>
+                                                @elseif ($memo->notice_memo == '2')
+                                                    <span class="badge rounded-pill bg-secondary-subtle text-secondary">Memo</span>
+                                                @else
+                                                    <span class="badge rounded-pill bg-info-subtle text-info">Other</span>
+                                                @endif
+                                            </td>
+                                            <td class="date">{{ $memo->date_ }}</td>
+                                            <td>{{ $memo->topic_name }}</td>
+                                            <td>
+                                                <div class="d-flex gap-2 flex-nowrap">
+                                                    <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
+                                                    class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Notice Conversation">
+                                                        <i class="bi bi-chat-dots"></i> Notice
+                                                    </a>
 
-                            @foreach ($group as $memo)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $memo->student_name }}</td>
-                                <td>
-                                    @if ($memo->notice_memo == '1')
-                                    <span class="badge bg-primary-subtle text-primary">Notice</span>
-                                    @elseif ($memo->notice_memo == '2')
-                                    <span class="badge bg-secondary-subtle text-secondary">Memo</span>
-                                    @else
-                                    <span class="badge bg-info-subtle text-info">Other</span>
-                                    @endif
-                                </td>
-                                <td>{{ $memo->date_ }}</td>
-                                <td>{{ $memo->topic_name }}</td>
-                                <td>
-                                    <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
-                                        class="btn btn-primary btn-sm">Notice Conversation</a>
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-secondary view-conversation"
+                                                        data-bs-toggle="offcanvas"
+                                                        data-bs-target="#chatOffcanvas"
+                                                        data-type="student"
+                                                        data-id="{{ $memo->notice_id }}"
+                                                        data-topic="{{ $memo->topic_name }}"
+                                                        data-bs-toggle="tooltip"
+                                                        title="Quick View">
+                                                        <i class="bi bi-eye"></i>
+                                                    </button>
 
-
-                                    <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
-                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="student"
-                                        data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
-                                        <i class="material-icons md-18" style="color: #af2910;">mark_unread_chat_alt</i>
-                                    </a>
-                                    @if($memo->type_notice_memo == 'Memo')
-                              
-                                        <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
-                                        class="btn btn-primary btn-sm">Memo Conversation</a>
-
-                                    @endif
-                                </td>
-                                <td>
-                                    @if ($memo->status == 1)
-                                    <span class="badge bg-success-subtle text-success">Open</span>
-                                    @else
-                                    <span class="badge bg-danger-subtle text-danger">Close</span>
-                                    @endif
-                                </td>
-                            </tr>
-                            @endforeach
-                            @endforeach
+                                                    @if($memo->type_notice_memo == 'Memo')
+                                                        <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
+                                                        class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Memo Conversation">
+                                                            <i class="bi bi-chat-square-text"></i> Memo
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @if ($memo->status == 1)
+                                                    <span class="badge rounded-pill bg-success-subtle text-success">
+                                                        <i class="bi bi-check-circle me-1"></i> Open
+                                                    </span>
+                                                @else
+                                                    <span class="badge rounded-pill bg-danger-subtle text-danger">
+                                                        <i class="bi bi-x-circle me-1"></i> Close
+                                                    </span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @endforeach
                             @endif
                         </tbody>
-
                     </table>
                 </div>
-
             </div>
         </div>
     </div>
