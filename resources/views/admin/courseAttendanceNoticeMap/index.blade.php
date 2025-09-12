@@ -166,7 +166,7 @@
 
                                     <!-- Admin Offcanvas -->
                                     <button type="button"
-                                        class="btn btn-sm btn-outline-secondary d-flex align-items-center"
+                                        class="btn btn-sm btn-outline-secondary d-flex align-items-center view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
                                         data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
                                         <i class="bi bi-chat me-1"></i> View
