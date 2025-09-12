@@ -89,138 +89,165 @@
 
             </div>
             <hr>
-            <div class="dataTables_wrapper" id="alt_pagination_wrapper">
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered text-nowrap" id="alt_pagination"
-                        data-toggle="data-table">
-                        <thead>
-                            <!-- start row -->
-                            <tr>
-                                <th class="col">S.No.</th>
-                                <th class="col">Participant Name</th>
-                                <th class="col">Type</th>
-                                <th class="col">Session Date</th>
-                                <th class="col">Topic</th>
-                                <th class="col">Conversation</th>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered text-nowrap" id="alt_pagination"
+                    data-toggle="data-table">
+                    <thead>
+                        <!-- start row -->
+                        <tr>
+                            <th class="col">S.No.</th>
+                            <th class="col">Participant Name</th>
+                            <th class="col">Type</th>
+                            <th class="col">Session Date</th>
+                            <th class="col">Topic</th>
+                            <th class="col">Conversation</th>
+                            <th class="col">Response</th>
+                            <th class="col">Conclusion Type</th>
+                            <th class="col">Discussion Name</th>
+                            <th class="col">Conclusion Remark</th>
+                            <th class="col">Status</th>
+                        </tr> <!-- end row -->
+                    </thead>
+                    <tbody>
+                        @if ($memos->isEmpty())
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                No records found
+                            </td>
+                        </tr>
+                        @else
+                        @foreach ($memos as $memo)
+                        <tr>
+                            <!-- Serial -->
+                            <td class="sno">{{ $loop->iteration }}</td>
 
-                                <th class="col">Response</th>
-                                <th class="col">Conclusion Type</th>
-                                <th class="col">Conclusion Remark</th>
-                                <th class="col">Status</th>
-                            </tr>
-                            <!-- end row -->
-                        </thead>
-                        <tbody>
-                            @if (count($memos) == 0)
-                            <tr>
-                                <td colspan="9" class="text-center">No records found</td>
-                            </tr>
-                            @else
-                            @foreach ($memos as $memo)
+                            <!-- Student -->
+                            <td class="s_name fw-medium">{{ $memo->student_name }}</td>
 
-                            <tr>
-                                <td class="sno">{{ $loop->iteration }}</td>
-                                <td class="s_name">{{ $memo->student_name }}</td>
-                                <td class="type">
-                                    @if ($memo->notice_memo == '1')
-                                    <span class="badge bg-primary-subtle text-primary">Notice</span>
-                                    @elseif ($memo->notice_memo == '2')
-                                    <span class="badge bg-secondary-subtle text-secondary">Memo</span>
-                                    @else
-                                    <span class="badge bg-info-subtle text-info">Other</span>
-                                    @endif
-                                </td>
-                                <td>{{ $memo->date_}}</td>
-                                <td>{{ $memo->topic_name }}</td>
-                                <td class="conversation">
-                                    @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
-                                        @if( $memo->notice_id != null)
-                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
-                                        class="btn btn-primary btn-sm">Notice Conversation</a>
-                                    @else
-                                    <span class="text-muted">No Conversation</span>
-                                    @endif
-                                    @endif
-
-                                    <a href="javascript:void(0)" class="text-primary btn btn-sm view-conversation"
-                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
-                                        data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}"><i
-                                            class="material-icons md-18"
-                                            style="vertical-align: middle; line-height: 1;color: #af2910;">mark_unread_chat_alt</i></a>
-                                    @if($memo->type_notice_memo == 'Notice')
-
-                                    <a href="script:void(0)" class="btn btn-secondary btn-sm">Memo Conversation</a>
-
-
-                                    @elseif($memo->type_notice_memo == 'Memo')
-                                    @if($memo->status == 1 || $memo->communication_status == 1 ||
-                                    $memo->communication_status == 2)
-
-                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
-                                        class="btn btn-primary btn-sm">Memo Conversation</a>
-
-                                    @endif
-                                    @endif
-
-                                </td>
-                                <td class="response">
-                                     @if($memo->type_notice_memo == 'Notice')
-                                    @if($memo->status == 1)
-                                    <button href="" class="btn-outline-secondary btn btn-sm" readonly>Generate
-                                        Memo</button>
-                                    @elseif($memo->status == 2)
-                                  <a href="javascript:void(0)" class="btn btn-danger btn-sm generate-memo-btn" 
-   data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal" data-bs-target="#memo_generate">
-   Generate Memo
-</a>
-
-                                    @endif
-                                </td>
-                                 
-                                <td class="conclusion_type">
-                                     @if($memo->type_notice_memo == 'Memo')
-
-                                    @endif
-                                    @elseif($memo->type_notice_memo == 'Memo')
-                                   <button href="" class="btn-outline-secondary btn btn-sm" readonly>Memo Generated
-                                        </button>
-
-                                    @endif
-                                </td>
-                                <td class="discussion_name">
-                                    @if($memo->type_notice_memo == 'Memo')
-                                    @if ($memo->communication_status == 2)
-                                    {{ $memo->discussion_name }}
-                                    @endif
-                                    @endif
-                                </td>
-                                @if($memo->type_notice_memo == 'Memo')
-
-                                    @if( $memo->communication_status == 2)
-                                <td >
-                                    
-                                    {{ $memo->conclusion_remark }}
-                                    
-                                </td>
+                            <!-- Type -->
+                            <td class="type">
+                                @if ($memo->notice_memo == '1')
+                                <span class="badge bg-primary-subtle text-primary">
+                                    <i class="bi bi-file-earmark-text me-1"></i> Notice
+                                </span>
+                                @elseif ($memo->notice_memo == '2')
+                                <span class="badge bg-secondary-subtle text-secondary">
+                                    <i class="bi bi-file-earmark me-1"></i> Memo
+                                </span>
+                                @else
+                                <span class="badge bg-info-subtle text-info">
+                                    <i class="bi bi-question-circle me-1"></i> Other
+                                </span>
                                 @endif
-                                    @endif
-                                <!-- Offcanvas Chat Component -->
+                            </td>
 
-                                <td class="status">
-                                    @if ($memo->status == 1)
-                                    <span class="badge bg-success-subtle text-success">Open</span>
+                            <!-- Date -->
+                            <td>{{ $memo->date_ }}</td>
+
+                            <!-- Topic -->
+                            <td>{{ $memo->topic_name }}</td>
+
+                            <!-- Conversations -->
+                            <td class="conversation">
+                                <div class="d-flex align-items-center gap-2 flex-nowrap">
+                                    @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
+                                    @if($memo->notice_id)
+                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
+                                        class="btn btn-sm btn-outline-primary d-flex align-items-center">
+                                        <i class="bi bi-chat-dots me-1"></i> Notice
+                                    </a>
                                     @else
-                                    <span class="badge bg-danger-subtle text-danger">Close</span>
+                                    <span class="text-muted small d-flex align-items-center">
+                                        <i class="bi bi-chat-slash me-1"></i> No Conversation
+                                    </span>
                                     @endif
-                                </td>
-                            </tr>
-                            @endforeach
-                            @endif
-                        </tbody>
-                    </table>
-                </div>
+                                    @endif
 
+                                    <!-- Admin Offcanvas -->
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary d-flex align-items-center"
+                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
+                                        data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
+                                        <i class="bi bi-chat me-1"></i> View
+                                    </button>
+
+                                    @if($memo->type_notice_memo == 'Notice')
+                                    <button class="btn btn-sm btn-outline-secondary" disabled>
+                                        Memo
+                                    </button>
+                                    @elseif($memo->type_notice_memo == 'Memo' &&
+                                    in_array($memo->communication_status,[1,2]))
+                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
+                                        class="btn btn-sm btn-outline-primary d-flex align-items-center">
+                                        <i class="bi bi-chat-square-text me-1"></i> Memo
+                                    </a>
+                                    @endif
+                                </div>
+                            </td>
+
+
+                            <!-- Response (Generate Memo) -->
+                            <td class="response">
+                                @if($memo->type_notice_memo == 'Notice')
+                                @if($memo->status == 1)
+                                <button type="button" class="btn btn-sm btn-secondary" disabled data-bs-toggle="tooltip"
+                                    data-bs-placement="top" title="Memo generation not available yet">
+                                    <i class="bi bi-file-earmark-lock me-1"></i> Generate Memo
+                                </button>
+                                @elseif($memo->status == 2)
+                                <a href="javascript:void(0)" class="btn btn-sm btn-success generate-memo-btn"
+                                    data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal"
+                                    data-bs-target="#memo_generate">
+                                    <i class="bi bi-file-earmark-plus me-1"></i> Generate Memo
+                                </a>
+                                @endif
+                                @endif
+                            </td>
+
+                            <!-- Conclusion -->
+                            <td class="conclusion_type">
+                                @if($memo->type_notice_memo == 'Memo')
+                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                                    Memo Generated
+                                </button>
+                                @endif
+                            </td>
+
+                            <!-- Discussion Name -->
+                            <td class="discussion_name">
+                                @if($memo->type_notice_memo == 'Memo' && $memo->communication_status == 2)
+                                {{ $memo->discussion_name }}
+                                @endif
+                            </td>
+
+                            <!-- Conclusion Remark -->
+                            <td>
+                                @if($memo->type_notice_memo == 'Memo' && $memo->communication_status == 2)
+                                {{ $memo->conclusion_remark }}
+                                @endif
+                            </td>
+
+                            <!-- Status -->
+                            <td class="status">
+                                @if ($memo->status == 1)
+                                <span class="badge bg-success-subtle text-success">
+                                    <i class="bi bi-check-circle me-1"></i> Open
+                                </span>
+                                @else
+                                <span class="badge bg-danger-subtle text-danger">
+                                    <i class="bi bi-x-circle me-1"></i> Close
+                                </span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                        @endif
+                    </tbody>
+
+                </table>
             </div>
+
         </div>
     </div>
     <!-- end Zero Configuration -->
@@ -256,8 +283,7 @@
                                 <input type="text" id="course_master_name" class="form-control"
                                     name="course_master_name" readonly>
                                 <input type="hidden" id="course_master_pk" name="course_master_pk">
-                                <input type="hidden" id="student_notice_status_pk"
-                                    name="student_notice_status_pk">
+                                <input type="hidden" id="student_notice_status_pk" name="student_notice_status_pk">
                                 <input type="hidden" id="memo_count" name="memo_count">
                                 <input type="hidden" id="student_pk" name="student_pk">
                                 @error('course_master_name')
@@ -378,7 +404,7 @@
                                 @enderror
                             </div>
                         </div>
-                    
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -389,7 +415,7 @@
         </div>
 
     </div>
-<!-- Memo generation end -->
+    <!-- Memo generation end -->
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
