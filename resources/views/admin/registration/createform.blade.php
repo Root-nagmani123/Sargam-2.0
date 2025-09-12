@@ -57,29 +57,6 @@
         function addSection() {
             const container = document.getElementById("sections-container");
             const index = container.children.length;
-
-            // const sectionHtml = `
-        //     <div class="section-entry border p-4 rounded shadow-sm my-4" id="section_${index}">
-        //         <h3 class="mb-3">Section ${index + 1}</h3>
-        //         <div class="form-group mb-3">
-        //             <label for="section_title_${index}">Section Title:</label>
-        //             <input type="text" class="form-control" id="section_title_${index}" name="section_title[]" required>
-        //         </div>
-        //         <div id="fields-container_${index}">
-        //             <!-- Fields for this section will be added here -->
-        //         </div>
-        //         <div id="tables-container_${index}">
-        //             <!-- Tables for this section will be added here -->
-        //         </div>
-        //         <div class="text-center mt-3">
-        //             <button type="button" class="btn btn-primary" onclick="addField(${index})">Add Field</button>
-        //             <button type="button" class="btn btn-info" onclick="addTable(${index})">Add Table</button>
-        //             <button type="button" class="btn btn-danger" onclick="removeSection(${index})">Remove Section</button>
-        //         </div>
-        //         <hr>
-        //     </div>
-        // `;
-
             const sectionHtml = `
     <div class="section-entry border p-4 rounded shadow-sm my-4" id="section_${index}">
         <h3 class="mb-3">Section ${index + 1}</h3>
@@ -87,6 +64,19 @@
             <label for="section_title_${index}">Section Title:</label>
             <input type="text" class="form-control" id="section_title_${index}" name="section_title[]" required>
         </div>
+
+         <!-- 🔹 New Layout Dropdown -->
+        <div class="form-group mb-3">
+            <label for="section_layout_${index}">Section Layout:</label>
+            <select class="form-control" id="section_layout_${index}" name="section_layout[]">
+                <option value="col-12">1 Column</option>
+                <option value="col-6">2 Columns</option>
+                <option value="col-4">3 Columns</option>
+                <option value="col-3">4 Columns</option>
+                <option value="col-2">6 Columns</option>
+            </select>
+        </div>
+        
         <div id="elements-container_${index}">
             <!-- Both fields and tables will be added here in sequence -->
         </div>
@@ -101,75 +91,7 @@
             container.insertAdjacentHTML("beforeend", sectionHtml);
         }
 
-        // function addField(sectionIndex) {
-        //     const container = document.getElementById(`fields-container_${sectionIndex}`);
-        //     const index = container.children.length;
-
-        //     let columnOptions = '<option value="">Select Column</option>';
-        //     submissionColumns.forEach(col => {
-        //         columnOptions += `<option value="${col}">${col}</option>`;
-        //     });
-
-        //     const fieldHtml = `
-    //                 <div class="field-entry border p-4 rounded shadow-sm my-3" id="field_${sectionIndex}_${index}">
-    //                     <h4>Field ${index + 1}</h4>
-    //                     <input type="hidden" name="field_section[]" value="${sectionIndex}">
-    //                     <div class="form-group mb-3">
-    //                         <label for="field_name_${sectionIndex}_${index}">Field Name:</label>
-    //                         <select class="form-control" id="field_name_${sectionIndex}_${index}" name="field_name[]" required>
-    //                             ${columnOptions}
-    //                         </select>
-    //                     </div>
-    //                     <div class="form-group mb-3">
-    //                         <label for="field_type_${sectionIndex}_${index}">Field Type:</label>
-    //                         <select class="form-control" id="field_type_${sectionIndex}_${index}" name="field_type[]">
-    //                             <option value="text">Text</option>
-    //                             <option value="checkbox">Checkbox</option>
-    //                             <option value="email">Email</option>
-    //                             <option value="textarea">Textarea</option>
-    //                             <option value="radio">Radio</option>
-    //                             <option value="dropdown">Dropdown</option>
-    //                             <option value="date">Date</option>
-    //                             <option value="file">File</option>
-    //                             <option value="view_download">View/Download</option>
-    //                             <option value="number">Number</option>
-    //                             <option value="time">Time</option>
-    //                         </select>
-    //                     </div>
-    //                     <div class="form-group mb-3">
-    //                         <label for="field_label_${sectionIndex}_${index}">Field Label:</label>
-    //                         <input type="text" class="form-control" id="field_label_${sectionIndex}_${index}" name="field_label[]" required>
-    //                     </div>
-    //                     <div class="form-group mb-3">
-    //                         <label for="field_options_${sectionIndex}_${index}">Options (comma separated):</label>
-    //                         <input type="text" class="form-control" id="field_options_${sectionIndex}_${index}" name="field_options[]">
-    //                     </div>
-    //                     <div class="form-group mb-3">
-    //                         <label>Required:</label>
-    //                         <input type="checkbox" name="is_required[]" value="1">
-    //                     </div>
-    //                     <div class="form-group mb-3">
-    //                         <label for="field_layout_${sectionIndex}_${index}">Layout:</label>
-    //                         <select class="form-control" id="field_layout_${sectionIndex}_${index}" name="field_layout[]">
-    //                             <option value="vertical">Vertical</option>
-    //                             <option value="horizontal">Horizontal</option>
-    //                         </select>
-    //                     </div>
-    //                     <button type="button" class="btn btn-danger" onclick="removeField(${sectionIndex}, ${index})">Remove Field</button>
-    //                     <hr>
-    //                 </div>
-    //             `;
-        //     container.insertAdjacentHTML("beforeend", fieldHtml);
-        // }
-
         const sectionFieldCount = {};
-
-        // function addField(sectionIndex) {
-        //     const container = document.getElementById(`fields-container_${sectionIndex}`);
-        //     if (!sectionFieldCount[sectionIndex]) {
-        //         sectionFieldCount[sectionIndex] = 0;
-        //     }
-        //     const index = sectionFieldCount[sectionIndex]++;
 
         function addField(sectionIndex) {
             const container = document.getElementById(`elements-container_${sectionIndex}`);
@@ -177,11 +99,6 @@
                 sectionFieldCount[sectionIndex] = 0;
             }
             const index = sectionFieldCount[sectionIndex]++;
-            // const index = container.children.length;
-
-            // Step 1: List of reserved/excluded column names
-            // const excludedColumns = ['id', 'formid', 'uid', 'timecreated'];
-
             // Step 2: Get already selected columns
             const usedColumns = Array.from(document.querySelectorAll('select[name="field_name[]"]'))
                 .map(select => select.value)
@@ -330,9 +247,6 @@
             }
         }
 
-        // function addTable(sectionIndex) {
-        //     const container = document.getElementById(`tables-container_${sectionIndex}`);
-        //     const index = container.children.length;
         function addTable(sectionIndex) {
             const container = document.getElementById(`elements-container_${sectionIndex}`);
             const index = container.children.length;
@@ -426,13 +340,6 @@
 
             tableContainer.innerHTML = table;
         }
-
-        // function removeTable(sectionIndex, tableIndex) {
-        //     const table = document.getElementById(`table_${sectionIndex}_${tableIndex}`);
-        //     if (table) {
-        //         table.remove();
-        //     }
-        // }
 
         function removeTable(sectionIndex, tableIndex) {
             const table = document.getElementById(`table_${sectionIndex}_${tableIndex}`);

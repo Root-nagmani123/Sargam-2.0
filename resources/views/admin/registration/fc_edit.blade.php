@@ -23,6 +23,21 @@
                             <input type="text" name="section_title[]" value="{{ $section->section_title }}" required
                                 class="form-control">
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Section Layout:</label>
+                            <select name="section_layout[]" class="form-select">
+                                <option value="col-12" {{ $section->layout == 'col-12' ? 'selected' : '' }}>1 Column
+                                </option>
+                                <option value="col-6" {{ $section->layout == 'col-6' ? 'selected' : '' }}>2 Columns
+                                </option>
+                                <option value="col-4" {{ $section->layout == 'col-4' ? 'selected' : '' }}>3 Columns
+                                </option>
+                                <option value="col-3" {{ $section->layout == 'col-3' ? 'selected' : '' }}>4 Columns
+                                </option>
+                                <option value="col-2" {{ $section->layout == 'col-2' ? 'selected' : '' }}>6 Columns
+                                </option>
+                            </select>
+                        </div>
 
                         @php
                             $section_fields = $fields->where('section_id', $section->id);
@@ -54,10 +69,10 @@
                                                 <input type="hidden" name="field_section[]" value="{{ $section->id }}">
 
                                                 <td><input type="text" name="field_label[]"
-                                                        value="{{ $field->formlabel }}"  class="form-control">
+                                                        value="{{ $field->formlabel }}" class="form-control">
                                                 </td>
                                                 <td><input type="text" name="field_name[]"
-                                                        value="{{ $field->field_title ?? $field->formname }}" 
+                                                        value="{{ $field->field_title ?? $field->formname }}"
                                                         class="form-control"></td>
                                                 <td>
                                                     <select name="field_type[]" class="form-control">
@@ -371,6 +386,17 @@
                 <label class="form-label">Section Title:</label>
                 <input type="text" name="section_title[]" required class="form-control">
             </div>
+            <div class="form-group mb-3">
+    <label for="section_layout_${newSectionIndex}">Section Layout:</label>
+                  <select class="form-control" id="section_layout_${newSectionIndex}" name="section_layout[]">
+                      <option value="col-12">1 Column</option>
+                      <option value="col-6">2 Columns</option>
+                      <option value="col-4">3 Columns</option>
+                      <option value="col-3">4 Columns</option>
+                     <option value="col-2">6 Columns</option>
+                 </select>
+                    </div>
+
 
             <div id="fields-container_${newSectionIndex}"></div>
 
@@ -429,53 +455,53 @@
     </script>
 
     <!-- <style>
-            .section-group {
-                margin-bottom: 2rem;
-                padding: 1.5rem;
-                border: 1px solid #dee2e6;
-                border-radius: 0.25rem;
-                background-color: #f8f9fa;
-            }
+                            .section-group {
+                                margin-bottom: 2rem;
+                                padding: 1.5rem;
+                                border: 1px solid #dee2e6;
+                                border-radius: 0.25rem;
+                                background-color: #f8f9fa;
+                            }
 
-            .form-group {
-                margin-bottom: 1rem;
-            }
+                            .form-group {
+                                margin-bottom: 1rem;
+                            }
 
-            .checkbox-container {
-                display: flex;
-                gap: 1rem;
-                margin-top: 0.5rem;
-            }
+                            .checkbox-container {
+                                display: flex;
+                                gap: 1rem;
+                                margin-top: 0.5rem;
+                            }
 
-            .btn-group {
-                display: inline-flex;
-                margin-left: 0.5rem;
-            }
+                            .btn-group {
+                                display: inline-flex;
+                                margin-left: 0.5rem;
+                            }
 
-            .form-group label {
-                /* font-weight: bold !important; */
-                color: #000 !important;
-                /* Pure black */
-            }
+                            .form-group label {
+                                /* font-weight: bold !important; */
+                                color: #000 !important;
+                                /* Pure black */
+                            }
 
-            table {
-                width: 100%;
-                margin-bottom: 1rem;
-            }
+                            table {
+                                width: 100%;
+                                margin-bottom: 1rem;
+                            }
 
-            table th,
-            table td {
-                padding: 0.75rem;
-                vertical-align: top;
-            }
+                            table th,
+                            table td {
+                                padding: 0.75rem;
+                                vertical-align: top;
+                            }
 
-            .form-check .form-check-input {
-                width: 1%;
-                height: 1.5em;
-                margin-top: 0.3em;
-                margin-right: 0.5em;
-                float: left;
-                margin-left: -1.813em;
-            }
-        </style> -->
+                            .form-check .form-check-input {
+                                width: 1%;
+                                height: 1.5em;
+                                margin-top: 0.3em;
+                                margin-right: 0.5em;
+                                float: left;
+                                margin-left: -1.813em;
+                            }
+                        </style> -->
 @endsection

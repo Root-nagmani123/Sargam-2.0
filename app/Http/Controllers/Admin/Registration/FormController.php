@@ -188,9 +188,10 @@ class FormController extends Controller
     public function saveform(Request $request, $formid)
     {
         DB::beginTransaction();
-
         try {
             $sectionTitles = $request->input('section_title', []);
+            $sectionLayouts = $request->input('section_layout', []); // ✅ new
+            // dd($sectionLayouts);
             $fieldSections = $request->input('field_section', []);
             $fieldNames = $request->input('field_name', []);
             $fieldTypes = $request->input('field_type', []);
@@ -214,6 +215,7 @@ class FormController extends Controller
                 $sectionId = FormSection::create([
                     'formid' => $formid,
                     'section_title' => $title,
+                    'layout'        => $sectionLayouts[$index] ?? 'col-4', //  save layout
                 ]);
 
                 if ($sectionId->id) {
@@ -498,8 +500,7 @@ class FormController extends Controller
                         } elseif (is_array($columnValue)) {
                             $fieldType = 'checkbox';
                             // $columnValue = json_encode($columnValue);
-                                $columnValue = implode(',', array_map('trim', $columnValue));
-
+                            $columnValue = implode(',', array_map('trim', $columnValue));
                         } elseif (in_array($columnValue, ['on', 'off', '1', '0'], true)) {
                             $fieldType = 'checkbox';
                             $columnValue = ($columnValue === 'on' || $columnValue === '1') ? 1 : 0;

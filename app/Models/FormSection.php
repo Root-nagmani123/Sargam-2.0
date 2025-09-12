@@ -11,6 +11,7 @@ class FormSection extends Model
     protected $fillable = [
         'formid',
         'section_title',
+        'layout', 
     ];
     public $timestamps = false;
 }
