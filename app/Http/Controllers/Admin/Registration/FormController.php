@@ -234,7 +234,12 @@ class FormController extends Controller
                 }
 
                 $requiredKey = "{$sectionIndex}_{$index}";
+                $fieldType = $fieldTypes[$index] ?? 'text';
 
+                //  Only store layout for radio/checkbox
+                $layout = ($fieldType === 'radio' || $fieldType === 'checkbox')
+                    ? ($fieldLayouts[$index] ?? 'inline')
+                    : null;
                 DB::table('form_data')->insert([
                     'formid'      => $formid,
                     'section_id'  => $sectionIds[$sectionIndex],
@@ -243,7 +248,7 @@ class FormController extends Controller
                     'formlabel'   => $fieldLabels[$index] ?? '',
                     'fieldoption' => $fieldOptions[$index] ?? '',
                     'required'    => isset($isRequireds[$requiredKey]) && $isRequireds[$requiredKey] == 1 ? 1 : 0,
-                    'layout'      => $fieldLayouts[$index] ?? 'vertical',
+                    'layout'      => $layout, //  store only for radio/checkbox
                     'created_at'  => now(),
                     'updated_at'  => now(),
                 ]);

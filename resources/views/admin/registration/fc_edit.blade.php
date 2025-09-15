@@ -18,25 +18,41 @@
                         <input type="hidden" name="section_id[]" value="{{ $section->id }}">
                         <input type="hidden" name="sort_order[]" value="{{ $index }}">
 
-                        <div class="form-group">
-                            <label class="form-label">Section Title:</label>
-                            <input type="text" name="section_title[]" value="{{ $section->section_title }}" required
-                                class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Section Layout:</label>
-                            <select name="section_layout[]" class="form-select">
-                                <option value="col-12" {{ $section->layout == 'col-12' ? 'selected' : '' }}>1 Column
-                                </option>
-                                <option value="col-6" {{ $section->layout == 'col-6' ? 'selected' : '' }}>2 Columns
-                                </option>
-                                <option value="col-4" {{ $section->layout == 'col-4' ? 'selected' : '' }}>3 Columns
-                                </option>
-                                <option value="col-3" {{ $section->layout == 'col-3' ? 'selected' : '' }}>4 Columns
-                                </option>
-                                <option value="col-2" {{ $section->layout == 'col-2' ? 'selected' : '' }}>6 Columns
-                                </option>
-                            </select>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Section Title:</label>
+                                        <input type="text" name="section_title[]" value="{{ $section->section_title }}"
+                                            required class="form-control">
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-group">
+                                        <label class="form-label">Section Layout:</label>
+                                        <select name="section_layout[]" class="form-select">
+                                            <option value="col-12" {{ $section->layout == 'col-12' ? 'selected' : '' }}>1
+                                                Column
+                                            </option>
+                                            <option value="col-6" {{ $section->layout == 'col-6' ? 'selected' : '' }}>2
+                                                Columns
+                                            </option>
+                                            <option value="col-4" {{ $section->layout == 'col-4' ? 'selected' : '' }}>3
+                                                Columns
+                                            </option>
+                                            <option value="col-3" {{ $section->layout == 'col-3' ? 'selected' : '' }}>4
+                                                Columns
+                                            </option>
+                                            <option value="col-2" {{ $section->layout == 'col-2' ? 'selected' : '' }}>6
+                                                Columns
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         @php
@@ -104,7 +120,7 @@
                                     ->whereNotNull('formname');
                             @endphp
 
-                            @foreach ($regular_fields as $fieldIndex => $field)
+                            {{-- @foreach ($regular_fields as $fieldIndex => $field)
                                 <div class="form-group border p-3 mb-4 rounded shadow-sm bg-light">
                                     <input type="hidden" name="field_id[{{ $fieldIndex }}]"
                                         value="{{ $field->id }}">
@@ -175,7 +191,106 @@
                                         </div>
                                     </div>
                                 </div>
+                            @endforeach --}}
+
+                            @foreach ($regular_fields as $fieldIndex => $field)
+                                <div class="form-group border p-3 mb-4 rounded shadow-sm bg-light">
+                                    <input type="hidden" name="field_id[{{ $fieldIndex }}]"
+                                        value="{{ $field->id }}">
+                                    <input type="hidden" name="field_section[{{ $fieldIndex }}]"
+                                        value="{{ $section->id }}">
+
+                                    {{-- First row: Label + Field Name --}}
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Label:
+                                                    @if ($field->required)
+                                                        <span class="text-danger">*</span>
+                                                    @endif
+                                                </label>
+                                                <input type="text" name="field_label[{{ $fieldIndex }}]"
+                                                    value="{{ $field->formlabel }}" required class="form-control">
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Field Name:</label>
+                                                <select class="form-control" name="field_name[{{ $fieldIndex }}]"
+                                                    required>
+                                                    @foreach ($columns as $column)
+                                                        <option value="{{ $column }}"
+                                                            {{ $field->formname == $column ? 'selected' : '' }}>
+                                                            {{ ucfirst(str_replace('_', ' ', $column)) }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Type:</label>
+                                                <select name="field_type[{{ $fieldIndex }}]" class="form-control">
+                                                    @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file', 'textarea', 'email', 'number', 'time'] as $type)
+                                                        <option value="{{ $type }}"
+                                                            {{ $field->formtype === $type ? 'selected' : '' }}>
+                                                            {{ ucfirst($type) }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        @if (in_array($field->formtype, ['Radio Button', 'radio', 'Checkbox', 'checkbox']))
+                                            {{--  HIGHLIGHT: Show layout selector only for radio/checkbox --}}
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Layout:</label>
+                                                    <select name="field_layout[{{ $fieldIndex }}]" class="form-control">
+                                                        <option value="inline"
+                                                            {{ ($field->layout ?? '') == 'inline' ? 'selected' : '' }}>
+                                                            Horizontal
+                                                        </option>
+                                                        <option value="block"
+                                                            {{ ($field->layout ?? '') == 'block' ? 'selected' : '' }}>
+                                                            vertical</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        @endif
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label class="form-label">Options (comma separated):</label>
+                                                <input type="text" name="field_options[{{ $fieldIndex }}]"
+                                                    value="{{ $field->fieldoption }}" class="form-control">
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <div class="form-check" style="padding-left: 0 !important;">
+                                                    <input type="checkbox" name="is_required[{{ $field->id }}]"
+                                                        id="required_{{ $field->id }}"
+                                                        {{ $field->required ? 'checked' : '' }}>
+                                                    <label class="form-check-label"
+                                                        for="required_{{ $field->id }}">Required</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <div class="form-check" style="padding-left: 0 !important;">
+                                                    <input type="checkbox" name="delete_fields[{{ $fieldIndex }}]"
+                                                        value="{{ $field->id }}" id="delete_{{ $fieldIndex }}">
+                                                    <label class="form-check-label text-danger"
+                                                        for="delete_{{ $fieldIndex }}">Delete</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             @endforeach
+
                         </div>
 
                         <button type="button" class="btn btn-primary btn-add-field"
@@ -197,7 +312,7 @@
             </div>
 
     </div>
-
+    @section('scripts')
     <script>
         // Track used options
         const usedOptions = new Set();
@@ -310,7 +425,7 @@
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="form-label">Type:</label>
-                        <select name="field_type[${newFieldIndex}]" class="form-control">
+                        <select name="field_type[${newFieldIndex}]" class="form-control field-type">
                             @foreach (['text', 'dropdown', 'radio', 'checkbox', 'date', 'file', 'textarea', 'email', 'number', 'time'] as $type)
                                 <option value="{{ $type }}">{{ ucfirst($type) }}</option>
                             @endforeach
@@ -323,6 +438,17 @@
                     </div>
                 </div>
 
+                 <!--  HIGHLIGHT: Layout selector for radio/checkbox -->
+            <div class="row mb-3 layout-options" style="display:none;" id="layout_group_options">
+                <div class="col-md-6">
+                    <label class="form-label">Display Layout:</label>
+                    <select class="form-control" id="field_layout_${newFieldIndex}" name="field_layout[${newFieldIndex}]">
+                        <option value="inline" selected>Horizontal</option>
+                        <option value="block">Vertical</option>
+                    </select>
+                </div>
+            </div>
+            
                 <div class="row align-items-center">
                     <div class="col-md-6">
                         <div class="form-check">
@@ -343,6 +469,33 @@
             } else {
                 fieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
             }
+
+            // Add event listener to type dropdown to show/hide layout
+            const fieldTypeSelect = document.getElementById(`field_type_${newFieldIndex}`); //  HIGHLIGHT
+            const layoutGroup = document.getElementById(`layout_group_${newFieldIndex}`); //  HIGHLIGHT
+            const layoutSelect = document.getElementById(`field_layout_${newFieldIndex}`); //  HIGHLIGHT
+
+            function toggleLayout() { //  HIGHLIGHT
+                if (fieldTypeSelect.value === 'radio' || fieldTypeSelect.value === 'checkbox') {
+                    layoutGroup.style.display = 'flex';
+                } else {
+                    layoutGroup.style.display = 'none';
+                }
+            }
+
+            fieldTypeSelect.addEventListener('change', toggleLayout);
+            toggleLayout(); // initialize
+
+            // Apply layout to radio/checkbox dynamically
+            layoutSelect?.addEventListener('change', function() { //  HIGHLIGHT
+                const optionInputs = fieldsContainer.querySelectorAll(`#field_${newFieldIndex} .form-check`);
+                optionInputs.forEach(div => {
+                    div.classList.remove('form-check-inline', 'd-block');
+                    div.classList.add(this.value === 'block' ? 'd-block' : 'form-check-inline');
+                });
+            });
+
+
 
             // Add event listener to the new dropdown
             const newDropdown = fieldsContainer.querySelector(`select[name="field_name[${newFieldIndex}]"]`);
@@ -452,56 +605,69 @@
             const fieldElement = button.closest('tr, .form-group');
             fieldElement.remove();
         }
+       $(document).on("change", ".field-type", function() {
+    let selectedType = $(this).val();
+    let index = $(this).data("index"); //  get the dynamic index
+
+    if (selectedType === "radio" || selectedType === "checkbox") {
+        alert('changed');
+
+        $(`#layout_group_options`).show();
+    } else {
+        $(`#layout_group_options`).hide();
+    }
+});
+
     </script>
-
+    @endsection
     <!-- <style>
-                            .section-group {
-                                margin-bottom: 2rem;
-                                padding: 1.5rem;
-                                border: 1px solid #dee2e6;
-                                border-radius: 0.25rem;
-                                background-color: #f8f9fa;
-                            }
+                                                                .section-group {
+                                                                    margin-bottom: 2rem;
+                                                                    padding: 1.5rem;
+                                                                    border: 1px solid #dee2e6;
+                                                                    border-radius: 0.25rem;
+                                                                    background-color: #f8f9fa;
+                                                                }
 
-                            .form-group {
-                                margin-bottom: 1rem;
-                            }
+                                                                .form-group {
+                                                                    margin-bottom: 1rem;
+                                                                }
 
-                            .checkbox-container {
-                                display: flex;
-                                gap: 1rem;
-                                margin-top: 0.5rem;
-                            }
+                                                                .checkbox-container {
+                                                                    display: flex;
+                                                                    gap: 1rem;
+                                                                    margin-top: 0.5rem;
+                                                                }
 
-                            .btn-group {
-                                display: inline-flex;
-                                margin-left: 0.5rem;
-                            }
+                                                                .btn-group {
+                                                                    display: inline-flex;
+                                                                    margin-left: 0.5rem;
+                                                                }
 
-                            .form-group label {
-                                /* font-weight: bold !important; */
-                                color: #000 !important;
-                                /* Pure black */
-                            }
+                                                                .form-group label {
+                                                                    /* font-weight: bold !important; */
+                                                                    color: #000 !important;
+                                                                    /* Pure black */
+                                                                }
 
-                            table {
-                                width: 100%;
-                                margin-bottom: 1rem;
-                            }
+                                                                table {
+                                                                    width: 100%;
+                                                                    margin-bottom: 1rem;
+                                                                }
 
-                            table th,
-                            table td {
-                                padding: 0.75rem;
-                                vertical-align: top;
-                            }
+                                                                table th,
+                                                                table td {
+                                                                    padding: 0.75rem;
+                                                                    vertical-align: top;
+                                                                }
 
-                            .form-check .form-check-input {
-                                width: 1%;
-                                height: 1.5em;
-                                margin-top: 0.3em;
-                                margin-right: 0.5em;
-                                float: left;
-                                margin-left: -1.813em;
-                            }
-                        </style> -->
+                                                                .form-check .form-check-input {
+                                                                    width: 1%;
+                                                                    height: 1.5em;
+                                                                    margin-top: 0.3em;
+                                                                    margin-right: 0.5em;
+                                                                    float: left;
+                                                                    margin-left: -1.813em;
+                                                                }
+                                                            </style> -->
 @endsection

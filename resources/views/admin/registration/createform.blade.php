@@ -138,6 +138,14 @@
                     <option value="time">Time</option>
                 </select>
             </div>
+              <!-- Place it right after Field Type -->
+    <div class="form-group mb-3 layout-options" id="layout_group_${sectionIndex}_${index}" style="display:none;">
+        <label for="field_layout_${sectionIndex}_${index}">Display Layout:</label>
+        <select class="form-control" id="field_layout_${sectionIndex}_${index}" name="field_layout[]">
+            <option value="inline">Horizontal</option>
+            <option value="block">Vertical</option>
+        </select>
+    </div>
             <div class="form-group mb-3">
                 <label for="field_label_${sectionIndex}_${index}">Field Label:</label>
                 <input type="text" class="form-control" id="field_label_${sectionIndex}_${index}" name="field_label[]" required>
@@ -165,9 +173,11 @@
     `;
 
             container.insertAdjacentHTML("beforeend", fieldHtml);
+
             // Show/hide options input based on selected field type
             const fieldTypeSelect = document.getElementById(`field_type_${sectionIndex}_${index}`);
             const optionsGroup = document.getElementById(`field_options_group_${sectionIndex}_${index}`);
+            const layoutGroup = document.getElementById(`layout_group_${sectionIndex}_${index}`); //  HIGHLIGHT
 
             function toggleOptionsField() {
                 const val = fieldTypeSelect.value;
@@ -175,6 +185,12 @@
                     optionsGroup.style.display = 'block';
                 } else {
                     optionsGroup.style.display = 'none';
+                }
+                //  Show layout dropdown only for radio/checkbox
+                if (val === 'radio' || val === 'checkbox') {
+                    layoutGroup.style.display = 'block';
+                } else {
+                    layoutGroup.style.display = 'none';
                 }
             }
 
