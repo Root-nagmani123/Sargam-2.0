@@ -1,11 +1,42 @@
 @php
     $validFieldHeadings = [
-    'country','state','district','language','admissioncategory','stream','institution','jobtype','boardname','qualification',
-    'religionmasterpk','lastservicepk','sports','size','fcscale','distinction','shoessize',
-    'studentskill','birthdistrict','birthstate','birthcountry','pdistrictid','mdistrictid','admissioncategorypk',
-    'higheststreampk','city','postalcity','servicemasterpk','tshirt','blazer','trouser','tracksuite',
-    'fatherprofession','motherprofession','degree','instituitontype'
-];
+        'country',
+        'state',
+        'district',
+        'language',
+        'admissioncategory',
+        'stream',
+        'institution',
+        'jobtype',
+        'boardname',
+        'qualification',
+        'religionmasterpk',
+        'lastservicepk',
+        'sports',
+        'size',
+        'fcscale',
+        'distinction',
+        'shoessize',
+        'studentskill',
+        'birthdistrict',
+        'birthstate',
+        'birthcountry',
+        'pdistrictid',
+        'mdistrictid',
+        'admissioncategorypk',
+        'higheststreampk',
+        'city',
+        'postalcity',
+        'servicemasterpk',
+        'tshirt',
+        'blazer',
+        'trouser',
+        'tracksuite',
+        'fatherprofession',
+        'motherprofession',
+        'degree',
+        'instituitontype',
+    ];
 
     $isTableField = isset($field->field_type);
     $fieldType = $isTableField ? $field->field_type : $field->formtype;
@@ -168,11 +199,13 @@
                 ',',
                 $field->field_radio_options ?? ($field->field_options ?? ($field->fieldoption ?? '')),
             );
+            //  Use DB layout for radio: 'inline' → form-check-inline, 'block' → d-block
+            $layoutClass = $field->layout === 'block' ? 'd-block' : 'form-check-inline';
         @endphp
 
         @foreach ($radioOptions as $option)
             @php $option = trim($option); @endphp
-            <div class="py-1 form-check form-check-inline">
+            <div class="py-1 form-check {{ $layoutClass }}">
                 <input type="radio" id="{{ $fieldName }}_{{ $loop->index }}" name="{{ $fieldName }}"
                     class="form-check-input" value="{{ $option }}" {{ $value == $option ? 'checked' : '' }}
                     {{ $required ? 'required' : '' }}>
@@ -187,11 +220,13 @@
         @php
             $checkboxOptions = explode(',', $field->field_checkbox_options ?? ($field->fieldoption ?? ''));
             $selectedValues = is_array($value) ? $value : explode(',', $value ?? '');
+             //  Use DB layout for radio: 'inline' → form-check-inline, 'block' → d-block
+            $layoutClass = $field->layout === 'block' ? 'd-block' : 'form-check-inline';
         @endphp
 
         @foreach ($checkboxOptions as $option)
             @php $option = trim($option); @endphp
-            <div class="py-1 form-check form-check-inline">
+            <div class="py-1 form-check {{ $layoutClass }}">
                 <input type="checkbox" id="{{ $fieldName }}_{{ $loop->index }}" name="{{ $fieldName }}[]"
                     class="form-check-input" value="{{ $option }}"
                     {{ in_array($option, $selectedValues) ? 'checked' : '' }} {{ $required ? 'required' : '' }}>

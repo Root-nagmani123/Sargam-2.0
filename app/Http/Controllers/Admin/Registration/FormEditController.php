@@ -260,10 +260,17 @@ class FormEditController extends Controller
                             'format' => 'table',
                         ]);
                     } else {
+
+                        //  HIGHLIGHT: Add layout only for radio/checkbox fields
+                        if (in_array($field_type, ['Radio Button', 'Checkbox'])) {
+                            $common_data['layout'] = $request->field_layout ?? 'inline';
+                        }
+// dd($request->field_layout);
                         $field_data = array_merge($common_data, [
                             'formname' => $request->field_name[$index],
                             'formtype' => $field_type,
                             'fieldoption' => $request->field_options[$index] ?? null,
+                            'layout' => $request->field_layout[$index] ?? 'inline', //  HIGHLIGHT
                         ]);
                     }
 
