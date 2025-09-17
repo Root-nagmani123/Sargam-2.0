@@ -118,7 +118,7 @@
             <input type="hidden" name="field_section[]" value="${sectionIndex}">
             <div class="form-group mb-3">
                 <label for="field_name_${sectionIndex}_${index}">Field Name:</label>
-                <select class="form-control " id="field_name_${sectionIndex}_${index}" name="field_name[]" required>
+                <select class="form-control select2" id="field_name_${sectionIndex}_${index}" name="field_name[]" required>
                     ${columnOptions}
                 </select>
             </div>
