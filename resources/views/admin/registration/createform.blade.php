@@ -50,7 +50,7 @@
             </div>
         </div>
     </div>
-
+@section('scripts')
     <script>
         const submissionColumns = @json($submissionColumns);
 
@@ -118,7 +118,7 @@
             <input type="hidden" name="field_section[]" value="${sectionIndex}">
             <div class="form-group mb-3">
                 <label for="field_name_${sectionIndex}_${index}">Field Name:</label>
-                <select class="form-control" id="field_name_${sectionIndex}_${index}" name="field_name[]" required>
+                <select class="form-control " id="field_name_${sectionIndex}_${index}" name="field_name[]" required>
                     ${columnOptions}
                 </select>
             </div>
@@ -200,6 +200,8 @@
             // Attach change listener to new dropdown option apper only once
             document.getElementById(`field_name_${sectionIndex}_${index}`).addEventListener('change',
                 updateFieldNameOptions);
+
+                $('.select2').select2()
 
         }
 
@@ -380,4 +382,6 @@
             radioOptions.style.display = value === 'Radio Button' ? 'block' : 'none';
         }
     </script>
+
+@endsection
 @endsection
