@@ -217,7 +217,7 @@
                                         <div class="col-md-6">
                                             <div class="mb-3">
                                                 <label class="form-label">Field Name:</label>
-                                                <select class="form-control" name="field_name[{{ $fieldIndex }}]"
+                                                <select class="form-control select2" name="field_name[{{ $fieldIndex }}]"
                                                     required>
                                                     @foreach ($columns as $column)
                                                         <option value="{{ $column }}"
@@ -312,7 +312,7 @@
             </div>
 
     </div>
-    @section('scripts')
+@section('scripts')
     <script>
         // Track used options
         const usedOptions = new Set();
@@ -416,7 +416,7 @@
 
                     <div class="col-md-6">
                         <label class="form-label">Name:</label>
-                        <select class="form-control" name="field_name[${newFieldIndex}]" required>
+                        <select class="form-control select2" name="field_name[${newFieldIndex}]" required>
                             ${optionsHtml}
                         </select>
                     </div>
@@ -469,6 +469,10 @@
             } else {
                 fieldsContainer.insertAdjacentHTML('beforeend', fieldHtml);
             }
+            // Re-initialize only the new select2
+            $(fieldsContainer).find('.select2').last().select2({
+                // width: '100%'
+            });
 
             // Add event listener to type dropdown to show/hide layout
             const fieldTypeSelect = document.getElementById(`field_type_${newFieldIndex}`); //  HIGHLIGHT
@@ -510,6 +514,7 @@
             }
 
             fieldCounter++;
+            // $('.select2').select2();
         }
 
         // Function to remove a field and make its option available again
@@ -605,69 +610,18 @@
             const fieldElement = button.closest('tr, .form-group');
             fieldElement.remove();
         }
-       $(document).on("change", ".field-type", function() {
-    let selectedType = $(this).val();
-    let index = $(this).data("index"); //  get the dynamic index
+        $(document).on("change", ".field-type", function() {
+            let selectedType = $(this).val();
+            let index = $(this).data("index"); //  get the dynamic index
 
-    if (selectedType === "radio" || selectedType === "checkbox") {
-        alert('changed');
+            if (selectedType === "radio" || selectedType === "checkbox") {
+                alert('changed');
 
-        $(`#layout_group_options`).show();
-    } else {
-        $(`#layout_group_options`).hide();
-    }
-});
-
+                $(`#layout_group_options`).show();
+            } else {
+                $(`#layout_group_options`).hide();
+            }
+        });
     </script>
-    @endsection
-    <!-- <style>
-                                                                .section-group {
-                                                                    margin-bottom: 2rem;
-                                                                    padding: 1.5rem;
-                                                                    border: 1px solid #dee2e6;
-                                                                    border-radius: 0.25rem;
-                                                                    background-color: #f8f9fa;
-                                                                }
-
-                                                                .form-group {
-                                                                    margin-bottom: 1rem;
-                                                                }
-
-                                                                .checkbox-container {
-                                                                    display: flex;
-                                                                    gap: 1rem;
-                                                                    margin-top: 0.5rem;
-                                                                }
-
-                                                                .btn-group {
-                                                                    display: inline-flex;
-                                                                    margin-left: 0.5rem;
-                                                                }
-
-                                                                .form-group label {
-                                                                    /* font-weight: bold !important; */
-                                                                    color: #000 !important;
-                                                                    /* Pure black */
-                                                                }
-
-                                                                table {
-                                                                    width: 100%;
-                                                                    margin-bottom: 1rem;
-                                                                }
-
-                                                                table th,
-                                                                table td {
-                                                                    padding: 0.75rem;
-                                                                    vertical-align: top;
-                                                                }
-
-                                                                .form-check .form-check-input {
-                                                                    width: 1%;
-                                                                    height: 1.5em;
-                                                                    margin-top: 0.3em;
-                                                                    margin-right: 0.5em;
-                                                                    float: left;
-                                                                    margin-left: -1.813em;
-                                                                }
-                                                            </style> -->
+@endsection
 @endsection
