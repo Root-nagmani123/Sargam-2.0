@@ -661,7 +661,26 @@ class FormController extends Controller
             'Tracksuite'                  => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
             'father_profession'           => ['table' => 'parents_profession_master',  'id' => 'pk', 'name' => 'profession_name'],
             'mother_profession'           => ['table' => 'parents_profession_master',  'id' => 'pk', 'name' => 'profession_name'],
+            'nationality'                 => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+            'birth_state'                => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'birth_district'             => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'state_district_mapping_pk'  => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'mother_Language'            => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'academic_medium'            => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'university_medium'          => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'pre_university_medium'      => ['table' => 'language_master',          ' id' => 'pk', 'name' => 'language_name'],
+            'upsc_exam_medium'           => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'upsc_viva_medium'          => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            't_shirt_size'               => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+            'blazer_jacket_size'         => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+            'trouser_size'               => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+            'tracksuit_size'             => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+            'mdistrict_id'              => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'matriculation_district'   => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'marticulation_state'      => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'country_master_pk'
         ];
+
 
         $lookupData = [];
         foreach ($idToNameMappings as $field => $map) {
@@ -885,11 +904,33 @@ class FormController extends Controller
             'Tracksuite'                 => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
             'father_profession'          => ['table' => 'parents_profession_master',  'id' => 'pk', 'name' => 'profession_name'],
             'mother_profession'          => ['table' => 'parents_profession_master',  'id' => 'pk', 'name' => 'profession_name'],
+            'nationality'                 => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+            'birth_state'                => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'birth_district'             => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'state_district_mapping_pk'  => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'mother_Language'            => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'academic_medium'            => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'university_medium'          => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'pre_university_medium'      => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'upsc_exam_medium'           => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            'upsc_viva_medium'          => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+            't_shirt_size'               => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+            'blazer_jacket_size'         => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+            'trouser_size'               => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+            'tracksuit_size'             => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+            'mdistrict_id'              => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'matriculation_district'   => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+            'marticulation_state'      => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+            'country_master_pk'     => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+            'state_master_pk'       => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
         ];
 
         // Preload lookup values
         $lookupValues = [];
         foreach ($mappings as $field => $map) {
+            if (!isset($map['table'], $map['id'], $map['name'])) {
+        dump("Invalid mapping for: $field", $map);
+    }
             $lookupValues[$field] = DB::table($map['table'])
                 ->pluck($map['name'], $map['id']); // [id => name]
         }
@@ -1240,6 +1281,24 @@ class FormController extends Controller
                 'university'                 => ['table' => 'university_board_name_master', 'id' => 'pk', 'name' => 'board_name'],
                 'Degree'                     => ['table' => 'degree_master',            'id' => 'pk', 'name' => 'degree_name'],
                 'instituitontype'            => ['table' => 'institute_type_master',    'id' => 'pk', 'name' => 'type_name'],
+                'nationality'                 => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
+                'birth_state'                => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+                'birth_district'             => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+                'state_district_mapping_pk'  => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+                'mother_Language'            => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+                'academic_medium'            => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+                'university_medium'          => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+                'pre_university_medium'      => ['table' => 'language_master',          ' id' => 'pk', 'name' => 'language_name'],
+                'upsc_exam_medium'           => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+                'upsc_viva_medium'          => ['table' => 'language_master',          'id' => 'pk', 'name' => 'language_name'],
+                't_shirt_size'               => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+                'blazer_jacket_size'         => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+                'trouser_size'               => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+                'tracksuit_size'             => ['table' => 'student_cloths_size_master',  'id' => 'pk', 'name' => 'cloth_size'],
+                'mdistrict_id'              => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+                'matriculation_district'   => ['table' => 'state_district_mapping',   'id' => 'pk', 'name' => 'district_name'],
+                'marticulation_state'      => ['table' => 'state_master',             'id' => 'pk', 'name' => 'state_name'],
+                'country_master_pk'        => ['table' => 'country_master',           'id' => 'pk', 'name' => 'country_name'],
 
             ];
 
