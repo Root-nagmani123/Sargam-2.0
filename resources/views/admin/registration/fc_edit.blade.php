@@ -354,7 +354,7 @@
                     if (option.value === '') return; // Skip placeholder
 
                     // Disable if used by another dropdown (and not this one)
-                    option.disabled = usedOptions.has(option.value) && option.value !== currentValue;
+                    option = usedOptions.has(option.value) && option.value !== currentValue;
                 });
             });
         }
