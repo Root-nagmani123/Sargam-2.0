@@ -39,6 +39,15 @@
                                     <small class="text-muted">Web Code is sent to your registered mobile
                                         number/Email</small>
                                 </div>
+
+                                 <!-- OTP -->
+                                <div class="col-md-12">
+                                    <label class="form-label">OTP</label>
+                                    <input type="text" class="form-control" placeholder="Enter OTP"
+                                           name="otp">
+                                    <small class="text-muted">OTP is sent to your registered mobile number</small>
+                                </div>
+
                                 <!-- Password -->
                                 <div class="col-md-12">
                                     <label class="form-label">Verification</label>

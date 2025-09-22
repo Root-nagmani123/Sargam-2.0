@@ -22,22 +22,59 @@
                     </div>
                     <p class="text-muted mb-4">Please fill in all required information for your exemption application.</p>
 
-                    <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}" enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}"
+                        enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" name="exemption_category" value="{{ $exemption->pk }}">
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="ex_mobile" class="form-label">Mobile Number <span class="text-danger">*</span></label>
+                                <label for="ex_mobile" class="form-label">Mobile Number <span
+                                        class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="ex_mobile" name="ex_mobile"
-                                       placeholder="Enter mobile number" required>
+                                    placeholder="Enter mobile number" required>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="reg_web_code" class="form-label">Web Authentication Code <span class="text-danger">*</span></label>
+                                <label for="reg_web_code" class="form-label">Web Authentication Code <span
+                                        class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="reg_web_code" name="reg_web_code"
-                                       placeholder="Enter web auth code" required>
+                                    placeholder="Enter web auth code" required>
                             </div>
+
+                            @if (stripos($exemption->Exemption_name, 'completed foundation course') !== false)
+                                <div class="col-md-6">
+                                    <label for="course" class="form-label">Course <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="course" name="course"
+                                        placeholder="Enter your course" required>
+                                </div>
+
+                                <div class="col-md-6">
+                                    <label for="year" class="form-label">Year <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="year" name="year" required>
+                                        <option value="" selected disabled>Select Year</option>
+                                        @for ($y = date('Y'); $y >= 1970; $y--)
+                                            <option value="{{ $y }}">{{ $y }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                            @endif
+
+                            {{--  Show Roll Number if exemption contains key words --}}
+                            @php
+                                $exName = strtolower($exemption->Exemption_name);
+                            @endphp
+
+                            @if (str_contains($exName, 'reappearing') || str_contains($exName, 'civil services'))
+                                <div class="col-md-6">
+                                    <label for="roll_number" class="form-label">Roll Number <span
+                                            class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="roll_number" name="roll_number"
+                                        placeholder="Enter your UPSC Roll Number" required>
+                                </div>
+                            @endif
+
 
                             @if (stripos($exemption->Exemption_name, 'medical') !== false)
                                 <div class="col-md-12">
@@ -45,7 +82,7 @@
                                         Upload Medical Exemption Document <span class="text-danger">*</span>
                                     </label>
                                     <input type="file" class="form-control" id="medical_doc" name="medical_doc"
-                                           accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
                                     <small class="text-muted">
                                         Supported formats: PDF, Word (.doc, .docx), JPG, JPEG, PNG. Max file size: 5 MB.
                                     </small>
@@ -56,13 +93,13 @@
                             <div class="col-md-6">
                                 <label class="form-label">Verification <span class="text-danger">*</span></label>
                                 <div class="d-flex align-items-center gap-3 mb-2">
-                                    <img src="{{ captcha_src() }}" alt="captcha" id="captchaImage"
-                                         class="border rounded" height="40">
+                                    <img src="{{ captcha_src() }}" alt="captcha" id="captchaImage" class="border rounded"
+                                        height="40">
                                     <button type="button" class="btn btn-outline-secondary btn-sm"
-                                            onclick="refreshCaptcha()">Refresh</button>
+                                        onclick="refreshCaptcha()">Refresh</button>
                                 </div>
-                                <input type="text" class="form-control" name="captcha"
-                                       placeholder="Enter captcha code" required>
+                                <input type="text" class="form-control" name="captcha" placeholder="Enter captcha code"
+                                    required>
                             </div>
 
                             {{-- Declaration --}}
@@ -70,7 +107,9 @@
                                 <div class="form-check mt-2">
                                     <input class="form-check-input" type="checkbox" id="declaration" required>
                                     <label class="form-check-label small" for="declaration">
-                                        I hereby declare that the information provided above is true and correct. I understand that any false information may lead to rejection of my exemption application.
+                                        I hereby declare that the information provided above is true and correct. I
+                                        understand that any false information may lead to rejection of my exemption
+                                        application.
                                     </label>
                                 </div>
                             </div>
@@ -78,10 +117,10 @@
                             {{-- Submit and Cancel --}}
                             <div class="col-12 d-flex justify-content-center gap-2 mt-4">
                                 <button type="submit" class="btn btn-primary"
-                                        style="background-color: #004a93;border-color: #004a93;">Submit Application</button>
+                                    style="background-color: #004a93;border-color: #004a93;">Submit Application</button>
                                 <a href="{{ route('fc.choose.path') }}"
-                                   onclick="return confirm('Are you sure you want to cancel your application? This action cannot be undone.')"
-                                   class="btn btn-danger">Cancel Application</a>
+                                    onclick="return confirm('Are you sure you want to cancel your application? This action cannot be undone.')"
+                                    class="btn btn-danger">Cancel Application</a>
                             </div>
                         </div>
                     </form>
@@ -103,7 +142,7 @@
 
     @if (session('already_applied'))
         <script>
-            document.addEventListener("DOMContentLoaded", function () {
+            document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
                     title: 'Notice',
                     text: '{{ session('already_applied') }}',
