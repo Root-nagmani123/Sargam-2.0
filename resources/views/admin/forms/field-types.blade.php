@@ -1,41 +1,10 @@
 @php
     $validFieldHeadings = [
-        'country',
-        'state',
-        'district',
-        'language',
-        'admissioncategory',
-        'stream',
-        'institution',
-        'jobtype',
-        'boardname',
-        'qualification',
-        'religionmasterpk',
-        'lastservicepk',
-        'sports',
-        'size',
-        'fcscale',
-        'distinction',
-        'shoessize',
-        'studentskill',
-        'birthdistrict',
-        'birthstate',
-        'birthcountry',
-        'pdistrictid',
-        'mdistrictid',
-        'admissioncategorypk',
-        'higheststreampk',
-        'city',
-        'postalcity',
-        'servicemasterpk',
-        'tshirt',
-        'blazer',
-        'trouser',
-        'tracksuite',
-        'fatherprofession',
-        'motherprofession',
-        'degree',
-        'instituitontype',
+        'country','state','district','language','admissioncategory','stream','institution','jobtype','boardname','qualification','religionmasterpk',
+        'lastservicepk','sports','size','fcscale','distinction','shoessize','studentskill','birthdistrict','birthstate','birthcountry','pdistrictid',
+        'mdistrictid','admissioncategorypk','higheststreampk','city','postalcity','servicemasterpk','tshirtsize','blazerjacketsize','trousersize','tracksuitsize','fatherprofession',
+        'motherprofession','degree','instituitontype','nationality','birthstate','birthdistrict','statedistrictmappingpk','motherlang','academicmedium',
+        'universitymedium','preuniversitymedium','upscexammedium','upscvivamedium'
     ];
 
     $isTableField = isset($field->field_type);
@@ -120,7 +89,7 @@
         </div>
     @break
 
-    @case('Select Box')
+    {{-- @case('Select Box')
     @case('dropdown')
         <div class="form-group">
             <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
@@ -133,8 +102,16 @@
                         // Mapping: heading → [table, pk_field, value_field]
                         $specialMappings = [
                             'country' => ['country_master', 'pk', 'country_name'],
+                            'nationality' => ['country_master', 'pk', 'country_name'],
                             'state' => ['state_master', 'pk', 'state_name'],
+                            'birthstate' => ['state_master', 'pk', 'state_name'],
                             'district' => ['state_district_mapping', 'pk', 'district_name'],
+                            'district' => ['state_district_mapping', 'pk', 'district_name'],
+                            'pdistrictid' => ['state_district_mapping', 'pk', 'district_name'],
+                            'mdistrictid' => ['state_district_mapping', 'pk', 'district_name'],
+                            'birthcountry' => ['country_master', 'pk', 'country_name'],
+                            'statedistrictmappingpk' => ['state_district_mapping', 'pk', 'district_name'],
+                            'birthdistrict' => ['state_district_mapping', 'pk', 'district_name'],
                             'admissioncategorypk' => ['admission_category_master', 'pk', 'Seat_name'],
                             'higheststreampk' => ['stream_master', 'pk', 'stream_name'],
                             'religionmasterpk' => ['religion_master', 'pk', 'religion_name'],
@@ -152,6 +129,12 @@
                             'university' => ['university_board_name_master', 'pk', 'board_name'],
                             'degree' => ['degree_master', 'Pk', 'degree_name'],
                             'instituitontype' => ['institute_type_master', 'pk', 'type_name'],
+                            'motherlang' => ['language_master', 'pk', 'language_name'],
+                            'academicmedium' => ['language_master', 'pk', 'language_name'],
+                            'preuniversitymedium' => ['language_master', 'pk', 'language_name'],
+                            'universitymedium' => ['language_master', 'pk', 'language_name'],
+                            'upscexammedium' => ['language_master', 'pk', 'language_name'],
+                            'upscvivamedium' => ['language_master', 'pk', 'language_name'],
                         ];
 
                         // $map = $specialMappings[$mappedHeading] ?? null;
@@ -189,6 +172,103 @@
                 @endif
             </select>
         </div>
+    @break --}}
+    @case('Select Box')
+    @case('dropdown')
+     @php
+    // dump([
+    //     'fieldName' => $fieldName ?? null,
+    //     'fieldLabel' => $fieldLabel ?? null,
+    //     'field' => $field ?? null,
+    // ]);
+@endphp
+        @php
+            // Collect options from field definition
+            $optionsRaw =
+                $field->field_options ??
+                ($field->field_checkbox_options ?? ($field->field_radio_options ?? ($field->fieldoption ?? '')));
+
+            $hasTableOptions = !empty(trim($optionsRaw ?? ''));
+
+            $options = [];
+            $pkField = null;
+            $valueField = null;
+
+            if ($hasTableOptions) {
+                // Priority 1: options defined in the field itself
+                $options = array_map('trim', explode(',', $optionsRaw));
+            } else {
+                // Priority 2: mapping from DB
+                $specialMappings = [
+                    'country' => ['country_master', 'pk', 'country_name'],
+                    'nationality' => ['country_master', 'pk', 'country_name'],
+                    'state' => ['state_master', 'pk', 'state_name'],
+                    'birthstate' => ['state_master', 'pk', 'state_name'],
+                    'district' => ['state_district_mapping', 'pk', 'district_name'],
+                    'pdistrictid' => ['state_district_mapping', 'pk', 'district_name'],
+                    'mdistrictid' => ['state_district_mapping', 'pk', 'district_name'],
+                    'birthcountry' => ['country_master', 'pk', 'country_name'],
+                    'statedistrictmappingpk' => ['state_district_mapping', 'pk', 'district_name'],
+                    'birthdistrict' => ['state_district_mapping', 'pk', 'district_name'],
+                    'admissioncategorypk' => ['admission_category_master', 'pk', 'Seat_name'],
+                    'higheststreampk' => ['stream_master', 'pk', 'stream_name'],
+                    'religionmasterpk' => ['religion_master', 'pk', 'religion_name'],
+                    'servicemasterpk' => ['service_master', 'pk', 'service_name'],
+                    'lastservicepk' => ['service_master', 'pk', 'service_name'],
+                    'city' => ['city_master', 'pk', 'city_name'],
+                    'tshirtsize' => ['student_cloths_size_master', 'pk', 'cloth_size'],
+                    'trousersize' => ['student_cloths_size_master', 'pk', 'cloth_size'],
+                    'blazerjacketsize' => ['student_cloths_size_master', 'pk', 'cloth_size'],
+                    'tracksuitsize' => ['student_cloths_size_master', 'pk', 'cloth_size'],
+                    'fatherprofession' => ['parents_profession_master', 'pk', 'profession_name'],
+                    'motherprofession' => ['parents_profession_master', 'pk', 'profession_name'],
+                    'language' => ['language_master', 'pk', 'language_name'],
+                    'boardname' => ['university_board_name_master', 'pk', 'board_name'],
+                    'university' => ['university_board_name_master', 'pk', 'board_name'],
+                    'degree' => ['degree_master', 'Pk', 'degree_name'],
+                    'instituitontype' => ['institute_type_master', 'pk', 'type_name'],
+                    'motherlang' => ['language_master', 'pk', 'language_name'],
+                    'academicmedium' => ['language_master', 'pk', 'language_name'],
+                    'preuniversitymedium' => ['language_master', 'pk', 'language_name'],
+                    'universitymedium' => ['language_master', 'pk', 'language_name'],
+                    'upscexammedium' => ['language_master', 'pk', 'language_name'],
+                    'upscvivamedium' => ['language_master', 'pk', 'language_name'],
+                ];
+
+                $map = $specialMappings[strtolower($mappedHeading ?? '')] ?? null;
+
+                if ($map) {
+                    [$tableName, $pkField, $valueField] = $map;
+                    $options = DB::table($tableName)->get();
+                }
+            }
+        @endphp
+
+        <div class="form-group">
+            <label class="form-label" for="{{ $fieldName }}">{!! $fieldLabel . $requiredAsterisk !!}</label>
+            <select class="form-control select" id="{{ $fieldName }}" name="{{ $fieldName }}"
+                {{ $required ? 'required' : '' }}>
+                <option value="">Choose Option</option>
+
+                {{-- Priority 1: use table-defined options --}}
+                @if ($hasTableOptions)
+                    @foreach ($options as $option)
+                        <option value="{{ $option }}" {{ old($fieldName, $value) == $option ? 'selected' : '' }}>
+                            {{ $option }}
+                        </option>
+                    @endforeach
+
+                    {{-- Priority 2: fallback to DB mapping --}}
+                @elseif(!empty($pkField) && !empty($valueField))
+                    @foreach ($options as $option)
+                        <option value="{{ $option->$pkField }}"
+                            {{ old($fieldName, $value) == $option->$pkField ? 'selected' : '' }}>
+                            {{ $option->$valueField }}
+                        </option>
+                    @endforeach
+                @endif
+            </select>
+        </div>
     @break
 
     @case('Radio Button')
@@ -220,7 +300,7 @@
         @php
             $checkboxOptions = explode(',', $field->field_checkbox_options ?? ($field->fieldoption ?? ''));
             $selectedValues = is_array($value) ? $value : explode(',', $value ?? '');
-             //  Use DB layout for radio: 'inline' → form-check-inline, 'block' → d-block
+            //  Use DB layout for radio: 'inline' → form-check-inline, 'block' → d-block
             $layoutClass = $field->layout === 'block' ? 'd-block' : 'form-check-inline';
         @endphp
 
