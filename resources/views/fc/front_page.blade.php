@@ -55,7 +55,7 @@
                 </div>
 
                 <!-- Online Exemption -->
-                <div class="col-md-6">
+                {{-- <div class="col-md-6">
                     <div class="d-flex align-items-center border rounded-4 p-3 h-100">
                         <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">group</i>
                         <div>
@@ -63,10 +63,10 @@
                             <div class="text-muted">Available after registration</div>
                         </div>
                     </div>
-                </div>
+                </div> --}}
 
                 <!-- Laptop Requirement -->
-                <div class="col-md-6">
+                {{-- <div class="col-md-6">
                     <div class="d-flex align-items-center border rounded-4 p-3 h-100">
                         <i class="material-icons menu-icon me-3 fs-3" style="color: #004a93;">laptop_windows</i>
                         <div>
@@ -74,7 +74,7 @@
                             <div class="text-muted">Mandatory for all participants</div>
                         </div>
                     </div>
-                </div>
+                </div> --}}
             </div>
         </div>
 
@@ -87,13 +87,13 @@
             @endif
         </div>
 
-        <div class="text-center mt-4">
+        {{-- <div class="text-center mt-4">
             <a href="{{ route('fc.choose.path') }}" class="btn btn-primary px-4"
                 style="background-color: #004a93; border: #004a93;">
                 Click Here to Proceed
             </a>
-        </div>
-        <hr>
+        </div> --}}
+        {{-- <hr> --}}
          <!-- Signature Block -->
         <div class="signature mt-5 text-end">
             @if (isset($data) && !empty($data->coordinator_signature))
@@ -107,6 +107,12 @@
                 {{ isset($data) ? $data->coordinator_designation ?? 'Coordinator Designation' : 'Coordinator Designation' }}<br>
                 {{ isset($data) ? $data->coordinator_info ?? 'Additional Info' : 'Additional Info' }}
             </p>
+        </div>
+         <div class="text-center mt-4">
+            <a href="{{ route('fc.choose.path') }}" class="btn btn-primary px-4"
+                style="background-color: #004a93; border: #004a93;">
+                Click Here to Proceed
+            </a>
         </div>
 
     </div>

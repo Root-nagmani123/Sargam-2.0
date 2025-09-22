@@ -85,8 +85,10 @@ class FcRegistrationMasterListDaTable extends DataTable
             ->filterColumn('exam_year', function ($query, $keyword) {
                 // $query->whereRaw("exam_year", '=', $keyword);
                 $query->whereRaw("BINARY `exam_year` = ?", [$keyword]);
+            })->addColumn('action', function ($row) {
+                return '<a href="' . route('admin.registration.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>';
             })
-            ->rawColumns(['service_master_pk', 'schema_id', 'contact_no', 'dob', 'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'rank', 'web_auth', 'exam_year']);
+            ->rawColumns(['service_master_pk', 'schema_id', 'contact_no', 'dob', 'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'rank', 'web_auth', 'exam_year', 'action']);
     }
 
     /**
@@ -149,6 +151,11 @@ class FcRegistrationMasterListDaTable extends DataTable
             Column::make('dob')->title('Date of Birth')->searchable(false)->orderable(false),
             Column::make('web_auth')->title('Web Auth')->searchable(true)->orderable(false),
             Column::make('exam_year')->title('Exam Year')->searchable(true)->orderable(false),
+            Column::computed('action')
+                ->exportable(false)
+                ->printable(false)
+                ->width(60)
+                ->addClass('text-center')->title('Action'),
         ];
     }
 
