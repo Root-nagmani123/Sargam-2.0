@@ -40,7 +40,7 @@
 @endpush
 
 @section('content')
-    <div class="container mt-5">
+    <div class="container-fluid mt-5">
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
                 {{ session('success') }}
@@ -53,7 +53,7 @@
             </div>
         @endif
 
-        <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card mx-auto">
             <div class="card-body text-center">
                 <p class="mb-4 text-muted status-message">
                     Click the button below to import students from the source table into the system.
