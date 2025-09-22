@@ -12,7 +12,7 @@
 
             <input type="hidden" name="form_id" value="{{ $form_id }}">
 
-            <div id="sections-container">
+            <div id="sections-container" class="card card-body">
                 @foreach ($sections as $index => $section)
                     <div class="section-group" id="section_{{ $index }}">
                         <input type="hidden" name="section_id[]" value="{{ $section->id }}">
@@ -121,7 +121,7 @@
                             @endphp
 
                             {{-- @foreach ($regular_fields as $fieldIndex => $field)
-                                <div class="form-group border p-3 mb-4 rounded shadow-sm bg-light">
+                                <div class="form-group mb-4 rounded">
                                     <input type="hidden" name="field_id[{{ $fieldIndex }}]"
                                         value="{{ $field->id }}">
                                     <input type="hidden" name="field_section[{{ $fieldIndex }}]"
@@ -194,7 +194,7 @@
                             @endforeach --}}
 
                             @foreach ($regular_fields as $fieldIndex => $field)
-                                <div class="form-group border p-3 mb-4 rounded shadow-sm bg-light">
+                                <div class="form-group mb-4 rounded">
                                     <input type="hidden" name="field_id[{{ $fieldIndex }}]"
                                         value="{{ $field->id }}">
                                     <input type="hidden" name="field_section[{{ $fieldIndex }}]"
@@ -288,6 +288,7 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <hr>
                                 </div>
                             @endforeach
 
@@ -404,7 +405,7 @@
          `;
             } else {
                 fieldHtml = `
-            <div class="form-group border p-3 mb-4 rounded shadow-sm">
+            <div class="form-group mb-4 rounded">
                 <input type="hidden" name="field_id[${newFieldIndex}]" value="new">
                 <input type="hidden" name="field_section[${newFieldIndex}]" value="${sectionId}">
 
@@ -461,6 +462,7 @@
                     </div>
                 </div>
             </div>
+            <hr>
          `;
             }
 
