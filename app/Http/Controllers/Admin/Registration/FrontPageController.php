@@ -628,6 +628,9 @@ class FrontPageController extends Controller
             'reg_web_code' => 'required|string',
             'exemption_category' => 'required|exists:fc_exemption_master,Pk',
             'captcha' => 'required|captcha',
+            'course' => 'nullable|string|max:255',   // Blade field -> DB previous_fc_course_name
+            'year' => 'nullable|digits:4',           // Blade field -> DB fc_date
+            'roll_number' => 'nullable|string|max:50', // Blade field -> DB appearing_roll_no
         ];
 
         // Custom error messages
@@ -643,6 +646,9 @@ class FrontPageController extends Controller
 
             'captcha.required' => 'Captcha is required.',
             'captcha.captcha' => 'The captcha you entered is incorrect. Please try again.',
+            'course.string' => 'Course name must be a valid string.',
+            'year.digits' => 'Year must be a valid 4-digit year.',
+            'roll_number.string' => 'Roll number must be a valid string.',
         ];
 
         $exemption = DB::table('fc_exemption_master')
@@ -683,26 +689,6 @@ class FrontPageController extends Controller
                 ->withErrors(['reg_web_code' => 'Invalid Web Code or Mobile Number.'])
                 ->withInput();
         }
-
-        // Check if exemption already applied
-        // $hasApplied = DB::table('fc_registration_master')
-        //     ->where('contact_no', $request->ex_mobile)
-        //     ->where('web_auth', $request->reg_web_code)
-        //     ->where('fc_exemption_master_pk', '!=', 0)
-        //     ->exists();
-
-
-        // if ($hasApplied) {
-        // return redirect()->back()
-        //     ->withInput()
-        //     ->with('has_applied', true); // This session value will trigger the modal
-        //     if ($hasApplied) {
-        //         return redirect()->back()
-        //             ->withInput()
-        //             ->with('already_applied', 'You have already applied for an exemption.');
-        //     }
-        // }
-
         $username = $registration->user_id ?? null;
 
         $medicalDocPath = null;
@@ -720,8 +706,10 @@ class FrontPageController extends Controller
                 'user_id' => $username,
                 'fc_exemption_master_pk' => $request->exemption_category,
                 'medical_exemption_doc' => $medicalDocPath,
-                // 'updated_at' => now(),
-                // 'created_at' => now(), // This won't update if already exists
+                'previous_fc_course_name' => !empty($request->course) ? $request->course : null,
+                'fc_date'                 => !empty($request->year) ? $request->year : null,
+                'appearing_roll_no'       => !empty($request->roll_number) ? $request->roll_number : null,
+
             ]
         );
 
