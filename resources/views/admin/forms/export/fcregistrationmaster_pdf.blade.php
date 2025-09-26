@@ -30,6 +30,9 @@
         <thead>
             <tr>
                 <th>S No</th>
+                <th>Course Name</th>
+                <th>Exemption Category</th>
+                <th>Application Type</th>
                 <th>Service Master PK</th>
                 <th>Schema ID</th>
                 <th>Display Name</th>
@@ -39,6 +42,7 @@
                 <th>Email</th>
                 <th>Contact No</th>
                 <th>Rank</th>
+                <th>Date of Birth</th>
                 <th>Web Auth</th>
                 <th>Exam Year</th>
             </tr>
@@ -47,17 +51,29 @@
             @foreach ($registrations as $reg)
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td>{{ $reg->service_master_pk }}</td>
-                    <td>{{ $reg->schema_id }}</td>
-                    <td>{{ $reg->display_name }}</td>
-                    <td>{{ $reg->first_name }}</td>
-                    <td>{{ $reg->middle_name }}</td>
-                    <td>{{ $reg->last_name }}</td>
-                    <td>{{ $reg->email }}</td>
-                    <td>{{ $reg->contact_no }}</td>
-                    <td>{{ $reg->rank }}</td>
-                    <td>{{ $reg->web_auth }}</td>
-                    <td>{{ $reg->exam_year }}</td>
+                    <td>{{ $reg->course_name ?? '' }}</td>
+                    <td>{{ $reg->exemption_name ?? '' }}</td>
+                    <td>
+                        @if ($reg->application_type == 1)
+                            Registration
+                        @elseif($reg->application_type == 2)
+                            Exemption
+                        @else
+                            N/A
+                        @endif
+                    </td>
+                    <td>{{ $reg->service_short_name ?? '' }}</td>
+                    <td>{{ $reg->schema_id ?? '' }}</td>
+                    <td>{{ $reg->display_name ?? '' }}</td>
+                    <td>{{ $reg->first_name ?? '' }}</td>
+                    <td>{{ $reg->middle_name ?? '' }}</td>
+                    <td>{{ $reg->last_name ?? '' }}</td>
+                    <td>{{ $reg->email ?? '' }}</td>
+                    <td>{{ $reg->contact_no ?? '' }}</td>
+                    <td>{{ $reg->rank ?? '' }}</td>
+                    <td>{{ $reg->dob ?? '' }}</td>
+                    <td>{{ $reg->web_auth ?? '' }}</td>
+                    <td>{{ $reg->exam_year ?? '' }}</td>
                 </tr>
             @endforeach
         </tbody>
