@@ -23,6 +23,11 @@ Route::middleware(['auth'])->prefix('/registration')->group(function () {
     Route::get('/forms/{id}/edit', [FormController::class, 'edit'])->name('forms.edit');
     Route::put('/forms/{id}', [FormController::class, 'update'])->name('forms.update');
     Route::post('/forms/{id}/toggle-visible', [FormController::class, 'toggleVisible'])->name('forms.toggleVisible');
+    // template route
+    Route::get('/forms/template-create', [FormController::class, 'template_create'])->name('forms.template.create');
+    // template store
+    Route::post('/forms/template-store', [FormController::class, 'template_store'])->name('forms.template.store');
+
 
     // Show the form
     Route::get('/forms/new/{formid}', [FormController::class, 'createform'])->name('forms.createnew');
