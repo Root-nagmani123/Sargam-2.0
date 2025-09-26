@@ -11,6 +11,8 @@ use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Html\Editor\Editor;
 use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
+use Illuminate\Support\Facades\DB; // Add this for joins
+
 
 class FcRegistrationMasterListDaTable extends DataTable
 {
@@ -25,8 +27,26 @@ class FcRegistrationMasterListDaTable extends DataTable
         return (new EloquentDataTable($query))
 
             ->addIndexColumn()
+
+            // 🔹 Course Name column
+            ->addColumn('course_name', function ($row) {
+                return $row->course_name ?? 'N/A';
+            })
+            // 🔹 Exemption Category column
+            ->addColumn('exemption_name', function ($row) {
+                return $row->exemption_name ?? 'N/A';
+            })
+            // 🔹 Type column (Registration/Exemption)
+            ->addColumn('application_type', function ($row) {
+                if ($row->application_type == 1) {
+                    return 'Registration';
+                } elseif ($row->application_type == 2) {
+                    return 'Exemption';
+                }
+                return 'N/A';
+            })
             ->addColumn('service_master_pk', function ($row) {
-                return $row->service_master_pk ?? '';
+                return $row->service_short_name ?? '';
             })
             ->addColumn('schema_id', function ($row) {
                 return $row->schema_id ?? '';
@@ -97,10 +117,43 @@ class FcRegistrationMasterListDaTable extends DataTable
      * @param \App\Models\FcRegistrationMasterListDaTable $model
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function query(FcRegistrationMaster $model): QueryBuilder
+    // public function query(FcRegistrationMaster $model): QueryBuilder
+    // {
+    //     return $model->select('pk', 'email', 'contact_no', 'display_name', 'schema_id', 'first_name', 'middle_name', 'last_name', 'rank', 'exam_year', 'service_master_pk', 'web_auth', 'dob')->newQuery();
+    // }
+
+
+    public function query(FcRegistrationMaster $model): \Illuminate\Database\Eloquent\Builder
     {
-        return $model->select('pk', 'email', 'contact_no', 'display_name', 'schema_id', 'first_name', 'middle_name', 'last_name', 'rank', 'exam_year', 'service_master_pk', 'web_auth', 'dob')->newQuery();
+        $query = $model->newQuery()
+            ->leftJoin('service_master as s', 'fc_registration_master.service_master_pk', '=', 's.pk')
+            ->leftJoin('fc_exemption_master as e', 'fc_registration_master.fc_exemption_master_pk', '=', 'e.Pk')
+            ->select(
+                'fc_registration_master.*',
+                's.service_short_name',
+                'e.Exemption_name as exemption_name'
+            );
+
+        // Apply DataTable filters
+        if ($course = request('course_name')) {
+            $query->where('fc_registration_master.formid', $course);
+        }
+
+        if ($exemption = request('exemption_category')) {
+            $query->where('e.Exemption_name', $exemption);
+        }
+
+        if ($type = request('application_type')) {
+            $query->where('fc_registration_master.application_type', $type);
+        }
+
+        if ($service = request('service_master')) {
+            $query->where('fc_registration_master.service_master_pk', $service);
+        }
+        // dd($query->toSql());
+        return $query;
     }
+
 
     /**
      * Optional method if you want to use html builder.
@@ -112,7 +165,7 @@ class FcRegistrationMasterListDaTable extends DataTable
         return $this->builder()
             ->setTableId('fcregistrationmasterlistdatable-table')
             ->columns($this->getColumns())
-            ->minifiedAjax()
+            ->minifiedAjax() // keep empty
             ->selectStyleSingle()
             ->parameters([
                 'responsive' => true,
@@ -130,6 +183,7 @@ class FcRegistrationMasterListDaTable extends DataTable
             ]);
     }
 
+
     /**
      * Get the dataTable columns definition.
      *
@@ -139,6 +193,9 @@ class FcRegistrationMasterListDaTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
+            Column::make('course_name')->title('Course Name')->searchable(true)->orderable(false),
+            Column::make('exemption_name')->title('Exemption Category')->searchable(true)->orderable(false),
+            Column::make('application_type')->title('Application Type')->searchable(true)->orderable(false),
             Column::make('service_master_pk')->title('Service Master PK')->orderable(false)->searchable(false),
             Column::make('schema_id')->title('Schema ID')->searchable(false)->orderable(false),
             Column::make('contact_no')->title('Contact No')->searchable(false)->orderable(false),
