@@ -71,6 +71,290 @@ class FormController extends Controller
         // return view('admin.registration.create');
     }
 
+    // Template create
+    public function template_create()
+    {
+        $forms = DB::table('local_form')->select('id', 'name', 'shortname')->orderBy('name')->get();
+        return view('admin.registration.template_create', compact('forms'));
+    }
+
+    // Template store
+    // public function template_store(Request $request)
+    // {
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // 1. Insert the new form
+    //         $formId = DB::table('local_form')->insertGetId([
+    //             'parent_id'    => $request->parent_id,
+    //             'name'         => $request->name,
+    //             'shortname'    => $request->shortname,
+    //             'description'  => $request->description,
+    //             'course_sdate' => $request->course_sdate,
+    //             'course_edate' => $request->course_edate,
+    //             'visible'      => $request->has('visible') ? 1 : 0,
+    //             'sortorder'    => 0,
+    //             'created_at'   => now(),
+    //             'updated_at'   => now(),
+    //         ]);
+
+    //         // 2. Clone template if template ID is present in URL
+    //         $templateId = $request->input('template_id'); // read template ID from POST
+
+    //         // 2. If user selected a template, clone sections & fields
+    //         if ($templateId) {
+    //             // $templateId = $request->parent_id;
+
+    //             // Fetch all sections of the template
+    //             $sections = DB::table('form_sections')
+    //                 ->where('formid', $templateId)
+    //                 ->get();
+
+    //             $sectionMap = []; // old_section_id → new_section_id
+
+    //             foreach ($sections as $section) {
+    //                 $newSectionId = DB::table('form_sections')->insertGetId([
+    //                     'formid'        => $formId,
+    //                     'section_title' => $section->section_title,
+    //                     'layout'        => $section->layout,
+    //                     'sort_order'    => $section->sort_order,
+    //                 ]);
+
+    //                 $sectionMap[$section->id] = $newSectionId;
+    //             }
+
+    //             // Fetch all fields of the template
+    //             $fields = DB::table('form_data')
+    //                 ->where('formid', $templateId)
+    //                 ->get();
+
+    //             foreach ($fields as $field) {
+    //                 DB::table('form_data')->insert([
+    //                     'formid'        => $formId,
+    //                     'section_id'    => $sectionMap[$field->section_id] ?? null,
+    //                     'formname'      => $field->formname,
+    //                     'formtype'      => $field->formtype,
+    //                     'formlabel'     => $field->formlabel,
+    //                     'fieldoption'   => $field->fieldoption,
+    //                     'required'      => $field->required,
+    //                     'layout'        => $field->layout,
+    //                     'table_index'   => $field->table_index,
+    //                     'format'        => $field->format,
+    //                     'row_index'     => $field->row_index,
+    //                     'col_index'     => $field->col_index,
+    //                     'header'        => $field->header,
+    //                     'field_type'    => $field->field_type,
+    //                     'field_title'   => $field->field_title,
+    //                     'field_url'     => $field->field_url,
+    //                     'field_options' => $field->field_options,
+    //                     'field_checkbox_options' => $field->field_checkbox_options,
+    //                     'field_radio_options'    => $field->field_radio_options,
+    //                     'created_at'    => now(),
+    //                     'updated_at'    => now(),
+    //                 ]);
+    //             }
+    //         }
+
+    //         DB::commit();
+    //         return redirect()->route('forms.index')->with('success', 'Form created successfully!');
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return back()->withErrors(['error' => $e->getMessage()]);
+    //     }
+    // }
+
+    //     public function template_store(Request $request)
+    // {
+    //     DB::beginTransaction();
+
+    //     try {
+    //         // Read template ID from hidden input
+    //         $templateId = $request->input('template_id');
+
+    //         if (!$templateId) {
+    //             throw new \Exception("Template ID not provided.");
+    //         }
+
+    //         // Recursive function to clone a form and its children
+    //         $cloneForm = function ($formId, $newParentId = null) use (&$cloneForm, $request) {
+    //             // Get original form data
+    //             $form = DB::table('local_form')->where('id', $formId)->first();
+
+    //             // Insert cloned form
+    //             $newFormId = DB::table('local_form')->insertGetId([
+    //                 'parent_id'    => $newParentId,
+    //                 'name'         => $request->name ?? $form->name,
+    //                 'shortname'    => $request->shortname ?? $form->shortname,
+    //                 'description'  => $request->description ?? $form->description,
+    //                 'course_sdate' => $request->course_sdate ?? $form->course_sdate,
+    //                 'course_edate' => $request->course_edate ?? $form->course_edate,
+    //                 'visible'      => $request->has('visible') ? 1 : $form->visible,
+    //                 'sortorder'    => $form->sortorder,
+    //                 'created_at'   => now(),
+    //                 'updated_at'   => now(),
+    //             ]);
+
+    //             // Clone sections
+    //             $sections = DB::table('form_sections')->where('formid', $formId)->get();
+    //             $sectionMap = [];
+
+    //             foreach ($sections as $section) {
+    //                 $newSectionId = DB::table('form_sections')->insertGetId([
+    //                     'formid'        => $newFormId,
+    //                     'section_title' => $section->section_title,
+    //                     'layout'        => $section->layout,
+    //                     'sort_order'    => $section->sort_order,
+    //                 ]);
+    //                 $sectionMap[$section->id] = $newSectionId;
+    //             }
+
+    //             // Clone fields
+    //             $fields = DB::table('form_data')->where('formid', $formId)->get();
+    //             foreach ($fields as $field) {
+    //                 DB::table('form_data')->insert([
+    //                     'formid'        => $newFormId,
+    //                     'section_id'    => $sectionMap[$field->section_id] ?? null,
+    //                     'formname'      => $field->formname,
+    //                     'formtype'      => $field->formtype,
+    //                     'formlabel'     => $field->formlabel,
+    //                     'fieldoption'   => $field->fieldoption,
+    //                     'required'      => $field->required,
+    //                     'layout'        => $field->layout,
+    //                     'table_index'   => $field->table_index,
+    //                     'format'        => $field->format,
+    //                     'row_index'     => $field->row_index,
+    //                     'col_index'     => $field->col_index,
+    //                     'header'        => $field->header,
+    //                     'field_type'    => $field->field_type,
+    //                     'field_title'   => $field->field_title,
+    //                     'field_url'     => $field->field_url,
+    //                     'field_options' => $field->field_options,
+    //                     'field_checkbox_options' => $field->field_checkbox_options,
+    //                     'field_radio_options'    => $field->field_radio_options,
+    //                     'created_at'    => now(),
+    //                     'updated_at'    => now(),
+    //                 ]);
+    //             }
+
+    //             // Clone child forms recursively
+    //             $children = DB::table('local_form')->where('parent_id', $formId)->get();
+    //             foreach ($children as $child) {
+    //                 $cloneForm($child->id, $newFormId);
+    //             }
+
+    //             return $newFormId;
+    //         };
+
+    //         // Start cloning from template
+    //         $cloneForm($templateId);
+
+    //         DB::commit();
+    //         return redirect()->route('forms.index')->with('success', 'Form and subforms cloned successfully!');
+    //     } catch (\Exception $e) {
+    //         DB::rollBack();
+    //         return back()->withErrors(['error' => $e->getMessage()]);
+    //     }
+    // }
+    public function template_store(Request $request)
+    {
+        DB::beginTransaction();
+
+        try {
+            $templateId = $request->input('template_id');
+
+            if (!$templateId) {
+                throw new \Exception("Template ID not provided.");
+            }
+
+            // Recursive clone
+            $cloneForm = function ($formId, $newParentId = null, $isRoot = false) use (&$cloneForm, $request) {
+                $form = DB::table('local_form')->where('id', $formId)->first();
+
+                // Handle names: only override for root form
+                $name = $isRoot ? ($request->name ?? $form->name) : $form->name;
+                $shortname = $isRoot ? ($request->shortname ?? $form->shortname) : $form->shortname;
+                $description = $isRoot ? ($request->description ?? $form->description) : $form->description;
+                $course_sdate = $isRoot ? ($request->course_sdate ?? $form->course_sdate) : $form->course_sdate;
+                $course_edate = $isRoot ? ($request->course_edate ?? $form->course_edate) : $form->course_edate;
+                $visible = $isRoot ? ($request->has('visible') ? 1 : $form->visible) : $form->visible;
+
+                $newFormId = DB::table('local_form')->insertGetId([
+                    'parent_id'    => $newParentId,
+                    'name'         => $name,
+                    'shortname'    => $shortname,
+                    'description'  => $description,
+                    'course_sdate' => $course_sdate,
+                    'course_edate' => $course_edate,
+                    'visible'      => $visible,
+                    'sortorder'    => $form->sortorder,
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+
+                // Clone sections
+                $sections = DB::table('form_sections')->where('formid', $formId)->get();
+                $sectionMap = [];
+                foreach ($sections as $section) {
+                    $newSectionId = DB::table('form_sections')->insertGetId([
+                        'formid'        => $newFormId,
+                        'section_title' => $section->section_title,
+                        'layout'        => $section->layout,
+                        'sort_order'    => $section->sort_order,
+                    ]);
+                    $sectionMap[$section->id] = $newSectionId;
+                }
+
+                // Clone fields
+                $fields = DB::table('form_data')->where('formid', $formId)->get();
+                foreach ($fields as $field) {
+                    DB::table('form_data')->insert([
+                        'formid'        => $newFormId,
+                        'section_id'    => $sectionMap[$field->section_id] ?? null,
+                        'formname'      => $field->formname,
+                        'formtype'      => $field->formtype,
+                        'formlabel'     => $field->formlabel,
+                        'fieldoption'   => $field->fieldoption,
+                        'required'      => $field->required,
+                        'layout'        => $field->layout,
+                        'table_index'   => $field->table_index,
+                        'format'        => $field->format,
+                        'row_index'     => $field->row_index,
+                        'col_index'     => $field->col_index,
+                        'header'        => $field->header,
+                        'field_type'    => $field->field_type,
+                        'field_title'   => $field->field_title,
+                        'field_url'     => $field->field_url,
+                        'field_options' => $field->field_options,
+                        'field_checkbox_options' => $field->field_checkbox_options,
+                        'field_radio_options'    => $field->field_radio_options,
+                        'created_at'    => now(),
+                        'updated_at'    => now(),
+                    ]);
+                }
+
+                // Clone children recursively
+                $children = DB::table('local_form')->where('parent_id', $formId)->get();
+                foreach ($children as $child) {
+                    $cloneForm($child->id, $newFormId, false);
+                }
+
+                return $newFormId;
+            };
+
+            // Start cloning with root form
+            $cloneForm($templateId, null, true);
+
+            DB::commit();
+            return redirect()->route('forms.index')->with('success', 'Form and subforms cloned successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => $e->getMessage()]);
+        }
+    }
+
+
+
+
     public function store(Request $request)
     {
         $request->validate([
@@ -929,8 +1213,8 @@ class FormController extends Controller
         $lookupValues = [];
         foreach ($mappings as $field => $map) {
             if (!isset($map['table'], $map['id'], $map['name'])) {
-        dump("Invalid mapping for: $field", $map);
-    }
+                dump("Invalid mapping for: $field", $map);
+            }
             $lookupValues[$field] = DB::table($map['table'])
                 ->pluck($map['name'], $map['id']); // [id => name]
         }
