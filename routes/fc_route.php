@@ -256,6 +256,19 @@ Route::get('/enrollment/export-enrolled', [EnrollementController::class, 'export
     // Inactive forms list
 Route::get('/forms/inactive', [FormController::class, 'inactive'])->name('forms.inactive');
 
+// Download template
+Route::get('/download-template', [RegistrationImportController::class, 'downloadTemplate'])->name('fc.download.template');
+// Route::post('/upload-excel', [RegistrationImportController::class, 'uploadExcel'])->name('fc.upload.excel');
+
+// Bulk upload preview
+Route::post('/registration/bulk/preview', [RegistrationImportController::class, 'previewUpload'])
+    ->name('fc.preview.upload');
+
+// Confirm and import
+Route::post('/registration/bulk/confirm', [RegistrationImportController::class, 'confirmUpload'])
+    ->name('fc.confirm.upload');
+
+
 
 
 
