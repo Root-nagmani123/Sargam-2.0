@@ -95,7 +95,7 @@
                     </div>
                 </form>
 
-                <!-- ✅ Export Form OUTSIDE filter form -->
+                <!--  Export Form OUTSIDE filter form -->
                 <form id="exportForm" action="{{ route('admin.registration.export') }}" method="GET"
                     class="d-flex align-items-center gap-2 mb-3">
                     <input type="hidden" name="course_name" id="export_course_name">
@@ -112,6 +112,37 @@
                     </select>
                     <button type="submit" class="btn btn-success">Export</button>
                 </form>
+
+
+                <!--  Bulk Upload Form -->
+                {{-- <form action="{{ route('fc.upload.excel') }}" method="POST" enctype="multipart/form-data"
+                    class="d-flex align-items-center gap-3 mb-3">
+                    @csrf
+                    <a href="{{ route('fc.download.template') }}" class="btn btn-outline-success">
+                        <i class="fa fa-download me-1"></i> Download Template
+                    </a>
+                    <input type="file" name="file" class="form-control w-auto" required>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-upload me-1"></i> Upload
+                    </button>
+                </form> --}}
+                <form action="{{ route('fc.preview.upload') }}" method="POST" enctype="multipart/form-data"
+                    class="mb-3 d-flex align-items-center gap-2">
+                    @csrf
+                    <!-- Download Template -->
+                    <a href="{{ route('fc.download.template') }}" class="btn btn-outline-success">
+                        <i class="bi bi-download me-1"></i> Download Template
+                    </a>
+
+                    <!-- File Input -->
+                    <input type="file" name="file" class="form-control w-auto" accept=".xlsx,.xls,.csv" required>
+
+                    <!-- Submit Preview -->
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-eye me-1"></i> Preview
+                    </button>
+                </form>
+
 
                 <!-- DataTable -->
                 <div class="table-responsive">
@@ -151,28 +182,27 @@
             });
         });
 
-        
-            $(document).ready(function() {
-                // ✅ Sync filter values into export form before submit
-                $('#exportForm').on('submit', function() {
-                    $('#export_course_name').val($('#course_name').val());
-                    $('#export_exemption_category').val($('#exemption_category').val());
-                    $('#export_application_type').val($('#application_type').val());
-                    $('#export_service_master').val($('#service_master').val());
-                });
 
-                // ✅ Disable Export button until format is selected
-                $('#format').on('change', function() {
-                    if ($(this).val()) {
-                        $('#exportForm button[type="submit"]').prop('disabled', false);
-                    } else {
-                        $('#exportForm button[type="submit"]').prop('disabled', true);
-                    }
-                });
-
-                // Set initial state (disabled)
-                $('#exportForm button[type="submit"]').prop('disabled', true);
+        $(document).ready(function() {
+            //  Sync filter values into export form before submit
+            $('#exportForm').on('submit', function() {
+                $('#export_course_name').val($('#course_name').val());
+                $('#export_exemption_category').val($('#exemption_category').val());
+                $('#export_application_type').val($('#application_type').val());
+                $('#export_service_master').val($('#service_master').val());
             });
 
+            //  Disable Export button until format is selected
+            $('#format').on('change', function() {
+                if ($(this).val()) {
+                    $('#exportForm button[type="submit"]').prop('disabled', false);
+                } else {
+                    $('#exportForm button[type="submit"]').prop('disabled', true);
+                }
+            });
+
+            // Set initial state (disabled)
+            $('#exportForm button[type="submit"]').prop('disabled', true);
+        });
     </script>
 @endpush
