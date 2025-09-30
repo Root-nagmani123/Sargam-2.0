@@ -83,12 +83,18 @@ class RegistrationImportController extends Controller
         $exemptionCategories = DB::table('fc_exemption_master')->pluck('Exemption_name', 'Pk');
         $applicationTypes = [1 => 'Registration', 2 => 'Exemption'];
         $serviceMasters = DB::table('service_master')->pluck('service_name', 'pk');
+        $years = DB::table('fc_registration_master')
+            ->select(DB::raw('DISTINCT exam_year'))
+            ->orderBy('exam_year', 'desc')
+            ->pluck('exam_year', 'exam_year');
+
 
         return $dataTable->render('admin.registration.fcregistrationmaster_list', [
             'courses' => $courses,
             'exemptionCategories' => $exemptionCategories,
             'applicationTypes' => $applicationTypes,
-            'serviceMasters' => $serviceMasters
+            'serviceMasters' => $serviceMasters,
+            'years' => $years
         ]);
     }
 
@@ -167,6 +173,7 @@ class RegistrationImportController extends Controller
         $query = FcRegistrationMaster::query()
             ->leftJoin('service_master as s', 'fc_registration_master.service_master_pk', '=', 's.pk')
             ->leftJoin('fc_exemption_master as e', 'fc_registration_master.fc_exemption_master_pk', '=', 'e.Pk')
+            ->leftJoin('cadre_master as c', 'fc_registration_master.cadre_master_pk', '=', 'c.pk')
             ->select(
                 'fc_registration_master.formid as course_master_pk',
                 'fc_registration_master.application_type',
@@ -183,7 +190,9 @@ class RegistrationImportController extends Controller
                 'fc_registration_master.dob',
                 'fc_registration_master.web_auth',
                 'fc_registration_master.exam_year',
-                'e.Exemption_name as exemption_name'
+                'e.Exemption_name as exemption_name',
+                'c.cadre_name',
+                's.group_service_name as group_type',        // <-- alias here
             );
 
         // Apply filters
@@ -201,6 +210,12 @@ class RegistrationImportController extends Controller
 
         if ($service = $request->service_master) {
             $query->where('fc_registration_master.service_master_pk', $service);
+        }
+        if ($year = $request->year) {
+            $query->where('fc_registration_master.exam_year', $year);
+        }
+        if ($group = $request->group_type) {
+            $query->where('s.group_service_name', $group);
         }
 
         $registrations = $query->get();
@@ -293,7 +308,7 @@ class RegistrationImportController extends Controller
         }, 'fc_registration_template.xlsx');
     }
 
-    
+
 
     // public function previewUpload(Request $request)
     // {
@@ -366,173 +381,171 @@ class RegistrationImportController extends Controller
 
     //working code
 
-//     public function previewUpload(Request $request)
-// {
-//     $request->validate([
-//         'file' => 'required|mimes:xlsx,csv,xls|max:2048',
-//     ]);
+    //     public function previewUpload(Request $request)
+    // {
+    //     $request->validate([
+    //         'file' => 'required|mimes:xlsx,csv,xls|max:2048',
+    //     ]);
 
-//     $rows = Excel::toCollection(new FcRegistrationImport, $request->file('file'))->first();
+    //     $rows = Excel::toCollection(new FcRegistrationImport, $request->file('file'))->first();
 
-//     $previewData = collect($rows)->map(function ($row) {
-//         $generated_ot_code = trim($row['generated_ot_code'] ?? '');
-//         $service_master_pk = trim($row['service_master_pk'] ?? '');
-//         $cadre_master_pk   = trim($row['cadre_master_pk'] ?? '');
-//         $rank              = trim($row['rank'] ?? '');
-//         $display_name      = trim($row['display_name'] ?? '');
-//         $contact_no        = trim($row['contact_no'] ?? '');
+    //     $previewData = collect($rows)->map(function ($row) {
+    //         $generated_ot_code = trim($row['generated_ot_code'] ?? '');
+    //         $service_master_pk = trim($row['service_master_pk'] ?? '');
+    //         $cadre_master_pk   = trim($row['cadre_master_pk'] ?? '');
+    //         $rank              = trim($row['rank'] ?? '');
+    //         $display_name      = trim($row['display_name'] ?? '');
+    //         $contact_no        = trim($row['contact_no'] ?? '');
 
-//         $exists = FcRegistrationMaster::where([
-//             ['generated_OT_code', $generated_ot_code],
-//             ['service_master_pk', $service_master_pk],
-//             ['cadre_master_pk', $cadre_master_pk],
-//         ])->exists();
+    //         $exists = FcRegistrationMaster::where([
+    //             ['generated_OT_code', $generated_ot_code],
+    //             ['service_master_pk', $service_master_pk],
+    //             ['cadre_master_pk', $cadre_master_pk],
+    //         ])->exists();
 
-//         return [
-//             'display_name'      => $display_name,
-//             'contact_no'        => $contact_no,
-//             'rank'              => $rank,
-//             'generated_OT_code' => $generated_ot_code,
-//             'service_master_pk' => $service_master_pk,
-//             'cadre_master_pk'   => $cadre_master_pk,
-//             'exists'            => $exists ? 'Update' : 'Insert',
-//         ];
-//     });
+    //         return [
+    //             'display_name'      => $display_name,
+    //             'contact_no'        => $contact_no,
+    //             'rank'              => $rank,
+    //             'generated_OT_code' => $generated_ot_code,
+    //             'service_master_pk' => $service_master_pk,
+    //             'cadre_master_pk'   => $cadre_master_pk,
+    //             'exists'            => $exists ? 'Update' : 'Insert',
+    //         ];
+    //     });
 
-//     return view('admin.registration.fclist_preview', compact('previewData'));
-// }
+    //     return view('admin.registration.fclist_preview', compact('previewData'));
+    // }
 
-// public function confirmUpload(Request $request)
-// {
-//     $data = json_decode($request->data, true);
+    // public function confirmUpload(Request $request)
+    // {
+    //     $data = json_decode($request->data, true);
 
-//     $insertData = [];
-//     $updateData = [];
+    //     $insertData = [];
+    //     $updateData = [];
 
-//     foreach ($data as $row) {
-//         $generated_ot_code = trim($row['generated_OT_code'] ?? '');
-//         $service_master_pk = trim($row['service_master_pk'] ?? '');
-//         $cadre_master_pk   = trim($row['cadre_master_pk'] ?? '');
+    //     foreach ($data as $row) {
+    //         $generated_ot_code = trim($row['generated_OT_code'] ?? '');
+    //         $service_master_pk = trim($row['service_master_pk'] ?? '');
+    //         $cadre_master_pk   = trim($row['cadre_master_pk'] ?? '');
 
-//         if (!$generated_ot_code) continue; // skip invalid
+    //         if (!$generated_ot_code) continue; // skip invalid
 
-//         $existing = FcRegistrationMaster::where([
-//             ['generated_OT_code', $generated_ot_code],
-//             ['service_master_pk', $service_master_pk],
-//             ['cadre_master_pk', $cadre_master_pk],
-//         ])->first();
+    //         $existing = FcRegistrationMaster::where([
+    //             ['generated_OT_code', $generated_ot_code],
+    //             ['service_master_pk', $service_master_pk],
+    //             ['cadre_master_pk', $cadre_master_pk],
+    //         ])->first();
 
-//         if ($existing) {
-//             // Prepare update
-//             $updateData[] = [
-//                 'id'                => $existing->pk,
-//                 'display_name'      => trim($row['display_name'] ?? $existing->display_name),
-//                 'contact_no'        => trim($row['contact_no'] ?? $existing->contact_no),
-//                 'rank'              => trim($row['rank'] ?? $existing->rank),
-//             ];
-//         } else {
-//             // Prepare insert
-//             $insertData[] = [
-//                 'display_name'      => trim($row['display_name'] ?? ''),
-//                 'contact_no'        => trim($row['contact_no'] ?? ''),
-//                 'rank'              => trim($row['rank'] ?? ''),
-//                 'generated_OT_code' => $generated_ot_code,
-//                 'service_master_pk' => $service_master_pk,
-//                 'cadre_master_pk'   => $cadre_master_pk,
-//                 'created_date'      => now(),
-//             ];
-//         }
-//     }
+    //         if ($existing) {
+    //             // Prepare update
+    //             $updateData[] = [
+    //                 'id'                => $existing->pk,
+    //                 'display_name'      => trim($row['display_name'] ?? $existing->display_name),
+    //                 'contact_no'        => trim($row['contact_no'] ?? $existing->contact_no),
+    //                 'rank'              => trim($row['rank'] ?? $existing->rank),
+    //             ];
+    //         } else {
+    //             // Prepare insert
+    //             $insertData[] = [
+    //                 'display_name'      => trim($row['display_name'] ?? ''),
+    //                 'contact_no'        => trim($row['contact_no'] ?? ''),
+    //                 'rank'              => trim($row['rank'] ?? ''),
+    //                 'generated_OT_code' => $generated_ot_code,
+    //                 'service_master_pk' => $service_master_pk,
+    //                 'cadre_master_pk'   => $cadre_master_pk,
+    //                 'created_date'      => now(),
+    //             ];
+    //         }
+    //     }
 
-//     // Insert new rows
-//     if (!empty($insertData)) {
-//         FcRegistrationMaster::insert($insertData);
-//     }
+    //     // Insert new rows
+    //     if (!empty($insertData)) {
+    //         FcRegistrationMaster::insert($insertData);
+    //     }
 
-//     // Update existing rows
-//     foreach ($updateData as $upd) {
-//         FcRegistrationMaster::where('pk', $upd['id'])->update([
-//             'display_name' => $upd['display_name'],
-//             'contact_no'   => $upd['contact_no'],
-//             'rank'         => $upd['rank'],
-//         ]);
-//     }
+    //     // Update existing rows
+    //     foreach ($updateData as $upd) {
+    //         FcRegistrationMaster::where('pk', $upd['id'])->update([
+    //             'display_name' => $upd['display_name'],
+    //             'contact_no'   => $upd['contact_no'],
+    //             'rank'         => $upd['rank'],
+    //         ]);
+    //     }
 
-//     return redirect()->route('admin.registration.index')
-//         ->with('success', 'Bulk upload completed successfully!');
-// }
+    //     return redirect()->route('admin.registration.index')
+    //         ->with('success', 'Bulk upload completed successfully!');
+    // }
 
-public function previewUpload(Request $request)
-{
-    $request->validate([
-        'file' => 'required|mimes:xlsx,csv,xls|max:2048',
-    ]);
+    public function previewUpload(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,csv,xls|max:2048',
+        ]);
 
-    $rows = Excel::toCollection(new FcRegistrationImport, $request->file('file'))->first();
+        $rows = Excel::toCollection(new FcRegistrationImport, $request->file('file'))->first();
 
-    $previewData = collect($rows)->map(function ($row) {
-        $display_name = trim($row['display_name'] ?? '');
-        $rank         = trim($row['rank'] ?? '');
-        $contact_no   = trim($row['contact_no'] ?? '');
-        $generated_ot_code = trim($row['generated_ot_code'] ?? '');
-        $service_master_pk = trim($row['service_master_pk'] ?? '');
-        $cadre_master_pk   = trim($row['cadre_master_pk'] ?? '');
+        $previewData = collect($rows)->map(function ($row) {
+            $display_name = trim($row['display_name'] ?? '');
+            $rank         = trim($row['rank'] ?? '');
+            $contact_no   = trim($row['contact_no'] ?? '');
+            $generated_ot_code = trim($row['generated_ot_code'] ?? '');
+            $service_master_pk = trim($row['service_master_pk'] ?? '');
+            $cadre_master_pk   = trim($row['cadre_master_pk'] ?? '');
 
-        $exists = FcRegistrationMaster::where([
-            ['display_name', $display_name],
-            ['rank', $rank],
-            ['contact_no', $contact_no],
-        ])->exists();
+            $exists = FcRegistrationMaster::where([
+                ['display_name', $display_name],
+                ['rank', $rank],
+                ['contact_no', $contact_no],
+            ])->exists();
 
-        return [
-            'display_name'      => $display_name,
-            'contact_no'        => $contact_no,
-            'rank'              => $rank,
-            'generated_OT_code' => $generated_ot_code,
-            'service_master_pk' => $service_master_pk,
-            'cadre_master_pk'   => $cadre_master_pk,
-            'exists'            => $exists ? 'Update' : 'Not Found',
-        ];
-    });
+            return [
+                'display_name'      => $display_name,
+                'contact_no'        => $contact_no,
+                'rank'              => $rank,
+                'generated_OT_code' => $generated_ot_code,
+                'service_master_pk' => $service_master_pk,
+                'cadre_master_pk'   => $cadre_master_pk,
+                'exists'            => $exists ? 'Update' : 'Not Found',
+            ];
+        });
 
-    return view('admin.registration.fclist_preview', compact('previewData'));
-}
-
-
-public function confirmUpload(Request $request)
-{
-    $data = json_decode($request->data, true);
-
-    foreach ($data as $row) {
-        $display_name = trim($row['display_name'] ?? '');
-        $rank         = trim($row['rank'] ?? '');
-        $contact_no   = trim($row['contact_no'] ?? '');
-        $generated_ot_code = trim($row['generated_OT_code'] ?? '');
-        $service_master_pk = trim($row['service_master_pk'] ?? '');
-        $cadre_master_pk   = trim($row['cadre_master_pk'] ?? '');
-
-        if (!$display_name || !$contact_no) continue; // skip invalid
-
-        // Only update if record exists based on display_name + rank + contact_no
-        $existing = FcRegistrationMaster::where([
-            ['display_name', $display_name],
-            ['rank', $rank],
-            ['contact_no', $contact_no],
-        ])->first();
-
-        if ($existing) {
-            FcRegistrationMaster::where('pk', $existing->pk)->update([
-                'generated_OT_code' => $generated_ot_code ?: $existing->generated_OT_code,
-                'service_master_pk' => $service_master_pk ?: $existing->service_master_pk,
-                'cadre_master_pk'   => $cadre_master_pk ?: $existing->cadre_master_pk,
-            ]);
-        }
-        // Skip if not exists
+        return view('admin.registration.fclist_preview', compact('previewData'));
     }
 
-    return redirect()->route('admin.registration.index')
-        ->with('success', 'Bulk update completed successfully!');
-}
 
+    public function confirmUpload(Request $request)
+    {
+        $data = json_decode($request->data, true);
 
+        foreach ($data as $row) {
+            $display_name = trim($row['display_name'] ?? '');
+            $rank         = trim($row['rank'] ?? '');
+            $contact_no   = trim($row['contact_no'] ?? '');
+            $generated_ot_code = trim($row['generated_OT_code'] ?? '');
+            $service_master_pk = trim($row['service_master_pk'] ?? '');
+            $cadre_master_pk   = trim($row['cadre_master_pk'] ?? '');
+
+            if (!$display_name || !$contact_no) continue; // skip invalid
+
+            // Only update if record exists based on display_name + rank + contact_no
+            $existing = FcRegistrationMaster::where([
+                ['display_name', $display_name],
+                ['rank', $rank],
+                ['contact_no', $contact_no],
+            ])->first();
+
+            if ($existing) {
+                FcRegistrationMaster::where('pk', $existing->pk)->update([
+                    'generated_OT_code' => $generated_ot_code ?: $existing->generated_OT_code,
+                    'service_master_pk' => $service_master_pk ?: $existing->service_master_pk,
+                    'cadre_master_pk'   => $cadre_master_pk ?: $existing->cadre_master_pk,
+                ]);
+            }
+            // Skip if not exists
+        }
+
+        return redirect()->route('admin.registration.index')
+            ->with('success', 'Bulk update completed successfully!');
+    }
 }

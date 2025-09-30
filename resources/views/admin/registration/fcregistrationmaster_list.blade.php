@@ -8,12 +8,14 @@
         <x-session_message />
 
         <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
+            {{-- <div class="card-body">
 
                 <!-- Filters Form -->
                 <form id="registrationFilterForm">
                     <div class="row align-items-end mb-4">
-
+                        <a href="{{ route('admin.registration.import.form') }}" class="btn btn-secondary">
+                            <i class="bi bi-upload me-1"></i> Bulk Upload
+                        </a>
                         <!-- Course Name -->
                         <div class="col-md-3 mb-2">
                             <label for="course_name" class="form-label">Course Name</label>
@@ -58,40 +60,31 @@
                             </select>
                         </div>
 
+                        <div class="col-md-3">
+                            <label for="year">Select Year</label>
+                            <select name="year" id="year" class="form-control">
+                                <option value="">-- All Years --</option>
+                                @foreach ($years as $key => $year)
+                                    <option value="{{ $key }}">{{ $year }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="group_type">Group Type</label>
+                            <select id="group_type" name="group_type" class="form-control">
+                                <option value="">All</option>
+                                <option value="A" {{ request('group_type') == 'A' ? 'selected' : '' }}>A</option>
+                                <option value="B" {{ request('group_type') == 'B' ? 'selected' : '' }}>B</option>
+                                <option value="NULL" {{ request('group_type') == 'NULL' ? 'selected' : '' }}>Other
+                                </option>
+                            </select>
+                        </div>
+
+
                         <!-- Reset Button -->
                         <div class="col-md-1 mb-2">
                             <button type="button" id="resetFilters" class="btn btn-outline-secondary w-100">Reset</button>
                         </div>
-                        <!-- Filter Button -->
-                        {{-- <div class="col-md-1 col-sm-6 mb-2">
-                            <button type="submit" class="btn btn-primary w-100">Filter</button>
-                        </div> --}}
-
-                        <!-- Reset Button -->
-                        {{-- <div class="col-md-1 col-sm-6 mb-2">
-                            <a href="{{ route('admin.registration.index') }}"
-                                class="btn btn-outline-secondary w-100">Reset</a>
-                        </div> --}}
-
-                        <!-- Export Format -->
-                        {{-- <div class="col-md-2 col-sm-6 mb-2">
-                            <label for="format" class="form-label">Export Format</label>
-                            <select name="format" id="format" class="form-select">
-                                <option value="">-- All Formats --</option>
-                                <option value="pdf">PDF</option>
-                                <option value="xlsx">Excel</option>
-                                <option value="csv">CSV</option>
-                            </select>
-                        </div>
-
-                        <!-- Export Button -->
-                        <div class="col-md-2 col-sm-12 mb-2">
-                            <button type="submit" formaction="{{ route('admin.registration.export') }}"
-                                class="btn btn-success w-100">
-                                Export
-                            </button> --}}
-                        {{-- </div> --}}
-
                     </div>
                 </form>
 
@@ -102,6 +95,8 @@
                     <input type="hidden" name="exemption_category" id="export_exemption_category">
                     <input type="hidden" name="application_type" id="export_application_type">
                     <input type="hidden" name="service_master" id="export_service_master">
+                    <input type="hidden" name="year" id="export_year">
+                    <input type="hidden" name="group_type" id="export_group_type">
 
                     <label for="format" class="form-label me-2 mb-0 fw-semibold">Export:</label>
                     <select name="format" id="format" class="form-select w-auto" required>
@@ -112,20 +107,7 @@
                     </select>
                     <button type="submit" class="btn btn-success">Export</button>
                 </form>
-
-
-                <!--  Bulk Upload Form -->
-                {{-- <form action="{{ route('fc.upload.excel') }}" method="POST" enctype="multipart/form-data"
-                    class="d-flex align-items-center gap-3 mb-3">
-                    @csrf
-                    <a href="{{ route('fc.download.template') }}" class="btn btn-outline-success">
-                        <i class="fa fa-download me-1"></i> Download Template
-                    </a>
-                    <input type="file" name="file" class="form-control w-auto" required>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fa fa-upload me-1"></i> Upload
-                    </button>
-                </form> --}}
+               
                 <form action="{{ route('fc.preview.upload') }}" method="POST" enctype="multipart/form-data"
                     class="mb-3 d-flex align-items-center gap-2">
                     @csrf
@@ -149,7 +131,132 @@
                     {{ $dataTable->table(['class' => 'table table-striped table-bordered text-nowrap align-middle', 'id' => 'fcregistrationmasterlistdatable-table']) }}
                 </div>
 
+            </div> --}}
+            <div class="card" style="border-left: 4px solid #004a93;">
+                <div class="card-body">
+
+                    <!-- Filters Form -->
+                    <form id="registrationFilterForm">
+                        <!-- Row 1: 4 Filters -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-3">
+                                <label for="course_name" class="form-label">Course Name</label>
+                                <select id="course_name" class="form-select">
+                                    <option value="">-- All Courses --</option>
+                                    @foreach ($courses as $id => $name)
+                                        <option value="{{ $id }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="exemption_category" class="form-label">Exemption Category</label>
+                                <select id="exemption_category" class="form-select">
+                                    <option value="">-- All Categories --</option>
+                                    @foreach ($exemptionCategories as $id => $name)
+                                        <option value="{{ $name }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
+                                <label for="application_type" class="form-label">Application Type</label>
+                                <select id="application_type" class="form-select">
+                                    <option value="">-- All Types --</option>
+                                    @foreach ($applicationTypes as $key => $value)
+                                        <option value="{{ $key }}">{{ $value }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label for="service_master" class="form-label">Service</label>
+                                <select id="service_master" class="form-select">
+                                    <option value="">-- All Services --</option>
+                                    @foreach ($serviceMasters as $id => $name)
+                                        <option value="{{ $id }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Year, Group Type, Reset -->
+                        <div class="row g-3 mb-3 align-items-end">
+                            <div class="col-md-3">
+                                <label for="year" class="form-label">Year</label>
+                                <select id="year" class="form-select">
+                                    <option value="">-- All Years --</option>
+                                    @foreach ($years as $key => $year)
+                                        <option value="{{ $key }}">{{ $year }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="group_type" class="form-label">Group Type</label>
+                                <select id="group_type" class="form-select">
+                                    <option value="">-- All Groups --</option>
+                                    <option value="A" {{ request('group_type') == 'A' ? 'selected' : '' }}>A</option>
+                                    <option value="B" {{ request('group_type') == 'B' ? 'selected' : '' }}>B</option>
+                                    <option value="NULL" {{ request('group_type') == 'NULL' ? 'selected' : '' }}>Other
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
+                                <button type="button" id="resetFilters" class="btn btn-outline-secondary w-100">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Row 3: Export & Template/Preview Buttons -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6 d-flex gap-2">
+                            <form id="exportForm" action="{{ route('admin.registration.export') }}" method="GET"
+                                class="d-flex w-100 gap-2">
+                                <input type="hidden" name="course_name" id="export_course_name">
+                                <input type="hidden" name="exemption_category" id="export_exemption_category">
+                                <input type="hidden" name="application_type" id="export_application_type">
+                                <input type="hidden" name="service_master" id="export_service_master">
+                                <input type="hidden" name="year" id="export_year">
+                                <input type="hidden" name="group_type" id="export_group_type">
+
+                                <select name="format" id="format" class="form-select">
+                                    <option value="">Format</option>
+                                    <option value="xlsx">Excel</option>
+                                    <option value="csv">CSV</option>
+                                    <option value="pdf">PDF</option>
+                                </select>
+                                <button type="submit" class="btn btn-success w-100">Export</button>
+                            </form>
+                        </div>
+
+                        <div class="col-md-6 d-flex gap-2">
+                            <form action="{{ route('fc.preview.upload') }}" method="POST" enctype="multipart/form-data"
+                                class="d-flex w-100 gap-2">
+                                @csrf
+                                <button type="button" onclick="window.location='{{ route('fc.download.template') }}'"
+                                    class="btn btn-outline-success w-100">
+                                    <i class="bi bi-download me-1"></i> Template
+                                </button>
+                                <input type="file" name="file" class="form-control w-100" accept=".xlsx,.xls,.csv"
+                                    required>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-eye me-1"></i> Preview
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- DataTable -->
+                    <div class="table-responsive">
+                        {{ $dataTable->table(['class' => 'table table-striped table-bordered text-nowrap align-middle', 'id' => 'fcregistrationmasterlistdatable-table']) }}
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
 @endsection
@@ -162,9 +269,11 @@
             var table = $('#fcregistrationmasterlistdatable-table').DataTable();
 
             // Reload DataTable on filter change
-            $('#course_name, #exemption_category, #application_type, #service_master').on('change', function() {
-                table.ajax.reload();
-            });
+            $('#course_name, #exemption_category, #application_type, #service_master, #year, #group_type').on(
+                'change',
+                function() {
+                    table.ajax.reload();
+                });
 
             // Reset filters
             $('#resetFilters').on('click', function() {
@@ -179,6 +288,10 @@
                 data.exemption_category = $('#exemption_category').val();
                 data.application_type = $('#application_type').val();
                 data.service_master = $('#service_master').val();
+                data.year = $('#year').val(); // Added Year
+                data.group_type = $('#group_type').val(); // Added Group Type
+
+
             });
         });
 
@@ -190,6 +303,8 @@
                 $('#export_exemption_category').val($('#exemption_category').val());
                 $('#export_application_type').val($('#application_type').val());
                 $('#export_service_master').val($('#service_master').val());
+                $('#export_year').val($('#year').val()); // Added Year
+                $('#export_group_type').val($('#group_type').val()); // Added Group Type
             });
 
             //  Disable Export button until format is selected

@@ -46,40 +46,46 @@ class FcRegistrationMasterListDaTable extends DataTable
                 return 'N/A';
             })
             ->addColumn('service_master_pk', function ($row) {
-                return $row->service_short_name ?? '';
+                return $row->service_short_name ?? 'N/A';
+            })
+            ->addColumn('group_service_name', function ($row) {
+                return $row->group_service_name ?? 'N/A';
+            })
+            ->addColumn('cadre_master_pk', function ($row) {
+                return $row->cadre_name ?? 'N/A';
             })
             ->addColumn('schema_id', function ($row) {
-                return $row->schema_id ?? '';
+                return $row->schema_id ?? 'N/A';
             })
             ->addColumn('contact_no', function ($row) {
-                return $row->contact_no ?? '';
+                return $row->contact_no ?? 'N/A';
             })
             ->addColumn('dob', function ($row) {
-                return $row->dob ??  '';
+                return $row->dob ?? 'N/A';
             })
             ->addColumn('display_name', function ($row) {
-                return $row->display_name ?? '';
+                return $row->display_name ?? 'N/A';
             })
             ->addColumn('first_name', function ($row) {
-                return $row->first_name ?? '';
+                return $row->first_name ?? 'N/A';
             })
             ->addColumn('middle_name', function ($row) {
-                return $row->middle_name ?? '';
+                return $row->middle_name ?? 'N/A';
             })
             ->addColumn('last_name', function ($row) {
-                return $row->last_name ?? '';
+                return $row->last_name ?? 'N/A';
             })
             ->addColumn('email', function ($row) {
-                return $row->email ?? '';
+                return $row->email ?? 'N/A';
             })
             ->addColumn('rank', function ($row) {
-                return $row->rank ?? '';
+                return $row->rank ?? 'N/A';
             })
             ->addColumn('web_auth', function ($row) {
-                return $row->web_auth ?? '';
+                return $row->web_auth ?? 'N/A';
             })
             ->addColumn('exam_year', function ($row) {
-                return $row->exam_year ?? '';
+                return $row->exam_year ?? 'N/A';
             })
             ->filterColumn('rank', function ($query, $keyword) {
                 $query->whereRaw("BINARY `rank` = ?", [$keyword]);
@@ -128,10 +134,13 @@ class FcRegistrationMasterListDaTable extends DataTable
         $query = $model->newQuery()
             ->leftJoin('service_master as s', 'fc_registration_master.service_master_pk', '=', 's.pk')
             ->leftJoin('fc_exemption_master as e', 'fc_registration_master.fc_exemption_master_pk', '=', 'e.Pk')
+            ->leftJoin('cadre_master as c', 'fc_registration_master.cadre_master_pk', '=', 'c.pk')
             ->select(
                 'fc_registration_master.*',
                 's.service_short_name',
-                'e.Exemption_name as exemption_name'
+                'e.Exemption_name as exemption_name',
+                'c.cadre_name as cadre_name',
+                's.group_service_name as group_type', // <-- alias here
             );
 
         // Apply DataTable filters
@@ -150,7 +159,16 @@ class FcRegistrationMasterListDaTable extends DataTable
         if ($service = request('service_master')) {
             $query->where('fc_registration_master.service_master_pk', $service);
         }
-        // dd($query->toSql());
+        if ($year = request('year')) {
+            $query->where('fc_registration_master.exam_year', $year);
+        }
+        if ($group = request('group_type')) {
+            if ($group === 'NULL') {
+                $query->whereNull('s.group_service_name');
+            } else {
+                $query->where('s.group_service_name', $group);
+            }
+        }
         return $query;
     }
 
@@ -196,7 +214,9 @@ class FcRegistrationMasterListDaTable extends DataTable
             Column::make('course_name')->title('Course Name')->searchable(true)->orderable(false),
             Column::make('exemption_name')->title('Exemption Category')->searchable(true)->orderable(false),
             Column::make('application_type')->title('Application Type')->searchable(true)->orderable(false),
-            Column::make('service_master_pk')->title('Service Master PK')->orderable(false)->searchable(false),
+            Column::make('service_master_pk')->title('Service')->orderable(false)->searchable(false),
+            Column::make('group_type')->title('Group Type')->orderable(false)->searchable(false),
+            Column::make('cadre_master_pk')->title('Cadre')->orderable(false)->searchable(false),
             Column::make('schema_id')->title('Schema ID')->searchable(false)->orderable(false),
             Column::make('contact_no')->title('Contact No')->searchable(false)->orderable(false),
             Column::make('display_name')->title('Display Name')->searchable(true)->orderable(false),

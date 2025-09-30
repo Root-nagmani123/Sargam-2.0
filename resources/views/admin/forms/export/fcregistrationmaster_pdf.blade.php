@@ -33,7 +33,9 @@
                 <th>Course Name</th>
                 <th>Exemption Category</th>
                 <th>Application Type</th>
-                <th>Service Master PK</th>
+                <th>Service</th>
+                <th>Group Type</th>
+                <th>Cadre</th>
                 <th>Schema ID</th>
                 <th>Display Name</th>
                 <th>First Name</th>
@@ -63,6 +65,8 @@
                         @endif
                     </td>
                     <td>{{ $reg->service_short_name ?? '' }}</td>
+                    <td>{{ $reg->group_type ?? 'N/A' }}</td>
+                    <td>{{ $reg->cadre_name ?? '' }}</td>
                     <td>{{ $reg->schema_id ?? '' }}</td>
                     <td>{{ $reg->display_name ?? '' }}</td>
                     <td>{{ $reg->first_name ?? '' }}</td>
