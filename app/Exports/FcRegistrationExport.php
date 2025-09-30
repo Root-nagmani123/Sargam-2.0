@@ -97,7 +97,7 @@ class FcRegistrationExport implements FromCollection, WithHeadings, ShouldAutoSi
 {
     protected $registrations;
 
-    // ✅ accept filtered data
+    //  accept filtered data
     public function __construct($registrations)
     {
         $this->registrations = $registrations;
@@ -113,6 +113,8 @@ class FcRegistrationExport implements FromCollection, WithHeadings, ShouldAutoSi
                 'exemption_name'    => $row->exemption_name ?? '',
                 'application_type'  => $row->application_type == 1 ? 'Registration' : ($row->application_type == 2 ? 'Exemption' : ''),
                 'service_master_pk' => $row->service_short_name ?? '', // joined name
+                'group_type'        => $row->group_type ?? '',
+                'cadre_name'        => $row->cadre_name ?? '',   // moved before schema_id
                 'schema_id'         => $row->schema_id ?? '',
                 'display_name'      => $row->display_name ?? '',
                 'first_name'        => $row->first_name ?? '',
@@ -124,6 +126,7 @@ class FcRegistrationExport implements FromCollection, WithHeadings, ShouldAutoSi
                 'dob'               => $row->dob ?? '',
                 'web_auth'          => $row->web_auth ?? '',
                 'exam_year'         => $row->exam_year ?? '',
+
             ];
         });
     }
@@ -132,8 +135,10 @@ class FcRegistrationExport implements FromCollection, WithHeadings, ShouldAutoSi
         return [
             'Course Name',
             'Exemption Category',
-            'Type',
-            'Service Master PK',
+            ' Application Type',
+            'Service',
+            'Group Type',
+            'Cadre',
             'Schema ID',
             'Display Name',
             'First Name',
