@@ -253,7 +253,7 @@ Route::get('/enrollment/enrolled-students', [EnrollementController::class, 'getE
 Route::get('/enrollment/export-enrolled', [EnrollementController::class, 'exportEnrolledStudents'])
     ->name('enrollment.exportEnrolled');
 
-    // Inactive forms list
+// Inactive forms list
 Route::get('/forms/inactive', [FormController::class, 'inactive'])->name('forms.inactive');
 
 // Download template
@@ -268,6 +268,9 @@ Route::post('/registration/bulk/preview', [RegistrationImportController::class, 
 Route::post('/registration/bulk/confirm', [RegistrationImportController::class, 'confirmUpload'])
     ->name('fc.confirm.upload');
 
+// Deactivate filtered records
+Route::post('registration/deactivate-filtered', [RegistrationImportController::class, 'deactivateFiltered'])
+    ->name('admin.registration.deactivate.filtered');
 
 
 
@@ -275,4 +278,5 @@ Route::post('/registration/bulk/confirm', [RegistrationImportController::class, 
 
 
 
-// EnrollementController
+
+

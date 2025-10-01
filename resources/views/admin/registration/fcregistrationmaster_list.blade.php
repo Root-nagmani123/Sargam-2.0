@@ -138,7 +138,7 @@
                     <!-- Filters Form -->
                     <form id="registrationFilterForm">
                         <!-- Row 1: 4 Filters -->
-                        <div class="row g-3 mb-3">
+                        <div class="row g-3 mb-3 align-items-end">
                             <div class="col-md-3">
                                 <label for="course_name" class="form-label">Course Name</label>
                                 <select id="course_name" class="form-select">
@@ -169,7 +169,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-4">
+                            <div class="col-md-2">
                                 <label for="service_master" class="form-label">Service</label>
                                 <select id="service_master" class="form-select">
                                     <option value="">-- All Services --</option>
@@ -178,7 +178,14 @@
                                     @endforeach
                                 </select>
                             </div>
+
+                            <div class="col-md-2 d-flex justify-content-end">
+                                <a href="{{ route('admin.registration.import.form') }}" class="btn btn-secondary w-100">
+                                    <i class="bi bi-upload me-1"></i> Bulk Upload
+                                </a>
+                            </div>
                         </div>
+
 
                         <!-- Row 2: Year, Group Type, Reset -->
                         <div class="row g-3 mb-3 align-items-end">
@@ -193,7 +200,7 @@
                             </div>
 
                             <div class="col-md-3">
-                                <label for="group_type" class="form-label">Group Type</label>
+                                <label for="group_type" class="form-label">Service Type</label>
                                 <select id="group_type" class="form-select">
                                     <option value="">-- All Groups --</option>
                                     <option value="A" {{ request('group_type') == 'A' ? 'selected' : '' }}>A</option>
@@ -248,6 +255,17 @@
                                 </button>
                             </form>
                         </div>
+
+                        <form id="bulkDeactivateForm" action="{{ route('admin.registration.deactivate.filtered') }}"
+                            method="POST" class="d-inline-block mb-3">
+                            @csrf
+                            <input type="hidden" name="group_type" id="deactivate_group_type">
+                            <button type="submit" class="btn btn-danger" id="deactivateButton" disabled>
+                                <i class="bi bi-slash-circle me-1"></i> Deactivate Service Type Records
+                            </button>
+                        </form>
+
+
                     </div>
 
                     <!-- DataTable -->
@@ -293,6 +311,13 @@
 
 
             });
+
+            //  Sync Group Type into deactivate form hidden input
+            function syncGroupType() {
+                $('#deactivate_group_type').val($('#group_type').val());
+            }
+            $('#group_type').on('change', syncGroupType);
+            syncGroupType(); // set initial value on load
         });
 
 
@@ -318,6 +343,32 @@
 
             // Set initial state (disabled)
             $('#exportForm button[type="submit"]').prop('disabled', true);
+        });
+    </script>
+
+    <!-- Script to enable/disable Deactivate button based on Group Type selection -->
+    <script>
+        $(document).ready(function() {
+            const deactivateBtn = $('#deactivateButton');
+            const groupSelect = $('#group_type');
+            const deactivateGroupInput = $('#deactivate_group_type');
+
+            function toggleDeactivateButton() {
+                const groupVal = groupSelect.val();
+                deactivateGroupInput.val(groupVal); // sync hidden input
+
+                if (groupVal === 'B') {
+                    deactivateBtn.prop('disabled', false); // enable only for B
+                } else {
+                    deactivateBtn.prop('disabled', true); // disable for others
+                }
+            }
+
+            // On load
+            toggleDeactivateButton();
+
+            // On change
+            groupSelect.on('change', toggleDeactivateButton);
         });
     </script>
 @endpush
