@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin\Registration;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\FcRegistrationImport; 
+use App\Imports\FcRegistrationImport;
 use App\Imports\PreviewImport;
 use App\Models\FcRegistrationMaster;
 use Illuminate\Support\Facades\Session;
@@ -106,7 +106,13 @@ class RegistrationImportController extends Controller
     public function fc_masteredit($id)
     {
         $registration = FcRegistrationMaster::findOrFail($id);
-        return view('admin.registration.fcregistrationmaster_edit', compact('registration'));
+        $serviceMasters = \DB::table('service_master')->pluck('service_name', 'pk');
+
+        $cadres = \DB::table('cadre_master')
+            ->where('active_inactive', 1) // only active
+            ->pluck('cadre_name', 'pk'); // key = pk, value = cadre_name
+
+        return view('admin.registration.fcregistrationmaster_edit', compact('registration', 'serviceMasters', 'cadres'));
     }
 
 
@@ -121,6 +127,7 @@ class RegistrationImportController extends Controller
             'schema_id' => 'nullable|string|max:255',
             'service_master_pk' => 'nullable|string|max:255',
             'exam_year' => 'nullable|string|max:255',
+            'cadre_master_pk' => 'nullable|string|max:255',
         ]);
 
         $record = FcRegistrationMaster::findOrFail($id);
@@ -136,7 +143,8 @@ class RegistrationImportController extends Controller
             'dob',
             'display_name',
             'schema_id',
-            'service_master_pk'
+            'service_master_pk',
+            'cadre_master_pk'
         ]));
 
         return redirect()->route('admin.registration.index')->with('success', 'Record updated successfully.');

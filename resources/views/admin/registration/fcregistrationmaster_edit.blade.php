@@ -11,7 +11,8 @@
                     <nav aria-label="breadcrumb" class="ms-auto">
                         <ol class="breadcrumb mb-0">
                             <li class="breadcrumb-item d-flex align-items-center">
-                                <a href="{{ route('admin.registration.index') }}" class="text-muted text-decoration-none d-flex">
+                                <a href="{{ route('admin.registration.index') }}"
+                                    class="text-muted text-decoration-none d-flex">
                                     <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
                                 </a>
                             </li>
@@ -59,14 +60,40 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label for="service_master_pk" class="form-label">Service Master PK</label>
-                            <input type="text" id="service_master_pk" name="service_master_pk"
-                                class="form-control @error('service_master_pk') is-invalid @enderror"
-                                value="{{ old('service_master_pk', $registration->service_master_pk) }}">
+                            <label for="service_master_pk" class="form-label">Service</label>
+                            <select id="service_master_pk" name="service_master_pk"
+                                class="form-select @error('service_master_pk') is-invalid @enderror" required>
+                                <option value="">-- Select Service --</option>
+                                @foreach ($serviceMasters as $pk => $name)
+                                    <option value="{{ $pk }}"
+                                        {{ old('service_master_pk', $registration->service_master_pk) == $pk ? 'selected' : '' }}>
+                                        {{ $name }}
+                                    </option>
+                                @endforeach
+                            </select>
                             @error('service_master_pk')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
+                        <div class="col-md-6">
+                            <label for="cadre_master_pk" class="form-label">Cadre</label>
+                            <select id="cadre_master_pk" name="cadre_master_pk"
+                                class="form-select @error('cadre_master_pk') is-invalid @enderror" required>
+                                <option value="">-- Select Cadre --</option>
+                                @foreach ($cadres as $pk => $name)
+                                    <option value="{{ $pk }}" @if (old('cadre_master_pk', $registration->cadre_master_pk) == $pk) selected @endif>
+                                        {{ $name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('cadre_master_pk')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+
+
 
                         <div class="col-md-6">
                             <label for="first_name" class="form-label">First Name</label>
