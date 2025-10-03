@@ -22,6 +22,8 @@ class FcRegistrationMaster extends Model
         'exam_year',
         'service_master_pk',
         'web_auth',
+        'cadre_master_pk',
+        'dob',
     ];
 
 
