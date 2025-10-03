@@ -1510,8 +1510,8 @@ class FormController extends Controller
             $sections = [];
 
             // 3) Profile image (or default)
-            if (!empty($submissionArray['profile'])) {
-                $path = storage_path("app/public/{$submissionArray['profile']}");
+            if (!empty($submissionArray['photo_path'])) {
+                $path = storage_path("app/public/{$submissionArray['photo_path']}");
                 if (file_exists($path)) {
                     $type = pathinfo($path, PATHINFO_EXTENSION);
                     $data = base64_encode(file_get_contents($path));
