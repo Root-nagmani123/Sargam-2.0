@@ -114,7 +114,23 @@ class FcRegistrationMasterListDaTable extends DataTable
             })->addColumn('action', function ($row) {
                 return '<a href="' . route('admin.registration.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>';
             })
-            ->rawColumns(['service_master_pk', 'schema_id', 'contact_no', 'dob', 'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'rank', 'web_auth', 'exam_year', 'action']);
+            ->addColumn('email_count', function ($row) {
+                return (int) $row->email_count; // make sure JS can read it as number
+            })
+
+            ->addColumn('status', function ($row) {
+                $checked = $row->active_inactive == 1 ? 'checked' : '';
+                return '<div class="form-check form-switch d-inline-block ms-2">
+                <input class="form-check-input status-toggle" 
+                    type="checkbox" role="switch"
+                    data-table="fc_registration_master" 
+                    data-column="active_inactive" 
+                    data-id="' . $row->pk . '" 
+                    ' . $checked . '>
+            </div>';
+            })
+
+            ->rawColumns(['service_master_pk', 'schema_id', 'contact_no', 'dob', 'display_name', 'first_name', 'middle_name', 'last_name', 'email', 'rank', 'web_auth', 'exam_year', 'status', 'action', 'email_count']);
     }
 
     /**
@@ -141,6 +157,8 @@ class FcRegistrationMasterListDaTable extends DataTable
                 'e.Exemption_name as exemption_name',
                 'c.cadre_name as cadre_name',
                 's.group_service_name as group_type', // <-- alias here
+                DB::raw('(SELECT COUNT(*) FROM fc_registration_master f2 WHERE f2.email = fc_registration_master.email) as email_count')
+
             );
 
         // Apply DataTable filters
@@ -190,6 +208,13 @@ class FcRegistrationMasterListDaTable extends DataTable
                 'scrollX' => true,
                 'autoWidth' => false,
                 'order' => [],
+                'rowCallback' => "function(row, data) {
+                if (parseInt(data.email_count) > 1) {
+                    $(row).css('background-color', '#ffe6e6');
+                } else {
+                    $(row).css('background-color', '');
+                }
+            }",
             ])
             ->buttons([
                 Button::make('excel'),
@@ -228,6 +253,8 @@ class FcRegistrationMasterListDaTable extends DataTable
             Column::make('dob')->title('Date of Birth')->searchable(false)->orderable(false),
             Column::make('web_auth')->title('Web Auth')->searchable(true)->orderable(false),
             Column::make('exam_year')->title('Exam Year')->searchable(true)->orderable(false),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::make('email_count')->visible(false),
             Column::computed('action')
                 ->exportable(false)
                 ->printable(false)
