@@ -46,6 +46,37 @@ class RegistrationImportController extends Controller
         return view('admin.registration.fcregistration_preview', ['rows' => $data[0]]);
     }
 
+    // public function importConfirmed()
+    // {
+    //     $importData = Session::get('import_data');
+
+    //     if (!$importData) {
+    //         return redirect()->back()->with('error', 'No data to import.');
+    //     }
+
+    //     foreach ($importData as $row) {
+    //         FcRegistrationMaster::updateOrCreate(
+    //             ['email' => $row['email']],
+    //             [
+    //                 'contact_no'        => $row['contact_no'] ?? null,
+    //                 'display_name'      => $row['display_name'] ?? null,
+    //                 'schema_id'         => $row['schema_id'] ?? null,
+    //                 'first_name'        => $row['first_name'] ?? null,
+    //                 'middle_name'       => $row['middle_name'] ?? null,
+    //                 'last_name'         => $row['last_name'] ?? null,
+    //                 'rank'              => $row['rank'] ?? null,
+    //                 'exam_year'         => $row['exam_year'] ?? null,
+    //                 'service_master_pk' => $row['service_master_pk'] ?? 0,
+    //                 'web_auth'          => $row['web_auth'] ?? null,
+    //             ]
+    //         );
+    //     }
+
+    //     Session::forget('import_data');
+
+    //     return redirect()->route('admin.registration.index')->with('success', 'Data imported successfully.');
+    // }
+
     public function importConfirmed()
     {
         $importData = Session::get('import_data');
@@ -55,11 +86,49 @@ class RegistrationImportController extends Controller
         }
 
         foreach ($importData as $row) {
-            FcRegistrationMaster::updateOrCreate(
-                ['email' => $row['email']],
-                [
+            if (empty($row['email'])) {
+                continue; // skip if no email
+            }
+
+            // Find existing record by email
+            $existing = FcRegistrationMaster::where('email', $row['email'])->first();
+
+            if ($existing) {
+                if ($existing->service_master_pk == ($row['service_master_pk'] ?? 0)) {
+                    // ✅ Same service → update existing record
+                    $existing->update([
+                        'contact_no'        => $row['contact_no'] ?? null,
+                        'display_name'      => $row['display_name'] ?? null,
+                        'schema_id'         => $row['schema_id'] ?? null,
+                        'first_name'        => $row['first_name'] ?? null,
+                        'middle_name'       => $row['middle_name'] ?? null,
+                        'last_name'         => $row['last_name'] ?? null,
+                        'rank'              => $row['rank'] ?? null,
+                        'exam_year'         => $row['exam_year'] ?? null,
+                        'web_auth'          => $row['web_auth'] ?? null,
+                    ]);
+                } else {
+                    // ❌ Different service → insert as NEW record
+                    FcRegistrationMaster::create([
+                        'email'             => $row['email'],
+                        'contact_no'        => $row['contact_no'] ?? null,
+                        // 'display_name'      => $row['display_name'] ?? null,
+                        'schema_id'         => $row['schema_id'] ?? null,
+                        'first_name'        => $row['first_name'] ?? null,
+                        'middle_name'       => $row['middle_name'] ?? null,
+                        'last_name'         => $row['last_name'] ?? null,
+                        'rank'              => $row['rank'] ?? null,
+                        'exam_year'         => $row['exam_year'] ?? null,
+                        'service_master_pk' => $row['service_master_pk'] ?? 0,
+                        'web_auth'          => $row['web_auth'] ?? null,
+                    ]);
+                }
+            } else {
+                // No existing record → create new one
+                FcRegistrationMaster::create([
+                    'email'             => $row['email'],
                     'contact_no'        => $row['contact_no'] ?? null,
-                    'display_name'      => $row['display_name'] ?? null,
+                    // 'display_name'      => $row['display_name'] ?? null,
                     'schema_id'         => $row['schema_id'] ?? null,
                     'first_name'        => $row['first_name'] ?? null,
                     'middle_name'       => $row['middle_name'] ?? null,
@@ -68,14 +137,15 @@ class RegistrationImportController extends Controller
                     'exam_year'         => $row['exam_year'] ?? null,
                     'service_master_pk' => $row['service_master_pk'] ?? 0,
                     'web_auth'          => $row['web_auth'] ?? null,
-                ]
-            );
+                ]);
+            }
         }
 
         Session::forget('import_data');
 
         return redirect()->route('admin.registration.index')->with('success', 'Data imported successfully.');
     }
+
 
     public function fc_masterindex(FcRegistrationMasterListDaTable $dataTable)
     {

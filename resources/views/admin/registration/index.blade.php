@@ -17,7 +17,7 @@
                     <a href="{{ route('forms.create') }}" class="btn btn-primary">Add Form</a>
 
                     <!-- Use Template Button -->
-                    {{-- <div class="btn-group">
+                    <div class="btn-group">
                         <button type="button" class="btn btn-info dropdown-toggle" data-bs-toggle="dropdown"
                             aria-expanded="false">
                             Use Template
@@ -32,7 +32,7 @@
                                 </li>
                             @endforeach
                         </ul>
-                    </div> --}}
+                    </div>
 
                     <a href="{{ route('forms.inactive') }}" class="btn btn-secondary"> Archived Courses</a>
                 </div>

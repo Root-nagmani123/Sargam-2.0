@@ -312,6 +312,38 @@
 
             });
 
+            // $('#fcregistrationmasterlistdatable-table').on('draw.dt', function() {
+            //     var table = $('#fcregistrationmasterlistdatable-table').DataTable();
+            //     table.rows().every(function() {
+            //         var data = this.data();
+            //         var rowNode = this.node();
+            //         if (parseInt(data.email_count) > 1) {
+            //             // highlight only the email cell
+            //             $(rowNode).find('td').eq(table.column('email:name').index()).css(
+            //                 'background-color', '#ffe6e6');
+            //         } else {
+            //             $(rowNode).find('td').eq(table.column('email:name').index()).css(
+            //                 'background-color', '');
+            //         }
+            //     });
+            // });
+            $('#fcregistrationmasterlistdatable-table').on('draw.dt', function() {
+                var table = $('#fcregistrationmasterlistdatable-table').DataTable();
+                table.rows().every(function() {
+                    var data = this.data();
+                    var rowNode = this.node();
+
+                    if (parseInt(data.email_count) > 1) {
+                        $(rowNode).addClass('highlight-row');
+                    } else {
+                        $(rowNode).removeClass('highlight-row');
+                    }
+                });
+            });
+
+
+
+
             //  Sync Group Type into deactivate form hidden input
             function syncGroupType() {
                 $('#deactivate_group_type').val($('#group_type').val());
@@ -371,4 +403,9 @@
             groupSelect.on('change', toggleDeactivateButton);
         });
     </script>
+    <style>
+        .highlight-row td {
+            background-color: #ffe6e6 !important;
+        }
+    </style>
 @endpush
