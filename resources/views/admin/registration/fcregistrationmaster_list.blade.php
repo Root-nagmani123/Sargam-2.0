@@ -3,6 +3,11 @@
 @section('title', 'Registration List')
 
 @section('content')
+    <style>
+        .highlight-row td {
+            background-color: #ffe6e6 !important;
+        }
+    </style>
     <div class="container-fluid">
         <x-breadcrum title="Registration List" />
         <x-session_message />
@@ -132,7 +137,7 @@
                 </div>
 
             </div> --}}
-            <div class="card" style="border-left: 4px solid #004a93;">
+            
                 <div class="card-body">
 
                     <!-- Filters Form -->
@@ -270,10 +275,10 @@
 
                     <!-- DataTable -->
                     <div class="table-responsive">
-                        {{ $dataTable->table(['class' => 'table table-striped table-bordered text-nowrap align-middle', 'id' => 'fcregistrationmasterlistdatable-table']) }}
+                        {{ $dataTable->table(['class' => 'table  table-bordered text-nowrap align-middle', 'id' => 'fcregistrationmasterlistdatable-table']) }}
                     </div>
                 </div>
-            </div>
+           
 
         </div>
     </div>
@@ -327,19 +332,42 @@
             //         }
             //     });
             // });
+            // $('#fcregistrationmasterlistdatable-table').on('draw.dt', function() {
+            //     var table = $('#fcregistrationmasterlistdatable-table').DataTable();
+            //     table.rows().every(function() {
+            //         var data = this.data();
+            //         var rowNode = this.node();
+
+            //         if (parseInt(data.email_count) > 1) {
+            //             $(rowNode).addClass('highlight-row');
+            //         } else {
+            //             $(rowNode).removeClass('highlight-row');
+            //         }
+            //     });
+            // });
+
             $('#fcregistrationmasterlistdatable-table').on('draw.dt', function() {
                 var table = $('#fcregistrationmasterlistdatable-table').DataTable();
-                table.rows().every(function() {
+
+                table.rows({
+                    page: 'current'
+                }).every(function() {
                     var data = this.data();
                     var rowNode = this.node();
 
-                    if (parseInt(data.email_count) > 1) {
+                    // Parse count as integer
+                    var emailCount = parseInt(data.email_count || 0);
+
+                    // ✅ Highlight only if email_count > 1 and email is not empty
+                    if (emailCount > 1 && data.email && data.email.trim() !== '') {
+
                         $(rowNode).addClass('highlight-row');
                     } else {
                         $(rowNode).removeClass('highlight-row');
                     }
                 });
             });
+
 
 
 
@@ -403,9 +431,4 @@
             groupSelect.on('change', toggleDeactivateButton);
         });
     </script>
-    <style>
-        .highlight-row td {
-            background-color: #ffe6e6 !important;
-        }
-    </style>
 @endpush
