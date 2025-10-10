@@ -254,7 +254,7 @@ class FcRegistrationMasterListDaTable extends DataTable
             Column::make('web_auth')->title('Web Auth')->searchable(true)->orderable(false),
             Column::make('exam_year')->title('Exam Year')->searchable(true)->orderable(false),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('email_count')->visible(false),
+            Column::make('email_count')->visible(true),
             Column::computed('action')
                 ->exportable(false)
                 ->printable(false)
