@@ -256,7 +256,10 @@ Route::get('/enrollment/export-enrolled', [EnrollementController::class, 'export
 // Inactive forms list
 Route::get('/forms/inactive', [FormController::class, 'inactive'])->name('forms.inactive');
 
-// Download template
+
+// Download template 1
+Route::get('/download-fctemplate', [RegistrationImportController::class, 'downloadFcRegistrationTemplate'])->name('fc.download.fctemplate');
+// Download template 2
 Route::get('/download-template', [RegistrationImportController::class, 'downloadTemplate'])->name('fc.download.template');
 // Route::post('/upload-excel', [RegistrationImportController::class, 'uploadExcel'])->name('fc.upload.excel');
 
