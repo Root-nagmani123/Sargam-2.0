@@ -51,6 +51,9 @@ class FcRegistrationMasterListDaTable extends DataTable
             ->addColumn('group_service_name', function ($row) {
                 return $row->group_service_name ?? 'N/A';
             })
+            ->addColumn('generated_OT_code', function ($row) {
+                return $row->generated_OT_code ?? 'N/A';
+            })
             ->addColumn('cadre_master_pk', function ($row) {
                 return $row->cadre_name ?? 'N/A';
             })
@@ -257,6 +260,7 @@ class FcRegistrationMasterListDaTable extends DataTable
             Column::make('rank')->title('Rank')->searchable(true)->orderable(false),
             Column::make('dob')->title('Date of Birth')->searchable(false)->orderable(false),
             Column::make('web_auth')->title('Web Auth')->searchable(true)->orderable(false),
+            Column::make('generated_OT_code')->title('Generated OT Code')->searchable(false)->orderable(false),
             Column::make('exam_year')->title('Exam Year')->searchable(true)->orderable(false),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('email_count')->visible(false),
