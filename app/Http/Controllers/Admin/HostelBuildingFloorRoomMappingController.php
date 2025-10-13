@@ -4,16 +4,23 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\DataTables\HostelBuildingFloorRoomMappingDataTable;
+// use App\DataTables\HostelBuildingFloorRoomMappingDataTable;
+use App\DataTables\BuildingFloorRoomMappingDataTable;
 use App\Models\{
     HostelBuildingFloorMapping,
     HostelRoomMaster,
-    HostelFloorRoomMapping
+    HostelFloorRoomMapping,
+
+
+
+    BuildingMaster,
+    FloorMaster
 };
 
 class HostelBuildingFloorRoomMappingController extends Controller
 {
-    public function index(HostelBuildingFloorRoomMappingDataTable $dataTable)
+    // public function index(HostelBuildingFloorRoomMappingDataTable $dataTable)
+    public function index(BuildingFloorRoomMappingDataTable $dataTable)
     {
         return $dataTable->render('admin.building_floor_room_mapping.index');
     }
@@ -62,21 +69,31 @@ class HostelBuildingFloorRoomMappingController extends Controller
      */
     private function formData(): array
     {
-        $hostelBuilding = HostelBuildingFloorMapping::active()
-            ->with([
-                'building:pk,hostel_building_name',
-                'floor:pk,hostel_floor_name'
-            ])
-            ->get()
-            ->mapWithKeys(fn($item) => [
-                $item->pk => "{$item->building->hostel_building_name}-{$item->floor->hostel_floor_name}"
-            ])
+        // $hostelBuilding = HostelBuildingFloorMapping::active()
+        //     ->with(relations: [
+        //         'building:pk,hostel_building_name',
+        //         'floor:pk,hostel_floor_name'
+        //     ])
+        //     ->get()
+        //     ->mapWithKeys(fn($item) => [
+        //         $item->pk => "{$item->building->hostel_building_name}-{$item->floor->hostel_floor_name}"
+        //     ])
+        //     ->toArray();
+
+        // $hostelRoom = HostelRoomMaster::active()
+        //     ->pluck('hostel_room_name', 'pk')
+        //     ->toArray();
+
+        // return compact('hostelBuilding', 'hostelRoom');
+
+        $building = BuildingMaster::active()
+            ->pluck('building_name', 'pk')
             ->toArray();
 
-        $hostelRoom = HostelRoomMaster::active()
-            ->pluck('hostel_room_name', 'pk')
+        $floor = FloorMaster::active()
+            ->pluck('floor_name', 'pk')
             ->toArray();
 
-        return compact('hostelBuilding', 'hostelRoom');
+        return compact('building', 'floor');
     }
 }

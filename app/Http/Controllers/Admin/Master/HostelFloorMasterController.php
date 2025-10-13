@@ -5,7 +5,8 @@ namespace App\Http\Controllers\Admin\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\DataTables\Master\HostelFloorMasterDataTable;
-use App\Models\HostelFloorMaster;
+// use App\Models\HostelFloorMaster;
+use App\Models\FloorMaster;
 
 class HostelFloorMasterController extends Controller
 {
@@ -22,28 +23,28 @@ class HostelFloorMasterController extends Controller
     public function store(Request $request){
         
         $request->validate([
-            'hostel_floor_name' => 'required|string|max:255|unique:hostel_floor_master,hostel_floor_name,' . ($request->pk ? decrypt($request->pk) : 'null').',pk',
+            'floor_name' => 'required|string|max:255|unique:floor_master,floor_name,' . ($request->pk ? decrypt($request->pk) : 'null').',pk',
         ]);
         
         if($request->pk) {
-            $message = 'Hostel Floor updated successfully.';
-            $hostelFloorMaster = HostelFloorMaster::findOrFail(decrypt($request->pk));
+            $message = 'Floor updated successfully.';
+            $floorMaster = FloorMaster::findOrFail(decrypt($request->pk));
         }
         else {
-            $message = 'Hostel Floor created successfully.';
-            $hostelFloorMaster = new HostelFloorMaster();
+            $message = 'Floor created successfully.';
+            $floorMaster = new FloorMaster();
         }
-        $hostelFloorMaster->hostel_floor_name = $request->hostel_floor_name;
-        $hostelFloorMaster->active_inactive = 1;
+        $floorMaster->floor_name = $request->floor_name;
+        $floorMaster->active_inactive = 1;
 
-        $hostelFloorMaster->save();
+        $floorMaster->save();
 
         return redirect()->route('master.hostel.floor.index')->with('success', $message);
     }
 
     public function edit($id){
         $id = decrypt($id);
-        $hostelFloorMaster = HostelFloorMaster::findOrFail($id);
+        $hostelFloorMaster = FloorMaster::findOrFail($id);
         return view('admin.master.hostel_floor.create', compact('hostelFloorMaster'));
     }
 }

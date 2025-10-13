@@ -24,12 +24,12 @@
                     <div class="col-md-4">
                         <div class="mb-3">
                             <x-input
-                                name="hostel_floor_name"
+                                name="floor_name"
                                 label="Name :" 
                                 placeholder="Name" 
                                 formLabelClass="form-label"
                                 required="true"
-                                value="{{ old('hostel_floor_name', $hostelFloorMaster->hostel_floor_name ?? '') }}"
+                                value="{{ old('floor_name', $hostelFloorMaster->floor_name ?? '') }}"
                                 />
                         </div>
                     </div>
