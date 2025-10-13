@@ -149,7 +149,7 @@
                             <label for="rank" class="form-label">Rank</label>
                             <input type="text" id="rank" name="rank"
                                 class="form-control @error('rank') is-invalid @enderror"
-                                value="{{ old('rank', $registration->rank) }}">
+                                value="{{ old('rank', $registration->rank) }}" readonly>
                             @error('rank')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -169,7 +169,7 @@
                             <label for="web_auth" class="form-label">Web Auth</label>
                             <input type="text" id="web_auth" name="web_auth"
                                 class="form-control @error('web_auth') is-invalid @enderror"
-                                value="{{ old('web_auth', $registration->web_auth) }}">
+                                value="{{ old('web_auth', $registration->web_auth) }}" readonly>
                             @error('web_auth')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

@@ -23,7 +23,7 @@
                             Use Template
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            @foreach ($forms as $form)
+                            @foreach ($forms_parent as $form)
                                 <li>
                                     <a class="dropdown-item"
                                         href="{{ route('forms.template.create', ['template' => $form->id]) }}">
