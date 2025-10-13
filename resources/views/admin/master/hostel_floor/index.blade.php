@@ -20,6 +20,7 @@
                         <div class="col-6">
                             <div class="float-end gap-2">
                                 <a href="{{route('master.hostel.floor.create')}}" class="btn btn-primary">+ Add Hostel Floor</a>
+                                <a href="{{ route('master.hostel.floor.export') }}" class="btn btn-secondary">Export</a>
                             </div>
                         </div>
                     </div>

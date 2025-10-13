@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use App\DataTables\Master\BuildingMasterDataTable;
 // use App\Models\HostelBuildingMaster;
 use App\Models\BuildingMaster;
+use App\Exports\BuildingMasterExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class HostelBuildingMasterController extends Controller
 {
@@ -53,5 +55,13 @@ class HostelBuildingMasterController extends Controller
         $id = decrypt($id);
         $hostelBuildingMaster = BuildingMaster::findOrFail($id);
         return view('admin.master.hostel_building.create', compact('hostelBuildingMaster'), ['buildingType' => $this->buildingType]);
+    }
+
+    public function export() {
+        try {
+            return \Excel::download(new \App\Exports\BuildingMasterExport, 'building_master.xlsx');
+        } catch (\Exception $e) {
+            return redirect()->route('master.hostel.building.index')->with('error', 'Error exporting data: ' . $e->getMessage());
+        }
     }
 }
