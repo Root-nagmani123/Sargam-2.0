@@ -1146,13 +1146,13 @@ $('#upload_import_hostel_mapping_to_student').on('click', function (e) {
 $(document).ready(function () {
     $('#building_master_pk, #floor_master_pk').change(function () {
 
-        let buildingMasterPk = $('#building_master_pk').text();
-        let floorMasterPk = $('#floor_master_pk').text();
+        let buildingMasterPk = $('#building_master_pk option:selected').text().trim();
+        let floorMasterPk = $('#floor_master_pk option:selected').text().trim();
 
         if(buildingMasterPk != '' && floorMasterPk != '' && buildingMasterPk != 'Select' && floorMasterPk != 'Select') {
-            buildingMasterPk.substring(0, 4);
-            
-            let prepend = $('.floor_room_name').html();
+            let buildingStart = buildingMasterPk.substring(0, 4);
+            let floorStart = floorMasterPk.substring(0, 4);
+            let prepend = $('.floor_room_name').html(buildingStart+'-'+floorStart);
         }
     });
 });

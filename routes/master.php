@@ -225,6 +225,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::get('/export', 'export')->name('export');
     });
 
     // Hostel Room Master

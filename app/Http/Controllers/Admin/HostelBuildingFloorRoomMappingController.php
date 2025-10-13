@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 // use App\DataTables\HostelBuildingFloorRoomMappingDataTable;
 use App\DataTables\BuildingFloorRoomMappingDataTable;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\FloorRoomMappingExport;
 use App\Models\{
     HostelBuildingFloorMapping,
     HostelRoomMaster,
@@ -14,11 +16,18 @@ use App\Models\{
 
 
     BuildingMaster,
-    FloorMaster
+    FloorMaster,
+    BuildingFloorRoomMapping
 };
 
 class HostelBuildingFloorRoomMappingController extends Controller
 {
+    public $roomTypes;
+
+    public function __construct()
+    {
+        $this->roomTypes = BuildingFloorRoomMapping::$roomTypes;
+    }
     // public function index(HostelBuildingFloorRoomMappingDataTable $dataTable)
     public function index(BuildingFloorRoomMappingDataTable $dataTable)
     {
@@ -32,32 +41,66 @@ class HostelBuildingFloorRoomMappingController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'hostel_building_floor' => 'required|exists:hostel_building_floor_mapping,pk',
-            'hostel_room' => 'required|exists:hostel_room_master,pk',
-        ]);
+        try{
+            $request->validate([
+                'building_master_pk' => 'required|exists:building_master,pk',
+                'floor_master_pk' => 'required|exists:floor_master,pk',
+                'capacity' => 'required|integer|min:1',
+                'room_type' => [
+                    'required',
+                    \Illuminate\Validation\Rule::in(array_keys(BuildingFloorRoomMapping::$roomTypes))
+                ],
+            ]);
+            
+            $room_name = '';
+            $building = BuildingMaster::where('pk', $request->building_master_pk)->first();
+            $floor = FloorMaster::where('pk', $request->floor_master_pk)->first();
+            $room_name = substr($building->building_name, 0, 4);
+            $room_name .= '-' . $floor->floor_name.$request->room_name;
 
-        $mapping = $request->filled('pk') 
-            ? HostelFloorRoomMapping::findOrFail(safeDecrypt($request->pk)) 
-            : new HostelFloorRoomMapping();
+            if( $request->room_type != 'Room' ) {
+                $room_name .= '-' . $request->room_type;
+            }
+            $mapping = new BuildingFloorRoomMapping();
+            $mapping->building_master_pk = $request->building_master_pk;
+            $mapping->floor_master_pk = $request->floor_master_pk;
+            $mapping->room_name = $room_name;
+            $mapping->room_type = $request->room_type;
+            $mapping->capacity = $request->capacity;
+            $mapping->save();
 
-        $mapping->hostel_building_floor_mapping_pk = $request->hostel_building_floor;
-        $mapping->hostel_room_master_pk = $request->hostel_room;
-        $mapping->active_inactive = 1;
-        $mapping->save();
+            return redirect()->route('hostel.building.floor.room.map.index')->with('success', 'Hostel Floor Room mapping created successfully.');
+        }
+        catch(\Exception $e) {
 
-        $message = $request->filled('pk') 
-            ? 'Hostel Floor Room mapping updated successfully.' 
-            : 'Hostel Floor Room mapping created successfully.';
+            return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Something went wrong');
+        }
+        // $request->validate([
+        //     'hostel_building_floor' => 'required|exists:hostel_building_floor_mapping,pk',
+        //     'hostel_room' => 'required|exists:hostel_room_master,pk',
+        // ]);
 
-        return redirect()->route('hostel.building.floor.room.map.index')->with('success', $message);
+        // $mapping = $request->filled('pk') 
+        //     ? HostelFloorRoomMapping::findOrFail(safeDecrypt($request->pk)) 
+        //     : new HostelFloorRoomMapping();
+
+        // $mapping->hostel_building_floor_mapping_pk = $request->hostel_building_floor;
+        // $mapping->hostel_room_master_pk = $request->hostel_room;
+        // $mapping->active_inactive = 1;
+        // $mapping->save();
+
+        // $message = $request->filled('pk') 
+        //     ? 'Hostel Floor Room mapping updated successfully.' 
+        //     : 'Hostel Floor Room mapping created successfully.';
+
+        // return redirect()->route('hostel.building.floor.room.map.index')->with('success', $message);
     }
 
     public function edit($encryptedId)
     {
         $id = safeDecrypt($encryptedId);
-        $hostelFloorMappingRoom = HostelFloorRoomMapping::findOrFail($id);
-
+        $hostelFloorMappingRoom = BuildingFloorRoomMapping::findOrFail($id);
+        
         return view('admin.building_floor_room_mapping.create', array_merge(
             $this->formData(),
             ['hostelFloorMappingRoom' => $hostelFloorMappingRoom]
@@ -94,6 +137,15 @@ class HostelBuildingFloorRoomMappingController extends Controller
             ->pluck('floor_name', 'pk')
             ->toArray();
 
-        return compact('building', 'floor');
+        $roomTypes = $this->roomTypes;
+        return compact('building', 'floor', 'roomTypes');
+    }
+
+    function export() {
+        try {
+            return \Excel::download(new \App\Exports\FloorRoomMappingExport, 'floor_room_mapping.xlsx');
+        } catch (\Exception $e) {
+            return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Error exporting data: ' . $e->getMessage());
+        }
     }
 }

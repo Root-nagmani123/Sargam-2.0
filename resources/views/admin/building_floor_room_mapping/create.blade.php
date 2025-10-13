@@ -38,15 +38,37 @@
 
                             </div>
                         </div>
+
+                        @php
+                            $prefix = '-';
+                            $suffix = '';
+
+                            if (!empty($hostelFloorMappingRoom) && !empty($hostelFloorMappingRoom->room_name)) {
+                                $prefix = substr($hostelFloorMappingRoom->room_name, 0, 6); // first 6 letters
+                                $suffix = substr($hostelFloorMappingRoom->room_name, 6);    // rest of the string
+                            }
+
+                            
+                        @endphp
+                        
                         <div class="col-md-6">
                             <div class="mb-3">
-                                
-                                <label for="basic-url" class="form-label">Your vanity URL</label>
+
+                                <label for="basic-url" class="form-label">Room Name</label>
                                 <div class="input-group">
-                                    <span class="input-group-text floor_room_name" id="basic-addon3">-</span>
+                                    <span class="input-group-text floor_room_name" id="basic-addon3">{{ $prefix }}</span>
                                     <input type="text" class="form-control" id="basic-url"
-                                        aria-describedby="basic-addon3 basic-addon4">
+                                        aria-describedby="basic-addon3 basic-addon4" name="room_name" value="{{ $suffix }}">
                                 </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+
+                                
+                                    <x-select name="room_type" label="Room Type :" formLabelClass="form-label"
+                                    :options="$roomTypes" required="true"
+                                    value="{{ !empty($hostelFloorMappingRoom) ? $hostelFloorMappingRoom->room_type : '' }}" />
                             </div>
                         </div>
                         <div class="col-md-6">
