@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use App\DataTables\Master\HostelFloorMasterDataTable;
 // use App\Models\HostelFloorMaster;
 use App\Models\FloorMaster;
+use App\Exports\FloorMasterExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class HostelFloorMasterController extends Controller
 {
@@ -46,5 +48,13 @@ class HostelFloorMasterController extends Controller
         $id = decrypt($id);
         $hostelFloorMaster = FloorMaster::findOrFail($id);
         return view('admin.master.hostel_floor.create', compact('hostelFloorMaster'));
+    }
+
+    public function export() {
+        try {
+            return Excel::download(new FloorMasterExport, 'floor_master.xlsx');
+        } catch (\Exception $th) {
+            return redirect()->route('master.hostel.floor.index')->with('error', 'Error exporting data: ' . $th->getMessage());
+        }
     }
 }
