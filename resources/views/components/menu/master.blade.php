@@ -43,18 +43,18 @@
                     <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">Hostel
                         Building</span>
                 </a></li>
-            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
+            {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
                     <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">Hostel
                         Room</span>
-                </a></li>
+                </a></li> --}}
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.floor.index') }}">
-                    <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">Hostel
+                    <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">
                         Floor</span>
                 </a></li>
-            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+            {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
                     <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">Hostel
                         Floor Mapping</span>
-                </a></li>
+                </a></li> --}}
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.floor.room.map.index') }}">
                     <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">Building
                         Floor Room Mapping</span>
