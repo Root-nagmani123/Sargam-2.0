@@ -40,8 +40,7 @@
         </li>
         <div class="collapse" id="hostelMenu">
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.building.index') }}">
-                    <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">Hostel
-                        Building</span>
+                    <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">Building Master</span>
                 </a></li>
             {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
                     <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span class="hide-menu">Hostel

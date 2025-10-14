@@ -30,7 +30,16 @@ class BuildingMasterDataTable extends DataTable
             ->addColumn('building_type', fn($row) => $row->building_type ?? '-')
             ->addColumn('action', function ($row) {
                 $editUrl = route('master.hostel.building.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
+                
+                $deleteUrl = route('master.hostel.building.destroy', ['id' => encrypt($row->pk)]);
+                return '
+                    <a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>
+                    <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure?\')">
+                        ' . csrf_field() . '
+                        ' . method_field('DELETE') . '
+                        <button type="submit" class="btn btn-danger btn-sm" ' . ($row->active_inactive == 0 ? '' : 'disabled') . '>Delete</button>
+                    </form>
+                ';
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';

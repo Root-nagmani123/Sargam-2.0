@@ -20,7 +20,7 @@
                         <div class="col-6">
                             <div class="float-end gap-2">
                                 <a href="{{route('hostel.building.floor.room.map.create')}}" class="btn btn-primary">+ Add Hostel Building Floor Room</a>
-                                <a href="{{ route('hostel.building.floor.room.map.export') }}" class="btn btn-secondary">Export</a>
+                                <a href="{{ route('hostel.building.floor.room.map.export') }}" class="btn btn-secondary">Export All</a>
                             </div>
                         </div>
                     </div>
@@ -37,4 +37,32 @@
 @endsection
 @push('scripts')
 {{ $dataTable->scripts() }}
+
+<script>
+$(document).on('change', '.comment-input', function() {
+    var id = $(this).data('id');
+    var value = $(this).val();
+
+    $.ajax({
+        url: '{{ route("hostel.building.floor.room.map.update.comment") }}',
+        type: 'POST',
+        data: {
+            _token: $('meta[name="csrf-token"]').attr('content'),
+            id: id,
+            comment: value
+        },
+        success: function(response) {
+            if(response.success){
+                toastr.success('Comment updated successfully');
+            } else {
+                toastr.error('Failed to update comment');
+            }
+        },
+        error: function() {
+            toastr.error('Error occurred');
+        }
+    });
+});
+
+</script>
 @endpush

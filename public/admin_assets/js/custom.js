@@ -1154,5 +1154,67 @@ $(document).ready(function () {
             let floorStart = floorMasterPk.substring(0, 4);
             let prepend = $('.floor_room_name').html(buildingStart+'-'+floorStart);
         }
+
+
     });
+
+    $('#room_type').change(function () {
+        
+        let buildingMasterPk = $('#building_master_pk').val();
+        let floorMasterPk = $('#floor_master_pk').val();
+        let prepend = $('.floor_room_name').text();
+        let roomName = $('input[name="room_name"]').val();
+        
+
+        if(buildingMasterPk == '' || buildingMasterPk == null || buildingMasterPk == undefined) {
+            alert('Please select Building');
+            return false;
+        }
+
+        if(floorMasterPk == '' || floorMasterPk == null || floorMasterPk == undefined) {
+            alert('Please select Floor');
+            return false;
+        }
+
+        if(roomName == '' || roomName == null || roomName == undefined) {
+            alert('Please enter Room Name/Number');
+            return false;
+        }
+        let finalRoomNameValue = finalRoomName().trim();
+        if(finalRoomNameValue == '' || finalRoomNameValue == null || finalRoomNameValue == undefined || finalRoomNameValue == 'undefined') {
+            $('.floor_room_name_span').html('');
+            return false;
+        }
+        
+        let html = '<strong> Room Name : '+finalRoomName()+'</strong>';
+        $('.floor_room_name_span').html(html);
+    });
+    $('#building_master_pk, #floor_master_pk, input[name="room_name"]').change(function () {
+        
+        let finalRoomNameValue = finalRoomName().trim();
+        if(finalRoomNameValue == '' || finalRoomNameValue == null || finalRoomNameValue == undefined || finalRoomNameValue == 'undefined') {
+            $('.floor_room_name_span').html('');
+            return false;
+        }
+        
+        let html = '<strong> Room Name : '+finalRoomName()+'</strong>';
+        $('.floor_room_name_span').html(html);
+        
+    });
+    function finalRoomName() {
+        let roomType = $('#room_type').val();
+        let roomTypeName = $('#room_type option:selected').text().trim();
+        let buildingMasterPk = $('#building_master_pk option:selected').text().trim();
+        let floorMasterPk = $('#floor_master_pk option:selected').text().trim();
+        let roomName = $('input[name="room_name"]').val();
+
+        if(buildingMasterPk != '' && floorMasterPk != '' && buildingMasterPk != 'Select' && floorMasterPk != 'Select' && roomType != '' && roomName != '') {
+            if (roomType == 'Room') {
+                return buildingMasterPk.substring(0, 4) + '-' + floorMasterPk.substring(0, 4) + roomName;
+            } else {
+                return buildingMasterPk.substring(0, 4) + '-' + floorMasterPk.substring(0, 4) + roomName + '-' + roomTypeName;
+            }
+        }
+        return '';
+    }
 });
