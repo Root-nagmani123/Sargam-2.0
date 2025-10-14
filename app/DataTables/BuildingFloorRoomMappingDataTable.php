@@ -112,19 +112,19 @@ class BuildingFloorRoomMappingDataTable extends DataTable
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label for="buildingFilter" class="form-label fw-bold">Filter by Building</label>
-                                <select id="buildingFilter" class="form-select form-select-sm">
+                                <select id="buildingFilter" class="form-select">
                                     <option value="">All Buildings</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label for="roomTypeFilter" class="form-label fw-bold">Filter by Room Type</label>
-                                <select id="roomTypeFilter" class="form-select form-select-sm">
+                                <select id="roomTypeFilter" class="form-select">
                                     <option value="">All Room Types</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
                                 <label for="statusFilter" class="form-label fw-bold">Filter by Status</label>
-                                <select id="statusFilter" class="form-select form-select-sm">
+                                <select id="statusFilter" class="form-select">
                                     <option value="">Select</option>
                                     <option value="1">Active</option>
                                     <option value="0">Inactive</option>
@@ -132,10 +132,10 @@ class BuildingFloorRoomMappingDataTable extends DataTable
                             </div>
                             <div class="col-md-3">
                                 <div class="d-flex align-items-end h-100">
-                                    <button class="btn btn-secondary btn-sm mt-4" id="resetFilters">Reset Filters</button>
+                                    <button class="btn btn-secondary mt-4" id="resetFilters">Reset Filters</button>
                                     <a href="' . route('hostel.building.floor.room.map.export') . '" 
                                     id="filterExportBtn"
-                                    class="btn btn-secondary btn-sm mt-4 ms-2">Filter Export</a>
+                                    class="btn btn-secondary mt-4 ms-2">Filter Export</a>
                                 </div>
                             </div>
                         </div>
