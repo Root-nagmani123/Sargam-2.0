@@ -15,20 +15,51 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class FloorRoomMappingExport implements FromCollection, WithHeadings, ShouldAutoSize, WithStyles, WithMapping
 {
+    protected $filters;
+    function __construct($filters)
+    {
+        $this->filters = $filters;
+    }
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * @return \Illuminate\Support\Collection
+     */
     public function collection()
     {
-        return BuildingFloorRoomMapping::with(['building', 'floor'])->get();
+        $query = BuildingFloorRoomMapping::with(['building', 'floor']);
+
+        // Filter by building relationship
+        $buildingId = $this->filters['building_id'] ?? null;
+        if ($buildingId) {
+            $query->whereHas('building', function ($q) use ($buildingId) {
+                $q->where('pk', $buildingId);
+            });
+        }
+
+        // Filter by room_type
+        $roomType = $this->filters['room_type'] ?? null;
+        if ($roomType) {
+            $query->where('room_type', $roomType);
+        }
+
+        // Filter by status
+        $status = $this->filters['status'] ?? null;
+        if ($status !== null && $status !== '') {
+            $query->where('active_inactive', $status);
+        }
+
+        $data = $query->get();
+
+        return $data; // Or pass $data to export logic
     }
 
-    public function headings(): array{
+    public function headings(): array
+    {
         return [
             'Building Name',
             'Floor',
             'Room Name',
-            'Capacity'
+            'Capacity',
+            'Comment',
         ];
     }
 
@@ -47,7 +78,7 @@ class FloorRoomMappingExport implements FromCollection, WithHeadings, ShouldAuto
                 ],
                 'alignment' => [
                     'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical'   => Alignment::VERTICAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER,
                 ],
             ]);
 
@@ -55,7 +86,7 @@ class FloorRoomMappingExport implements FromCollection, WithHeadings, ShouldAuto
             1 => [
                 'font' => ['bold' => true],
                 'fill' => [
-                    'fillType'   => Fill::FILL_SOLID,
+                    'fillType' => Fill::FILL_SOLID,
                     'startColor' => ['rgb' => 'FFCC00'],
                 ],
             ],
@@ -65,10 +96,11 @@ class FloorRoomMappingExport implements FromCollection, WithHeadings, ShouldAuto
     public function map($mapping): array
     {
         return [
-            $mapping->building->building_name,
-            $mapping->floor->floor_name,
+            optional($mapping->building)->building_name,
+            optional($mapping->floor)->floor_name,
             $mapping->room_name,
             $mapping->capacity,
+            $mapping->comment,
         ];
     }
 

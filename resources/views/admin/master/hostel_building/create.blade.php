@@ -1,17 +1,17 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Hostel Building')
+@section('title', 'Building Master')
 
 @section('content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Hostel Building" />
+    <x-breadcrum title="Building Master" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">
-                {{ !empty($hostelBuildingMaster) ? 'Edit Hostel Building' : 'Create Hostel Building' }}
+                {{ !empty($hostelBuildingMaster) ? 'Edit Building Master' : 'Create Building Master' }}
             </h4>
             <hr>
             <form action="{{ route('master.hostel.building.store') }}" method="POST" id="hostelBuildingForm">

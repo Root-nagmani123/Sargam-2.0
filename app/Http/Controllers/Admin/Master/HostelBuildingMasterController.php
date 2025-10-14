@@ -64,4 +64,11 @@ class HostelBuildingMasterController extends Controller
             return redirect()->route('master.hostel.building.index')->with('error', 'Error exporting data: ' . $e->getMessage());
         }
     }
+
+    function destroy($id){
+        $id = decrypt($id);
+        $buildingMaster = BuildingMaster::findOrFail($id);
+        $buildingMaster->delete();
+        return redirect()->route('master.hostel.building.index')->with('success', 'Building deleted successfully.');
+    }
 }

@@ -42,10 +42,13 @@
                         @php
                             $prefix = '-';
                             $suffix = '';
-
+                            $middleString = '';
                             if (!empty($hostelFloorMappingRoom) && !empty($hostelFloorMappingRoom->room_name)) {
                                 $prefix = substr($hostelFloorMappingRoom->room_name, 0, 6); // first 6 letters
                                 $suffix = substr($hostelFloorMappingRoom->room_name, 6);    // rest of the string
+
+                                $middleStringArr = explode('-', $suffix);
+                                $middleStringArr ? $middleString = $middleStringArr[0] : $middleString = '';
                             }
 
                             
@@ -58,7 +61,7 @@
                                 <div class="input-group">
                                     <span class="input-group-text floor_room_name" id="basic-addon3">{{ $prefix }}</span>
                                     <input type="text" class="form-control" id="basic-url"
-                                        aria-describedby="basic-addon3 basic-addon4" name="room_name" value="{{ $suffix }}">
+                                        aria-describedby="basic-addon3 basic-addon4" name="room_name" value="{{ $middleString }}">
                                 </div>
                             </div>
                         </div>
@@ -79,6 +82,13 @@
                                     placeholder="Enter Room Capacity" required="true" />
 
                             </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <span class="floor_room_name_span"></span>
+                            </div>
+
                         </div>
                     </div>
                     <hr>

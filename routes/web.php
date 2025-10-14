@@ -305,6 +305,7 @@ Route::prefix('admin/course-memo-decision')
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/export', 'export')->name('export');
+        Route::post('/update-comment', 'updateComment')->name('update.comment');
     });
 });
 
