@@ -78,8 +78,14 @@ class FormController extends Controller
 
     public function create()
     {
-        $forms = DB::table('local_form')->select('id', 'name', 'shortname')->orderBy('name')->get();
+        $forms = DB::table('local_form')
+            ->select('id', 'name', 'shortname')
+            ->whereNull('parent_id') // Only parent forms
+            ->orderBy('name')
+            ->get();
+
         return view('admin.registration.create', compact('forms'));
+
         // return view('admin.registration.create');
     }
 
