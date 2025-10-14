@@ -69,33 +69,30 @@
 
     @section('scripts')
         <script>
-            document.querySelectorAll('.toggle-visible-switch').forEach(function(checkbox) {
-                checkbox.addEventListener('change', function() {
-                    const id = this.getAttribute('data-id');
-                    const toggleSwitch = this;
+            $(document).on('change', '.toggle-visible-switch', function() {
+                const id = $(this).data('id');
 
-                    fetch(`/registration/forms/${id}/toggle-visible`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({})
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                alert('Visibility updated successfully.');
-                                  location.reload();
-                            } else {
-                                alert('Failed to update visibility.');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            alert('An error occurred while updating visibility.');
-                        });
-                });
+                fetch(`/registration/forms/${id}/toggle-visible`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({})
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Visibility updated successfully.');
+                            location.reload(); // refresh table state
+                        } else {
+                            alert('Failed to update visibility.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('An error occurred while updating visibility.');
+                    });
             });
         </script>
     @endsection

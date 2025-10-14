@@ -4,6 +4,8 @@
 
 @section('content')
     <div class="container-fluid">
+        <x-breadcrum title="Registration" />
+        <x-session_message />
         <div class="card card-body py-3">
             <div class="row">
                 <div class="col-6">
@@ -197,8 +199,33 @@
             });
 
             // Toggle visibility
-            $('.toggle-visible-switch').on('change', function() {
+            // $('.toggle-visible-switch').on('change', function() {
+            //     const id = $(this).data('id');
+            //     fetch(`/registration/forms/${id}/toggle-visible`, {
+            //             method: 'POST',
+            //             headers: {
+            //                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            //                 'Content-Type': 'application/json'
+            //             },
+            //             body: JSON.stringify({})
+            //         })
+            //         .then(res => res.json())
+            //         .then(data => {
+            //             if (data.success) {
+            //                 alert('Visibility updated successfully.');
+            //                 location.reload();
+            //             } else {
+            //                 alert('Failed to update visibility.');
+            //             }
+            //         })
+            //         .catch(err => {
+            //             console.error(err);
+            //             alert('An error occurred while updating visibility.');
+            //         });
+            // });
+            $(document).on('change', '.toggle-visible-switch', function() {
                 const id = $(this).data('id');
+
                 fetch(`/registration/forms/${id}/toggle-visible`, {
                         method: 'POST',
                         headers: {
@@ -211,7 +238,7 @@
                     .then(data => {
                         if (data.success) {
                             alert('Visibility updated successfully.');
-                            location.reload();
+                            location.reload(); //  Refresh the page to reflect change
                         } else {
                             alert('Failed to update visibility.');
                         }
@@ -221,6 +248,7 @@
                         alert('An error occurred while updating visibility.');
                     });
             });
+
         });
     </script>
 @endsection
