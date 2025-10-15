@@ -297,6 +297,9 @@ Route::prefix('admin/course-memo-decision')
 
         Route::get('assign-student', 'assignStudent')->name('assign.student');
         Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
+        Route::get('export', 'export')->name('export');
+        Route::get('import', 'import')->name('import');
+        Route::post('import', 'import')->name('import');
     });
 
     Route::prefix('hostel-building-floor-room-map')->name('hostel.building.floor.room.map.')->controller(HostelBuildingFloorRoomMappingController::class)->group(function () {
