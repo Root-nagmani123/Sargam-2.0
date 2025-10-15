@@ -18,11 +18,19 @@
                                 <h4>Hostel Building Assign Student</h4>
                             </div>
                             <div class="col-6 d-flex justify-content-end gap-2">
-                                <button type="button" class="btn btn-success d-flex align-items-center"
+                                {{-- <button type="button" class="btn btn-success d-flex align-items-center"
                                     data-bs-toggle="modal" data-bs-target="#importModal">
                                     <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
                                         class="me-1"></iconify-icon> Import Excel
-                                </button>
+                                </button> --}}
+                                <a href="{{ route('hostel.building.map.import') }}" class="btn btn-success d-flex align-items-center">
+                                    <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
+                                        class="me-1"></iconify-icon> Import Excel
+                                </a>
+                                <a href="{{ route('hostel.building.map.export') }}" class="btn btn-info d-flex align-items-center">
+                                    <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
+                                        class="me-1"></iconify-icon> Export Excel
+                                </a>
                             </div>
                         </div>
                         <hr>
