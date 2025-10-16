@@ -12,6 +12,8 @@ use App\Http\Controllers\Admin\Registration\FrontPageController;
 use App\Http\Controllers\Admin\Registration\FcJoiningDocumentController;
 use App\Http\Controllers\Admin\Registration\StudentImportController;
 use App\Http\Controllers\Admin\Registration\EnrollementController;
+use App\Http\Controllers\Admin\PeerEvaluationController;
+
 
 
 //Registration
@@ -276,10 +278,59 @@ Route::post('registration/deactivate-filtered', [RegistrationImportController::c
     ->name('admin.registration.deactivate.filtered');
 
 
+// Route::prefix('admin/peer')->group(function () {
+//     Route::get('/', [PeerEvaluationController::class, 'index'])->name('peer.index');
+//     Route::post('/group', [PeerEvaluationController::class, 'storeGroup'])->name('peer.group.store');
+//     Route::post('/column', [PeerEvaluationController::class, 'storeColumn'])->name('peer.column.store');
+//     Route::post('/toggle/{id}', [PeerEvaluationController::class, 'toggleColumn'])->name('peer.column.toggle');
+//     Route::post('/store', [PeerEvaluationController::class, 'storeScore'])->name('peer.store');
+// });
 
 
+// Admin Routes
+Route::prefix('admin')->group(function () {
+    Route::get('/peer-evaluation', [PeerEvaluationController::class, 'index'])->name('admin.peer.index');
+    Route::post('/peer/group/store', [PeerEvaluationController::class, 'storeGroup'])->name('admin.peer.group.store');
+    Route::post('/peer/column/store', [PeerEvaluationController::class, 'storeColumn'])->name('admin.peer.column.store');
+    Route::post('/peer/toggle/{id}', [PeerEvaluationController::class, 'toggleColumn'])->name('admin.peer.toggle');
+    Route::post('/peer/group/delete/{id}', [PeerEvaluationController::class, 'deleteGroup'])->name('admin.peer.group.delete');
+    Route::post('/peer/column/delete/{id}', [PeerEvaluationController::class, 'deleteColumn'])->name('admin.peer.column.delete');
+});
+
+// User Routes
+Route::get('/peer-evaluation', [PeerEvaluationController::class, 'user_index'])->name('peer.index');
+Route::post('/peer-evaluation', [PeerEvaluationController::class, 'store'])->name('peer.store');
+Route::get('/peer-evaluation/group/{groupId}/members', [PeerEvaluationController::class, 'getGroupMembers'])->name('peer.group.members');
 
 
+// Group Members Routes
+Route::get('/peer/group/{id}/members', [PeerEvaluationController::class, 'showGroupMembers'])->name('admin.peer.group.members');
+Route::get('/peer/group/{id}/import', [PeerEvaluationController::class, 'importMembersView'])->name('admin.peer.group.import');
+Route::post('/peer/group/{id}/add-members', [PeerEvaluationController::class, 'addMembersToGroup'])->name('admin.peer.group.add-members');
+Route::post('/admin/peer/group/{groupId}/remove-member/{memberPk}', [PeerEvaluationController::class, 'removeMemberFromGroup'])->name('admin.peer.group.remove-member');
+// Make sure you have this route defined
+// Route::post('/admin/peer/group/{groupId}/remove-member/{memberPk}', [PeerEvaluationAdminController::class, 'removeMemberFromGroup'])->name('admin.peer.group.remove-member');
 
+// Excel Import Routes
+Route::get('/peer/group/{id}/import', [PeerEvaluationController::class, 'importMembersView'])->name('admin.peer.group.import');
+Route::post('/peer/group/{id}/import-excel', [PeerEvaluationController::class, 'importExcel'])->name('admin.peer.group.import-excel');
+Route::get('/peer/download-template', [PeerEvaluationController::class, 'PeerDownloadTemplate'])->name('admin.peer.download-template');
 
+// User Routes
+// Route::get('/peer-evaluation', [PeerEvaluationController::class, 'index'])->name('peer.index');
+// Route::post('/peer-evaluation', [PeerEvaluationController::class, 'store'])->name('peer.store');
 
+// User-facing routes
+Route::prefix('peer')->middleware('auth')->group(function () {
+    Route::get('my-groups', [PeerEvaluationController::class, 'user_groups'])->name('peer.user_groups');
+    Route::get('evaluate/{groupId}', [PeerEvaluationController::class, 'user_evaluation'])->name('peer.user_evaluation');
+    Route::post('store', [PeerEvaluationController::class, 'store'])->name('peer.store');
+});
+
+// View submissions for a specific peer group
+Route::get('admin/peer/group/{group}/submissions', [PeerEvaluationController::class, 'viewSubmissions'])
+    ->name('admin.peer.group.submissions');
+
+// Export submissions for a specific peer group
+Route::get('admin/peer/export/{groupId}', [PeerEvaluationController::class, 'exportSubmissions'])
+    ->name('admin.peer.export');
