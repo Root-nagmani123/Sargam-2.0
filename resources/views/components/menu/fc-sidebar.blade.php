@@ -148,5 +148,30 @@
             </li>
         </ul>
 
+        <!-- ======= PEER EVALUATION ======= -->
+        <li class="sidebar-item mt-2">
+            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+                href="#collapsePeerEvaluation" role="button" aria-expanded="false"
+                aria-controls="collapsePeerEvaluation"
+                style="background-color: #af2910 !important; color: white; border-radius: 10px;">
+                <span class="fw-bold">Peer Evaluation</span>
+                <i class="bi bi-chevron-down text-white"></i>
+            </a>
+        </li>
+        <ul class="collapse list-unstyled ps-3" id="collapsePeerEvaluation">
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.peer.index') }}">
+                    <iconify-icon icon="mdi:cog-outline"></iconify-icon>
+                    <span class="hide-menu">Peer Evaluation (Admin Panel)</span>
+                </a>
+            </li>
+
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('peer.index') }}">
+                    <iconify-icon icon="mdi:account-group-outline"></iconify-icon>
+                    <span class="hide-menu">Peer Evaluation Form (User Panel)</span>
+                </a>
+            </li>
+        </ul>
     </ul>
 </nav>
