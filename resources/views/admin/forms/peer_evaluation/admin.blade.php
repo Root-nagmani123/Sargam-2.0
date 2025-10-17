@@ -49,11 +49,11 @@
                                 <tr>
                                     <td>{{ $group->group_name }}</td>
                                     <td>
-                                        <span class="badge {{ $group->is_active ? 'bg-success' : 'bg-danger' }}">
-                                            {{ $group->is_active ? 'Active' : 'Inactive' }}
+                                        <span class="badge {{ $group->is_form_active ? 'bg-success' : 'bg-danger' }}">
+                                            {{ $group->is_form_active ? 'Active' : 'Inactive' }}
                                         </span>
-                                        <input type="checkbox" class="toggle-group ms-2" data-id="{{ $group->id }}"
-                                            {{ $group->is_active ? 'checked' : '' }}>
+                                        <input type="checkbox" class="toggle-form ms-2" data-id="{{ $group->id }}"
+                                            {{ $group->is_form_active ? 'checked' : '' }}>
                                     </td>
                                     <td>{{ $group->member_count }} members</td>
                                     <td>
@@ -165,6 +165,41 @@
                         location.reload();
                     });
                 }
+            });
+        });
+
+        $(function() {
+            // Toggle Form Active/Inactive
+            $('.toggle-form').change(function() {
+                const checkbox = $(this);
+                const id = checkbox.data('id');
+                const isChecked = checkbox.is(':checked') ? 1 : 0;
+
+                $.ajax({
+                    url: '/admin/peer/group/toggle-form/' + id, // make sure route exists
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        is_form_active: isChecked
+                    },
+                   success: function(response) {
+                // Option 1: Reload page
+                location.reload();
+
+                // Option 2: OR update badge dynamically without reload
+                // const badge = checkbox.siblings('.form-badge');
+                // if (isChecked) {
+                //     badge.removeClass('bg-danger').addClass('bg-success').text('Active');
+                // } else {
+                //     badge.removeClass('bg-success').addClass('bg-danger').text('Inactive');
+                // }
+            },
+                    error: function(xhr) {
+                        alert('Something went wrong!');
+                        // revert checkbox if error
+                        checkbox.prop('checked', !isChecked);
+                    }
+                });
             });
         });
     </script>

@@ -124,19 +124,7 @@ class PeerGroupMembersImport implements ToCollection, WithStartRow
                 $skippedCount++;
                 continue;
             }
-            dump($row);
-            dump([
-                 'group_id' => $this->groupId,
-                    'member_pk' => $row[0] ?? $this->generateMemberPk(), // Use User ID as member_pk
-                    'course_name' => $row[1] ?? null,
-                    'event_name' => $row[2] ?? null,
-                    'user_id' => $row[0] ?? null,
-                    'user_name' => $row[3] ?? null,
-                    'ot_code' => $row[4] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now()
-
-            ]);
+        
 
             try {
                 DB::table('peer_group_members')->insert([
