@@ -334,3 +334,6 @@ Route::get('admin/peer/group/{group}/submissions', [PeerEvaluationController::cl
 // Export submissions for a specific peer group
 Route::get('admin/peer/export/{groupId}', [PeerEvaluationController::class, 'exportSubmissions'])
     ->name('admin.peer.export');
+
+// web.php
+Route::post('admin/peer/group/toggle-form/{id}', [PeerEvaluationController::class, 'toggleForm'])->name('admin.peer.group.toggleForm');

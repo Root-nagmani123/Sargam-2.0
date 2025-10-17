@@ -15,6 +15,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use App\Models\PeerGroup;
 
 class PeerEvaluationController extends Controller
 {
@@ -128,7 +129,7 @@ class PeerEvaluationController extends Controller
             ->groupBy('g.id')
             ->get();
 
-        $columns = DB::table('peer_columns')->where('is_visible', 1)->get();
+        $columns = DB::table('peer_columns')->get();
 
         // Get selected group ID from request or use first group
         $selectedGroupId = request('group_id', $groups->first()->id ?? null);
@@ -246,7 +247,7 @@ class PeerEvaluationController extends Controller
             ->groupBy('peer_groups.id')
             ->get();
 
-        $columns = DB::table('peer_columns')->get();
+        $columns = DB::table('peer_columns')->where('is_visible', 1)->get();
         $allUsers = DB::table('fc_registration_master')
             ->select('pk', 'first_name')
             ->orderBy('first_name')
@@ -483,17 +484,47 @@ class PeerEvaluationController extends Controller
 
 
     // Show user all their assigned groups
+
+    // query method in PeerGroup model used instead
+    // public function user_groups()
+    // {
+    //     $userId = auth()->id();
+
+    //     // Get all active groups
+    //     $groups = DB::table('peer_groups')
+    //         ->where('is_form_active', 1)
+    //         ->select('id', 'group_name')
+    //         ->get();
+
+    //     // Get groups where user already belongs
+    //     $userGroups = DB::table('peer_group_members')
+    //         ->where('user_id', $userId)
+    //         ->pluck('group_id')
+    //         ->toArray();
+
+    //     return view('admin.forms.peer_evaluation.user_groups', compact('groups', 'userGroups'));
+    // }
+
+
+    // Elequent method in PeerGroup model used instead
+
     public function user_groups()
     {
         $userId = auth()->id();
 
-        // Get all active groups
-        $groups = DB::table('peer_groups')
-            ->where('is_form_active', 1)
-            ->select('id', 'group_name')
+        $groups = DB::table('peer_groups as g')
+            ->leftJoin('peer_group_members as m', 'g.id', '=', 'm.group_id')
+            ->where('g.is_form_active', 1)
+            ->select(
+                'g.id',
+                'g.group_name',
+                DB::raw('MAX(m.course_name) as course_name'),
+                DB::raw('MAX(m.event_name) as event_name'),
+                DB::raw('GROUP_CONCAT(m.ot_code SEPARATOR ", ") as ot_codes') // OT code may differ per user
+            )
+            ->groupBy('g.id', 'g.group_name')
             ->get();
 
-        // Get groups where user already belongs
         $userGroups = DB::table('peer_group_members')
             ->where('user_id', $userId)
             ->pluck('group_id')
@@ -601,5 +632,15 @@ class PeerEvaluationController extends Controller
         } else {
             return Excel::download(new PeerEvaluationExport($members, $columns, $scores, $groupName), $groupName . '_submissions.' . $format);
         }
+    }
+
+    // Toggle form active/inactive
+    public function toggleForm($id)
+    {
+        $group = PeerGroup::findOrFail($id);
+        $group->is_form_active = request('is_form_active'); // 1 or 0
+        $group->save();
+
+        return response()->json(['status' => 'success']);
     }
 }

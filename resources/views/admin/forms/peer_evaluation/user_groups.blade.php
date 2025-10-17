@@ -6,25 +6,33 @@
         @if ($groups->isEmpty())
             <div class="alert alert-info">No evaluation groups available.</div>
         @else
-            <div class="list-group mt-3">
-                @foreach ($groups as $group)
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <span>{{ $group->group_name }}</span>
+            <div class="table-responsive mt-3">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Group Name</th>
+                            <th>Course Name</th>
+                            <th>Event Name</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($groups as $group)
+                            <tr>
+                                <td>{{ $group->group_name }}</td>
+                                <td>{{ $group->course_name ?? '-' }}</td>
+                                <td>{{ $group->event_name ?? '-' }}</td>
 
-                        {{-- @if (in_array($group->id, $userGroups)) --}}
-                        {{-- <a href="{{ route('peer.index', $group->id) }}" class="btn btn-success btn-sm">
-                            Submit Evaluation
-                        </a> --}}
-
-                        <a href="{{ route('peer.index', ['group_id' => $group->id]) }}" class="btn btn-success btn-sm">
-                            Submit Evaluation
-                        </a>
-
-                        {{-- @else
-                        <span class="badge bg-secondary">Not Assigned</span>
-                    @endif --}}
-                    </div>
-                @endforeach
+                                <td>
+                                    <a href="{{ route('peer.index', ['group_id' => $group->id]) }}"
+                                        class="btn btn-success btn-sm">
+                                        Submit Evaluation
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
     </div>
