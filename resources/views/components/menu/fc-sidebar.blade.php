@@ -166,12 +166,12 @@
                 </a>
             </li>
 
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('peer.index') }}">
-                    <iconify-icon icon="mdi:account-group-outline"></iconify-icon>
-                    <span class="hide-menu">Peer Evaluation Form (User Panel)</span>
-                </a>
-            </li>
+                <li class="sidebar-item">
+                    <a class="sidebar-link" href="{{ route('peer.user_groups') }}">
+                        <iconify-icon icon="mdi:account-group-outline"></iconify-icon>
+                        <span class="hide-menu">Peer Evaluation Form (User Panel)</span>
+                    </a>
+                </li>
         </ul>
     </ul>
 </nav>

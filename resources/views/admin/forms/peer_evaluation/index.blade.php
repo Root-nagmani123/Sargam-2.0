@@ -76,7 +76,7 @@
                                             <th>
                                                 {{ $column->column_name }}
                                                 <br>
-                                                <small class="text-warning">(1-10)</small>
+                                                <small class="text-muted">(1-{{ $selectedGroup->max_marks }})</small>
                                             </th>
                                         @endforeach
                                     </tr>
@@ -140,6 +140,15 @@
                                 </tbody>
                             </table>
                         </div>
+                        {{-- Reflection Fields Section --}}
+                        @foreach ($reflectionFields as $field)
+                            <label class="form-label fw-bold mb-3">
+                                <br>
+                                <strong>{{ $field->field_label }} :</strong>
+                            </label>
+                            <textarea name="reflections[{{ $field->id }}]" class="form-control reflection-textarea" rows="4"
+                                placeholder="Enter your description for {{ $field->field_label }}"></textarea>
+                        @endforeach
 
                         <div class="mt-4">
                             <button type="submit" class="btn btn-success btn-lg">
