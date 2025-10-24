@@ -183,29 +183,85 @@ class PeerEvaluationController extends Controller
     //     return back()->with('success', 'Evaluation submitted successfully!');
     // }
 
+    // initial working
+    // public function store(Request $request)
+    // {
+    //     $scores = $request->input('scores', []);
+    //     $groupId = $request->input('group_id');
+
+    //     foreach ($scores as $memberId => $columns) {
+    //         foreach ($columns as $columnId => $score) {
+    //             DB::table('peer_scores')->updateOrInsert(
+    //                 [
+    //                     'member_id' => $memberId,      // MUST match peer_group_members.id
+    //                     'column_id' => $columnId,
+    //                     'group_id' => $groupId,
+    //                     'evaluator_id' => auth()->id()
+    //                 ],
+    //                 [
+    //                     'score' => $score,
+    //                     'updated_at' => now()
+    //                 ]
+    //             );
+    //         }
+    //     }
+
+    //     return back()->with('success', 'Evaluation submitted successfully!');
+    // }
+
     public function store(Request $request)
     {
         $scores = $request->input('scores', []);
+        $reflections = $request->input('reflections', []);
         $groupId = $request->input('group_id');
+        $userId = auth()->id();
 
-        foreach ($scores as $memberId => $columns) {
-            foreach ($columns as $columnId => $score) {
-                DB::table('peer_scores')->updateOrInsert(
+        try {
+            DB::beginTransaction();
+
+            // Store evaluation scores
+            foreach ($scores as $memberId => $columns) {
+                foreach ($columns as $columnId => $score) {
+                    DB::table('peer_scores')->updateOrInsert(
+                        [
+                            'member_id' => $memberId,
+                            'column_id' => $columnId,
+                            'group_id' => $groupId,
+                            'evaluator_id' => $userId
+                        ],
+                        [
+                            'score' => $score,
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]
+                    );
+                }
+            }
+
+            // Store reflection fields data in new table
+            foreach ($reflections as $fieldId => $description) {
+                DB::table('reflection_responses')->updateOrInsert(
                     [
-                        'member_id' => $memberId,      // MUST match peer_group_members.id
-                        'column_id' => $columnId,
-                        'group_id' => $groupId,
-                        'evaluator_id' => auth()->id()
+                        'evaluator_id' => $userId,
+                        'field_id' => $fieldId,
+                        'group_id' => $groupId
                     ],
                     [
-                        'score' => $score,
+                        'description' => $description,
+                        'created_at' => now(),
                         'updated_at' => now()
                     ]
                 );
             }
-        }
 
-        return back()->with('success', 'Evaluation submitted successfully!');
+            DB::commit();
+
+            return back()->with('success', 'Evaluation submitted successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to store evaluation: ' . $e->getMessage());
+            return back()->with('error', 'Failed to submit evaluation: ' . $e->getMessage());
+        }
     }
 
 
@@ -237,7 +293,6 @@ class PeerEvaluationController extends Controller
 
     public function user_index(Request $request)
     {
-
         $groups = DB::table('peer_groups')
             ->select(
                 'peer_groups.*',
@@ -256,6 +311,15 @@ class PeerEvaluationController extends Controller
         // Get selected group ID from request or use first group
         $selectedGroupId = $request->query('group_id', $groups->first()->id ?? null);
 
+        // Get selected group details including max_marks
+        $selectedGroup = null;
+        if ($selectedGroupId) {
+            $selectedGroup = DB::table('peer_groups')->where('id', $selectedGroupId)->first();
+        }
+
+        // Get active reflection fields
+        $reflectionFields = DB::table('peer_reflection_fields')->where('is_active', 1)->get();
+
         // Get members for selected group
         $members = [];
         if ($selectedGroupId) {
@@ -266,23 +330,53 @@ class PeerEvaluationController extends Controller
         }
 
 
-        return view('admin.forms.peer_evaluation.index', compact('groups', 'columns', 'allUsers', 'members', 'selectedGroupId'));
+        return view('admin.forms.peer_evaluation.index', compact('groups', 'columns', 'allUsers', 'members', 'selectedGroupId', 'reflectionFields', 'selectedGroup'));
     }
 
     public function storeGroup(Request $request)
     {
         $request->validate([
-            'group_name' => 'required|string|max:255'
+            'group_name' => 'required|string|max:255',
+            // 'max_marks' => 'required|numeric|min:1|max:100'
         ]);
 
         DB::table('peer_groups')->insert([
             'group_name' => $request->group_name,
+            'max_marks' => $request->max_marks ?? 10.00,
             'is_active' => true,
+            'is_form_active' => true,
             'created_at' => now(),
             'updated_at' => now()
         ]);
 
         return back()->with('success', 'Group added successfully!');
+    }
+
+    // Update max marks for group
+    public function updateMaxMarks(Request $request)
+    {
+        $request->validate([
+            'group_id' => 'required|exists:peer_groups,id',
+            'max_marks' => 'required|numeric|min:1|max:100'
+        ]);
+
+        try {
+            $group = PeerGroup::findOrFail($request->group_id);
+            $group->update([
+                'max_marks' => $request->max_marks,
+                'updated_at' => now()
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Max marks updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update max marks: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function storeColumn(Request $request)
@@ -557,6 +651,62 @@ class PeerEvaluationController extends Controller
         return view('admin.forms.peer_evaluation.user_evaluation', compact('group', 'columns', 'members'));
     }
 
+    //working fine 
+    // public function viewSubmissions($groupId)
+    // {
+    //     // Get group info
+    //     $groups = DB::table('peer_groups')
+    //         ->select('id', 'group_name', 'is_active')
+    //         ->get();
+
+    //     if ($groups->isEmpty()) {
+    //         return redirect()->back()->with('error', 'Group not found.');
+    //     }
+
+    //     // Get members of this group
+    //     $members = DB::table('peer_group_members')
+    //         ->where('group_id', $groupId)
+    //         ->select('id', 'member_pk', 'user_name as first_name', 'user_id', 'ot_code')
+    //         ->get();
+
+    //     // Get all columns
+    //     $columns = DB::table('peer_columns')->get();
+
+    //     // Get all scores for this group
+    //     $scores = DB::table('peer_scores')
+    //         ->where('group_id', $groupId)
+    //         ->get();
+    //         // ->keyBy(function ($item) {
+    //         //     return $item->member_id . '-' . $item->column_id;
+    //         // }); // key by member-column for easy lookup
+
+
+    //     // Get reflection fields
+    //     $reflectionFields = DB::table('peer_reflection_fields')->where('is_active', 1)->get();
+
+    //     // Get reflection responses for this group - key by member_id and field_id
+    //     $reflectionResponses = DB::table('reflection_responses')
+    //         ->where('group_id', $groupId)
+    //         ->get()
+    //         ->keyBy(function ($item) {
+    //             return $item->evaluator_id . '-' . $item->field_id;
+    //         });
+    //         // dd($scores);
+
+    //     // Pass $selectedGroupId to keep Blade consistent
+    //     $selectedGroupId = $groupId;
+
+    //     return view('admin.forms.peer_evaluation.view_submissions', compact(
+    //         'groups',
+    //         'members',
+    //         'columns',
+    //         'scores',
+    //         'selectedGroupId',
+    //         'reflectionFields',
+    //         'reflectionResponses'
+    //     ));
+    // }
+
     public function viewSubmissions($groupId)
     {
         // Get group info
@@ -568,24 +718,51 @@ class PeerEvaluationController extends Controller
             return redirect()->back()->with('error', 'Group not found.');
         }
 
-        // Get members of this group
+        // Get members of this group with user names from user_credentials
         $members = DB::table('peer_group_members')
-            ->where('group_id', $groupId)
-            ->select('id', 'member_pk', 'user_name as first_name', 'user_id', 'ot_code')
+            ->leftJoin('user_credentials', 'peer_group_members.user_id', '=', 'user_credentials.pk')
+            ->where('peer_group_members.group_id', $groupId)
+            ->select(
+                'peer_group_members.id',
+                'peer_group_members.member_pk',
+                'peer_group_members.user_name as first_name',
+                'peer_group_members.user_id',
+                'peer_group_members.ot_code',
+                'user_credentials.first_name as user_full_name', // Get user's actual first name
+                'user_credentials.last_name as user_last_name'  // Get user's last name
+            )
             ->get();
 
         // Get all columns
         $columns = DB::table('peer_columns')->get();
 
-        // Get all scores for this group
+        // Get all scores for this group with evaluator names from user_credentials
         $scores = DB::table('peer_scores')
-            ->where('group_id', $groupId)
+            ->leftJoin('user_credentials', 'peer_scores.evaluator_id', '=', 'user_credentials.pk')
+            ->where('peer_scores.group_id', $groupId)
+            ->select(
+                'peer_scores.*',
+                'user_credentials.first_name as evaluator_first_name', // Get evaluator's first name
+                'user_credentials.last_name as evaluator_last_name'   // Get evaluator's last name
+            )
+            ->get();
+
+        // Get reflection fields
+        $reflectionFields = DB::table('peer_reflection_fields')->where('is_active', 1)->get();
+
+        // Get reflection responses for this group with evaluator names from user_credentials
+        $reflectionResponses = DB::table('reflection_responses')
+            ->leftJoin('user_credentials', 'reflection_responses.evaluator_id', '=', 'user_credentials.pk')
+            ->where('reflection_responses.group_id', $groupId)
+            ->select(
+                'reflection_responses.*',
+                'user_credentials.first_name as evaluator_first_name', // Get evaluator's first name
+                'user_credentials.last_name as evaluator_last_name'   // Get evaluator's last name
+            )
             ->get()
             ->keyBy(function ($item) {
-                return $item->member_id . '-' . $item->column_id;
-            }); // key by member-column for easy lookup
-
-        // dd($scores);
+                return $item->evaluator_id . '-' . $item->field_id;
+            });
 
         // Pass $selectedGroupId to keep Blade consistent
         $selectedGroupId = $groupId;
@@ -595,27 +772,105 @@ class PeerEvaluationController extends Controller
             'members',
             'columns',
             'scores',
-            'selectedGroupId'
+            'selectedGroupId',
+            'reflectionFields',
+            'reflectionResponses'
         ));
     }
 
+
+    //WORKING 
+    // public function exportSubmissions(Request $request, $groupId)
+    // {
+    //     $format = $request->input('format');
+
+    //     $members = DB::table('peer_group_members')
+    //         ->where('group_id', $groupId)
+    //         ->select('id', 'member_pk', 'user_name as first_name', 'user_id', 'ot_code')
+    //         ->get();
+
+    //     $columns = DB::table('peer_columns')->get();
+
+    //     $scores = DB::table('peer_scores')
+    //         ->where('group_id', $groupId)
+    //         ->get()
+    //         ->keyBy(function ($item) {
+    //             return $item->member_id . '-' . $item->column_id;
+    //         });
+
+    //     $group = DB::table('peer_groups')->where('id', $groupId)->first();
+    //     $groupName = $group->group_name ?? 'Group';
+
+    //     if ($format === 'pdf') {
+    //         $pdf = PDF::loadView('admin.forms.peer_evaluation.export_pdf', [
+    //             'members' => $members,
+    //             'columns' => $columns,
+    //             'scores' => $scores,
+    //             'groupName' => $groupName
+    //         ]);
+    //         return $pdf->download($groupName . '_submissions.pdf');
+    //     } else {
+    //         return Excel::download(new PeerEvaluationExport($members, $columns, $scores, $groupName), $groupName . '_submissions.' . $format);
+    //     }
+    // }
+
+    // // Toggle form active/inactive
+    public function toggleForm($id)
+    {
+        $group = PeerGroup::findOrFail($id);
+        $group->is_form_active = request('is_form_active'); // 1 or 0
+        $group->save();
+
+        return response()->json(['status' => 'success']);
+    }
 
     public function exportSubmissions(Request $request, $groupId)
     {
         $format = $request->input('format');
 
+        // Get members with user names from user_credentials
         $members = DB::table('peer_group_members')
-            ->where('group_id', $groupId)
-            ->select('id', 'member_pk', 'user_name as first_name', 'user_id', 'ot_code')
+            ->leftJoin('user_credentials', 'peer_group_members.user_id', '=', 'user_credentials.pk')
+            ->where('peer_group_members.group_id', $groupId)
+            ->select(
+                'peer_group_members.id',
+                'peer_group_members.member_pk',
+                'peer_group_members.user_name as first_name',
+                'peer_group_members.user_id',
+                'peer_group_members.ot_code',
+                'user_credentials.first_name as user_full_name',
+                'user_credentials.last_name as user_last_name'
+            )
             ->get();
 
         $columns = DB::table('peer_columns')->get();
 
+        // Get scores with evaluator names
         $scores = DB::table('peer_scores')
-            ->where('group_id', $groupId)
+            ->leftJoin('user_credentials', 'peer_scores.evaluator_id', '=', 'user_credentials.pk')
+            ->where('peer_scores.group_id', $groupId)
+            ->select(
+                'peer_scores.*',
+                'user_credentials.first_name as evaluator_first_name',
+                'user_credentials.last_name as evaluator_last_name'
+            )
+            ->get();
+
+        // Get reflection fields
+        $reflectionFields = DB::table('peer_reflection_fields')->where('is_active', 1)->get();
+
+        // Get reflection responses with evaluator names
+        $reflectionResponses = DB::table('reflection_responses')
+            ->leftJoin('user_credentials', 'reflection_responses.evaluator_id', '=', 'user_credentials.pk')
+            ->where('reflection_responses.group_id', $groupId)
+            ->select(
+                'reflection_responses.*',
+                'user_credentials.first_name as evaluator_first_name',
+                'user_credentials.last_name as evaluator_last_name'
+            )
             ->get()
             ->keyBy(function ($item) {
-                return $item->member_id . '-' . $item->column_id;
+                return $item->evaluator_id . '-' . $item->field_id;
             });
 
         $group = DB::table('peer_groups')->where('id', $groupId)->first();
@@ -626,21 +881,55 @@ class PeerEvaluationController extends Controller
                 'members' => $members,
                 'columns' => $columns,
                 'scores' => $scores,
-                'groupName' => $groupName
+                'groupName' => $groupName,
+                'reflectionFields' => $reflectionFields,
+                'reflectionResponses' => $reflectionResponses
             ]);
             return $pdf->download($groupName . '_submissions.pdf');
         } else {
-            return Excel::download(new PeerEvaluationExport($members, $columns, $scores, $groupName), $groupName . '_submissions.' . $format);
+            return Excel::download(new PeerEvaluationExport(
+                $members,
+                $columns,
+                $scores,
+                $groupName,
+                $reflectionFields,
+                $reflectionResponses
+            ), $groupName . '_submissions.' . $format);
         }
     }
 
-    // Toggle form active/inactive
-    public function toggleForm($id)
-    {
-        $group = PeerGroup::findOrFail($id);
-        $group->is_form_active = request('is_form_active'); // 1 or 0
-        $group->save();
 
-        return response()->json(['status' => 'success']);
+    // Reflection Fields Management
+    public function addReflectionField(Request $request)
+    {
+        $request->validate([
+            'field_label' => 'required|string|max:255'
+        ]);
+
+        DB::table('peer_reflection_fields')->insert([
+            'field_label' => $request->field_label,
+            'is_active' => 1,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return redirect()->back()->with('success', 'Reflection field added successfully.');
+    }
+
+    public function toggleReflectionField($id)
+    {
+        $field = DB::table('peer_reflection_fields')->find($id);
+        if ($field) {
+            DB::table('peer_reflection_fields')
+                ->where('id', $id)
+                ->update(['is_active' => !$field->is_active]);
+        }
+        return response()->json(['success' => true]);
+    }
+
+    public function deleteReflectionField($id)
+    {
+        DB::table('peer_reflection_fields')->where('id', $id)->delete();
+        return response()->json(['success' => true]);
     }
 }
