@@ -337,3 +337,13 @@ Route::get('admin/peer/export/{groupId}', [PeerEvaluationController::class, 'exp
 
 // web.php
 Route::post('admin/peer/group/toggle-form/{id}', [PeerEvaluationController::class, 'toggleForm'])->name('admin.peer.group.toggleForm');
+
+// Reflection Fields
+Route::post('/admin/peer/reflection/add', [PeerEvaluationController::class, 'addReflectionField'])->name('admin.peer.reflection.add');
+Route::post('/admin/peer/reflection/toggle/{id}', [PeerEvaluationController::class, 'toggleReflectionField'])->name('admin.peer.reflection.toggle');
+Route::post('/admin/peer/reflection/delete/{id}', [PeerEvaluationController::class, 'deleteReflectionField'])->name('admin.peer.reflection.delete');
+
+// Additional Admin Routes for Peer Evaluation Groups max marks
+Route::post('/admin/peer/groups/add', [PeerEvaluationController::class, 'addGroup'])->name('admin.peer.groups.add');
+Route::post('/admin/peer/groups/update-marks', [PeerEvaluationController::class, 'updateMaxMarks'])->name('admin.peer.groups.update-marks');
+

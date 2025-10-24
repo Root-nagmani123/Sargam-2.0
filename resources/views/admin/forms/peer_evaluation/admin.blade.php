@@ -39,6 +39,7 @@
                         <thead>
                             <tr>
                                 <th>Group Name</th>
+                                <th>Max Marks</th>
                                 <th>Status</th>
                                 <th>Members</th>
                                 <th>Actions</th>
@@ -48,6 +49,13 @@
                             @foreach ($groups as $group)
                                 <tr>
                                     <td>{{ $group->group_name }}</td>
+                                    <td>
+                                        <input type="number" class="form-control form-control-sm max-marks-input"
+                                            data-id="{{ $group->id }}" value="{{ $group->max_marks ?? 10 }}"
+                                            step="0.01" min="1" max="100" style="width: 80px;">
+                                        <button class="btn btn-sm btn-outline-primary update-marks mt-1"
+                                            data-id="{{ $group->id }}">Update</button>
+                                    </td>
                                     <td>
                                         <span class="badge {{ $group->is_form_active ? 'bg-success' : 'bg-danger' }}">
                                             {{ $group->is_form_active ? 'Active' : 'Inactive' }}
@@ -103,6 +111,31 @@
                 @endforeach
             </div>
         </div>
+
+        {{-- Manage Additional Reflection Fields --}}
+        <div class="mb-4">
+            <h5>Manage Reflection Fields (Dynamic)</h5>
+            <div class="input-group mb-3">
+                <input type="text" id="reflection_field" class="form-control"
+                    placeholder="Enter Reflection Field (e.g. Learning from the Paramilitary Forces)">
+                <button class="btn btn-secondary" id="addReflectionBtn">Add Field</button>
+            </div>
+
+            {{-- Reflection Fields List --}}
+            <div class="mt-3">
+                <h6>Existing Reflection Fields:</h6>
+                @foreach (DB::table('peer_reflection_fields')->get() as $field)
+                    <span class="badge {{ $field->is_active ? 'bg-success' : 'bg-secondary' }} me-2 mb-2 p-2">
+                        {{ $field->field_label }}
+                        <input type="checkbox" class="toggle-reflection ms-1" data-id="{{ $field->id }}"
+                            {{ $field->is_active ? 'checked' : '' }}>
+                        <button class="btn btn-sm btn-danger ms-1 delete-reflection"
+                            data-id="{{ $field->id }}">×</button>
+                    </span>
+                @endforeach
+            </div>
+        </div>
+
 
         <div class="alert alert-info">
             <strong>Note:</strong> This is the admin panel for managing groups and columns.
@@ -166,6 +199,39 @@
                     });
                 }
             });
+
+            // Add Reflection Field
+            $('#addReflectionBtn').click(function() {
+                $.post('{{ route('admin.peer.reflection.add') }}', {
+                    _token: '{{ csrf_token() }}',
+                    field_label: $('#reflection_field').val()
+                }, function() {
+                    location.reload();
+                });
+            });
+
+            // Toggle Reflection Field
+            $('.toggle-reflection').change(function() {
+                const id = $(this).data('id');
+                $.post('{{ url('admin/peer/reflection/toggle') }}/' + id, {
+                    _token: '{{ csrf_token() }}'
+                }, function() {
+                    location.reload();
+                });
+            });
+
+            // Delete Reflection Field
+            $('.delete-reflection').click(function() {
+                if (confirm('Are you sure you want to delete this field?')) {
+                    const id = $(this).data('id');
+                    $.post('{{ url('admin/peer/reflection/delete') }}/' + id, {
+                        _token: '{{ csrf_token() }}'
+                    }, function() {
+                        location.reload();
+                    });
+                }
+            });
+
         });
 
         $(function() {
@@ -182,24 +248,116 @@
                         _token: '{{ csrf_token() }}',
                         is_form_active: isChecked
                     },
-                   success: function(response) {
-                // Option 1: Reload page
-                location.reload();
+                    success: function(response) {
+                        // Option 1: Reload page
+                        location.reload();
 
-                // Option 2: OR update badge dynamically without reload
-                // const badge = checkbox.siblings('.form-badge');
-                // if (isChecked) {
-                //     badge.removeClass('bg-danger').addClass('bg-success').text('Active');
-                // } else {
-                //     badge.removeClass('bg-success').addClass('bg-danger').text('Inactive');
-                // }
-            },
+                        // Option 2: OR update badge dynamically without reload
+                        // const badge = checkbox.siblings('.form-badge');
+                        // if (isChecked) {
+                        //     badge.removeClass('bg-danger').addClass('bg-success').text('Active');
+                        // } else {
+                        //     badge.removeClass('bg-success').addClass('bg-danger').text('Inactive');
+                        // }
+                    },
                     error: function(xhr) {
-                        alert('Something went wrong!');
+                                            console.error('Error:', error);
+                        
+                        alert('Something went wrong!!!!');
                         // revert checkbox if error
                         checkbox.prop('checked', !isChecked);
                     }
                 });
+            });
+        });
+
+        // Add new group with max marks
+        document.getElementById('addGroupBtn').addEventListener('click', function() {
+            const groupName = document.getElementById('group_name').value;
+            const maxMarks = document.getElementById('max_marks').value;
+
+            if (!groupName) {
+                alert('Please enter a group name');
+                return;
+            }
+
+            if (!maxMarks || maxMarks <= 0) {
+                alert('Please enter valid max marks');
+                return;
+            }
+
+            // Send AJAX request to add group
+            fetch('{{ route('admin.peer.groups.add') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        group_name: groupName,
+                        max_marks: parseFloat(maxMarks)
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while adding the group');
+                });
+        });
+
+        // Update max marks for existing group
+        document.querySelectorAll('.update-marks').forEach(button => {
+            button.addEventListener('click', function() {
+                const groupId = this.getAttribute('data-id');
+                const input = document.querySelector(`.max-marks-input[data-id="${groupId}"]`);
+                const maxMarks = input.value;
+
+                if (!maxMarks || maxMarks <= 0) {
+                    alert('Please enter valid max marks');
+                    return;
+                }
+
+                // Send AJAX request to update max marks
+                fetch('{{ route('admin.peer.groups.update-marks') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({
+                            group_id: groupId,
+                            max_marks: parseFloat(maxMarks)
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Max marks updated successfully');
+                        } else {
+                            alert('Error: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while updating max marks');
+                    });
+            });
+        });
+
+        // Allow Enter key to trigger update
+        document.querySelectorAll('.max-marks-input').forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const groupId = this.getAttribute('data-id');
+                    document.querySelector(`.update-marks[data-id="${groupId}"]`).click();
+                }
             });
         });
     </script>
