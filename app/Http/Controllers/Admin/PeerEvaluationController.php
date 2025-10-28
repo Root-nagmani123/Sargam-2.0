@@ -734,7 +734,7 @@ class PeerEvaluationController extends Controller
             ->get();
 
         // Get all columns
-        $columns = DB::table('peer_columns')->get();
+        $columns = DB::table('peer_columns')->where('is_visible', 1)->get();
 
         // Get all scores for this group with evaluator names from user_credentials
         $scores = DB::table('peer_scores')
