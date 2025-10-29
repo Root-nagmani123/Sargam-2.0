@@ -1,10 +1,9 @@
 <?php
-
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\DB;
 
 class PeerGroup extends Model
 {
@@ -12,11 +11,11 @@ class PeerGroup extends Model
     
     protected $fillable = [
         'group_name', 
+        'event_id',
+        'course_id',
         'is_active', 
         'is_form_active', 
-        'max_marks', 
-        'created_at', 
-        'updated_at'
+        'max_marks'
     ];
 
     protected $casts = [
@@ -27,7 +26,16 @@ class PeerGroup extends Model
         'updated_at' => 'datetime'
     ];
 
-    // Relationship to members
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(PeerEvent::class, 'event_id');
+    }
+
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(PeerCourse::class, 'course_id');
+    }
+
     public function members(): HasMany
     {
         return $this->hasMany(PeerGroupMember::class, 'group_id');
@@ -37,30 +45,6 @@ class PeerGroup extends Model
     public function getMemberCountAttribute()
     {
         return $this->members()->count();
-    }
-
-    // Static method to get groups with user info
-    public static function getActiveGroupsWithUser($userId)
-    {
-        return self::leftJoin('peer_group_members as m', 'peer_groups.id', '=', 'm.group_id')
-            ->where('peer_groups.is_form_active', 1)
-            ->where('m.user_id', $userId)
-            ->select(
-                'peer_groups.id',
-                'peer_groups.group_name',
-                'peer_groups.max_marks',
-                DB::raw('GROUP_CONCAT(m.course_name SEPARATOR ", ") as course_names'),
-                DB::raw('GROUP_CONCAT(m.event_name SEPARATOR ", ") as event_names'),
-                DB::raw('GROUP_CONCAT(m.ot_code SEPARATOR ", ") as ot_codes')
-            )
-            ->groupBy('peer_groups.id', 'peer_groups.group_name', 'peer_groups.max_marks')
-            ->get();
-    }
-
-    // Get user's group IDs
-    public static function getUserGroupIds($userId)
-    {
-        return PeerGroupMember::where('user_id', $userId)->pluck('group_id')->toArray();
     }
 
     // Scope for active groups

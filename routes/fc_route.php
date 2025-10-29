@@ -347,3 +347,22 @@ Route::post('/admin/peer/reflection/delete/{id}', [PeerEvaluationController::cla
 Route::post('/admin/peer/groups/add', [PeerEvaluationController::class, 'addGroup'])->name('admin.peer.groups.add');
 Route::post('/admin/peer/groups/update-marks', [PeerEvaluationController::class, 'updateMaxMarks'])->name('admin.peer.groups.update-marks');
 
+// Events and Courses
+Route::post('/admin/peer/event/add', [PeerEvaluationController::class, 'addEvent'])->name('admin.peer.event.add');
+Route::post('/admin/peer/course/add', [PeerEvaluationController::class, 'addCourse'])->name('admin.peer.course.add');
+Route::get('/admin/peer/courses/{eventId}', [PeerEvaluationController::class, 'getCoursesByEvent']);
+
+// Groups with event/course
+Route::post('/admin/peer/group/add', [PeerEvaluationController::class, 'addGroup'])->name('admin.peer.group.add');
+// Route::post('/admin/peer/group/toggle-form/{id}', [PeerEvaluationController::class, 'toggleFormStatus']);
+// Route::post('/admin/peer/group/delete/{id}', [PeerEvaluationController::class, 'deleteGroup']);
+
+// Columns with event/course
+Route::post('/admin/peer/column/add', [PeerEvaluationController::class, 'addColumn'])->name('admin.peer.column.add');
+Route::post('/admin/peer/column/toggle/{id}', [PeerEvaluationController::class, 'toggleColumnVisibility']);
+Route::post('/admin/peer/column/delete/{id}', [PeerEvaluationController::class, 'deleteColumn']);
+
+// Max marks
+Route::post('/admin/peer/groups/update-marks', [PeerEvaluationController::class, 'updateMaxMarks'])->name('admin.peer.groups.update-marks');
+
+// Keep your existing routes for reflection fields, etc.
