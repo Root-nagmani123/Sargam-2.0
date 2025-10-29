@@ -1,19 +1,23 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class PeerEvent extends Model
+class PeerReflectionField extends Model
 {
-    protected $table = 'peer_events';
-    
-    protected $fillable = ['event_name', 'course_id', 'is_active'];
+    protected $table = 'peer_reflection_fields';
+
+    protected $fillable = [
+        'field_label',
+        'course_id',
+        'event_id',
+        'is_active'
+    ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'course_id' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];
@@ -23,17 +27,11 @@ class PeerEvent extends Model
         return $this->belongsTo(PeerCourse::class, 'course_id');
     }
 
-    public function groups(): HasMany
+    public function event(): BelongsTo
     {
-        return $this->hasMany(PeerGroup::class, 'event_id');
+        return $this->belongsTo(PeerEvent::class, 'event_id');
     }
 
-    public function columns(): HasMany
-    {
-        return $this->hasMany(PeerColumn::class, 'event_id');
-    }
-
-    // Scope for active events
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
