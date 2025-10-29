@@ -2,14 +2,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PeerCourse extends Model
 {
     protected $table = 'peer_courses';
     
-    protected $fillable = ['course_name', 'event_id', 'is_active'];
+    protected $fillable = ['course_name', 'is_active'];
 
     protected $casts = [
         'is_active' => 'boolean',
@@ -17,9 +16,9 @@ class PeerCourse extends Model
         'updated_at' => 'datetime'
     ];
 
-    public function event(): BelongsTo
+    public function events(): HasMany
     {
-        return $this->belongsTo(PeerEvent::class, 'event_id');
+        return $this->hasMany(PeerEvent::class, 'course_id');
     }
 
     public function groups(): HasMany

@@ -3,45 +3,44 @@
     <div class="card p-3">
         <h4 class="mb-4">Peer Evaluation - Admin Panel</h4>
 
-        {{-- Manage Events Section --}}
+        {{-- Manage Courses Section --}}
         <div class="mb-4">
-            <h5>Manage Events & Courses</h5>
+            <h5>Manage Courses</h5>
             <div class="input-group mb-3">
-                <input type="text" id="event_name" class="form-control"
-                    placeholder="Enter Event Name (e.g. Foundation Course)">
-                <button class="btn btn-info" id="addEventBtn">Add Event</button>
+                <input type="text" id="course_name" class="form-control" placeholder="Enter Course Name">
+                <button class="btn btn-info" id="addCourseBtn">Add Course</button>
             </div>
 
-            {{-- Events List --}}
+            {{-- Courses List --}}
             <div class="mt-3">
-                <h6>Existing Events & Courses:</h6>
-                @foreach ($events as $event)
+                <h6>Existing Courses:</h6>
+                @foreach ($courses as $course)
                     <div class="card mb-3">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <strong>{{ $event->event_name }}</strong>
+                            <strong>{{ $course->course_name }}</strong>
                             <div>
-                                <span class="badge bg-primary">{{ $event->courses->count() }} Courses</span>
-                                <span class="badge bg-secondary ms-1">{{ $event->groups->count() }} Groups</span>
+                                <span class="badge bg-primary">{{ $course->events_count }} Events</span>
+                                <span class="badge bg-secondary ms-1">{{ $course->groups_count }} Groups</span>
                             </div>
                         </div>
                         <div class="card-body">
-                            {{-- Add Course to this Event --}}
+                            {{-- Add Event to this Course --}}
                             <div class="input-group input-group-sm mb-3">
-                                <input type="text" class="form-control course-input"
-                                    placeholder="Add Course to {{ $event->event_name }}"
-                                    data-event-id="{{ $event->id }}">
-                                <button class="btn btn-outline-primary add-course-btn"
-                                    data-event-id="{{ $event->id }}">Add Course</button>
+                                <input type="text" class="form-control event-input"
+                                    placeholder="Add Event to {{ $course->course_name }}"
+                                    data-course-id="{{ $course->id }}">
+                                <button class="btn btn-outline-primary add-event-btn"
+                                    data-course-id="{{ $course->id }}">Add Event</button>
                             </div>
 
-                            {{-- Courses List --}}
-                            @foreach ($event->courses as $course)
+                            {{-- Events List --}}
+                            @foreach ($course->events as $event)
                                 <div class="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
                                     <div>
-                                        <strong>{{ $course->course_name }}</strong>
-                                        <span class="badge bg-secondary ms-2">{{ $course->groups_count ?? 0 }} Groups</span>
+                                        <strong>{{ $event->event_name }}</strong>
+                                        <span class="badge bg-secondary ms-2">{{ $event->groups->count() }} Groups</span>
                                     </div>
-                                    <small class="text-muted">Course ID: {{ $course->id }}</small>
+                                    <small class="text-muted">Event ID: {{ $event->id }}</small>
                                 </div>
                             @endforeach
                         </div>
@@ -55,18 +54,18 @@
             <h5>Manage Groups</h5>
             <div class="row mb-3">
                 <div class="col-md-3">
-                    <label class="form-label">Event</label>
-                    <select class="form-control" id="group_event_id">
-                        <option value="">Select Event</option>
-                        @foreach ($events as $event)
-                            <option value="{{ $event->id }}">{{ $event->event_name }}</option>
+                    <label class="form-label">Course</label>
+                    <select class="form-control" id="group_course_id">
+                        <option value="">Select Course</option>
+                        @foreach ($courses as $course)
+                            <option value="{{ $course->id }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Course</label>
-                    <select class="form-control" id="group_course_id" disabled>
-                        <option value="">Select Course</option>
+                    <label class="form-label">Event</label>
+                    <select class="form-control" id="group_event_id" disabled>
+                        <option value="">Select Event</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -88,10 +87,10 @@
                 <h6>Groups List:</h6>
                 <div class="table-responsive">
                     <table class="table table-bordered table-striped">
-                        <thead class="table-navbar-dark bg-dark text-white">
+                        <thead class="table-white bg-primary text-white">
                             <tr>
-                                <th>Event</th>
                                 <th>Course</th>
+                                <th>Event</th>
                                 <th>Group Name</th>
                                 <th>Max Marks</th>
                                 <th>Status</th>
@@ -103,10 +102,10 @@
                             @foreach ($groups as $group)
                                 <tr>
                                     <td>
-                                        <span class="badge bg-info">{{ $group->event->event_name ?? 'N/A' }}</span>
+                                        <span class="badge bg-info">{{ $group->course->course_name ?? 'N/A' }}</span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-secondary">{{ $group->course->course_name ?? 'N/A' }}</span>
+                                        <span class="badge bg-secondary">{{ $group->event->event_name ?? 'N/A' }}</span>
                                     </td>
                                     <td>{{ $group->group_name }}</td>
                                     <td>
@@ -163,18 +162,18 @@
             <h5>Manage Evaluation Columns</h5>
             <div class="row mb-3">
                 <div class="col-md-3">
-                    <label class="form-label">Event (Optional)</label>
-                    <select class="form-control" id="column_event_id">
+                    <label class="form-label">Course (Optional)</label>
+                    <select class="form-control" id="column_course_id">
                         <option value="">Global Column</option>
-                        @foreach ($events as $event)
-                            <option value="{{ $event->id }}">{{ $event->event_name }}</option>
+                        @foreach ($courses as $course)
+                            <option value="{{ $course->id }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label">Course (Optional)</label>
-                    <select class="form-control" id="column_course_id" disabled>
-                        <option value="">Select Course</option>
+                    <label class="form-label">Event (Optional)</label>
+                    <select class="form-control" id="column_event_id" disabled>
+                        <option value="">Select Event</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -200,15 +199,14 @@
                                                 class="badge {{ $column->is_visible ? 'bg-success' : 'bg-secondary' }} me-1">
                                                 {{ $column->column_name }}
                                             </span>
-                                            {{-- Safe access to event and course --}}
-                                            @if (isset($column->event_id) && $column->event_id)
+                                            @if ($column->course)
                                                 <small class="text-muted">
-                                                    (Event ID: {{ $column->event_id }})
+                                                    ({{ $column->course->course_name }})
                                                 </small>
                                             @endif
-                                            @if (isset($column->course_id) && $column->course_id)
+                                            @if ($column->event)
                                                 <small class="text-muted">
-                                                    - Course ID: {{ $column->course_id }}
+                                                    - {{ $column->event->event_name }}
                                                 </small>
                                             @endif
                                         </div>
@@ -232,38 +230,44 @@
         {{-- Manage Reflection Fields --}}
         <div class="mb-4">
             <h5>Manage Reflection Fields</h5>
-
-            {{-- Event and Course Selection --}}
             <div class="row mb-3">
-                <div class="col-md-4">
-                    <label class="form-label">Event (Optional)</label>
-                    <select class="form-control" id="reflection_event_id">
+                <div class="col-md-3">
+                    <label class="form-label">Course (Optional)</label>
+                    <select class="form-control" id="reflection_course_id">
                         <option value="">Global Field</option>
-                        @foreach ($events as $event)
-                            <option value="{{ $event->id }}">{{ $event->event_name }}</option>
+                        @foreach ($courses as $course)
+                            <option value="{{ $course->id }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Course (Optional)</label> {{-- Changed label from "Group" to "Course" --}}
-                    <select class="form-control" id="reflection_course_id" disabled> {{-- Changed ID from reflection_column_id to reflection_course_id --}}
-                        <option value="">Select Course</option> {{-- Changed from "Select Group" to "Select Course" --}}
+                <div class="col-md-3">
+                    <label class="form-label">Event (Optional)</label>
+                    <select class="form-control" id="reflection_event_id" disabled>
+                        <option value="">Select Event</option>
                     </select>
                 </div>
-            </div>
-
-            {{-- Add Reflection Field --}}
-            <div class="input-group mb-3">
-                <input type="text" id="reflection_field" class="form-control"
-                    placeholder="Enter Reflection Field (e.g. Learning from the Paramilitary Forces)">
-                <button class="btn btn-secondary" id="addReflectionBtn">Add Field</button>
-            </div>
-
+                <div class="col-md-4">
+                    <label class="form-label">Reflection Field Name</label>
+                    <input type="text" id="reflection_field" class="form-control"
+                        placeholder="Enter Reflection Field Name">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-secondary" id="addReflectionBtn">Add Field</button>
+                </div>
+            </div>  
             {{-- Reflection Fields List --}}
             <div class="mt-3">
                 <h6>Existing Reflection Fields:</h6>
                 <div class="row">
-                    @foreach (DB::table('peer_reflection_fields as prf')->leftJoin('peer_events as pe', 'prf.event_id', '=', 'pe.id')->leftJoin('peer_groups as pg', 'prf.group_id', '=', 'pg.id')->select('prf.*', 'pe.event_name', 'pg.group_name')->get() as $field)
+                    @php
+                        $reflectionFields = DB::table('peer_reflection_fields as prf')
+                            ->leftJoin('peer_courses as pc', 'prf.course_id', '=', 'pc.id')
+                            ->leftJoin('peer_events as pe', 'prf.event_id', '=', 'pe.id')
+                            ->select('prf.*', 'pc.course_name', 'pe.event_name')
+                            ->get();
+                    @endphp
+
+                    @foreach ($reflectionFields as $field)
                         <div class="col-md-4 mb-2">
                             <div class="card">
                                 <div class="card-body p-2">
@@ -273,11 +277,11 @@
                                                 class="badge {{ $field->is_active ? 'bg-success' : 'bg-secondary' }} me-1">
                                                 {{ $field->field_label }}
                                             </span>
-                                            @if ($field->event_name)
-                                                <small class="text-muted">({{ $field->event_name }})</small>
+                                            @if ($field->course_name)
+                                                <small class="text-muted">({{ $field->course_name }})</small>
                                             @endif
-                                            @if ($field->group_name)
-                                                <small class="text-muted">- {{ $field->group_name }}</small>
+                                            @if ($field->event_name)
+                                                <small class="text-muted">- {{ $field->event_name }}</small>
                                             @endif
                                         </div>
                                         <div>
@@ -294,312 +298,348 @@
                     @endforeach
                 </div>
             </div>
+
+            <div class="alert alert-info">
+                <strong>Note:</strong> This is the admin panel for managing courses, events, groups and columns.
+                Users will see the evaluation form on the user side.
+            </div>
         </div>
 
-        <div class="alert alert-info">
-            <strong>Note:</strong> This is the admin panel for managing events, courses, groups and columns.
-            Users will see the evaluation form on the user side.
-        </div>
-    </div>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+        <script>
+            $(document).ready(function() {
+                // Load events when course is selected for groups
+                $('#group_course_id').change(function() {
+                    const courseId = $(this).val();
+                    const eventSelect = $('#group_event_id');
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            // Load courses when event is selected for groups
-            $('#group_event_id').change(function() {
-                const eventId = $(this).val();
-                const courseSelect = $('#group_course_id');
-
-                if (eventId) {
-                    $.get('/admin/peer/courses/' + eventId, function(courses) {
-                        courseSelect.empty().append('<option value="">Select Course</option>');
-                        courses.forEach(course => {
-                            courseSelect.append(
-                                `<option value="${course.id}">${course.course_name}</option>`
-                            );
+                    if (courseId) {
+                        $.get('/admin/peer/events/' + courseId, function(events) {
+                            eventSelect.empty().append('<option value="">Select Event</option>');
+                            events.forEach(event => {
+                                eventSelect.append(
+                                    `<option value="${event.id}">${event.event_name}</option>`
+                                );
+                            });
+                            eventSelect.prop('disabled', false);
+                        }).fail(function() {
+                            alert('Error loading events');
                         });
-                        courseSelect.prop('disabled', false);
-                    }).fail(function() {
-                        alert('Error loading courses');
-                    });
-                } else {
-                    courseSelect.empty().append('<option value="">Select Course</option>').prop('disabled',
-                        true);
-                }
-            });
+                    } else {
+                        eventSelect.empty().append('<option value="">Select Event</option>').prop('disabled',
+                            true);
+                    }
+                });
 
-            // Load courses when event is selected for columns
-            $('#column_event_id').change(function() {
-                const eventId = $(this).val();
-                const courseSelect = $('#column_course_id');
+                // Load events when course is selected for columns
+                $('#column_course_id').change(function() {
+                    const courseId = $(this).val();
+                    const eventSelect = $('#column_event_id');
 
-                if (eventId) {
-                    $.get('/admin/peer/courses/' + eventId, function(courses) {
-                        courseSelect.empty().append('<option value="">Select Course</option>');
-                        courses.forEach(course => {
-                            courseSelect.append(
-                                `<option value="${course.id}">${course.course_name}</option>`
-                            );
+                    if (courseId) {
+                        $.get('/admin/peer/events/' + courseId, function(events) {
+                            eventSelect.empty().append('<option value="">Select Event</option>');
+                            events.forEach(event => {
+                                eventSelect.append(
+                                    `<option value="${event.id}">${event.event_name}</option>`
+                                );
+                            });
+                            eventSelect.prop('disabled', false);
+                        }).fail(function() {
+                            alert('Error loading events');
                         });
-                        courseSelect.prop('disabled', false);
-                    }).fail(function() {
-                        alert('Error loading courses');
-                    });
-                } else {
-                    courseSelect.empty().append('<option value="">Select Course</option>').prop('disabled',
-                        true);
-                }
-            });
-
-            // Add Event
-            $('#addEventBtn').click(function() {
-                const eventName = $('#event_name').val();
-                if (!eventName) {
-                    alert('Please enter event name');
-                    return;
-                }
-
-                $.post('{{ route('admin.peer.event.add') }}', {
-                    _token: '{{ csrf_token() }}',
-                    event_name: eventName
-                }, function(response) {
-                    if (response.success) {
-                        location.reload();
                     } else {
-                        alert('Error: ' + response.message);
+                        eventSelect.empty().append('<option value="">Select Event</option>').prop('disabled',
+                            true);
                     }
-                }).fail(function() {
-                    alert('Error adding event');
                 });
-            });
 
-            // Add Course to Event
-            $('.add-course-btn').click(function() {
-                const eventId = $(this).data('event-id');
-                const courseInput = $(`.course-input[data-event-id="${eventId}"]`);
-                const courseName = courseInput.val();
+                // Load events when course is selected for reflection fields
+                $('#reflection_course_id').change(function() {
+                    const courseId = $(this).val();
+                    const eventSelect = $('#reflection_event_id');
 
-                if (!courseName) {
-                    alert('Please enter course name');
-                    return;
-                }
-
-                $.post('{{ route('admin.peer.course.add') }}', {
-                    _token: '{{ csrf_token() }}',
-                    course_name: courseName,
-                    event_id: eventId
-                }, function(response) {
-                    if (response.success) {
-                        location.reload();
+                    if (courseId) {
+                        $.get('/admin/peer/events/' + courseId, function(events) {
+                            eventSelect.empty().append('<option value="">Select Event</option>');
+                            events.forEach(event => {
+                                eventSelect.append(
+                                    `<option value="${event.id}">${event.event_name}</option>`
+                                );
+                            });
+                            eventSelect.prop('disabled', false);
+                        }).fail(function() {
+                            alert('Error loading events');
+                        });
                     } else {
-                        alert('Error: ' + response.message);
+                        eventSelect.empty().append('<option value="">Select Event</option>').prop('disabled',
+                            true);
                     }
-                }).fail(function() {
-                    alert('Error adding course');
                 });
-            });
 
-            // Add Group with Event and Course
-            $('#addGroupBtn').click(function() {
-                const eventId = $('#group_event_id').val();
-                const courseId = $('#group_course_id').val();
-                const groupName = $('#group_name').val();
-                const maxMarks = $('#max_marks').val();
-
-                if (!eventId || !courseId || !groupName) {
-                    alert('Please select event, course and enter group name');
-                    return;
-                }
-
-                if (!maxMarks || maxMarks <= 0) {
-                    alert('Please enter valid max marks');
-                    return;
-                }
-
-                $.post('{{ route('admin.peer.group.add') }}', {
-                    _token: '{{ csrf_token() }}',
-                    event_id: eventId,
-                    course_id: courseId,
-                    group_name: groupName,
-                    max_marks: maxMarks
-                }, function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + response.message);
+                // Add Course
+                $('#addCourseBtn').click(function() {
+                    const courseName = $('#course_name').val();
+                    if (!courseName) {
+                        alert('Please enter course name');
+                        return;
                     }
-                }).fail(function() {
-                    alert('Error adding group');
-                });
-            });
 
-            // Add Column with Event and Course
-            $('#addColumnBtn').click(function() {
-                const eventId = $('#column_event_id').val();
-                const courseId = $('#column_course_id').val();
-                const columnName = $('#column_name').val();
-
-                if (!columnName) {
-                    alert('Please enter column name');
-                    return;
-                }
-
-                $.post('{{ route('admin.peer.column.add') }}', {
-                    _token: '{{ csrf_token() }}',
-                    event_id: eventId || null,
-                    course_id: courseId || null,
-                    column_name: columnName
-                }, function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                }).fail(function() {
-                    alert('Error adding column');
-                });
-            });
-
-            // Update Max Marks
-            $('.update-marks').click(function() {
-                const groupId = $(this).data('id');
-                const input = $(`.max-marks-input[data-id="${groupId}"]`);
-                const maxMarks = input.val();
-
-                if (!maxMarks || maxMarks <= 0) {
-                    alert('Please enter valid max marks');
-                    return;
-                }
-
-                $.post('{{ route('admin.peer.groups.update-marks') }}', {
-                    _token: '{{ csrf_token() }}',
-                    group_id: groupId,
-                    max_marks: parseFloat(maxMarks)
-                }, function(response) {
-                    if (response.success) {
-                        alert('Max marks updated successfully');
-                        input.val(parseFloat(maxMarks));
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                }).fail(function() {
-                    alert('Error updating max marks');
-                });
-            });
-
-            // Toggle Form Status
-            // Toggle Form Status - Enhanced version
-            $('.toggle-form').change(function() {
-                const checkbox = $(this);
-                const id = checkbox.data('id');
-                const isChecked = checkbox.is(':checked') ? 1 : 0;
-
-                // Store original state in case we need to revert
-                const originalState = !isChecked;
-
-                // Optional: Show loading state
-                checkbox.prop('disabled', true);
-
-                $.post('/admin/peer/group/toggle-form/' + id, {
+                    $.post('{{ route('admin.peer.course.add') }}', {
                         _token: '{{ csrf_token() }}',
-                        is_form_active: isChecked
-                    })
-                    .done(function(response) {
-                        if (response.status === 'success') {
-                            // Success - update the badge/text to reflect new status
-                            const badge = checkbox.closest('td').find('.badge');
-                            if (badge.length) {
-                                if (isChecked) {
-                                    badge.removeClass('bg-danger').addClass('bg-success').text(
-                                        'Active');
-                                } else {
-                                    badge.removeClass('bg-success').addClass('bg-danger').text(
-                                        'Inactive');
-                                }
-                            }
-                            console.log('Form status updated successfully');
+                        course_name: courseName
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
                         } else {
-                            // Handle error response
-                            const errorMessage = response.message || 'Error updating form status';
-                            alert(errorMessage);
-                            checkbox.prop('checked', originalState);
+                            alert('Error: ' + response.message);
                         }
-                    })
-                    .fail(function(xhr, status, error) {
-                        // Handle AJAX failure
-                        let errorMessage = 'Error updating form status';
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            errorMessage = response.message || errorMessage;
-                        } catch (e) {
-                            // If response is not JSON, use default message
-                        }
-                        alert(errorMessage);
-                        checkbox.prop('checked', originalState);
-                    })
-                    .always(function() {
-                        // Re-enable checkbox
-                        checkbox.prop('disabled', false);
+                    }).fail(function() {
+                        alert('Error adding course');
                     });
-            });
+                });
 
-            // Delete Group
-            // Delete Group
-            $('.delete-group').click(function() {
-                if (confirm('Are you sure you want to delete this group?')) {
-                    const button = $(this);
-                    const id = button.data('id');
+                // Add Event to Course
+                $('.add-event-btn').click(function() {
+                    const courseId = $(this).data('course-id');
+                    const eventInput = $(`.event-input[data-course-id="${courseId}"]`);
+                    const eventName = eventInput.val();
 
-                    // Show loading state
-                    button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+                    if (!eventName) {
+                        alert('Please enter event name');
+                        return;
+                    }
 
-                    $.post('/admin/peer/group/delete/' + id, {
-                            _token: '{{ csrf_token() }}'
+                    $.post('{{ route('admin.peer.event.add') }}', {
+                        _token: '{{ csrf_token() }}',
+                        event_name: eventName,
+                        course_id: courseId
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    }).fail(function() {
+                        alert('Error adding event');
+                    });
+                });
+
+                // Add Group with Course and Event
+                $('#addGroupBtn').click(function() {
+                    const courseId = $('#group_course_id').val();
+                    const eventId = $('#group_event_id').val();
+                    const groupName = $('#group_name').val();
+                    const maxMarks = $('#max_marks').val();
+
+                    if (!courseId || !eventId || !groupName) {
+                        alert('Please select course, event and enter group name');
+                        return;
+                    }
+
+                    if (!maxMarks || maxMarks <= 0) {
+                        alert('Please enter valid max marks');
+                        return;
+                    }
+
+                    $.post('{{ route('admin.peer.group.add') }}', {
+                        _token: '{{ csrf_token() }}',
+                        course_id: courseId,
+                        event_id: eventId,
+                        group_name: groupName,
+                        max_marks: maxMarks
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    }).fail(function() {
+                        alert('Error adding group');
+                    });
+                });
+
+                // Add Column with Course and Event
+                $('#addColumnBtn').click(function() {
+                    const courseId = $('#column_course_id').val();
+                    const eventId = $('#column_event_id').val();
+                    const columnName = $('#column_name').val();
+
+                    if (!columnName) {
+                        alert('Please enter column name');
+                        return;
+                    }
+
+                    $.post('{{ route('admin.peer.column.add') }}', {
+                        _token: '{{ csrf_token() }}',
+                        course_id: courseId || null,
+                        event_id: eventId || null,
+                        column_name: columnName
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    }).fail(function() {
+                        alert('Error adding column');
+                    });
+                });
+
+                // Update Max Marks
+                $('.update-marks').click(function() {
+                    const groupId = $(this).data('id');
+                    const input = $(`.max-marks-input[data-id="${groupId}"]`);
+                    const maxMarks = input.val();
+
+                    if (!maxMarks || maxMarks <= 0) {
+                        alert('Please enter valid max marks');
+                        return;
+                    }
+
+                    $.post('{{ route('admin.peer.groups.update-marks') }}', {
+                        _token: '{{ csrf_token() }}',
+                        group_id: groupId,
+                        max_marks: parseFloat(maxMarks)
+                    }, function(response) {
+                        if (response.success) {
+                            alert('Max marks updated successfully');
+                            input.val(parseFloat(maxMarks));
+                        } else {
+                            alert('Error: ' + response.message);
+                        }
+                    }).fail(function() {
+                        alert('Error updating max marks');
+                    });
+                });
+
+                // Toggle Form Status
+                $('.toggle-form').change(function() {
+                    const checkbox = $(this);
+                    const id = checkbox.data('id');
+                    const isChecked = checkbox.is(':checked') ? 1 : 0;
+
+                    const originalState = !isChecked;
+                    checkbox.prop('disabled', true);
+
+                    $.post('/admin/peer/group/toggle-form/' + id, {
+                            _token: '{{ csrf_token() }}',
+                            is_form_active: isChecked
                         })
                         .done(function(response) {
+                            if (response.status === 'success') {
+                                const badge = checkbox.closest('td').find('.badge');
+                                if (badge.length) {
+                                    if (isChecked) {
+                                        badge.removeClass('bg-danger').addClass('bg-success').text(
+                                            'Active');
+                                    } else {
+                                        badge.removeClass('bg-success').addClass('bg-danger').text(
+                                            'Inactive');
+                                    }
+                                }
+                            } else {
+                                const errorMessage = response.message || 'Error updating form status';
+                                alert(errorMessage);
+                                checkbox.prop('checked', originalState);
+                            }
+                        })
+                        .fail(function(xhr, status, error) {
+                            let errorMessage = 'Error updating form status';
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                errorMessage = response.message || errorMessage;
+                            } catch (e) {}
+                            alert(errorMessage);
+                            checkbox.prop('checked', originalState);
+                        })
+                        .always(function() {
+                            checkbox.prop('disabled', false);
+                        });
+                });
+
+                // Delete Group
+                $('.delete-group').click(function() {
+                    if (confirm('Are you sure you want to delete this group?')) {
+                        const button = $(this);
+                        const id = button.data('id');
+
+                        button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+                        $.post('/admin/peer/group/delete/' + id, {
+                                _token: '{{ csrf_token() }}'
+                            })
+                            .done(function(response) {
+                                if (response.success) {
+                                    alert(response.message || 'Group deleted successfully!');
+                                    location.reload();
+                                } else {
+                                    alert('Error: ' + response.message);
+                                    button.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                                }
+                            })
+                            .fail(function(xhr, status, error) {
+                                alert('Error deleting group: ' + error);
+                                button.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                            });
+                    }
+                });
+
+                // Toggle Column Visibility
+                $('.toggle-column').change(function() {
+                    const checkbox = $(this);
+                    const id = checkbox.data('id');
+
+                    $.post('/admin/peer/column/toggle/' + id, {
+                        _token: '{{ csrf_token() }}'
+                    }, function(response) {
+                        if (response.success) {
+                            location.reload();
+                        } else {
+                            alert('Error: ' + response.message);
+                            checkbox.prop('checked', !checkbox.is(':checked'));
+                        }
+                    }).fail(function() {
+                        alert('Error updating column visibility');
+                        checkbox.prop('checked', !checkbox.is(':checked'));
+                    });
+                });
+
+                // Delete Column
+                $('.delete-column').click(function() {
+                    if (confirm('Are you sure you want to delete this column?')) {
+                        const id = $(this).data('id');
+                        $.post('/admin/peer/column/delete/' + id, {
+                            _token: '{{ csrf_token() }}'
+                        }, function(response) {
                             if (response.success) {
-                                // Show success message and reload
-                                alert(response.message || 'Group deleted successfully!');
                                 location.reload();
                             } else {
                                 alert('Error: ' + response.message);
-                                button.prop('disabled', false).html('<i class="fas fa-trash"></i>');
                             }
-                        })
-                        .fail(function(xhr, status, error) {
-                            alert('Error deleting group: ' + error);
-                            button.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                        }).fail(function() {
+                            alert('Error deleting column');
                         });
-                }
-            });
-            // Toggle Column Visibility
-            $('.toggle-column').change(function() {
-                const checkbox = $(this);
-                const id = checkbox.data('id');
-
-                $.post('/admin/peer/toggle/' + id, {
-                    _token: '{{ csrf_token() }}'
-                }, function(response) {
-                    if (response.success) {
-                        // reload page to see changes
-                        location.reload();
-                    } else {
-                        alert('Error: ' + response.message);
-                        checkbox.prop('checked', !checkbox.is(':checked'));
                     }
-                }).fail(function() {
-                    alert('Error updating column visibility');
-                    checkbox.prop('checked', !checkbox.is(':checked'));
                 });
-            });
 
-            // Delete Column
-            $('.delete-column').click(function() {
-                if (confirm('Are you sure you want to delete this column?')) {
-                    const id = $(this).data('id');
-                    $.post('/admin/peer/column/delete/' + id, {
-                        _token: '{{ csrf_token() }}'
+                // Add Reflection Field with Course and Event
+                $('#addReflectionBtn').click(function() {
+                    const courseId = $('#reflection_course_id').val();
+                    const eventId = $('#reflection_event_id').val();
+                    const fieldLabel = $('#reflection_field').val();
+
+                    if (!fieldLabel) {
+                        alert('Please enter reflection field label');
+                        return;
+                    }
+
+                    $.post('{{ route('admin.peer.reflection.add') }}', {
+                        _token: '{{ csrf_token() }}',
+                        field_label: fieldLabel,
+                        course_id: courseId || null,
+                        event_id: eventId || null
                     }, function(response) {
                         if (response.success) {
                             location.reload();
@@ -607,139 +647,78 @@
                             alert('Error: ' + response.message);
                         }
                     }).fail(function() {
-                        alert('Error deleting column');
+                        alert('Error adding reflection field');
                     });
-                }
-            });
+                });
 
-            // Load courses when event is selected for reflection fields
-            $('#reflection_event_id').change(function() {
-                const eventId = $(this).val();
-                const courseSelect = $('#reflection_course_id');
-                if (eventId) {
-                    courseSelect.prop('disabled', true).html(
-                        '<option value="">Loading courses...</option>');
+                // Toggle Reflection Field
+                $('.toggle-reflection').change(function() {
+                    const checkbox = $(this);
+                    const id = checkbox.data('id');
 
-                    $.get('/admin/peer/courses/' + eventId)
-                        .done(function(courses) {
-                            courseSelect.empty().append('<option value="">Select Course</option>');
-                            if (courses && courses.length > 0) {
-                                courses.forEach(course => {
-                                    console.log('Adding course:', course.id, course
-                                        .course_name);
-                                    courseSelect.append(
-                                        `<option value="${course.id}">${course.course_name}</option>`
-                                    );
-                                });
-                                courseSelect.prop('disabled', false);
-                                console.log('Courses populated successfully');
+                    $.post('/admin/peer/reflection/toggle/' + id, {
+                        _token: '{{ csrf_token() }}'
+                    }, function(response) {
+                        if (response.success) {
+                            const badge = checkbox.closest('.card').find('.badge');
+                            if (response.new_state) {
+                                badge.removeClass('bg-secondary').addClass('bg-success');
                             } else {
-                                courseSelect.append(
-                                    '<option value="" disabled>No courses found</option>');
-                                courseSelect.prop('disabled', false);
+                                badge.removeClass('bg-success').addClass('bg-secondary');
                             }
-                        })
-                        .fail(function(xhr, status, error) {
-                            console.error('Error loading courses:', status, error);
-                            console.error('Response text:', xhr.responseText);
-                            alert('Error loading courses: ' + error);
-                            courseSelect.empty().append('<option value="">Select Course</option>').prop(
-                                'disabled', true);
-                        });
-                } else {
-                    courseSelect.empty().append('<option value="">Select Course</option>').prop('disabled',
-                        true);
-                }
-            });
-            // Add Reflection Field with Event and Group
-            $('#addReflectionBtn').click(function() {
-                const eventId = $('#reflection_event_id').val();
-                const groupId = $('#reflection_group_id').val();
-                const fieldLabel = $('#reflection_field').val();
-
-                if (!fieldLabel) {
-                    alert('Please enter reflection field label');
-                    return;
-                }
-
-                $.post('{{ route('admin.peer.reflection.add') }}', {
-                    _token: '{{ csrf_token() }}',
-                    field_label: fieldLabel,
-                    event_id: eventId || null,
-                    group_id: groupId || null
-                }, function(response) {
-                    if (response.success) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + response.message);
-                    }
-                }).fail(function() {
-                    alert('Error adding reflection field');
-                });
-            });
-
-            $('.toggle-reflection').change(function() {
-                const checkbox = $(this);
-                const id = checkbox.data('id');
-
-                $.post('/admin/peer/reflection/toggle/' + id, {
-                    _token: '{{ csrf_token() }}'
-                }, function(response) {
-                    if (response.success) {
-                        // Update badge color
-                        const badge = checkbox.closest('.card').find('.badge');
-                        if (response.new_state) {
-                            badge.removeClass('bg-secondary').addClass('bg-success');
-                        } else {
-                            badge.removeClass('bg-success').addClass('bg-secondary');
-                        }
-                    } else {
-                        alert('Error: ' + response.message);
-                        checkbox.prop('checked', !checkbox.is(':checked'));
-                    }
-                }).fail(function() {
-                    alert('Error updating reflection field');
-                    checkbox.prop('checked', !checkbox.is(':checked'));
-                });
-            });
-
-            $('.delete-reflection').click(function() {
-                if (confirm('Are you sure you want to delete this reflection field?')) {
-                    const button = $(this);
-                    const id = button.data('id');
-
-                    $.post('/admin/peer/reflection/delete/' + id, {
-                        _token: '{{ csrf_token() }}'
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
                         } else {
                             alert('Error: ' + response.message);
+                            checkbox.prop('checked', !checkbox.is(':checked'));
                         }
                     }).fail(function() {
-                        alert('Error deleting reflection field');
+                        alert('Error updating reflection field');
+                        checkbox.prop('checked', !checkbox.is(':checked'));
                     });
-                }
+                });
+
+                // Delete Reflection Field
+                $('.delete-reflection').click(function() {
+                    if (confirm('Are you sure you want to delete this reflection field?')) {
+                        const button = $(this);
+                        const id = button.data('id');
+
+                        $.post('/admin/peer/reflection/delete/' + id, {
+                            _token: '{{ csrf_token() }}'
+                        }, function(response) {
+                            if (response.success) {
+                                location.reload();
+                            } else {
+                                alert('Error: ' + response.message);
+                            }
+                        }).fail(function() {
+                            alert('Error deleting reflection field');
+                        });
+                    }
+                });
             });
-        });
-    </script>
+        </script>
 
-    <style>
-        .card-header {
-            background: linear-gradient(45deg, #007bff, #0056b3);
-            color: white;
-        }
+        <style>
+            .card-header {
+                background: linear-gradient(45deg, #007bff, #0056b3);
+                color: white;
+            }
 
-        .table th {
-            vertical-align: middle;
-        }
+            .table th {
+                vertical-align: middle;
+            }
 
-        .badge {
-            font-size: 0.8em;
-        }
+            .badge {
+                font-size: 0.8em;
+            }
 
-        .btn-group-sm>.btn {
-            padding: 0.25rem 0.5rem;
-        }
-    </style>
-@endsection
+            .btn-group-sm>.btn {
+                padding: 0.25rem 0.5rem;
+            }
+
+            .event-input,
+            .course-input {
+                max-width: 300px;
+            }
+        </style>
+    @endsection

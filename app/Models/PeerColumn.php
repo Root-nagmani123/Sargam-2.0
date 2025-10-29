@@ -10,8 +10,8 @@ class PeerColumn extends Model
     
     protected $fillable = [
         'column_name',
-        'event_id',
         'course_id',
+        'event_id',
         'is_visible'
     ];
 
@@ -21,14 +21,14 @@ class PeerColumn extends Model
         'updated_at' => 'datetime'
     ];
 
-    public function event(): BelongsTo
-    {
-        return $this->belongsTo(PeerEvent::class, 'event_id');
-    }
-
     public function course(): BelongsTo
     {
         return $this->belongsTo(PeerCourse::class, 'course_id');
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(PeerEvent::class, 'event_id');
     }
 
     // Scope for visible columns
@@ -37,9 +37,9 @@ class PeerColumn extends Model
         return $query->where('is_visible', true);
     }
 
-    // Scope for global columns (no event/course association)
+    // Scope for global columns (no course/event association)
     public function scopeGlobal($query)
     {
-        return $query->whereNull('event_id')->whereNull('course_id');
+        return $query->whereNull('course_id')->whereNull('event_id');
     }
 }

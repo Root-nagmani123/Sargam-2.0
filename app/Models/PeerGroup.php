@@ -11,8 +11,8 @@ class PeerGroup extends Model
     
     protected $fillable = [
         'group_name', 
-        'event_id',
         'course_id',
+        'event_id',
         'is_active', 
         'is_form_active', 
         'max_marks'
@@ -26,14 +26,14 @@ class PeerGroup extends Model
         'updated_at' => 'datetime'
     ];
 
-    public function event(): BelongsTo
-    {
-        return $this->belongsTo(PeerEvent::class, 'event_id');
-    }
-
     public function course(): BelongsTo
     {
         return $this->belongsTo(PeerCourse::class, 'course_id');
+    }
+
+    public function event(): BelongsTo
+    {
+        return $this->belongsTo(PeerEvent::class, 'event_id');
     }
 
     public function members(): HasMany
@@ -42,7 +42,7 @@ class PeerGroup extends Model
     }
 
     // Get member count attribute
-    public function getMemberCountAttribute()
+    public function getMembersCountAttribute()
     {
         return $this->members()->count();
     }
