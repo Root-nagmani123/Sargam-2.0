@@ -31,6 +31,9 @@ class ProgrammeRequest extends FormRequest
             'enddate' => 'required|date',
             'coursecoordinator' => 'required|string|max:255',
             'assistantcoursecoordinator' => 'required|array',
+            'assistantcoursecoordinator.*' => 'required|string|max:255',
+            'assistant_coordinator_role' => 'required|array',
+            'assistant_coordinator_role.*' => 'required|string|max:255',
         ];
     }
 
@@ -53,8 +56,15 @@ class ProgrammeRequest extends FormRequest
             'coursecoordinator.string' => 'The course coordinator must be a string.',
             'coursecoordinator.max' => 'The course coordinator must be less than 255 characters.',
             'assistantcoursecoordinator.required' => 'The assistant course coordinator is required.',
-            'assistantcoursecoordinator.string' => 'The assistant course coordinator must be a string.',
-            'assistantcoursecoordinator.max' => 'The assistant course coordinator must be less than 255 characters.',
+            'assistantcoursecoordinator.array' => 'The assistant course coordinator must be an array.',
+            'assistantcoursecoordinator.*.required' => 'Each assistant course coordinator is required.',
+            'assistantcoursecoordinator.*.string' => 'Each assistant course coordinator must be a string.',
+            'assistantcoursecoordinator.*.max' => 'Each assistant course coordinator must be less than 255 characters.',
+            'assistant_coordinator_role.required' => 'The assistant coordinator role is required.',
+            'assistant_coordinator_role.array' => 'The assistant coordinator role must be an array.',
+            'assistant_coordinator_role.*.required' => 'Each assistant coordinator role is required.',
+            'assistant_coordinator_role.*.string' => 'Each assistant coordinator role must be a string.',
+            'assistant_coordinator_role.*.max' => 'Each assistant coordinator role must be less than 255 characters.',
         ];
     }
 }

@@ -36,7 +36,11 @@ class CourseMasterDataTable extends DataTable
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>';
+                $viewUrl = route('programme.show', ['id' => encrypt($row->pk)]);
+                $encryptedId = encrypt($row->pk);
+                return '<a href="'.$editUrl.'" class="btn btn-primary btn-sm me-1">Edit</a>
+                        <a href="'.$viewUrl.'" class="btn btn-info btn-sm me-1" target="_blank">View</a>
+                        <!-- <button type="button" class="btn btn-secondary btn-sm view-course-btn" data-id="'.$encryptedId.'" data-bs-toggle="modal" data-bs-target="#viewCourseModal">Quick View</button> -->';
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
@@ -73,7 +77,27 @@ class CourseMasterDataTable extends DataTable
      */
     public function query(CourseMaster $model): QueryBuilder
     {
-        return $model->orderBy('pk', 'desc')->newQuery();
+        $query = $model->orderBy('pk', 'desc')->newQuery();
+        
+        // Apply status filter if provided
+        $statusFilter = request('status_filter');
+        $currentDate = Carbon::now()->format('Y-m-d');
+        
+        if ($statusFilter === 'active' || !$statusFilter) {
+            // Active courses: current date is between start and end date (default)
+            $query->where(function($q) use ($currentDate) {
+                $q->where('start_year', '<=', $currentDate)
+                  ->where('end_date', '>=', $currentDate);
+            });
+        } elseif ($statusFilter === 'archive') {
+            // Archived courses: current date is before start date or after end date
+            $query->where(function($q) use ($currentDate) {
+                $q->where('start_year', '>', $currentDate)
+                  ->orWhere('end_date', '<', $currentDate);
+            });
+        }
+        
+        return $query;
     }
 
     /**
