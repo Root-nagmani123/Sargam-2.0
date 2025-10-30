@@ -108,4 +108,48 @@ class HostelBuildingFloorMappingController extends Controller
             ], 500);
         }
     }
+
+    public function import(Request $request)
+    {
+        if ($request->isMethod('post')) {
+            // Validate file input
+            $validator = Validator::make($request->all(), [
+                'file' => 'required|mimes:xlsx,xls,csv|max:10248',
+            ]);
+
+            if ($validator->fails()) {
+                return redirect()->back()
+                    ->withErrors($validator)
+                    ->withInput();
+            }
+
+            try {
+                $import = new AssignHostelToStudent();
+                Excel::import($import, $request->file('file'));
+
+                if (!empty($import->failures)) {
+                    // Don't insert anything, show all errors in table
+                    return redirect()->back()
+                        ->with('failures', $import->failures)
+                        ->with('error', 'Import failed. Please fix the errors below.')
+                        ->withInput();
+                }
+
+                return redirect()->route('hostel.building.map.assign.student')->with('success', 'Students assigned successfully.');
+            } catch (\Throwable $e) {
+                return redirect()->back()
+                    ->with('error', 'An unexpected error occurred during import. Please check your file.')
+                    ->withInput();
+            }
+
+        } else {
+            return view('admin.building_floor_mapping.import');
+        }
+    }
+
+    function export()
+    {
+        $fileName = 'hostel_room_details_' . date('Y_m_d_H_i_s') . '.xlsx';
+        return Excel::download(new \App\Exports\OTHostelRoomDetailsExport, $fileName);
+    }
 }
