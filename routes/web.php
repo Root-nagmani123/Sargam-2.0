@@ -91,6 +91,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
+        Route::get('view/{id}', 'view')->name('view');
+        Route::get('show/{id}', 'show')->name('show');
+        Route::get('download-pdf/{id}', 'downloadPdf')->name('download.pdf');
+        Route::get('debug/{id}', 'debug')->name('debug');
         Route::post('store', 'store')->name('store');
     });
 
