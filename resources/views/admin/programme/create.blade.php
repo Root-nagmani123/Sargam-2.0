@@ -88,16 +88,74 @@
 
                         </div>
                         <div class="col-md-12 mt-4">
-
-                            <x-select 
-                                name="assistantcoursecoordinator[]" 
-                                label="Assistant Course Coordinator" 
-                                placeholder="Assistant Course Coordinator" 
-                                formLabelClass="form-label" 
-                                :options="$facultyList" 
-                                :value="$assistant_coordinator_name ?? []"
-                                multiple="true" />
-                            
+                            <label class="form-label">Assistant Course Coordinators</label>
+                            <div id="assistant-coordinators-container">
+                                @if(!empty($assistant_coordinator_name) && is_array($assistant_coordinator_name))
+                                    @foreach($assistant_coordinator_name as $index => $coordinator)
+                                        <div class="assistant-coordinator-row row mb-3" data-index="{{ $index }}">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Assistant Coordinator</label>
+                                                <select name="assistantcoursecoordinator[]" class="form-select @error('assistantcoursecoordinator') is-invalid @enderror" required>
+                                                    <option value="">Select Assistant Coordinator</option>
+                                                    @foreach($facultyList as $key => $name)
+                                                        <option value="{{ $name }}" {{ $coordinator == $name ? 'selected' : '' }}>{{ $name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                @error('assistantcoursecoordinator')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-md-5">
+                                                <label class="form-label">Role</label>
+                                                <input type="text" name="assistant_coordinator_role[]" class="form-control @error('assistant_coordinator_role') is-invalid @enderror" 
+                                                       placeholder="e.g., Discipline In-Charge, Co-Coordinator" 
+                                                       value="{{ $assistant_coordinator_roles[$index] ?? '' }}" required>
+                                                @error('assistant_coordinator_role')
+                                                    <div class="invalid-feedback">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                            <div class="col-md-1 d-flex align-items-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="assistant-coordinator-row row mb-3" data-index="0">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Assistant Coordinator</label>
+                                            <select name="assistantcoursecoordinator[]" class="form-select @error('assistantcoursecoordinator') is-invalid @enderror" required>
+                                                <option value="">Select Assistant Coordinator</option>
+                                                @foreach($facultyList as $key => $name)
+                                                    <option value="{{ $name }}">{{ $name }}</option>
+                                                @endforeach
+                                            </select>
+                                            @error('assistantcoursecoordinator')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label">Role</label>
+                                            <input type="text" name="assistant_coordinator_role[]" class="form-control @error('assistant_coordinator_role') is-invalid @enderror" 
+                                                   placeholder="e.g., Discipline In-Charge, Co-Coordinator" required>
+                                            @error('assistant_coordinator_role')
+                                                <div class="invalid-feedback">{{ $message }}</div>
+                                            @enderror
+                                        </div>
+                                        <div class="col-md-1 d-flex align-items-end">
+                                            <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                            <div class="mt-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-coordinator">
+                                    <i class="fas fa-plus"></i> Add Another Assistant Coordinator
+                                </button>
+                            </div>
                         </div>
 
                     </div>
@@ -119,3 +177,59 @@
 
 
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let coordinatorIndex = {{ !empty($assistant_coordinator_name) && is_array($assistant_coordinator_name) ? count($assistant_coordinator_name) : 1 }};
+    
+    // Add coordinator functionality
+    document.getElementById('add-coordinator').addEventListener('click', function() {
+        const container = document.getElementById('assistant-coordinators-container');
+        const newRow = document.createElement('div');
+        newRow.className = 'assistant-coordinator-row row mb-3';
+        newRow.setAttribute('data-index', coordinatorIndex);
+        
+        newRow.innerHTML = `
+            <div class="col-md-6">
+                <label class="form-label">Assistant Coordinator</label>
+                <select name="assistantcoursecoordinator[]" class="form-select" required>
+                    <option value="">Select Assistant Coordinator</option>
+                    @foreach($facultyList as $key => $name)
+                        <option value="{{ $name }}">{{ $name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Role</label>
+                <input type="text" name="assistant_coordinator_role[]" class="form-control" 
+                       placeholder="e.g., Discipline In-Charge, Co-Coordinator" required>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(newRow);
+        coordinatorIndex++;
+    });
+    
+    // Remove coordinator functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-coordinator')) {
+            const row = e.target.closest('.assistant-coordinator-row');
+            const container = document.getElementById('assistant-coordinators-container');
+            
+            // Don't allow removing the last coordinator
+            if (container.children.length > 1) {
+                row.remove();
+            } else {
+                alert('At least one assistant coordinator is required.');
+            }
+        }
+    });
+});
+</script>
+@endpush

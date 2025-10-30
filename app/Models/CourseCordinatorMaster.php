@@ -12,9 +12,18 @@ class CourseCordinatorMaster extends Model
     protected $primaryKey = 'pk';
     const CREATED_AT = 'created_date';
     const UPDATED_AT = 'Modified_date';
+    
+    protected $fillable = [
+        'courses_master_pk',
+        'Coordinator_name',
+        'Assistant_Coordinator_name',
+        'assistant_coordinator_role',
+        'created_date',
+        'Modified_date'
+    ];
 
     public function course()
     {
-        return $this->belongsTo(CoursesMaster::class, 'courses_master_pk', 'pk');
+        return $this->belongsTo(CourseMaster::class, 'courses_master_pk', 'pk');
     }
 }
