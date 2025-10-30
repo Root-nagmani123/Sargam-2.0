@@ -84,11 +84,17 @@ class CourseMasterDataTable extends DataTable
         $currentDate = Carbon::now()->format('Y-m-d');
         
         if ($statusFilter === 'active' || !$statusFilter) {
-            // Active courses: end_date is today or in the future (current and upcoming courses)
-            $query->where('end_date', '>=', $currentDate);
+            // Active courses: current date is between start and end date (default)
+            $query->where(function($q) use ($currentDate) {
+                $q->where('start_year', '<=', $currentDate)
+                  ->where('end_date', '>=', $currentDate);
+            });
         } elseif ($statusFilter === 'archive') {
-            // Archived courses: end_date has already passed (expired courses)
-            $query->where('end_date', '<', $currentDate);
+            // Archived courses: current date is before start date or after end date
+            $query->where(function($q) use ($currentDate) {
+                $q->where('start_year', '>', $currentDate)
+                  ->orWhere('end_date', '<', $currentDate);
+            });
         }
         
         return $query;
