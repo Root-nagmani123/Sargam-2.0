@@ -3,8 +3,50 @@
 @section('title', 'Course Master - Sargam | Lal Bahadur')
 
 @section('content')
+<style>
+    .btn-group[role="group"] .btn {
+    transition: all 0.3s ease-in-out;
+    border-radius: 0; /* Reset for pill-style container */
+}
+
+.btn-group[role="group"] .btn:first-child {
+    border-top-left-radius: 50rem !important;
+    border-bottom-left-radius: 50rem !important;
+}
+
+.btn-group[role="group"] .btn:last-child {
+    border-top-right-radius: 50rem !important;
+    border-bottom-right-radius: 50rem !important;
+}
+
+/* Hover + Active States */
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-group .btn.active {
+    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+/* Accessibility: Focus ring */
+.btn:focus-visible {
+    outline: 3px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+/* Better contrast for GIGW compliance */
+.btn-outline-secondary {
+    color: #333;
+    border-color: #999;
+}
+.btn-outline-secondary:hover {
+    background-color: #f8f9fa;
+    border-color: #666;
+}
+
+</style>
     <div class="container-fluid">
-        <x-breadcrum title="Programme" />
+        <x-breadcrum title="Course Master" />
         <x-session_message />
 
         <div class="datatables">
@@ -26,12 +68,19 @@
                     
                     <!-- Filter Buttons -->
                     <div class="row mb-3">
-                        <div class="col-12">
-                            <div class="btn-group" role="group" aria-label="Course Status Filter">
-                                <button type="button" class="btn btn-success" id="filterActive">Active</button>
-                                <button type="button" class="btn btn-outline-secondary" id="filterArchive">Archive</button>
-                            </div>
-                        </div>
+                        <div class="col-12 text-end">
+    <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group" aria-label="Course Status Filter">
+        <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive" 
+                aria-pressed="true">
+            <i class="bi bi-check-circle me-1"></i> Active
+        </button>
+        <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" id="filterArchive" 
+                aria-pressed="false">
+            <i class="bi bi-archive me-1"></i> Archive
+        </button>
+    </div>
+</div>
+
                     </div>
                     <div class="table-responsive">
 
