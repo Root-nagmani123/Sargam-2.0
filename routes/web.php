@@ -166,6 +166,20 @@ Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])-
             return view('admin.mapping.edit');
         })->name('edit');
     });
+        Route::prefix('councillor')->name('councillor.')->group(function () {
+        Route::get('/', function () {
+            return view('admin.councillor.index');
+        })->name('index');
+
+        Route::get('/create', function () {
+            return view('admin.councillor.create');
+        })->name('create');
+
+        Route::get('/edit', function () {
+            return view('admin.councillor.edit');
+        })->name('edit');
+    });
+
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
         Route::get('/get-subject-Name', [CalendarController::class, 'getSubjectName'])->name('get.subject.name');
