@@ -26,7 +26,6 @@ class CourseController extends Controller
     {
         // $deputationEmployeeList = EmployeeMaster::getDeputationEmployeeListNameAndPK();
         $facultyList = FacultyMaster::pluck('full_name', 'pk')->toArray();
-
         return view('admin.programme.create', compact('facultyList'));
     }
 
@@ -290,7 +289,20 @@ class CourseController extends Controller
                 }
             }
             
-            $disciplineInCharge = 'Not Specified';
+            // Determine Discipline In-Charge from assistant coordinator roles
+            $disciplineCandidates = $coordinators->filter(function($coordinator) {
+                $role = $coordinator->assistant_coordinator_role ?? '';
+                return $role !== '' && stripos($role, 'discipline') !== false; // matches Discipline, Discipline In-Charge, etc.
+            });
+            $disciplineInChargeNames = $disciplineCandidates
+                ->pluck('Assistant_Coordinator_name')
+                ->filter()
+                ->unique()
+                ->values()
+                ->toArray();
+            $disciplineInCharge = !empty($disciplineInChargeNames)
+                ? implode(', ', $disciplineInChargeNames)
+                : 'Not Specified';
             
             // Generate PDF
             $pdf = Pdf::loadView('admin.programme.pdf', compact(
