@@ -1,6 +1,9 @@
 @extends('admin.layouts.master')
 @section('content')
-    <div class="card p-3">
+<div class="container-fluid">
+     <x-breadcrum title="Peer Evaluation - Admin Panel" />
+        <x-session_message />
+    <div class="card p-3" style="border-left: 4px solid #004a93;">
         <h4 class="mb-4">Peer Evaluation - Admin Panel</h4>
 
         {{-- Manage Courses Section --}}
