@@ -94,6 +94,8 @@
                                     <tr>
                                         <td></td>
                                         <td></td>
+                                        <td></td>
+                                        <td></td>
                                         <td>
                                             <a href="{{ route('councillor.edit') }}"
                                                 class="btn btn-sm btn-primary">Edit</a>
