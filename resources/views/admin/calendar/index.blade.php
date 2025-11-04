@@ -285,66 +285,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <div class="row py-3">
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="feedback_checkbox" id="feedback_checkbox" checked>
-                                            <label class="form-check-label" for="feedback_checkbox">
-                                                Feedback
-                                            </label>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="remarkCheckbox" id="remarkCheckbox">
-                                            <label class="form-check-label" for="remarkCheckbox">
-                                                Remark
-                                            </label>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="ratingCheckbox" id="ratingCheckbox">
-                                            <label class="form-check-label" for="ratingCheckbox">
-                                                Ratting
-                                            </label>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                            <label class="form-check-label" for="bio_attendanceCheckbox">
-                                                Bio Attendance
-                                            </label>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn bg-danger-subtle text-danger" data-bs-dismiss="modal">
@@ -538,6 +478,62 @@ $(document).ready(function() {
                                             <input type="time" name="end_time[${topicIndex}]" id="end_time${topicIndex}" class="form-control">
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="feedback_checkbox" id="feedback_checkbox" checked>
+                                            <label class="form-check-label" for="feedback_checkbox">
+                                                Feedback
+                                            </label>
+                                        </div>
+                                    </label>
+
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="remarkCheckbox" id="remarkCheckbox">
+                                            <label class="form-check-label" for="remarkCheckbox">
+                                                Remark
+                                            </label>
+                                        </div>
+                                    </label>
+
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="ratingCheckbox" id="ratingCheckbox">
+                                            <label class="form-check-label" for="ratingCheckbox">
+                                                Ratting
+                                            </label>
+                                        </div>
+                                    </label>
+
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <div>
+                                    <label class="form-label">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="1"
+                                                name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
+                                            <label class="form-check-label" for="bio_attendanceCheckbox">
+                                                Bio Attendance
+                                            </label>
+                                        </div>
+                                    </label>
+
                                 </div>
                             </div>
                         </div>
