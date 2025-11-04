@@ -27,13 +27,17 @@
                             <thead>
                                 <tr>
                                     <th>S.No</th>
-                                    <th>Group Name</th>
+                                    <th>Course Name</th>
+                                    <th>Counsellor Code </th>
+                                    <th>Faculty name</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                
                                     <tr>
+                                        <td></td>
+                                        <td></td>
                                         <td></td>
                                         <td></td>
                                         <td>
