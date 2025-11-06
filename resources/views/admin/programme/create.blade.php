@@ -116,7 +116,7 @@
                                             </div>
                                             <div class="col-md-1 d-flex align-items-end">
                                                 <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
-                                                    <i class="fas fa-trash"></i>
+                                                    <i class="material-icons menu-icon">delete</i>
                                                 </button>
                                             </div>
                                         </div>
@@ -144,27 +144,29 @@
                                         </div>
                                         <div class="col-md-1 d-flex align-items-end">
                                             <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="material-icons menu-icon">delete</i>
                                             </button>
                                         </div>
                                     </div>
                                 @endif
                             </div>
-                            <div class="mt-2">
-                                <button type="button" class="btn btn-outline-primary btn-sm" id="add-coordinator">
-                                    <i class="fas fa-plus"></i> Add Another Assistant Coordinator
-                                </button>
-                            </div>
+                            <div class="mt-3">
+    <button type="button" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2 shadow-sm" id="add-coordinator" aria-label="Add another assistant coordinator">
+        <i class="bi bi-person-plus-fill fs-6"></i>
+        <span>Add Assistant Coordinator</span>
+    </button>
+</div>
+
                         </div>
 
                     </div>
                 </div>
                 <hr>
                 <div class="mb-3 mt-4 text-end gap-2">
-                    <button class="btn btn-primary" type="submit">
+                    <button class="btn btn-primary btn-sm" type="submit">
                         Submit
                     </button>
-                    <a href="{{ route('programme.index') }}" class="btn btn-secondary">
+                    <a href="{{ route('programme.index') }}" class="btn btn-secondary btn-sm">
                         Back
                     </a>
                 </div>
