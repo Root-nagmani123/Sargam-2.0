@@ -17,7 +17,7 @@
             <form action="{{ route('group.mapping.store') }}" method="POST" id="classSessionForm">
                 @csrf
                 @if(!empty($groupMapping))
-                <input type="hidden" name="id" value="{{ encrypt($groupMapping->pk) }}">
+                <input type="hidden" name="pk" value="{{ encrypt($groupMapping->pk) }}">
                 @endif
                 <div class="row">
                     <div class="col-4">
@@ -42,7 +42,15 @@
                                 value="{{ old('group_name', $groupMapping->group_name ?? '') }}" />
                         </div>
                     </div>
-
+                </div>
+                <div class="row">
+                    <div class="col-4">
+                        <div class="mb-3">
+                            <x-select name="counsellor_code" label="Counsellor Group Name :" placeholder="Counsellor Group Name (Optional)"
+                                formLabelClass="form-label" formSelectClass="select2" required="false"
+                                :options="$counsellorGroups" :value="old('counsellor_code', $groupMapping->counsellor_code ?? '')" />
+                        </div>
+                    </div>
                 </div>
                 <hr>
                 <div class="mb-3 gap-2 float-end">

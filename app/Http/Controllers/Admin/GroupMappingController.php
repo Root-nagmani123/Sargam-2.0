@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
+use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, CounsellorGroup};
 use App\Exports\GroupMappingExport;
 use App\DataTables\GroupMappingDataTable;
 
@@ -26,9 +26,10 @@ class GroupMappingController extends Controller
      */
     function create()
     {
-        $courses = CourseMaster::pluck('course_name', 'pk')->toArray();
+        $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
-        return view('admin.group_mapping.create', compact('courses', 'courseGroupTypeMaster'));
+        $counsellorGroups = CounsellorGroup::where('active_inactive', 1)->pluck('counsellor_group_name', 'pk')->toArray();
+        return view('admin.group_mapping.create', compact('courses', 'courseGroupTypeMaster', 'counsellorGroups'));
     }
 
     /**
@@ -40,9 +41,10 @@ class GroupMappingController extends Controller
     function edit(string $id)
     {
         $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($id));
-        $courses = CourseMaster::pluck('course_name', 'pk')->toArray();
+        $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
-        return view('admin.group_mapping.create', compact('groupMapping', 'courses', 'courseGroupTypeMaster'));
+        $counsellorGroups = CounsellorGroup::where('active_inactive', 1)->pluck('counsellor_group_name', 'pk')->toArray();
+        return view('admin.group_mapping.create', compact('groupMapping', 'courses', 'courseGroupTypeMaster', 'counsellorGroups'));
     }
 
     /**
@@ -57,11 +59,12 @@ class GroupMappingController extends Controller
             $request->validate([
                 'course_id' => 'required|string|max:255',
                 'type_id' => 'required|string|max:255',
-                'group_name' => 'required|string|max:255'
+                'group_name' => 'required|string|max:255',
+                'counsellor_code' => 'nullable|exists:counsellor_group,pk'
             ]);
 
             if ($request->pk) {
-                $groupMapping = GroupTypeMasterCourseMasterMap::find($request->pk);
+                $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($request->pk));
                 $message = 'Group Mapping updated successfully.';
             } else {
                 $groupMapping = new GroupTypeMasterCourseMasterMap();
@@ -70,6 +73,8 @@ class GroupMappingController extends Controller
             $groupMapping->course_name = $request->course_id;
             $groupMapping->type_name = $request->type_id;
             $groupMapping->group_name = $request->group_name;
+            // Store the counsellor group pk in counsellor_code field
+            $groupMapping->counsellor_code = $request->counsellor_code ?? null;
             $groupMapping->save();
 
             return redirect()->route('group.mapping.index')->with('success', $message);
