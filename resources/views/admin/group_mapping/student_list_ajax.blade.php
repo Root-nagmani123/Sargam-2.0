@@ -19,6 +19,7 @@
             <th>Display Name</th>
             <th>Email</th>
             <th>Contact No</th>
+            <th>Counsellor Group Name</th>
         </tr>
     </thead>
     <tbody>
@@ -28,10 +29,11 @@
                 <td>{{ $studentMap->studentsMaster->display_name ?? 'N/A' }}</td>
                 <td>{{ $studentMap->studentsMaster->email ?? 'N/A' }}</td>
                 <td>{{ $studentMap->studentsMaster->contact_no ?? 'N/A' }}</td>
+                <td>{{ $studentMap->counsellor_group_name ?? 'N/A' }}</td>
             </tr>
         @empty
             <tr>
-                <td colspan="4" class="text-center text-muted">No students found.</td>
+                <td colspan="5" class="text-center text-muted">No students found.</td>
             </tr>
         @endforelse
     </tbody>
