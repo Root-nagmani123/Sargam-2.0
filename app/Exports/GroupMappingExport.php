@@ -11,7 +11,9 @@ class GroupMappingExport implements FromCollection, WithHeadings
     protected $id;
 
     public function __construct($id = null)
+    public function __construct($id = null)
     {
+        $this->id = $id ? decrypt($id) : null;
         $this->id = $id ? decrypt($id) : null;
     }
 

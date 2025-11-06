@@ -24,9 +24,6 @@ class GroupMappingDataTable extends DataTable
             ->addColumn('group_name', function ($row) {
                 return $row->group_name ?? '';
             })
-            ->addColumn('counsellor_group_name', function ($row) {
-                return $row->counsellorGroup->counsellor_group_name ?? '-';
-            })
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
             ->addColumn('view_download', function ($row) {
                 $id = encrypt($row->pk);
@@ -89,7 +86,7 @@ class GroupMappingDataTable extends DataTable
             ->filterColumn('group_name', function ($query, $keyword) {
                 $query->where('group_name', 'like', "%{$keyword}%");
             })
-            ->rawColumns(['course_name', 'group_name', 'counsellor_group_name', 'view_download', 'action', 'status']);
+            ->rawColumns(['course_name', 'group_name', 'view_download', 'action', 'status']);
     }
 
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
@@ -99,7 +96,7 @@ class GroupMappingDataTable extends DataTable
 
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
-                ->with(['courseGroup', 'courseGroupType', 'counsellorGroup'])
+                ->with(['courseGroup', 'courseGroupType'])
                 ->orderBy('pk', 'desc');
                 // <- check karo ki data aa raha hai ya nahi
 
@@ -152,11 +149,6 @@ public function html(): HtmlBuilder
                 ->title('Group Name')
                 ->addClass('text-center')
                 ->searchable(true),
-            Column::make('counsellor_group_name')
-                ->title('Counsellor Group Name')
-                ->addClass('text-center')
-                ->searchable(false)
-                ->orderable(false),
             Column::computed('student_count')
                 ->title('Student Count')
                 ->addClass('text-center')
