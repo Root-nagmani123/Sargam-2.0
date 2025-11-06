@@ -89,7 +89,7 @@ class GroupMappingDataTable extends DataTable
             ->filterColumn('group_name', function ($query, $keyword) {
                 $query->where('group_name', 'like', "%{$keyword}%");
             })
-            ->rawColumns(['course_name', 'group_name', 'view_download', 'action', 'status']);
+            ->rawColumns(['course_name', 'group_name', 'counsellor_group_name', 'view_download', 'action', 'status']);
     }
 
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
