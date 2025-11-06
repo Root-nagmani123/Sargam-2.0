@@ -159,19 +159,13 @@ Route::middleware(['auth'])->group(function () {
             return view('admin.mapping.edit');
         })->name('edit');
     });
-        Route::prefix('councillor')->name('councillor.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.councillor.index');
-        })->name('index');
-
-        Route::get('/create', function () {
-            return view('admin.councillor.create');
-        })->name('create');
-
-        Route::get('/edit', function () {
-            return view('admin.councillor.edit');
-        })->name('edit');
-    });
+        Route::prefix('counsellor-group')->name('counsellor.group.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'index'])->name('index');
+            Route::get('/create', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'create'])->name('create');
+            Route::post('/store', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'store'])->name('store');
+            Route::get('/edit/{id}', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'edit'])->name('edit');
+            Route::delete('/delete/{id}', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'delete'])->name('delete');
+        });
 
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
