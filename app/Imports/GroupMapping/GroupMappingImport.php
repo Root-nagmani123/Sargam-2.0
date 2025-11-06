@@ -35,6 +35,7 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
                 'otcode'      => 'required|string|max:255',
                 'group_name'  => 'required|string|max:255',
                 'group_type'  => 'required|string|max:255',
+                'counsellor_group_name' => 'nullable|string|max:255',
             ]);
 
             if ($validator->fails()) {
@@ -79,6 +80,7 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
             $dataToInsert[] = [
                 'student_master_pk'                      => $studentMaster->pk,
                 'group_type_master_course_master_map_pk' => $groupMap->pk,
+                'counsellor_group_name'                  => $data['counsellor_group_name'] ?? null,
                 'active_inactive'                        => 1,
                 'created_date'                           => now(),
                 'modified_date'                          => now(),
