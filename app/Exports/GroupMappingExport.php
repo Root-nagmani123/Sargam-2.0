@@ -38,13 +38,13 @@ class GroupMappingExport implements FromCollection, WithHeadings
                 'otcode'      => optional($record->student)->generated_OT_code ?? '',
                 'group_name'  => optional($record->groupTypeMasterCourseMasterMap)->group_name ?? '',
                 'group_type'  => optional($record->groupTypeMasterCourseMasterMap->courseGroupType)->type_name ?? '',
-                'counsellor_group_name' => $record->counsellor_group_name ?? '',
+                'counsellor_code' => $record->counsellor_code ?? '',
             ];
         });
     }
 
     public function headings(): array
     {
-        return ['Name', 'OTCode', 'Group Name', 'Group Type', 'Counsellor Group Name'];
+        return ['Name', 'OTCode', 'Group Name', 'Group Type', 'Counsellor Code'];
     }
 }
