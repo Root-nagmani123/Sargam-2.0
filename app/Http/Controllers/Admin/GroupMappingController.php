@@ -26,7 +26,7 @@ class GroupMappingController extends Controller
      */
     function create()
     {
-        $courses = CourseMaster::pluck('course_name', 'pk')->toArray();
+        $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
         return view('admin.group_mapping.create', compact('courses', 'courseGroupTypeMaster'));
     }
@@ -40,7 +40,7 @@ class GroupMappingController extends Controller
     function edit(string $id)
     {
         $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($id));
-        $courses = CourseMaster::pluck('course_name', 'pk')->toArray();
+        $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
         return view('admin.group_mapping.create', compact('groupMapping', 'courses', 'courseGroupTypeMaster'));
     }
@@ -57,11 +57,11 @@ class GroupMappingController extends Controller
             $request->validate([
                 'course_id' => 'required|string|max:255',
                 'type_id' => 'required|string|max:255',
-                'group_name' => 'required|string|max:255'
+                'group_name' => 'required|string|max:255',
             ]);
 
             if ($request->pk) {
-                $groupMapping = GroupTypeMasterCourseMasterMap::find($request->pk);
+                $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($request->pk));
                 $message = 'Group Mapping updated successfully.';
             } else {
                 $groupMapping = new GroupTypeMasterCourseMasterMap();

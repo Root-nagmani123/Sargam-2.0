@@ -10,9 +10,9 @@ class GroupMappingExport implements FromCollection, WithHeadings
 {
     protected $id;
 
-    public function __construct($id)
+    public function __construct($id = null)
     {
-        $this->id = decrypt($id);
+        $this->id = $id ? decrypt($id) : null;
     }
 
     public function collection()
@@ -38,12 +38,13 @@ class GroupMappingExport implements FromCollection, WithHeadings
                 'otcode'      => optional($record->student)->generated_OT_code ?? '',
                 'group_name'  => optional($record->groupTypeMasterCourseMasterMap)->group_name ?? '',
                 'group_type'  => optional($record->groupTypeMasterCourseMasterMap->courseGroupType)->type_name ?? '',
+                'counsellor_group_name' => $record->counsellor_group_name ?? '',
             ];
         });
     }
 
     public function headings(): array
     {
-        return ['Name', 'OTCode', 'Group Name', 'Group Type'];
+        return ['Name', 'OTCode', 'Group Name', 'Group Type', 'Counsellor Group Name'];
     }
 }
