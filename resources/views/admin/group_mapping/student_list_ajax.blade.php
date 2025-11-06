@@ -40,6 +40,7 @@
             <th>Display Name</th>
             <th>Email</th>
             <th>Contact No</th>
+            <th>Counsellor Group Name</th>
         </tr>
     </thead>
     <tbody>
