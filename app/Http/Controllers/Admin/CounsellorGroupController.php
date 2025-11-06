@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\{CourseMaster, FacultyMaster, CounsellorGroup};
 use App\DataTables\CounsellorGroupDataTable;
+use Carbon\Carbon;
 
 class CounsellorGroupController extends Controller
 {
@@ -21,7 +22,10 @@ class CounsellorGroupController extends Controller
      */
     public function create()
     {
-        $courses = CourseMaster::pluck('course_name', 'pk')->toArray();
+        $currentDate = Carbon::now()->format('Y-m-d');
+        $courses = CourseMaster::where('end_date', '>=', $currentDate)
+            ->pluck('course_name', 'pk')
+            ->toArray();
         $faculties = FacultyMaster::pluck('full_name', 'pk')->toArray();
         return view('admin.counsellor_group.create', compact('courses', 'faculties'));
     }
@@ -35,7 +39,22 @@ class CounsellorGroupController extends Controller
     public function edit(string $id)
     {
         $counsellorGroup = CounsellorGroup::find(decrypt($id));
-        $courses = CourseMaster::pluck('course_name', 'pk')->toArray();
+        $currentDate = Carbon::now()->format('Y-m-d');
+        
+        // Get active courses (end_date >= today)
+        $activeCourses = CourseMaster::where('end_date', '>=', $currentDate)
+            ->pluck('course_name', 'pk')
+            ->toArray();
+        
+        // If editing and the current course is archived, include it in the list
+        $courses = $activeCourses;
+        if ($counsellorGroup && $counsellorGroup->course_master_pk) {
+            $currentCourse = CourseMaster::find($counsellorGroup->course_master_pk);
+            if ($currentCourse && !isset($courses[$currentCourse->pk])) {
+                $courses[$currentCourse->pk] = $currentCourse->course_name;
+            }
+        }
+        
         $faculties = FacultyMaster::pluck('full_name', 'pk')->toArray();
         return view('admin.counsellor_group.create', compact('counsellorGroup', 'courses', 'faculties'));
     }
