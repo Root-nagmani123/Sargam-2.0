@@ -43,15 +43,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-4">
-                        <div class="mb-3">
-                            <x-select name="counsellor_code" label="Counsellor Group Name :" placeholder="Counsellor Group Name (Optional)"
-                                formLabelClass="form-label" formSelectClass="select2" required="false"
-                                :options="$counsellorGroups" :value="old('counsellor_code', $groupMapping->counsellor_code ?? '')" />
-                        </div>
-                    </div>
-                </div>
                 <hr>
                 <div class="mb-3 gap-2 float-end">
                     <button class="btn btn-primary " type="submit" id="saveClassSessionForm">
