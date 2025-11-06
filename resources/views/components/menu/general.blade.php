@@ -63,7 +63,7 @@
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('group.mapping.index') }}">
                                         <iconify-icon icon="solar:calendar-mark-line-duotone"></iconify-icon><span
-                                            class="hide-menu">Group Name Mapping</span>
+                                            class="hide-menu">Course Group Mapping</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('subject-module.index') }}">

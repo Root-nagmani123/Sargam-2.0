@@ -26,7 +26,11 @@ class CourseController extends Controller
     {
         // $deputationEmployeeList = EmployeeMaster::getDeputationEmployeeListNameAndPK();
         $facultyList = FacultyMaster::pluck('full_name', 'pk')->toArray();
-        return view('admin.programme.create', compact('facultyList'));
+        $roleOptions = [
+            'Leave' => 'Leave',
+            'Memo' => 'Memo'
+        ];
+        return view('admin.programme.create', compact('facultyList', 'roleOptions'));
     }
 
     public function edit(string $id)
@@ -47,8 +51,12 @@ class CourseController extends Controller
             $assistant_coordinator_name = array_column($courseCordinatorMaterData, 'Assistant_Coordinator_name');
             $assistant_coordinator_roles = array_column($courseCordinatorMaterData, 'assistant_coordinator_role');
             $coordinator_name = $coordinator_name[0] ?? '';
+            $roleOptions = [
+                'Leave' => 'Leave',
+                'Memo' => 'Memo'
+            ];
             
-            return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles'));
+            return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Invalid course ID');
         }

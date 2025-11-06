@@ -104,13 +104,14 @@
                                                     required="true" />
                                             </div>
                                             <div class="col-md-5">
-                                                <x-input 
-                                                    type="text" 
+                                                <x-select 
                                                     name="assistant_coordinator_role[]" 
                                                     label="Role" 
-                                                    placeholder="e.g., Discipline In-Charge, Co-Coordinator" 
-                                                    value="{{ $assistant_coordinator_roles[$index] ?? '' }}" 
-                                                    formLabelClass="form-label"
+                                                    placeholder="Select Role" 
+                                                    formLabelClass="form-label" 
+                                                    formSelectClass="select2"
+                                                    :options="$roleOptions" 
+                                                    value="{{ $assistant_coordinator_roles[$index] ?? '' }}"
                                                     required="true" />
                                             </div>
                                             <div class="col-md-1 d-flex align-items-end">
@@ -132,12 +133,13 @@
                                                 required="true" />
                                         </div>
                                         <div class="col-md-5">
-                                            <x-input 
-                                                type="text" 
+                                            <x-select 
                                                 name="assistant_coordinator_role[]" 
                                                 label="Role" 
-                                                placeholder="e.g., Discipline In-Charge, Co-Coordinator" 
-                                                formLabelClass="form-label"
+                                                placeholder="Select Role" 
+                                                formLabelClass="form-label" 
+                                                formSelectClass="select2"
+                                                :options="$roleOptions" 
                                                 required="true" />
                                         </div>
                                         <div class="col-md-1 d-flex align-items-end">

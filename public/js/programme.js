@@ -50,12 +50,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Clear values in cloned inputs/selects
         const selects = newRow.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
-        const inputs = newRow.querySelectorAll('input[name="assistant_coordinator_role[]"]');
+        const roleSelects = newRow.querySelectorAll('select[name="assistant_coordinator_role[]"]');
         selects.forEach(function(sel){ sel.value = ''; });
-        inputs.forEach(function(inp){ inp.value = ''; });
+        roleSelects.forEach(function(sel){ sel.value = ''; });
 
         container.appendChild(newRow);
         coordinatorIndex++;
+
+        // Initialize select2 for the new role dropdown if select2 is available
+        const newRoleSelect = newRow.querySelector('select[name="assistant_coordinator_role[]"]');
+        if (newRoleSelect && typeof $.fn.select2 !== 'undefined') {
+            $(newRoleSelect).select2({
+                dropdownParent: $(newRow).closest('.card-body, .modal-body, body'),
+                width: '100%'
+            });
+        }
 
         updateAssistantOptions();
     });

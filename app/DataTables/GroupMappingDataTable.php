@@ -125,7 +125,7 @@ class GroupMappingDataTable extends DataTable
                 ->searchable(false)
                 ->orderable(false),
             Column::make('type_name')
-                ->title('Type Name')
+                ->title('Group Type')
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false),

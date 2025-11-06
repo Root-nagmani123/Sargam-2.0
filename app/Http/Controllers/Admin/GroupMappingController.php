@@ -10,6 +10,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
 use App\Exports\GroupMappingExport;
 use App\DataTables\GroupMappingDataTable;
+use Carbon\Carbon;
 
 class GroupMappingController extends Controller
 {
@@ -26,7 +27,11 @@ class GroupMappingController extends Controller
      */
     function create()
     {
-        $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
+        $currentDate = Carbon::now()->format('Y-m-d');
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '>=', $currentDate)
+            ->pluck('course_name', 'pk')
+            ->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
         return view('admin.group_mapping.create', compact('courses', 'courseGroupTypeMaster'));
     }
@@ -40,7 +45,23 @@ class GroupMappingController extends Controller
     function edit(string $id)
     {
         $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($id));
-        $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
+        $currentDate = Carbon::now()->format('Y-m-d');
+        
+        // Get active courses (active_inactive = 1 and end_date >= today)
+        $activeCourses = CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '>=', $currentDate)
+            ->pluck('course_name', 'pk')
+            ->toArray();
+        
+        // If editing and the current course is archived, include it in the list
+        $courses = $activeCourses;
+        if ($groupMapping && $groupMapping->course_name) {
+            $currentCourse = CourseMaster::find($groupMapping->course_name);
+            if ($currentCourse && !isset($courses[$currentCourse->pk])) {
+                $courses[$currentCourse->pk] = $currentCourse->course_name;
+            }
+        }
+        
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
         return view('admin.group_mapping.create', compact('groupMapping', 'courses', 'courseGroupTypeMaster'));
     }

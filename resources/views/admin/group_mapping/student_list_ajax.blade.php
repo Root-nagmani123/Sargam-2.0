@@ -19,7 +19,7 @@
             <th>Display Name</th>
             <th>Email</th>
             <th>Contact No</th>
-            <th>Counsellor Group Name</th>
+            <th>Counsellor Code</th>
         </tr>
     </thead>
     <tbody>
@@ -29,7 +29,7 @@
                 <td>{{ $studentMap->studentsMaster->display_name ?? 'N/A' }}</td>
                 <td>{{ $studentMap->studentsMaster->email ?? 'N/A' }}</td>
                 <td>{{ $studentMap->studentsMaster->contact_no ?? 'N/A' }}</td>
-                <td>{{ $studentMap->counsellor_group_name ?? 'N/A' }}</td>
+                <td>{{ $studentMap->counsellor_code ?? 'N/A' }}</td>
             </tr>
         @empty
             <tr>
