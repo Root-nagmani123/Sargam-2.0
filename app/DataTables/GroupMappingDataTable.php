@@ -24,8 +24,8 @@ class GroupMappingDataTable extends DataTable
             ->addColumn('group_name', function ($row) {
                 return $row->group_name ?? '';
             })
-            ->addColumn('facility', function ($row) {
-                return $row->facility->venue_name ?? '-';
+            ->addColumn('counsellor_group_name', function ($row) {
+                return $row->counsellorGroup->counsellor_group_name ?? '-';
             })
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
             ->addColumn('view_download', function ($row) {
@@ -89,7 +89,7 @@ class GroupMappingDataTable extends DataTable
             ->filterColumn('group_name', function ($query, $keyword) {
                 $query->where('group_name', 'like', "%{$keyword}%");
             })
-            ->rawColumns(['course_name', 'group_name', 'view_download', 'action', 'status']);
+            ->rawColumns(['course_name', 'group_name', 'counsellor_group_name', 'view_download', 'action', 'status']);
     }
 
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
@@ -99,22 +99,7 @@ class GroupMappingDataTable extends DataTable
 
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
-                ->with(['courseGroup', 'courseGroupType', 'facility'])
-                ->when($statusFilter === 'active' || empty($statusFilter), function ($query) use ($currentDate) {
-                    $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
-                        $courseQuery->where(function ($q) use ($currentDate) {
-                            $q->whereNull('end_date')              // end date NULL ho (kabhi khatam nahi)
-                              ->orWhereDate('end_date', '>=', $currentDate); // ya abhi ya future me active
-                        });
-                    });
-                })
-                
-                ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
-                    $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
-                        $courseQuery->whereNotNull('end_date')
-                            ->whereDate('end_date', '<', $currentDate);
-                    });
-                })
+                ->with(['courseGroup', 'courseGroupType', 'counsellorGroup'])
                 ->orderBy('pk', 'desc');
                 // <- check karo ki data aa raha hai ya nahi
 
@@ -167,8 +152,8 @@ public function html(): HtmlBuilder
                 ->title('Group Name')
                 ->addClass('text-center')
                 ->searchable(true),
-            Column::make('facility')
-                ->title('Facility')
+            Column::make('counsellor_group_name')
+                ->title('Counsellor Group Name')
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false),
