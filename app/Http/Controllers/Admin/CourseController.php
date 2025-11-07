@@ -167,7 +167,6 @@ class CourseController extends Controller
                     'assistant_coordinators' => $assistantCoordinators,
                     'coordinator_photo' => $coordinatorFaculty ? ($coordinatorFaculty->photo_uplode_path ?? null) : null,
                     'assistant_coordinator_photos' => $assistantCoordinatorFaculties->pluck('photo_uplode_path')->filter()->toArray(),
-                    'discipline_in_charge' => 'Not Available', // Placeholder as this field doesn't exist in current structure
                 ]
             ]);
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
@@ -242,17 +241,12 @@ class CourseController extends Controller
                     ];
                 }
             }
-            
-            // Check if discipline_in_charge exists in course or coordinator
-            // For now, we'll use a placeholder or check if there's a related field
-            $disciplineInCharge = 'Not Specified'; // This can be updated based on actual database structure
-            
+
             return view('admin.programme.show', compact(
                 'course',
                 'coordinatorName',
                 'coordinatorFaculty',
-                'assistantCoordinatorsData',
-                'disciplineInCharge'
+                'assistantCoordinatorsData'
             ));
         } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
             \Log::error('Decryption error in course show: ' . $e->getMessage());
@@ -297,28 +291,12 @@ class CourseController extends Controller
                 }
             }
             
-            // Determine Discipline In-Charge from assistant coordinator roles
-            $disciplineCandidates = $coordinators->filter(function($coordinator) {
-                $role = $coordinator->assistant_coordinator_role ?? '';
-                return $role !== '' && stripos($role, 'discipline') !== false; // matches Discipline, Discipline In-Charge, etc.
-            });
-            $disciplineInChargeNames = $disciplineCandidates
-                ->pluck('Assistant_Coordinator_name')
-                ->filter()
-                ->unique()
-                ->values()
-                ->toArray();
-            $disciplineInCharge = !empty($disciplineInChargeNames)
-                ? implode(', ', $disciplineInChargeNames)
-                : 'Not Specified';
-            
             // Generate PDF
             $pdf = Pdf::loadView('admin.programme.pdf', compact(
                 'course',
                 'coordinatorName',
                 'coordinatorFaculty',
-                'assistantCoordinatorsData',
-                'disciplineInCharge'
+                'assistantCoordinatorsData'
             ));
             
             $pdf->setPaper('a4', 'portrait');
