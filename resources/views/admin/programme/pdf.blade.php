@@ -268,18 +268,6 @@
                 No Assistant Coordinators assigned
             </div>
         @endif
-
-        <!-- Discipline In-Charge -->
-        @if($disciplineInCharge && $disciplineInCharge !== 'Not Specified')
-            <div style="margin-top: 25px;">
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <span class="role-badge">Discipline In-Charge</span>
-                </div>
-                <div style="text-align: center; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-                    {{ $disciplineInCharge }}
-                </div>
-            </div>
-        @endif
     </div>
 
     <!-- Footer -->

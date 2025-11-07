@@ -195,12 +195,6 @@
             </div>
           @endforelse
         </div>
-
-        <!-- Discipline In-Charge -->
-        <div class="mt-4 text-center">
-          <span class="role-badge mb-2">Discipline In-Charge</span>
-          <div class="detail-value text-center fw-semibold">{{ $disciplineInCharge }}</div>
-        </div>
       </section>
 
     </div>

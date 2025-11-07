@@ -239,10 +239,6 @@
                                         <span>${course.coordinator_name}</span>
                                     </div>
                                 </div>
-                                <div class="col-md-6">
-                                    <strong>Discipline In Charge:</strong>
-                                    <p class="text-muted">${course.discipline_in_charge}</p>
-                                </div>
                             </div>
                             
                             <div class="row mb-3">
