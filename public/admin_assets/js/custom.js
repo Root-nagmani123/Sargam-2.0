@@ -113,7 +113,7 @@ $(document).on('change', '.status-toggle', function () {
     let id_column = $checkbox.data('id_column');
     let status = $checkbox.is(':checked') ? 1 : 0;
 
-   
+
     table = $(this).data('table');
     column = $(this).data('column');
     id = $(this).data('id');
@@ -160,7 +160,9 @@ $(document).on('change', '.status-toggle', function () {
                     </div>
                 `);
                  setTimeout(function() {
-        location.reload();
+       // location.reload();
+        $('#status-msg .alert').alert('close');
+       //console.log(data);
     }, 1000);
             },
             error: function () {
@@ -178,7 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $('input[name="photo"]').on('change', function () {
         console.log('Photo input changed');
-        
+
         const input = this;
         const preview = $('#photoPreview');
 
@@ -629,10 +631,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // Faculty When City is Other
     $(document).on('change', '#city', function () {
     // $('#city').on('change', function () {
-        
+
         console.log($(this).find('option:selected').text().toLowerCase().trim());
         console.log($(this).find('option:selected').text().toLowerCase().trim() == 'other');
-        
+
         if ($(this).find('option:selected').text().toLowerCase().trim() == 'other') {
             console.log('Other city selected');
             $('#otherCityContainer').removeClass('d-none');
@@ -702,7 +704,7 @@ $(document).ready(function () {
                 $('#upload_import').prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Uploading...');
             },
             success: function (response) {
-                
+
                 alert('File imported successfully!');
                 $('#importModal').modal('hide');
                 resetImportModal();
@@ -795,7 +797,7 @@ $(document).on('click', '.student-list-pagination .pagination a', function (e) {
 //     // Initialize DualListbox on page load
 //     dualListbox = new DualListbox("#select", {
 //         addEvent: function (value) {
- 
+
 //         },
 //         removeEvent: function (value) {
 
@@ -877,7 +879,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize DualListbox on page load
     dualListbox = new DualListbox("#select_memo_student", {
         addEvent: function (value) {
- 
+
         },
         removeEvent: function (value) {
 
@@ -892,7 +894,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     $('#topic_id').on('change', function () {
- 
+
         let topic_id = $(this).val();
 
         if (topic_id.length > 0) {
@@ -922,7 +924,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                 })
                             );
                         });
-
+               dualListbox.refresh();
                         // Destroy the old dual listbox wrapper (if needed)
                         $('.dual-listbox').remove(); // depends on your plugin structure
 
@@ -970,7 +972,7 @@ $(document).on('click', '#searchAttendance', function () {
     if(attendanceType === 'manual') {
         sessionTypeValue = $('#manual_session').val();
     }
-    
+
 
 
     // || !viewType
@@ -992,15 +994,15 @@ $(document).on('click', '#searchAttendance', function () {
             // view_type: viewType
         },
         beforeSend: function () {
-            showAjaxLoader(); 
+            showAjaxLoader();
         },
         complete: function () {
-            hideAjaxLoader(); 
+            hideAjaxLoader();
         },
         success: function (response) {
             // Optional: validate response format
             if (response && typeof response === 'object') {
-                drawAttendanceTable(); 
+                drawAttendanceTable();
             } else {
                 alert("Unexpected response format.");
             }
@@ -1051,18 +1053,18 @@ function drawAttendanceTable() {
 
 
 $(document).ready(function() {
-    
+
     $('#normal_session_container').hide();
     $('#manual_session_container').hide();
-    
-    
+
+
     $('input[name="attendance_type"]').change(function() {
         $('#normal_session_container').hide();
         $('#manual_session_container').hide();
-        
+
         $('#session').val('').trigger('change');
         $('#manual_session').val('').trigger('change');
-        
+
         if ($(this).val() === 'normal') {
             $('#normal_session_container').show();
         } else if ($(this).val() === 'manual') {
@@ -1070,7 +1072,7 @@ $(document).ready(function() {
         }
         // For 'full_day', both remain hidden
     });
-    
+
     // Trigger change on page load to show/hide based on default checked radio
     $('input[name="attendance_type"]:checked').trigger('change');
 });
@@ -1107,7 +1109,7 @@ $('#upload_import_hostel_mapping_to_student').on('click', function (e) {
             $('#upload_import_hostel_mapping_to_student').prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Uploading...');
         },
         success: function (response) {
-            
+
             alert('File imported successfully!');
             $('#importModal').modal('hide');
             resetImportModal();
@@ -1159,12 +1161,12 @@ $(document).ready(function () {
     });
 
     $('#room_type').change(function () {
-        
+
         let buildingMasterPk = $('#building_master_pk').val();
         let floorMasterPk = $('#floor_master_pk').val();
         let prepend = $('.floor_room_name').text();
         let roomName = $('input[name="room_name"]').val();
-        
+
 
         if(buildingMasterPk == '' || buildingMasterPk == null || buildingMasterPk == undefined) {
             alert('Please select Building');
@@ -1185,21 +1187,21 @@ $(document).ready(function () {
             $('.floor_room_name_span').html('');
             return false;
         }
-        
+
         let html = '<strong> Room Name : '+finalRoomName()+'</strong>';
         $('.floor_room_name_span').html(html);
     });
     $('#building_master_pk, #floor_master_pk, input[name="room_name"]').change(function () {
-        
+
         let finalRoomNameValue = finalRoomName().trim();
         if(finalRoomNameValue == '' || finalRoomNameValue == null || finalRoomNameValue == undefined || finalRoomNameValue == 'undefined') {
             $('.floor_room_name_span').html('');
             return false;
         }
-        
+
         let html = '<strong> Room Name : '+finalRoomName()+'</strong>';
         $('.floor_room_name_span').html(html);
-        
+
     });
     function finalRoomName() {
         let roomType = $('#room_type').val();

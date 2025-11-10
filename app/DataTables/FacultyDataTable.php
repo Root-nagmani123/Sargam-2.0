@@ -48,7 +48,7 @@ class FacultyDataTable extends DataTable
                     1 => '<span class="badge bg-success">Government</span>',
                     default => '<span class="badge bg-danger">Private</span>',
                 };
-                
+
             })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
@@ -66,7 +66,7 @@ class FacultyDataTable extends DataTable
                 //         <input type="hidden" name="_token" value="'.$csrf.'">
                 //         <input type="hidden" name="_method" value="DELETE">
                 //         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                //     </form>    
+                //     </form>
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';

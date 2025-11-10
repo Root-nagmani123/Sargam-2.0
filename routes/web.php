@@ -57,6 +57,10 @@ Route::middleware(['auth'])->group(function () {
     })->name('admin.dashboard');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
+	
+	// By Dhananjay
+Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
+
 
     // Member Routes
     Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
@@ -83,6 +87,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
+		Route::get('/faculty/check-unique',  'checkUnique')->name('faculty.checkUnique');
+		//Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
+		
     });
 
     // Programme Routes
