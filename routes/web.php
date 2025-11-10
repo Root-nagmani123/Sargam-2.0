@@ -159,14 +159,6 @@ Route::middleware(['auth'])->group(function () {
             return view('admin.mapping.edit');
         })->name('edit');
     });
-        Route::prefix('counsellor-group')->name('counsellor.group.')->group(function () {
-            Route::get('/', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'index'])->name('index');
-            Route::get('/create', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'create'])->name('create');
-            Route::post('/store', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'store'])->name('store');
-            Route::get('/edit/{id}', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'edit'])->name('edit');
-            Route::delete('/delete/{id}', [\App\Http\Controllers\Admin\CounsellorGroupController::class, 'delete'])->name('delete');
-        });
-
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
         Route::get('/get-subject-Name', [CalendarController::class, 'getSubjectName'])->name('get.subject.name');
@@ -213,6 +205,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
         Route::post('student-list', 'studentList')->name('student.list');
+        Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
         Route::delete('delete/{id}', 'delete')->name('delete');
     });

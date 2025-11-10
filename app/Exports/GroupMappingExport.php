@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\{GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
+use App\Models\StudentCourseGroupMap;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\{FromCollection, WithHeadings};
 
@@ -20,7 +20,8 @@ class GroupMappingExport implements FromCollection, WithHeadings
         $data = StudentCourseGroupMap::with([
             'student:pk,display_name,generated_OT_code', 
             'groupTypeMasterCourseMasterMap.courseGroup:pk,course_name,course_year',
-            'groupTypeMasterCourseMasterMap.courseGroupType:pk,type_name'
+            'groupTypeMasterCourseMasterMap.courseGroupType:pk,type_name',
+            'groupTypeMasterCourseMasterMap.facility:venue_id,venue_name'
         ]);
         
         if ($this->id) {
@@ -33,18 +34,22 @@ class GroupMappingExport implements FromCollection, WithHeadings
 
 
         return $data->map(function ($record) {
+            $groupMap = $record->groupTypeMasterCourseMasterMap;
+            $facility = $groupMap && $groupMap->facility ? $groupMap->facility->venue_name : '';
+            $groupType = $groupMap && $groupMap->courseGroupType ? $groupMap->courseGroupType->type_name : '';
+
             return [
                 'name'        => optional($record->student)->display_name ?? '',
                 'otcode'      => optional($record->student)->generated_OT_code ?? '',
-                'group_name'  => optional($record->groupTypeMasterCourseMasterMap)->group_name ?? '',
-                'group_type'  => optional($record->groupTypeMasterCourseMasterMap->courseGroupType)->type_name ?? '',
-                'counsellor_code' => $record->counsellor_code ?? '',
+                'group_name'  => $groupMap ? $groupMap->group_name : '',
+                'group_type'  => $groupType,
+                'facility'    => $facility,
             ];
         });
     }
 
     public function headings(): array
     {
-        return ['Name', 'OTCode', 'Group Name', 'Group Type', 'Counsellor Code'];
+        return ['Name', 'OTCode', 'Group Name', 'Group Type', 'Facility'];
     }
 }

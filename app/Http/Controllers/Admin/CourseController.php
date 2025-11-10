@@ -40,17 +40,21 @@ class CourseController extends Controller
             // $deputationEmployeeList = EmployeeMaster::getDeputationEmployeeListNameAndPK();
             $facultyList = FacultyMaster::pluck('full_name', 'pk')->toArray();
 
-            $courseCordinatorMaterData = $courseMasterObj->courseCordinatorMater->map(function($item){
-                $item['Coordinator_name'] = $item['Coordinator_name'];
-                $item['Assistant_Coordinator_name'] = $item['Assistant_Coordinator_name'];
-                $item['assistant_coordinator_role'] = $item['assistant_coordinator_role'];
-                return $item;
-            })->toArray();
-            
-            $coordinator_name = array_column($courseCordinatorMaterData, 'Coordinator_name');
-            $assistant_coordinator_name = array_column($courseCordinatorMaterData, 'Assistant_Coordinator_name');
-            $assistant_coordinator_roles = array_column($courseCordinatorMaterData, 'assistant_coordinator_role');
-            $coordinator_name = $coordinator_name[0] ?? '';
+            $courseCoordinatorAssignments = $courseMasterObj->courseCordinatorMater()
+                ->select('Coordinator_name', 'Assistant_Coordinator_name', 'assistant_coordinator_role')
+                ->orderBy('pk')
+                ->get();
+
+            $coordinator_name = $courseCoordinatorAssignments->first()->Coordinator_name ?? '';
+
+            $assistantCoordinatorCollection = $courseCoordinatorAssignments
+                ->filter(function ($coordinator) {
+                    return !is_null($coordinator->Assistant_Coordinator_name) && $coordinator->Assistant_Coordinator_name !== '';
+                })
+                ->values();
+
+            $assistant_coordinator_name = $assistantCoordinatorCollection->pluck('Assistant_Coordinator_name')->toArray();
+            $assistant_coordinator_roles = $assistantCoordinatorCollection->pluck('assistant_coordinator_role')->toArray();
             $roleOptions = [
                 'Leave' => 'Leave',
                 'Memo' => 'Memo'
