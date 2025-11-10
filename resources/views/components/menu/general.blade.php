@@ -50,11 +50,6 @@
                                         <iconify-icon icon="solar:mask-happly-line-duotone"></iconify-icon><span
                                             class="hide-menu">Course Master</span>
                                     </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('counsellor.group.index') }}">
-                                        <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon><span
-                                            class="hide-menu">Counsellor Group</span>
-                                    </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.course.group.type.index') }}">
                                         <iconify-icon icon="solar:face-scan-square-broken"></iconify-icon><span
