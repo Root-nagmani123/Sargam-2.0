@@ -29,19 +29,12 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
             $rowNumber = $index + 2;
             $data = array_map('trim', $row->toArray());
 
-            // Normalize column names - handle both "Counsellor Group" and "Counsellor Code"
-            // Laravel Excel converts "Counsellor Group" to "counsellor_group" and "Counsellor Code" to "counsellor_code"
-            if (isset($data['counsellor_group']) && !isset($data['counsellor_code'])) {
-                $data['counsellor_code'] = $data['counsellor_group'];
-            }
-
             // Validate Excel row
             $validator = Validator::make($data, [
                 'name'        => 'required|string|max:255',
                 'otcode'      => 'required|string|max:255',
                 'group_name'  => 'required|string|max:255',
                 'group_type'  => 'required|string|max:255',
-                'counsellor_code' => 'nullable|string|max:255',
             ]);
 
             if ($validator->fails()) {
@@ -86,7 +79,6 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
             $dataToInsert[] = [
                 'student_master_pk'                      => $studentMaster->pk,
                 'group_type_master_course_master_map_pk' => $groupMap->pk,
-                'counsellor_code'                        => $data['counsellor_code'] ?? null,
                 'active_inactive'                        => 1,
                 'created_date'                           => now(),
                 'modified_date'                          => now(),
