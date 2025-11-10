@@ -232,10 +232,10 @@
                                         <iconify-icon icon="solar:document-text-line-duotone"></iconify-icon><span
                                             class="hide-menu">Faculty</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mapping.index') }}">
+                                <!--<li class="sidebar-item"><a class="sidebar-link" href="{{ route('mapping.index') }}">
                                         <iconify-icon icon="solar:map-arrow-up-bold-duotone"></iconify-icon><span
                                             class="hide-menu">Faculty Topic Mapping</span>
-                                    </a></li>
+                                    </a></li>-->
                             </ul>
 
                             {{-- USER MANAGEMENT --}}
@@ -286,7 +286,7 @@
                                         <iconify-icon icon="solar:atom-line-duotone"></iconify-icon><span
                                             class="hide-menu">Student Feedback</span>
                                     </a></li>
-                               
+
                             </ul>
 
                         </ul>
