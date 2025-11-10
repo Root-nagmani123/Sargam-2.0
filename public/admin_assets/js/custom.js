@@ -740,11 +740,131 @@ $(document).ready(function () {
 });
 
 
+window.selectedOtIds = new Set();
+window.currentGroupMappingId = null;
+
+function resetBulkMessageForm() {
+    $('#bulkMessageText').val('');
+    $('#bulkMessageCharCount').text('0');
+    clearBulkMessageAlert();
+    $('#bulkMessageContainer').addClass('d-none');
+}
+
+function clearBulkMessageAlert() {
+    $('#bulkMessageAlert')
+        .addClass('d-none')
+        .removeClass('alert-success alert-danger alert-warning')
+        .text('');
+}
+
+function showBulkMessageAlert(type, message) {
+    const alertBox = $('#bulkMessageAlert');
+    if (!alertBox.length) {
+        return;
+    }
+
+    alertBox
+        .removeClass('d-none alert-success alert-danger alert-warning')
+        .addClass(`alert alert-${type}`)
+        .text(message);
+}
+
+function updateSelectedOtCount() {
+    const count = window.selectedOtIds ? window.selectedOtIds.size : 0;
+    $('#selectedOtCount').text(`${count} OT(s) selected`);
+
+    const hasSelection = count > 0;
+    $('#toggleBulkMessage').prop('disabled', !hasSelection);
+    $('.send-bulk-message').prop('disabled', !hasSelection);
+
+    if (!hasSelection) {
+        $('#bulkMessageContainer').addClass('d-none');
+        clearBulkMessageAlert();
+    }
+}
+
+function updateSelectAllState() {
+    const checkboxList = $('.student-select');
+    const selectAll = $('#selectAllOts');
+
+    if (!selectAll.length) {
+        return;
+    }
+
+    if (!checkboxList.length) {
+        selectAll.prop({
+            checked: false,
+            indeterminate: false,
+        });
+        return;
+    }
+
+    const total = checkboxList.length;
+    const checked = checkboxList.filter(':checked').length;
+
+    if (checked === 0) {
+        selectAll.prop({
+            checked: false,
+            indeterminate: false,
+        });
+    } else if (checked === total) {
+        selectAll.prop({
+            checked: true,
+            indeterminate: false,
+        });
+    } else {
+        selectAll.prop({
+            checked: false,
+            indeterminate: true,
+        });
+    }
+}
+
+function initializeStudentListSelection() {
+    $('.student-select').each(function () {
+        const studentId = $(this).val();
+        if (window.selectedOtIds && window.selectedOtIds.has(studentId)) {
+            $(this).prop('checked', true);
+        }
+    });
+
+    updateSelectAllState();
+    updateSelectedOtCount();
+}
+
+function setSendingState(channel, isSending) {
+    const button = $(`.send-bulk-message[data-channel="${channel}"]`);
+    if (!button.length) {
+        return;
+    }
+
+    if (isSending) {
+        button.data('original-html', button.html());
+        button.prop('disabled', true).html(`
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            Sending...
+        `);
+        $('.send-bulk-message').not(button).prop('disabled', true);
+    } else {
+        const originalHtml = button.data('original-html');
+        if (originalHtml) {
+            button.html(originalHtml);
+        }
+        $('.send-bulk-message').prop('disabled', window.selectedOtIds.size === 0);
+    }
+}
+
+
 $(document).on('click', '.view-student', function (e) {
     e.preventDefault();
-    let groupMappingID = $(this).data('id');
 
-    let token = $('meta[name="csrf-token"]').attr('content');
+    const groupMappingID = $(this).data('id');
+    const token = $('meta[name="csrf-token"]').attr('content');
+
+    window.selectedOtIds = new Set();
+    window.currentGroupMappingId = groupMappingID;
+    resetBulkMessageForm();
+    updateSelectedOtCount();
 
     $.ajax({
         url: routes.groupMappingStudentList,
@@ -754,7 +874,12 @@ $(document).on('click', '.view-student', function (e) {
             groupMappingID: groupMappingID
         },
         success: function (response) {
-            $('#studentDetailsModal .modal-body').html(response.html);
+            $('#studentDetailsContent').html(response.html);
+            const encryptedId = $('#groupMappingEncryptedId').val();
+            if (encryptedId) {
+                window.currentGroupMappingId = encryptedId;
+            }
+            initializeStudentListSelection();
             $('#studentDetailsModal').modal('show');
         },
         error: function () {
@@ -766,9 +891,10 @@ $(document).on('click', '.view-student', function (e) {
 
 $(document).on('click', '.student-list-pagination .pagination a', function (e) {
     e.preventDefault();
-    let pageUrl = $(this).attr('href');
-    let groupMappingID = $('.view-student').data('id');
-    let token = $('meta[name="csrf-token"]').attr('content');
+
+    const pageUrl = $(this).attr('href');
+    const token = $('meta[name="csrf-token"]').attr('content');
+    const groupMappingID = $('#groupMappingEncryptedId').val() || window.currentGroupMappingId;
 
     $.ajax({
         url: pageUrl,
@@ -778,12 +904,149 @@ $(document).on('click', '.student-list-pagination .pagination a', function (e) {
             groupMappingID: groupMappingID
         },
         success: function (response) {
-            $('#studentDetailsModal .modal-body').html(response.html);
+            $('#studentDetailsContent').html(response.html);
+            const encryptedId = $('#groupMappingEncryptedId').val();
+            if (encryptedId) {
+                window.currentGroupMappingId = encryptedId;
+            }
+            initializeStudentListSelection();
         },
         error: function () {
             alert('Error loading student list');
         }
     });
+});
+
+$(document).on('change', '.student-select', function () {
+    if (!window.selectedOtIds) {
+        window.selectedOtIds = new Set();
+    }
+
+    const studentId = $(this).val();
+
+    if ($(this).is(':checked')) {
+        if (studentId) {
+            window.selectedOtIds.add(studentId);
+        }
+    } else if (studentId) {
+        window.selectedOtIds.delete(studentId);
+    }
+
+    updateSelectAllState();
+    updateSelectedOtCount();
+});
+
+$(document).on('change', '#selectAllOts', function () {
+    const shouldSelect = $(this).is(':checked');
+    const checkboxes = $('.student-select');
+
+    checkboxes.each(function () {
+        const isChecked = $(this).is(':checked');
+        if (isChecked !== shouldSelect) {
+            $(this).prop('checked', shouldSelect).trigger('change');
+        }
+    });
+
+    updateSelectAllState();
+});
+
+$(document).on('click', '#toggleBulkMessage', function (e) {
+    e.preventDefault();
+
+    if ($(this).prop('disabled')) {
+        return;
+    }
+
+    const container = $('#bulkMessageContainer');
+    const isHidden = container.hasClass('d-none');
+
+    if (isHidden) {
+        container.removeClass('d-none');
+        clearBulkMessageAlert();
+        $('#bulkMessageText').trigger('input').focus();
+    } else {
+        container.addClass('d-none');
+        clearBulkMessageAlert();
+    }
+});
+
+$(document).on('click', '#closeBulkMessage', function (e) {
+    e.preventDefault();
+    $('#bulkMessageContainer').addClass('d-none');
+    clearBulkMessageAlert();
+});
+
+$(document).on('input', '#bulkMessageText', function () {
+    $('#bulkMessageCharCount').text($(this).val().length);
+});
+
+$(document).on('click', '.send-bulk-message', function (e) {
+    e.preventDefault();
+
+    if ($(this).prop('disabled')) {
+        return;
+    }
+
+    const channel = $(this).data('channel');
+    const message = ($('#bulkMessageText').val() || '').trim();
+    const studentIds = window.selectedOtIds ? Array.from(window.selectedOtIds) : [];
+    const groupMappingID = $('#groupMappingEncryptedId').val() || window.currentGroupMappingId;
+    const token = $('meta[name="csrf-token"]').attr('content');
+
+    if (!groupMappingID) {
+        showBulkMessageAlert('danger', 'Missing group mapping details. Please reload the student list.');
+        return;
+    }
+
+    if (!studentIds.length) {
+        showBulkMessageAlert('warning', 'Please select at least one OT.');
+        return;
+    }
+
+    if (!message.length) {
+        showBulkMessageAlert('warning', 'Please enter a message before sending.');
+        $('#bulkMessageText').focus();
+        return;
+    }
+
+    setSendingState(channel, true);
+
+    $.ajax({
+        url: routes.groupMappingSendMessage,
+        type: 'POST',
+        data: {
+            _token: token,
+            channel: channel,
+            message: message,
+            student_ids: studentIds,
+            group_mapping_id: groupMappingID
+        },
+        success: function (response) {
+            if (response && response.status === 'success') {
+                showBulkMessageAlert('success', response.message || 'Message sent successfully.');
+            } else {
+                const infoMessage = (response && response.message) ? response.message : 'Message sent with warnings.';
+                showBulkMessageAlert('warning', infoMessage);
+            }
+        },
+        error: function (xhr) {
+            const errorMessage = xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message
+                : 'Unable to send the message. Please try again.';
+            showBulkMessageAlert('danger', errorMessage);
+        },
+        complete: function () {
+            setSendingState(channel, false);
+            updateSelectedOtCount();
+        }
+    });
+});
+
+$('#studentDetailsModal').on('hidden.bs.modal', function () {
+    window.selectedOtIds = new Set();
+    window.currentGroupMappingId = null;
+    resetBulkMessageForm();
+    updateSelectedOtCount();
 });
 
 // End Group Mapping Modules

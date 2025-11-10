@@ -7,13 +7,25 @@ use Illuminate\Http\Request;
 use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
+use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, VenueMaster};
 use App\Exports\GroupMappingExport;
 use App\DataTables\GroupMappingDataTable;
 use Carbon\Carbon;
+use App\Http\Requests\Admin\GroupMapping\BulkMessageRequest;
+use App\Services\Messaging\EmailService;
+use App\Services\Messaging\SmsService;
 
 class GroupMappingController extends Controller
 {
+    protected EmailService $emailService;
+    protected SmsService $smsService;
+
+    public function __construct(EmailService $emailService, SmsService $smsService)
+    {
+        $this->emailService = $emailService;
+        $this->smsService = $smsService;
+    }
+
     public function index(GroupMappingDataTable $dataTable)
     {
         return $dataTable->render('admin.group_mapping.index');
@@ -30,10 +42,16 @@ class GroupMappingController extends Controller
         $currentDate = Carbon::now()->format('Y-m-d');
         $courses = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>=', $currentDate)
+            ->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
-        return view('admin.group_mapping.create', compact('courses', 'courseGroupTypeMaster'));
+        $facilities = VenueMaster::where('active_inactive', 1)
+            ->orderBy('venue_name')
+            ->pluck('venue_name', 'venue_id')
+            ->toArray();
+
+        return view('admin.group_mapping.create', compact('courses', 'courseGroupTypeMaster', 'facilities'));
     }
 
     /**
@@ -50,6 +68,7 @@ class GroupMappingController extends Controller
         // Get active courses (active_inactive = 1 and end_date >= today)
         $activeCourses = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>=', $currentDate)
+            ->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();
         
@@ -58,12 +77,25 @@ class GroupMappingController extends Controller
         if ($groupMapping && $groupMapping->course_name) {
             $currentCourse = CourseMaster::find($groupMapping->course_name);
             if ($currentCourse && !isset($courses[$currentCourse->pk])) {
-                $courses[$currentCourse->pk] = $currentCourse->course_name;
+                $courses = [$currentCourse->pk => $currentCourse->course_name] + $courses;
             }
         }
         
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
-        return view('admin.group_mapping.create', compact('groupMapping', 'courses', 'courseGroupTypeMaster'));
+
+        $facilities = VenueMaster::where('active_inactive', 1)
+            ->orderBy('venue_name')
+            ->pluck('venue_name', 'venue_id')
+            ->toArray();
+
+        if ($groupMapping && $groupMapping->facility_id && !isset($facilities[$groupMapping->facility_id])) {
+            $facility = VenueMaster::find($groupMapping->facility_id);
+            if ($facility) {
+                $facilities[$facility->venue_id] = $facility->venue_name;
+            }
+        }
+
+        return view('admin.group_mapping.create', compact('groupMapping', 'courses', 'courseGroupTypeMaster', 'facilities'));
     }
 
     /**
@@ -79,6 +111,7 @@ class GroupMappingController extends Controller
                 'course_id' => 'required|string|max:255',
                 'type_id' => 'required|string|max:255',
                 'group_name' => 'required|string|max:255',
+                'facility_id' => 'nullable|string|max:255',
             ]);
 
             if ($request->pk) {
@@ -91,6 +124,7 @@ class GroupMappingController extends Controller
             $groupMapping->course_name = $request->course_id;
             $groupMapping->type_name = $request->type_id;
             $groupMapping->group_name = $request->group_name;
+            $groupMapping->facility_id = $request->facility_id ?: null;
             $groupMapping->save();
 
             return redirect()->route('group.mapping.index')->with('success', $message);
@@ -145,14 +179,19 @@ class GroupMappingController extends Controller
     {
         try {
             $groupMappingID = decrypt($request->groupMappingID);
-            $groupMapping = GroupTypeMasterCourseMasterMap::findOrFail($groupMappingID);
+            $groupMapping = GroupTypeMasterCourseMasterMap::with('facility')->findOrFail($groupMappingID);
             // Apply pagination
             $students = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
                 ->paginate(10, ['*'], 'page', $request->page);
             // Render the HTML partial
             $groupMappingPk = $groupMapping->pk;
-            $html = view('admin.group_mapping.student_list_ajax', compact('students', 'groupMappingPk'))->render();
+            $html = view('admin.group_mapping.student_list_ajax', [
+                'students' => $students,
+                'groupMappingPk' => $groupMappingPk,
+                'groupName' => $groupMapping->group_name,
+                'facilityName' => optional($groupMapping->facility)->venue_name,
+            ])->render();
 
             return response()->json([
                 'status' => 'success',
@@ -208,5 +247,120 @@ class GroupMappingController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
+    }
+
+    public function sendMessage(BulkMessageRequest $request)
+    {
+        try {
+            $groupMappingId = decrypt($request->input('group_mapping_id'));
+        } catch (\Throwable $exception) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid group mapping selection.',
+            ], 422);
+        }
+
+        $encryptedStudentIds = collect($request->input('student_ids'));
+        $studentIds = collect();
+
+        foreach ($encryptedStudentIds as $encryptedId) {
+            try {
+                $studentIds->push(decrypt($encryptedId));
+            } catch (\Throwable $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'One or more selected OTs could not be verified.',
+                ], 422);
+            }
+        }
+
+        $studentMappings = StudentCourseGroupMap::with('studentsMaster:pk,display_name,email,contact_no')
+            ->where('group_type_master_course_master_map_pk', $groupMappingId)
+            ->whereIn('student_master_pk', $studentIds)
+            ->get();
+
+        if ($studentMappings->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No matching OTs were found for this group.',
+            ], 422);
+        }
+
+        $matchedStudentIds = $studentMappings->pluck('student_master_pk');
+        $missingSelections = $studentIds->diff($matchedStudentIds);
+
+        if ($missingSelections->isNotEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Some selected OTs are not part of the chosen group.',
+            ], 422);
+        }
+
+        $students = $studentMappings->pluck('studentsMaster')->filter();
+
+        if ($students->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No contact records were found for the selected OTs.',
+            ], 422);
+        }
+
+        $channel = $request->input('channel');
+        $message = $request->input('message');
+
+        if ($channel === 'email') {
+            $emails = $students->pluck('email')->filter();
+
+            if ($emails->isEmpty()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'None of the selected OTs have an email address on record.',
+                ], 422);
+            }
+
+            $failed = $this->emailService->sendBulk($emails, $message);
+            $sentCount = $emails->count() - count($failed);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => $sentCount > 0
+                    ? "Email sent to {$sentCount} OT(s)."
+                    : 'Unable to send email to the selected OTs.',
+                'data' => [
+                    'channel' => 'email',
+                    'attempted' => $emails->count(),
+                    'failed' => $failed,
+                ],
+            ], $sentCount > 0 ? 200 : 500);
+        }
+
+        $phoneNumbers = $students->pluck('contact_no')->filter();
+
+        if ($phoneNumbers->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'None of the selected OTs have a contact number on record.',
+            ], 422);
+        }
+
+        $failed = $this->smsService->sendBulk($phoneNumbers, $message);
+        $sentCount = $phoneNumbers->count() - count($failed);
+
+        if ($sentCount <= 0) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unable to send SMS to the selected OTs.',
+            ], 500);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "SMS sent to {$sentCount} OT(s).",
+            'data' => [
+                'channel' => 'sms',
+                'attempted' => $phoneNumbers->count(),
+                'failed' => $failed,
+            ],
+        ]);
     }
 }
