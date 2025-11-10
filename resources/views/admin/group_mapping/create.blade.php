@@ -42,6 +42,14 @@
                                 value="{{ old('group_name', $groupMapping->group_name ?? '') }}" />
                         </div>
                     </div>
+                    <div class="col-4">
+                        <div class="mb-3">
+                            <x-select name="facility_id" label="Facility (Optional) :" placeholder="Select Facility"
+                                formLabelClass="form-label" formSelectClass="select2"
+                                :options="$facilities ?? []"
+                                :value="old('facility_id', $groupMapping->facility_id ?? '')" />
+                        </div>
+                    </div>
                 </div>
                 <hr>
                 <div class="mb-3 gap-2 float-end">

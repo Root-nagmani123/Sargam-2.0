@@ -11,25 +11,57 @@
         <strong>Group Code:</strong> {{ $group->code ?? 'N/A' }}
     </div>
 </div> --}}
+@if(!empty($groupName) || !empty($facilityName))
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <strong>Group Name:</strong>
+            <span class="text-muted">{{ $groupName ?? 'N/A' }}</span>
+        </div>
+        <div class="col-md-6">
+            <strong>Facility:</strong>
+            <span class="text-muted">{{ $facilityName ?? 'N/A' }}</span>
+        </div>
+    </div>
+@endif
 
-<table class="table table-bordered table-hover">
+<table class="table table-bordered table-hover align-middle">
     <thead class="table-primary">
         <tr>
+            <th scope="col" style="width: 45px;">
+                <div class="form-check mb-0">
+                    <input type="checkbox" class="form-check-input" id="selectAllOts">
+                </div>
+            </th>
             <th>#</th>
             <th>Display Name</th>
             <th>Email</th>
             <th>Contact No</th>
-            <th>Counsellor Code</th>
         </tr>
     </thead>
     <tbody>
         @forelse($students as $index => $studentMap)
+            @php
+                $student = $studentMap->studentsMaster;
+            @endphp
             <tr>
+                <td>
+                    @if($student && $student->pk)
+                        <div class="form-check mb-0">
+                            <input
+                                type="checkbox"
+                                class="form-check-input student-select"
+                                value="{{ encrypt($student->pk) }}"
+                                data-email="{{ $student->email }}"
+                                data-phone="{{ $student->contact_no }}"
+                                data-name="{{ $student->display_name }}"
+                            >
+                        </div>
+                    @endif
+                </td>
                 <td>{{ $loop->iteration + ($students->currentPage() - 1) * $students->perPage() }}</td>
-                <td>{{ $studentMap->studentsMaster->display_name ?? 'N/A' }}</td>
-                <td>{{ $studentMap->studentsMaster->email ?? 'N/A' }}</td>
-                <td>{{ $studentMap->studentsMaster->contact_no ?? 'N/A' }}</td>
-                <td>{{ $studentMap->counsellor_code ?? 'N/A' }}</td>
+                <td>{{ $student->display_name ?? 'N/A' }}</td>
+                <td>{{ $student->email ?? 'N/A' }}</td>
+                <td>{{ $student->contact_no ?? 'N/A' }}</td>
             </tr>
         @empty
             <tr>
@@ -51,4 +83,4 @@
     </div>
 </div>
 
-<input type="hidden" name="groupMappingID" class="view-student" value="{{ encrypt($groupMappingPk) }}" data-id="{{ encrypt($groupMappingPk) }}">
+<input type="hidden" id="groupMappingEncryptedId" value="{{ encrypt($groupMappingPk) }}">
