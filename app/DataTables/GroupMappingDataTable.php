@@ -24,6 +24,9 @@ class GroupMappingDataTable extends DataTable
             ->addColumn('group_name', function ($row) {
                 return $row->group_name ?? '';
             })
+            ->addColumn('facility', function ($row) {
+                return $row->facility->venue_name ?? '-';
+            })
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
             ->addColumn('view_download', function ($row) {
                 $id = encrypt($row->pk);
@@ -96,7 +99,24 @@ class GroupMappingDataTable extends DataTable
 
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
-                ->with(['courseGroup', 'courseGroupType'])
+                ->with(['courseGroup', 'courseGroupType', 'facility'])
+                ->when($statusFilter === 'active' || empty($statusFilter), function ($query) use ($currentDate) {
+                    $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
+                        $courseQuery->where(function ($dateQuery) use ($currentDate) {
+                            $dateQuery->whereNull('start_year')
+                                ->orWhereDate('start_year', '<=', $currentDate);
+                        })->where(function ($dateQuery) use ($currentDate) {
+                            $dateQuery->whereNull('end_date')
+                                ->orWhereDate('end_date', '>=', $currentDate);
+                        });
+                    });
+                })
+                ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
+                    $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
+                        $courseQuery->whereNotNull('end_date')
+                            ->whereDate('end_date', '<', $currentDate);
+                    });
+                })
                 ->orderBy('pk', 'desc');
                 // <- check karo ki data aa raha hai ya nahi
 
@@ -149,6 +169,11 @@ public function html(): HtmlBuilder
                 ->title('Group Name')
                 ->addClass('text-center')
                 ->searchable(true),
+            Column::make('facility')
+                ->title('Facility')
+                ->addClass('text-center')
+                ->searchable(false)
+                ->orderable(false),
             Column::computed('student_count')
                 ->title('Student Count')
                 ->addClass('text-center')
