@@ -468,4 +468,28 @@ class FacultyController extends Controller
     {
         return Excel::download(new \App\Exports\FacultyExport(), 'faculty_list_'.time().'.xlsx');
     }
+	
+	//check existing record implemented by Dhananjay
+	public function checkUnique(Request $request)
+		{
+			$type = $request->type; // 'email' or 'mobile'
+			$value = $request->value;
+
+			$query = FacultyMaster::query();
+
+			if ($type === 'email') {
+				$exists = $query->where('email_id', $value)->exists();
+			} elseif ($type === 'mobile') {
+				$exists = $query->where('mobile_no', $value)->exists();
+			} else {
+				return response()->json(['status' => false, 'message' => 'Invalid type']);
+			}
+
+			return response()->json([
+				'status' => true,
+				'exists' => $exists,
+				'message' => $exists ? ucfirst($type) . ' already exists.' : ucfirst($type) . ' is available.'
+			]);
+		}
+		
 }

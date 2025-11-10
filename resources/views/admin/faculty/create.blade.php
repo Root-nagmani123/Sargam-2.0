@@ -239,7 +239,7 @@
                                 </div>
                                 
                             </div>
-                            <div class="col-md-6">
+                             <div class="col-md-6">
 
                                 <x-input
                                     name="email"
@@ -655,7 +655,45 @@
 
 @section('scripts')
 <script>
-    
-    
+$(document).ready(function () {
+
+    // Check Email
+    $('input[name="email"]').on('blur', function () {
+        let email = $(this).val();
+        if (email) {
+            checkUnique('email', email, $(this));
+        }
+    });
+
+    // Check Mobile
+    $('input[name="mobile"]').on('blur', function () {
+        let mobile = $(this).val();
+        if (mobile) {
+            checkUnique('mobile', mobile, $(this));
+        }
+    });
+
+    function checkUnique(type, value, inputElement) {
+        $.ajax({
+            url: "{{ route('faculty.checkUnique') }}",
+            method: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                type: type,
+                value: value
+            },
+            success: function (response) {
+                inputElement.next('.unique-error').remove(); // remove old messages
+                if (response.exists) {
+                    inputElement.after('<small class="text-danger unique-error">' + response.message + '</small>');
+                    inputElement.addClass('is-invalid');
+                } else {
+                    inputElement.after('<small class="text-success unique-error">' + response.message + '</small>');
+                    inputElement.removeClass('is-invalid');
+                }
+            }
+        });
+    }
+});
 </script>
 @endsection
