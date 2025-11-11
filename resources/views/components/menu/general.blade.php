@@ -60,11 +60,12 @@
                                             class="hide-menu">Course Group Mapping</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
+                                        <iconify-icon icon="solar:speaker-minimalistic-line-duotone"></iconify-icon>
                                         <span class="hide-menu">Subject Master</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('subject-module.index') }}">
-                                        <span
+                                        <iconify-icon icon="solar:widget-4-line-duotone"></iconify-icon><span
                                             class="hide-menu">Subject Module Master</span>
                                     </a></li>
                             </ul>
