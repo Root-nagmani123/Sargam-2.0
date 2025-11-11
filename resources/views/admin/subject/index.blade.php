@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Subject module" />
+    <x-breadcrum title="Subject Master" />
     <x-session_message />
     <div class="card dataTables_wrapper" id="alt_pagination_wrapper" style="border-left:4px solid #004a93;">
         <div class="card-body">
@@ -27,7 +27,6 @@
                             <th class="col">S.No.</th>
                             <th class="col">Major Subject Name</th>
                             <th class="col">Short Name</th>
-                            <th class="col">Subject Module</th>
                             <th class="col">Action</th>
                             <th class="col">Status</th>
                         </tr>
@@ -38,7 +37,6 @@
                             <td>{{ $key + 1 }}</td>
                             <td>{{ $subject->subject_name }}</td>
                             <td>{{ $subject->sub_short_name }}</td>
-                            <td>{{ $subject->module->module_name ?? 'N/A' }}</td>
                             <td>
                                 <div class="d-flex justify-content-start align-items-start gap-2">
                                     <a href="{{ route('subject.edit', $subject->pk) }}"
