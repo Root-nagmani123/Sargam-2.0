@@ -97,20 +97,29 @@ class GroupMappingDataTable extends DataTable
         $statusFilter = request('status_filter', 'active');
         $currentDate = Carbon::now()->format('Y-m-d');
 
-        return $model->newQuery()
+        $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
                 ->with(['courseGroup', 'courseGroupType', 'facility'])
+                // ->when($statusFilter === 'active' || empty($statusFilter), function ($query) use ($currentDate) {
+                //     $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
+                //         $courseQuery->where(function ($dateQuery) use ($currentDate) {
+                //             $dateQuery->whereNull('start_year')
+                //                 ->orWhereDate('start_year', '<=', $currentDate);
+                //         })->where(function ($dateQuery) use ($currentDate) {
+                //             $dateQuery->whereNull('end_date')
+                //                 ->orWhereDate('end_date', '>=', $currentDate);
+                //         });
+                //     });
+                // })
                 ->when($statusFilter === 'active' || empty($statusFilter), function ($query) use ($currentDate) {
                     $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
-                        $courseQuery->where(function ($dateQuery) use ($currentDate) {
-                            $dateQuery->whereNull('start_year')
-                                ->orWhereDate('start_year', '<=', $currentDate);
-                        })->where(function ($dateQuery) use ($currentDate) {
-                            $dateQuery->whereNull('end_date')
-                                ->orWhereDate('end_date', '>=', $currentDate);
+                        $courseQuery->where(function ($q) use ($currentDate) {
+                            $q->whereNull('end_date')              // end date NULL ho (kabhi khatam nahi)
+                              ->orWhereDate('end_date', '>=', $currentDate); // ya abhi ya future me active
                         });
                     });
                 })
+                
                 ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
                     $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
                         $courseQuery->whereNotNull('end_date')
@@ -118,6 +127,9 @@ class GroupMappingDataTable extends DataTable
                     });
                 })
                 ->orderBy('pk', 'desc');
+                // <- check karo ki data aa raha hai ya nahi
+
+        return $query;
     }
 
     public function html(): HtmlBuilder
