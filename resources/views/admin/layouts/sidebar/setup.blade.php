@@ -135,7 +135,7 @@
                  </div>
                  <div class="sidebarmenu">
                      <div class="brand-logo d-flex align-items-center nav-logo">
-                         <a href="#" class="text-nowrap logo-img">
+                         <a href="javascript:void(0)" class="text-nowrap logo-img">
                              <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Logo">
                          </a>
 
