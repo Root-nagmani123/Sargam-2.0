@@ -40,6 +40,238 @@
                                 <x-input name="middlename" label="Middle Name :" placeholder="Middle Name"
                                     formLabelClass="form-label" required="true" formInputClass="only-letters" />
 
+                                    
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+
+                                    <x-input
+                                        name="lastname"
+                                        label="Last Name :" 
+                                        placeholder="Last Name"
+                                        formLabelClass="form-label"
+                                        required="true"
+                                        labelRequired="true"
+                                        formInputClass="only-letters"
+                                        />
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+
+                                    <x-input
+                                        name="fullname"
+                                        label="Full Name :" 
+                                        placeholder="Full Name"
+                                        formLabelClass="form-label"
+                                        required="true"
+                                        />
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+
+                                    @php
+                                        $genderList = [
+
+                                            'male' => 'Male',
+                                            'female' => 'Female',
+                                            'other' => 'Other',
+                                        ];
+                                    @endphp
+                                    <x-select 
+                                        name="gender" 
+                                        label="Gender :" 
+                                        placeholder="Gender" 
+                                        formLabelClass="form-label" 
+                                        :options="$genderList" 
+                                        required="true"
+                                        labelRequired="true"
+                                        />
+                                        
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+
+                                    <x-input 
+                                        type="text" 
+                                        name="landline" 
+                                        label="Landline Number" 
+                                        placeholder="Landline Number" 
+                                        formLabelClass="form-label"
+                                        required="true"
+                                        labelRequired="true"
+                                        inputmode="numeric"
+                                        pattern="\d*"
+                                        formInputClass="only-numbers"
+                                        />
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <x-input 
+                                        type="text" 
+                                        name="mobile" 
+                                        label="Mobile Number :" 
+                                        placeholder="Mobile Number" 
+                                        formLabelClass="form-label"
+                                        required="true"
+                                        labelRequired="true"
+                                        inputmode="numeric"
+                                        pattern="\d*"
+                                        formInputClass="only-numbers"
+                                        />
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <x-select
+                                        name="country"
+                                        label="Country :"
+                                        placeholder="Country"
+                                        formLabelClass="form-label"
+                                        :options="$country" 
+                                        required="true"
+                                        labelRequired="true"
+                                        />
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+
+                                    <x-select
+                                        name="state"
+                                        label="State :"
+                                        placeholder="State"
+                                        formLabelClass="form-label"
+                                        {{-- :options="$state" --}}
+                                        required="true"
+                                        labelRequired="true"
+                                        />
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+
+                                    <x-select
+                                        name="district"
+                                        label="District :"
+                                        placeholder="District"
+                                        formLabelClass="form-label"
+                                        {{-- :options="$district" --}}
+                                        required="true"
+                                        />
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+
+                                    <x-select 
+                                        name="city"
+                                        label="City :"
+                                        placeholder="City"
+                                        formLabelClass="form-label"
+                                        {{-- :options="$city" --}}
+                                        required="true"
+                                        labelRequired="true"
+                                        />
+
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 d-none" id="otherCityContainer">
+                                <div class="mb-3">
+
+                                    <x-input 
+                                        name="other_city"
+                                        label="Other City :"
+                                        placeholder="Other City"
+                                        formLabelClass="form-label"
+                                        required="true"
+                                        value=""
+                                        />
+
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                <x-input
+                                    name="residence_address"
+                                    label="Residence Address :"
+                                    placeholder="Residence Address :"
+                                    formLabelClass="form-label"
+                                    />
+                                </div>
+                                
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                <x-input
+                                    name="permanent_address"
+                                    label="Permanent Address :"
+                                    placeholder="Permanent Address :"
+                                    formLabelClass="form-label"
+                                    />
+                                </div>
+                                
+                            </div>
+                             <div class="col-md-6">
+
+                                <x-input
+                                    name="email"
+                                    label="Email :"
+                                    placeholder="Email :"
+                                    formLabelClass="form-label"
+                                    labelRequired="true"
+                                    />
+                                
+                            </div>
+                            <div class="col-md-6">
+                                <x-input
+                                    name="alternativeEmail"
+                                    label="Alternate Email :"
+                                    placeholder="Alternate Email :"
+                                    formLabelClass="form-label"
+                                    
+                                    />
+                                
+                            </div>
+                            <div class="col-md-6 mt-3">
+                                <x-input 
+                                    type="file"
+                                    name="photo"
+                                    label="Photo Upload:"
+                                    placeholder="Photo Upload:"
+                                    formLabelClass="form-label"
+                                    labelRequired="true"
+                                    helperSmallText="Please upload a recent passport-sized photo"
+                                />
+
+                                <!-- Preview Container -->
+                                <div class="mt-2">
+                                    <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mt-3">
+
+                                <x-input 
+                                    type="file"
+                                    name="document"
+                                    label="Document upload :"
+                                    placeholder="Document upload :"
+                                    formLabelClass="form-label"
+                                    labelRequired="true"
+                                    helperSmallText="CV or any other supporting document"
+                                    />
 
                             </div>
                         </div>
@@ -420,9 +652,47 @@
 
     @endsection
 
-    @section('scripts')
-    <script>
+@section('scripts')
+<script>
+$(document).ready(function () {
 
+    // Check Email
+    $('input[name="email"]').on('blur', function () {
+        let email = $(this).val();
+        if (email) {
+            checkUnique('email', email, $(this));
+        }
+    });
 
-    </script>
-    @endsection
+    // Check Mobile
+    $('input[name="mobile"]').on('blur', function () {
+        let mobile = $(this).val();
+        if (mobile) {
+            checkUnique('mobile', mobile, $(this));
+        }
+    });
+
+    function checkUnique(type, value, inputElement) {
+        $.ajax({
+            url: "{{ route('faculty.checkUnique') }}",
+            method: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                type: type,
+                value: value
+            },
+            success: function (response) {
+                inputElement.next('.unique-error').remove(); // remove old messages
+                if (response.exists) {
+                    inputElement.after('<small class="text-danger unique-error">' + response.message + '</small>');
+                    inputElement.addClass('is-invalid');
+                } else {
+                    inputElement.after('<small class="text-success unique-error">' + response.message + '</small>');
+                    inputElement.removeClass('is-invalid');
+                }
+            }
+        });
+    }
+});
+</script>
+@endsection

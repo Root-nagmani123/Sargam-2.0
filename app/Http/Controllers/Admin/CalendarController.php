@@ -25,10 +25,11 @@ class CalendarController extends Controller
         $subjects = SubjectModuleMaster::where('active_inactive', 1)
             ->select('pk', 'module_name')
             ->get();
+            // print_r($subjects);die;
     
         $venueMaster = VenueMaster::where('active_inactive', 1)
             ->select('venue_id', 'venue_name')
-            ->get();
+            ->get(); 
     
         $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
             ->select('pk', 'shift_name','shift_time', 'start_time', 'end_time')

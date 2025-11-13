@@ -6,7 +6,7 @@
 
 <style>
 .readonly-checkbox {
-    pointer-events: none;
+    pointer-events: none; 
     opacity: 0.6;
 }
 
@@ -350,15 +350,15 @@
 <script>
 $(document).ready(function() {
     // Initialize Select2 for multiple select elements
-    $('.faculty-select').select2({
-        placeholder: "Select Faculty",
-        allowClear: true
-    });
+    // $('.faculty-select').select2({
+    //     placeholder: "Select Faculty",
+    //     allowClear: true
+    // });
     
-    $('.venue-select').select2({
-        placeholder: "Select Venue",
-        allowClear: true
-    });
+    // $('.venue-select').select2({
+    //     placeholder: "Select Venue",
+    //     allowClear: true
+    // });
     
     // Add first topic section on page load
     addTopicSection();
@@ -381,7 +381,7 @@ $(document).ready(function() {
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Subject Module Name <span class="text-danger">*</span></label>
-                            <select name="subject_module[]" class="form-control subject-module-select">
+                            <select name="subject_module" class="form-control subject-module-select" id="subject_module">
                                 <option value="">Select Subject Name</option>
                                 @foreach($subjects as $subject)
                                 <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
@@ -394,7 +394,7 @@ $(document).ready(function() {
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Subject Name <span class="text-danger">*</span></label>
-                            <select name="subject_name[]" class="form-control subject-name-select">
+                            <select name="subject_name" id="subject_name" class="form-control subject-name-select">
                                 <option value="">Select Subject Name</option>
                             </select>
                         </div>
@@ -402,7 +402,7 @@ $(document).ready(function() {
                     <div class="col-md-12">
                         <div class="mb-3">
                             <label class="form-label">Topic <span class="text-danger">*</span></label>
-                            <textarea name="topic[]" class="form-control" rows="3"></textarea>
+                            <textarea name="topic" id="topic" class="form-control" rows="3"></textarea>
                         </div>
                     </div>
                     
@@ -439,20 +439,20 @@ $(document).ready(function() {
                                 <div class="mb-3">
                                     <label class="form-label">Shift Type<span class="text-danger">*</span></label>
                                     <div>
-                                        <input type="radio" name="shift_type[${topicIndex}]" id="normalShift${topicIndex}" value="1" class="form-check-input" checked>
-                                        <label class="form-check-label" for="normalShift${topicIndex}">Normal Shift</label>
-                                        <input type="radio" name="shift_type[${topicIndex}]" id="manualShift${topicIndex}" value="2" class="form-check-input">
-                                        <label class="form-check-label" for="manualShift${topicIndex}">Manual Shift</label>
+                                        <input type="radio" name="shift_type" id="normalShift" value="1" class="form-check-input" checked>
+                                        <label class="form-check-label" for="normalShift">Normal Shift</label>
+                                        <input type="radio" name="shift_type" id="manualShift" value="2" class="form-check-input">
+                                        <label class="form-check-label" for="manualShift">Manual Shift</label>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-12" id="shiftSelect${topicIndex}">
+                            <div class="col-md-12" id="shiftSelect">
                                 <div class="mb-3">
                                     <label class="form-label">Shift <span class="text-danger">*</span></label>
-                                    <select name="shift[${topicIndex}]" class="form-control">
+                                    <select name="shift" class="form-control" id="shift">
                                         <option value="">Select Shift</option>
                                         @foreach($classSessionMaster as $shift)
                                         <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
@@ -461,21 +461,21 @@ $(document).ready(function() {
                                 </div>
                             </div>
                             
-                            <div class="col-md-12" id="manualShiftFields${topicIndex}" style="display: none;">
+                            <div class="col-md-12" id="manualShiftFields" style="display: none;">
                                 <div class="mb-3 form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox${topicIndex}" name="fullDayCheckbox[${topicIndex}]">
-                                    <label class="form-check-label" for="fullDayCheckbox${topicIndex}">Full Day</label>
+                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox" name="fullDayCheckbox">
+                                    <label class="form-check-label" for="fullDayCheckbox">Full Day</label>
                                 </div>
                                 
                                 <div id="dateTimeFields${topicIndex}">
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label for="start_time${topicIndex}" class="form-label">Start Time <span class="text-danger">*</span></label>
-                                            <input type="time" name="start_time[${topicIndex}]" id="start_time${topicIndex}" class="form-control">
+                                            <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
+                                            <input type="time" name="start_time" id="start_time" class="form-control">
                                         </div>
                                         <div class="col-md-6">
-                                            <label for="end_time${topicIndex}" class="form-label">End Time <span class="text-danger">*</span></label>
-                                            <input type="time" name="end_time[${topicIndex}]" id="end_time${topicIndex}" class="form-control">
+                                            <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
+                                            <input type="time" name="end_time" id="end_time" class="form-control">
                                         </div>
                                     </div>
                                 </div>
@@ -545,8 +545,8 @@ $(document).ready(function() {
         $('#topicsContainer').append(topicSection);
         
         // Initialize Select2 for new selects
-        $(`#topicSection${topicIndex} .subject-module-select`).select2();
-        $(`#topicSection${topicIndex} .subject-name-select`).select2();
+        // $(`#topicSection${topicIndex} .subject-module-select`).select2();
+        // $(`#topicSection${topicIndex} .subject-name-select`).select2();
         
         // Add first faculty and venue for this topic
         addFacultySection(topicIndex, 0);
@@ -568,7 +568,7 @@ $(document).ready(function() {
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Faculty <span class="text-danger">*</span></label>
-                            <select name="faculty[${topicIndex}][]" class="form-control faculty-select" multiple="multiple">
+                            <select name="faculty" id="faculty" class="form-control faculty-select" >
                                 <option value="">Select Faculty</option>
                                 @foreach($facultyMaster as $faculty)
                                 <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
@@ -581,7 +581,7 @@ $(document).ready(function() {
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
-                            <select name="faculty_type[${topicIndex}][]" class="form-control" multiple="multiple">
+                            <select name="faculty_type" class="form-control" id="faculty_type">
                                 <option value="">Select Faculty Type</option>
                                 <option value="1">Internal</option>
                                 <option value="2">Guest</option>
@@ -596,8 +596,8 @@ $(document).ready(function() {
         $(`#facultyContainer${topicIndex}`).append(facultySection);
         
         // Initialize Select2 for new selects
-        $(`#facultySection${topicIndex}_${facultyIndex} .faculty-select`).select2();
-        $(`#facultySection${topicIndex}_${facultyIndex} select[name="faculty_type[${topicIndex}][]"]`).select2();
+        // $(`#facultySection${topicIndex}_${facultyIndex} .faculty-select`).select2();
+        // $(`#facultySection${topicIndex}_${facultyIndex} select[name="faculty_type[]"]`).select2();
     }
     
     // Function to add a venue section
@@ -612,7 +612,7 @@ $(document).ready(function() {
                     <div class="col-md-12">
                         <div class="mb-3">
                             <label class="form-label">Location <span class="text-danger">*</span></label>
-                            <select name="vanue[${topicIndex}][]" class="form-control venue-select" multiple="multiple">
+                            <select name="vanue" class="form-control venue-select" id="vanue">
                                 <option value="">Select Location</option>
                                 @foreach($venueMaster as $loc)
                                 <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
@@ -627,7 +627,7 @@ $(document).ready(function() {
         $(`#venueContainer${topicIndex}`).append(venueSection);
         
         // Initialize Select2 for new selects
-        $(`#venueSection${topicIndex}_${venueIndex} .venue-select`).select2();
+        // $(`#venueSection${topicIndex}_${venueIndex} .venue-select`).select2();
     }
     
     // Function to set up event handlers for a topic
@@ -801,6 +801,7 @@ $(document).ready(function() {
                     }
 
                     $('#group_type').off('change').on('change', function() {
+                        console.log('Group type changed first');
                         const selectedType = $(this).val();
                         let html = '';
                         let groupNames = window.selectedGroupNames;
@@ -835,47 +836,48 @@ $(document).ready(function() {
             });
         } else {
             $('#group_type').empty().append('<option value="">Select Group Type</option>');
+               console.log('Group type changed 2');
             $('#type_name_container').html('');
         }
     });
 
     // Form submission handler
-    $('#eventForm').on('submit', function(e) {
-        e.preventDefault();
+    // $('#eventForm').on('submit', function(e) {
+    //     e.preventDefault();
         
-        // Validate form
-        if (!validateForm()) {
-            return false;
-        }
+    //     // Validate form
+    //     if (!validateForm()) {
+    //         return false;
+    //     }
         
-        // Prepare form data
-        let formData = new FormData(this);
+    //     // Prepare form data
+    //     let formData = new FormData(this);
         
-        // Add group type names
-        $('input[name="type_names[]"]:checked').each(function() {
-            formData.append('group_type_name[]', $(this).val());
-        });
+    //     // Add group type names
+    //     $('input[name="type_names"]:checked').each(function() {
+    //         formData.append('group_type_name[]', $(this).val());
+    //     });
         
-        // Submit form via AJAX
-        $.ajax({
-            url: "{{ route('calendar.event.store') }}",
-            method: "POST",
-            data: $(this).serialize(),
-            success: function(response) {
-                alert("Event created successfully!");
-                $('#eventModal').modal('hide');
-                $('#eventForm')[0].reset();
-                window.location.reload();
-            },
-            error: function(xhr) {
-                if (xhr.status === 422) {
-                    let errors = xhr.responseJSON.errors;
-                    let messages = Object.values(errors).map(val => val.join('\n')).join('\n');
-                    alert("Server Validation Failed:\n\n" + messages);
-                }
-            }
-        });
-    });
+    //     // Submit form via AJAX
+    //     $.ajax({
+    //         url: "{{ route('calendar.event.store') }}",
+    //         method: "POST",
+    //         data: $(this).serialize(),
+    //         success: function(response) {
+    //             alert("Event created successfully!");
+    //             $('#eventModal').modal('hide');
+    //             $('#eventForm')[0].reset();
+    //             // window.location.reload();
+    //         },
+    //         error: function(xhr) {
+    //             if (xhr.status === 422) {
+    //                 let errors = xhr.responseJSON.errors;
+    //                 let messages = Object.values(errors).map(val => val.join('\n')).join('\n');
+    //                 alert("Server Validation Failed:\n\n" + messages);
+    //             }
+    //         }
+    //     });
+    // });
     
     // Form validation function
     function validateForm() {
@@ -902,7 +904,7 @@ $(document).ready(function() {
             const topicIndex = index;
             const subjectModule = $(this).find('.subject-module-select').val();
             const subjectName = $(this).find('.subject-name-select').val();
-            const topic = $(this).find('textarea[name="topic[]"]').val();
+            const topic = $(this).find('textarea[name="topic"]').val();
             
             if (!subjectModule) {
                 alert(`Please select a Subject Module for Topic ${topicIndex + 1}.`);
@@ -972,20 +974,20 @@ $(document).ready(function() {
             });
             
             // Validate shift for this topic
-            const shiftType = $(this).find(`input[name="shift_type[${topicIndex}]"]:checked`).val();
+            const shiftType = $(this).find(`input[name="shift_type"]:checked`).val();
             
             if (!shiftType) {
-                alert(`Please select a Shift Type for Topic ${topicIndex + 1}.`);
+                alert(`Please select a Shift Type for Topic}.`);
                 isValid = false;
                 return false;
             }
             
             if (shiftType == 1) {
                 // Normal shift
-                const shift = $(this).find(`select[name="shift[${topicIndex}]"]`).val();
+                const shift = $(this).find(`select[name="shift"]`).val();
                 if (!shift) {
                     alert(`Please select a Shift for Topic ${topicIndex + 1}.`);
-                    $(this).find(`select[name="shift[${topicIndex}]"]`).focus();
+                    $(this).find(`select[name="shift"]`).focus();
                     isValid = false;
                     return false;
                 }
@@ -1163,6 +1165,7 @@ $(document).ready(function() {
                         groupedData[item.group_type_name].push(
                             item);
                     });
+                       console.log('Group type changed 3');
 
                     // Step 2: Fill the dropdown with unique group_type_name
                     $('#group_type').empty().append(
@@ -1179,6 +1182,7 @@ $(document).ready(function() {
                     }
 
                     $('#group_type').off('change').on('change', function() {
+                           console.log('Group type changed 4');
                         const selectedType = $(this).val();
                         let html = '';
                         let groupNames = window.selectedGroupNames;
@@ -1214,6 +1218,7 @@ $(document).ready(function() {
             });
         } else {
             $('#group_type').empty().append(
+                   console.log('Group type changed 5');
                 '<option value="">Select Group Type</option>');
             $('#type_name_container').html('');
         }
@@ -1258,11 +1263,11 @@ $('#eventForm').on('submit', function(e) {
         $('#subject_name').focus();
         return false;
     }
-    if (!subjectModule) {
-        alert("Please select a Subject Module.");
-        $('#subject_module').focus();
-        return false;
-    }
+    // if (!subjectModule) {
+    //     alert("Please select a Subject Module.");
+    //     $('#subject_module').focus();
+    //     return false;
+    // }
     if (!topic) {
         alert("Please Enter topic.");
         $('#topic').focus();

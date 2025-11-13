@@ -6,7 +6,8 @@
 <div class="container-fluid">
 
     <x-breadcrum title="Faculty" />
-    <x-session_message />
+    <!--<x-session_message />-->
+    <div id="status-msg"></div>
 
     <div class="datatables">
         <!-- start Zero Configuration -->
