@@ -276,9 +276,9 @@
                             <div class="col-md-12">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h5>Topics</h5>
-                                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-more" id="addTopicBtn">
+                                    <!-- <button type="button" class="btn btn-sm btn-outline-primary btn-add-more" id="addTopicBtn">
                                         <i class="bi bi-plus"></i> Add Topic
-                                    </button>
+                                    </button> -->
                                 </div>
                                 <div id="topicsContainer">
                                     <!-- Topic sections will be added here dynamically -->
@@ -558,77 +558,90 @@ $(document).ready(function() {
     
     // Function to add a faculty section
     function addFacultySection(topicIndex, facultyIndex) {
-        const facultySection = `
-            <div class="faculty-section" id="facultySection${topicIndex}_${facultyIndex}">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6>Faculty ${facultyIndex + 1}</h6>
-                    ${facultyIndex > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger remove-faculty" data-topic-index="${topicIndex}" data-faculty-index="${facultyIndex}"><i class="bi bi-trash"></i> Remove</button>' : ''}
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Faculty <span class="text-danger">*</span></label>
-                            <select name="faculty" id="faculty" class="form-control faculty-select" >
-                                <option value="">Select Faculty</option>
-                                @foreach($facultyMaster as $faculty)
-                                <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                    {{ $faculty->full_name }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
+    console.log(topicIndex, facultyIndex); // e.g. 0 1
+    const facultySection = `
+        <div class="faculty-section" id="facultySection${topicIndex}_${facultyIndex}">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6>Faculty ${facultyIndex + 1}</h6>
+                ${facultyIndex > 0 
+                    ? `<button type="button" class="btn btn-sm btn-outline-danger remove-faculty" 
+                          data-topic-index="${topicIndex}" 
+                          data-faculty-index="${facultyIndex}">
+                          <i class="bi bi-trash"></i> Remove
+                       </button>` 
+                    : ''
+                }
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Faculty <span class="text-danger">*</span></label>
+                        <select name="faculty" id="faculty" class="form-control faculty-select">
+                            <option value="">Select Faculty</option>
+                            @foreach($facultyMaster as $faculty)
+                            <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                {{ $faculty->full_name }}
+                            </option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
-                            <select name="faculty_type" class="form-control" id="faculty_type">
-                                <option value="">Select Faculty Type</option>
-                                <option value="1">Internal</option>
-                                <option value="2">Guest</option>
-                                <option value="3">Research</option>
-                            </select>
-                        </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
+                        <select name="faculty_type" class="form-control" id="faculty_type">
+                            <option value="">Select Faculty Type</option>
+                            <option value="1">Internal</option>
+                            <option value="2">Guest</option>
+                            <option value="3">Research</option>
+                        </select>
                     </div>
                 </div>
             </div>
-        `;
-        
-        $(`#facultyContainer${topicIndex}`).append(facultySection);
-        
-        // Initialize Select2 for new selects
-        // $(`#facultySection${topicIndex}_${facultyIndex} .faculty-select`).select2();
-        // $(`#facultySection${topicIndex}_${facultyIndex} select[name="faculty_type[]"]`).select2();
-    }
+        </div>
+    `;
+    
+    $(`#facultyContainer${topicIndex}`).append(facultySection);
+}
+
     
     // Function to add a venue section
-    function addVenueSection(topicIndex, venueIndex) {
-        const venueSection = `
-            <div class="venue-section" id="venueSection${topicIndex}_${venueIndex}">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6>Venue ${venueIndex + 1}</h6>
-                    ${venueIndex > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger remove-venue" data-topic-index="${topicIndex}" data-venue-index="${venueIndex}"><i class="bi bi-trash"></i> Remove</button>' : ''}
-                </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <label class="form-label">Location <span class="text-danger">*</span></label>
-                            <select name="vanue" class="form-control venue-select" id="vanue">
-                                <option value="">Select Location</option>
-                                @foreach($venueMaster as $loc)
-                                <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+   function addVenueSection(topicIndex, venueIndex) {
+    const venueSection = `
+        <div class="venue-section" id="venueSection${topicIndex}_${venueIndex}">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6>Venue ${venueIndex + 1}</h6>
+                ${venueIndex > 0 
+                    ? `<button type="button" class="btn btn-sm btn-outline-danger remove-venue" 
+                          data-topic-index="${topicIndex}" 
+                          data-venue-index="${venueIndex}">
+                          <i class="bi bi-trash"></i> Remove
+                       </button>` 
+                    : ''
+                }
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="mb-3">
+                        <label class="form-label">Location <span class="text-danger">*</span></label>
+                        <select name="venue" class="form-control venue-select" id="venue${topicIndex}_${venueIndex}">
+                            <option value="">Select Location</option>
+                            @foreach($venueMaster as $loc)
+                            <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
             </div>
-        `;
-        
-        $(`#venueContainer${topicIndex}`).append(venueSection);
-        
-        // Initialize Select2 for new selects
-        // $(`#venueSection${topicIndex}_${venueIndex} .venue-select`).select2();
-    }
+        </div>
+    `;
+    
+    $(`#venueContainer${topicIndex}`).append(venueSection);
+
+    // Initialize Select2 if needed
+    // $(`#venueSection${topicIndex}_${venueIndex} .venue-select`).select2();
+}
+
     
     // Function to set up event handlers for a topic
     function setupTopicEventHandlers(topicIndex) {
@@ -696,11 +709,13 @@ $(document).ready(function() {
     });
     
     // Remove faculty handler
-    $(document).on('click', '.remove-faculty', function() {
-        const topicIndex = $(this).data('topic-index');
-        const facultyIndex = $(this).data('faculty-index');
-        $(`#facultySection${topicIndex}_${facultyIndex}`).remove();
-    });
+   $(document).on('click', '.remove-faculty', function() {
+    const topicIndex = $(this).data('topic-index');
+    const facultyIndex = $(this).data('faculty-index');
+    console.log(topicIndex, facultyIndex);
+    $(`#facultySection${topicIndex}_${facultyIndex}`).remove();
+});
+
     
     // Remove venue handler
     $(document).on('click', '.remove-venue', function() {
