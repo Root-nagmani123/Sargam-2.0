@@ -40,13 +40,17 @@ class FacultyDataTable extends DataTable
             ->addColumn('mobile_number', function($row) {
                 return $row->mobile_no ?? '';
             })
-            ->addColumn('designation', function($row) {
-                return $row->designation ?? '';
-            })
+            // ->addColumn('designation', function($row) {
+            //     return $row->designation ?? '';
+            // })
             ->addColumn('current_sector', function($row) {
-                return match((int)$row->current_sector) {
+                $sector = $row->faculty_sector ?? $row->current_sector;
+                $sector = empty($sector) ? 1 : (int)$sector;
+
+                return match($sector) {
                     1 => '<span class="badge bg-success">Government</span>',
-                    default => '<span class="badge bg-danger">Private</span>',
+                    2 => '<span class="badge bg-danger">Private</span>',
+                    default => '<span class="badge bg-success">Government</span>',
                 };
 
             })
@@ -151,11 +155,11 @@ class FacultyDataTable extends DataTable
                 ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
-            Column::make('designation')
-                ->title('Designation')
-                ->addClass('text-center')
-                ->searchable(false)
-                ->orderable(false),
+            // Column::make('designation')
+            //     ->title('Designation')
+            //     ->addClass('text-center')
+            //     ->searchable(false)
+            //     ->orderable(false),
             Column::make('current_sector')
                 ->title('Current Sector')
                 ->addClass('text-center')

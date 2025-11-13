@@ -77,7 +77,7 @@
                                         :options="$years"
                                         required="true"
                                         helperSmallText="Select the year of passing"
-                                        value="{{ $qualification->Year_of_passing }}"
+                                        value="{{ $qualification->Year_of_passing ?? '' }}"
                                     />
             </div>
             <div class="col-3">
