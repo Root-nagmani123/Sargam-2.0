@@ -50,7 +50,7 @@ class CalendarController extends Controller
 
     // Change the field name accordingly (assuming subject_module_master.pk = $dataId)
    $modules = SubjectMaster::where('active_inactive', 1)
-                              ->where('subject_module_master_pk', $dataId)
+                            //   ->where('subject_module_master_pk', $dataId)
                               ->get();
 
 
