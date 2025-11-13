@@ -624,7 +624,7 @@ $(document).ready(function() {
                 <div class="col-md-12">
                     <div class="mb-3">
                         <label class="form-label">Location <span class="text-danger">*</span></label>
-                        <select name="venue" class="form-control venue-select" id="venue${topicIndex}_${venueIndex}">
+                        <select name="vanue" class="form-control venue-select" id="vanue">
                             <option value="">Select Location</option>
                             @foreach($venueMaster as $loc)
                             <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
