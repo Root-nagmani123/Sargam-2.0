@@ -1,17 +1,90 @@
-<!--  Header Start -->
+<!-- 🌟 Header Start -->
+<style>
+    /* --- Navbar Styling --- */
+    .navbar-nav .nav-link {
+        color: #333;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+    .navbar-nav .nav-link:hover,
+    .navbar-nav .nav-link:focus {
+        background-color: #f2f2f2;
+        color: #000;
+        outline: none;
+    }
+
+    .navbar-nav .nav-link.active {
+        background-color: #c62828;
+        color: #fff !important;
+    }
+
+    .navbar-nav {
+        background-color: #f9f9f9;
+        border-radius: 50rem;
+    }
+
+    .btn-link {
+        text-decoration: none !important;
+    }
+
+    .btn-link:hover {
+        opacity: 0.8;
+    }
+
+    @media (max-width: 991.98px) {
+        .navbar-nav {
+            border-radius: 0.5rem;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .navbar-nav .nav-link {
+            width: 100%;
+            border-radius: 0.5rem;
+        }
+    }
+
+    /* --- Search Animation --- */
+    .search-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+
+    .search-box {
+        position: absolute;
+        top: 50%;
+        left: 120%;
+        transform: translateY(-50%) scale(0.95);
+        opacity: 0;
+        display: none;
+        min-width: 220px;
+        transition: all 0.3s ease;
+        z-index: 1050;
+    }
+
+    .search-box.show {
+        display: block !important;
+        opacity: 1;
+        transform: translateY(-50%) scale(1);
+    }
+
+    .input-group-sm .form-control {
+        border-radius: 50rem 0 0 50rem;
+    }
+
+    .input-group-sm .btn {
+        border-radius: 0 50rem 50rem 0;
+    }
+</style>
+
 <header class="topbar">
     <div class="with-vertical">
-
-        <!-- ---------------------------------- -->
-        <!-- Start Vertical Layout Header -->
-        <!-- ---------------------------------- -->
         <nav class="navbar navbar-expand-lg p-0">
-
-
-
             <ul class="navbar-nav">
                 <li class="nav-item d-flex d-xl-none">
-                    <a class="nav-link nav-icon-hover-bg rounded-circle  sidebartoggler " id="headerCollapse"
+                    <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
                         href="javascript:void(0)">
                         <iconify-icon icon="solar:hamburger-menu-line-duotone" class="fs-6"></iconify-icon>
                     </a>
@@ -19,105 +92,108 @@
             </ul>
 
             <div class="d-block d-lg-none py-9 py-xl-0">
-                <img src="{{asset('admin_assets/images/logos/logo.svg')}}" alt="sargam-img">
+                <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo">
             </div>
-            <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" href="javascript:void(0)"
-                data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
-                aria-label="Toggle navigation">
+
+            <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
+                data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <iconify-icon icon="solar:menu-dots-bold-duotone" class="fs-6"></iconify-icon>
             </a>
+
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-
-                <div class="d-flex align-items-center justify-content-between">
-                    <ul class="navbar-nav flex-row mx-auto ms-lg-auto align-items-center justify-content-center">
+                <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
+                    <ul class="navbar-nav rounded-pill bg-light shadow-sm px-3 py-1 gap-1">
+                        <li class="nav-item"><a href="#" class="nav-link active rounded-pill px-4 py-1 fw-semibold">Home</a></li>
+                        <li class="nav-item"><a href="#tab-setup" class="nav-link rounded-pill px-3 py-1 fw-semibold">Setup</a></li>
+                        <li class="nav-item"><a href="#tab-communications" class="nav-link rounded-pill px-3 py-1 fw-semibold">Communications</a></li>
+                        <li class="nav-item"><a href="#tab-academics" class="nav-link rounded-pill px-3 py-1 fw-semibold">Academics</a></li>
+                        <li class="nav-item"><a href="#tab-material-management" class="nav-link rounded-pill px-3 py-1 fw-semibold">Material Management</a></li>
                         <li class="nav-item dropdown">
-                            <a href="javascript:void(0)"
-                                class="nav-link nav-icon-hover-bg rounded-circle d-flex d-lg-none align-items-center justify-content-center"
-                                type="button" data-bs-toggle="offcanvas" data-bs-target="#mobilenavbar"
-                                aria-controls="offcanvasWithBothOptions">
-                                <iconify-icon icon="solar:sort-line-duotone" class="fs-6"></iconify-icon>
-                            </a>
+                            <a class="nav-link dropdown-toggle rounded-pill px-3 py-1 fw-semibold" href="#"
+                                id="financialDropdown" data-bs-toggle="dropdown" aria-expanded="false">Financial</a>
+                            <ul class="dropdown-menu" aria-labelledby="financialDropdown">
+                                <li><a class="dropdown-item" href="#">Budget</a></li>
+                                <li><a class="dropdown-item" href="#">Accounts</a></li>
+                            </ul>
                         </li>
-
-
-                        <!-- ------------------------------- -->
-                        <!-- start profile Dropdown -->
-                        <!-- ------------------------------- -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link" href="javascript:void(0)" id="drop1" aria-expanded="false">
-                                <div class="d-flex align-items-center gap-2 lh-base">
-                                    <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
-                                        class="rounded-circle" width="35" height="35" alt="matdash-img">
-                                    <iconify-icon icon="solar:alt-arrow-down-bold" class="fs-2"></iconify-icon>
-                                </div>
-                            </a>
-                            <div class="dropdown-menu profile-dropdown dropdown-menu-end dropdown-menu-animate-up"
-                                aria-labelledby="drop1">
-                                <div class="position-relative px-4 pt-3 pb-2">
-                                    <div class="d-flex align-items-center mb-3 pb-3 border-bottom gap-6">
-                                        <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
-                                            class="rounded-circle" width="56" height="56" alt="matdash-img">
-                                        <div>
-                                            <h5 class="mb-0 fs-12">Admin</h5>
-                                            <p class="mb-0 text-dark">
-                                                admin@gmail.com
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div class="message-body">
-                                        <a href="#" class="p-2 dropdown-item h6 rounded-1">
-                                            My Profile
-                                        </a>
-                                        <form action="{{route('logout')}}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="p-2 dropdown-item h6 rounded-1">
-                                                Sign Out
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                        </li>
-                        <!-- ------------------------------- -->
-                        <!-- end profile Dropdown -->
-                        <!-- ------------------------------- -->
                     </ul>
+                </div>
+
+                <div class="d-flex align-items-center ms-auto gap-3">
+                    <!-- 🔍 Search Button + Expandable Input -->
+                    <div class="search-wrapper">
+                        <button class="btn btn-link p-0 text-dark" id="searchToggleBtn" aria-label="Search">
+                            <i class="bi bi-search fs-5"></i>
+                        </button>
+
+                        <div id="searchContainer" class="search-box">
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="tableSearchInput" class="form-control" placeholder="Search..."
+                                    aria-label="Search in table">
+                                <button class="btn btn-outline-secondary" id="closeSearchBtn" aria-label="Close Search">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 🔐 Logout -->
+                    <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-link p-0 text-danger" aria-label="Sign Out">
+                            <iconify-icon icon="solar:login-3-outline" class="fs-7"></iconify-icon>
+                        </button>
+                    </form>
+
+                    <!-- ⏰ Last Login -->
+                    <div class="text-end small text-muted lh-sm">
+                        <div>Last login:</div>
+                        <time datetime="2025-05-14T13:56:02">2025-05-14 13:56:02</time>
+                    </div>
                 </div>
             </div>
         </nav>
-        <!-- ---------------------------------- -->
-        <!-- End Vertical Layout Header -->
-        <!-- ---------------------------------- -->
     </div>
 </header>
-<!--  Header End -->
+
+<!-- 🧠 Search Toggle Script -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.tab-item').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('searchToggleBtn');
+    const searchBox = document.getElementById('searchContainer');
+    const closeBtn = document.getElementById('closeSearchBtn');
+    const searchInput = document.getElementById('tableSearchInput');
 
-            // Remove active class from all tab items
-            document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove(
-                'active'));
+    // Open/close search
+    toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        searchBox.classList.toggle('show');
+        if (searchBox.classList.contains('show')) {
+            searchInput.focus();
+        } else {
+            searchInput.value = '';
+        }
+    });
 
-            // Add active class to clicked tab
-            this.classList.add('active');
+    // Close via X button
+    closeBtn.addEventListener('click', () => {
+        searchBox.classList.remove('show');
+        searchInput.value = '';
+    });
 
-            // Remove active class and hide all tab panes
-            document.querySelectorAll('.tab-pane').forEach(pane => {
-                pane.classList.remove('active');
-                pane.classList.add('d-none');
-            });
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+            searchBox.classList.remove('show');
+        }
+    });
 
-            // Show and activate the target content pane
-            const target = this.getAttribute('data-tab');
-            const targetPane = document.getElementById('tab-' + target);
-            if (targetPane) {
-                targetPane.classList.remove('d-none');
-                targetPane.classList.add('active');
-            }
-        });
+    // Close on ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            searchBox.classList.remove('show');
+        }
     });
 });
 </script>
+<!-- 🌟 Header End -->

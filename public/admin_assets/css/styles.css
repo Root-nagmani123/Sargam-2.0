@@ -13545,7 +13545,7 @@
     --bs-success-rgb: 54, 199, 108;
     --bs-info-rgb: 70, 202, 235;
     --bs-warning-rgb: 248, 194, 10;
-    --bs-danger-rgb: 255, 102, 146;
+    --bs-danger-rgb: 175, 41, 16;
     --bs-light-rgb: 239, 244, 250;
     --bs-dark-rgb: 10, 37, 64;
     --bs-muted-rgb: 82, 107, 122;
@@ -13668,7 +13668,7 @@
     --bs-success-bg-subtle: rgba(54, 199, 108, 0.2);
     --bs-info-bg-subtle: rgba(70, 202, 235, 0.2);
     --bs-warning-bg-subtle: rgba(248, 194, 10, 0.2);
-    --bs-danger-bg-subtle: rgba(255, 102, 146, 0.2);
+    --bs-danger-bg-subtle: rgba(175, 41, 16, 0.2);
     --bs-light-bg-subtle: rgba(239, 244, 250, 0.2);
     --bs-dark-bg-subtle: rgba(10, 37, 64, 0.2);
     --bs-primary-border-subtle: #3b3799;
@@ -17159,7 +17159,7 @@ fieldset:disabled .btn {
     --bs-btn-hover-color: #fff;
     --bs-btn-hover-bg: #ff6692;
     --bs-btn-hover-border-color: #ff6692;
-    --bs-btn-focus-shadow-rgb: 255, 102, 146;
+    --bs-btn-focus-shadow-rgb: 175, 41, 16;
     --bs-btn-active-color: #fff;
     --bs-btn-active-bg: #ff6692;
     --bs-btn-active-border-color: #ff6692;
@@ -30938,7 +30938,7 @@ ul {
     html[data-layout="vertical"]
         body[data-sidebartype="mini-sidebar"]
         .page-wrapper {
-        margin-left: 80px;
+        margin-left: 50px;
     }
 }
 
