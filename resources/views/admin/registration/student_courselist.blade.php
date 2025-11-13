@@ -4,18 +4,11 @@
 
 @section('content')
     <div class="container-fluid">
-
-        {{-- Header --}}
-        <div class="card card-body py-3 mb-3">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <h4 class="mb-0">Student - Course Mapping</h4>
-                </div>
-            </div>
-        </div>
+        <x-breadcrum title="Student - Course Mapping" />
+    <x-session_message />
 
         {{-- Filters + Counts + Export --}}
-        <div class="card mb-3 p-3">
+        <div class="card mb-3 p-3" style="border-left: 4px solid #004a93;">
             <div class="row align-items-end g-3">
 
                 <!-- Course Filter -->
@@ -79,7 +72,7 @@
         </div>
 
         {{-- Data Table --}}
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
                     <table id="zero_config" class="table table-striped table-bordered text-nowrap align-middle">
