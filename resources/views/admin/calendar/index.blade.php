@@ -605,8 +605,7 @@ $(document).ready(function() {
 }
 function getShiftSection(topicIndex, facultyIndex) {
     return `
-        
-        
+        <div class="shift-section" id="shiftSection${topicIndex}_${facultyIndex}">
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
@@ -615,15 +614,13 @@ function getShiftSection(topicIndex, facultyIndex) {
                             <input type="radio" name="shift_type_${topicIndex}_${facultyIndex}" 
                                    value="1" class="form-check-input normalShift" checked>
                             <label class="form-check-label">Normal Shift</label>
-
                             <input type="radio" name="shift_type_${topicIndex}_${facultyIndex}"
                                    value="2" class="form-check-input manualShift">
                             <label class="form-check-label">Manual Shift</label>
                         </div>
                     </div>
                 </div>
-            
-
+            </div>
             <div id="shiftBox_${topicIndex}_${facultyIndex}">
                 <div class="mb-3">
                     <label class="form-label">Shift <span class="text-danger">*</span></label>
@@ -635,14 +632,12 @@ function getShiftSection(topicIndex, facultyIndex) {
                     </select>
                 </div>
             </div>
-
             <div id="manualShiftFields_${topicIndex}_${facultyIndex}" style="display:none;">
                 <div class="mb-3 form-check">
                     <input class="form-check-input fullDay" type="checkbox" value="1" 
                            name="full_day_${topicIndex}_${facultyIndex}">
                     <label class="form-check-label">Full Day</label>
                 </div>
-
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Start Time</label>
@@ -656,8 +651,7 @@ function getShiftSection(topicIndex, facultyIndex) {
                     </div>
                 </div>
             </div>
-            </div>
-
+        </div>
     `;
 }
 
@@ -732,10 +726,9 @@ function getShiftSection(topicIndex, facultyIndex) {
     const topicIndex = $(this).data('topic-index');
     const facultyIndex = $(this).data('faculty-index');
     console.log(topicIndex, facultyIndex);
+
     $(`#facultySection${topicIndex}_${facultyIndex}`).remove();
-    
-    // $(`#shiftSection${topicIndex}_${facultyIndex}`).remove();
-    $(`#shiftSection0_1`).remove();
+    $(`#shiftSection${topicIndex}_${facultyIndex}`).remove();
     
 });
 
