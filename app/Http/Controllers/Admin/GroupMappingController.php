@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, FacultyMaster, StudentMaster};
+use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, VenueMaster};
 use App\Exports\GroupMappingExport;
 use App\DataTables\GroupMappingDataTable;
 use Carbon\Carbon;
@@ -189,19 +190,34 @@ class GroupMappingController extends Controller
         try {
             $groupMappingID = decrypt($request->groupMappingID);
             $groupMapping = GroupTypeMasterCourseMasterMap::with(['facility', 'courseGroup'])->findOrFail($groupMappingID);
-
-            $students = StudentCourseGroupMap::with('studentsMaster:pk,display_name,email,contact_no')
+            
+            // Get the course ID from the group mapping
+            $courseId = $groupMapping->course_name;
+            
+            // Filter students by:
+            // 1. Group mapping (group_type_master_course_master_map_pk)
+            // 2. Course enrollment (via StudentMasterCourseMap - students must be enrolled in the course)
+            $students = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
-                ->whereHas('studentsMaster')
+                ->whereHas('studentsMaster', function($query) use ($courseId) {
+                    $query->whereExists(function($subQuery) use ($courseId) {
+                        $subQuery->select(DB::raw(1))
+                                 ->from('student_master_course__map')
+                                 ->whereColumn('student_master_course__map.student_master_pk', 'student_master.pk')
+                                 ->where('student_master_course__map.course_master_pk', $courseId)
+                                 ->where('student_master_course__map.active_inactive', 1);
+                    });
+                })
                 ->paginate(10, ['*'], 'page', $request->page);
-
+            
+            // Render the HTML partial
             $groupMappingPk = $groupMapping->pk;
             $courseName = $groupMapping->courseGroup->course_name ?? 'N/A';
             $html = view('admin.group_mapping.student_list_ajax', [
                 'students' => $students,
                 'groupMappingPk' => $groupMappingPk,
                 'groupName' => $groupMapping->group_name,
-                'facilityName' => optional($groupMapping->facility)->full_name,
+                'facilityName' => optional($groupMapping->facility)->venue_name,
                 'courseName' => $courseName,
             ])->render();
 
