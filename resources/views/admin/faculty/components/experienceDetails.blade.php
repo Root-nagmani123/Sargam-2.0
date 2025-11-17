@@ -9,27 +9,27 @@
             <div class="row mb-3 experience_group">
                 <div class="col-3">
                     <x-input name="experience[]" label="Years of Experience :" placeholder="Years of Experience"
-                        formLabelClass="form-label" required="true" value="{{ $experience->Years_Of_Experience }}" />
+                        formLabelClass="form-label"  value="{{ $experience->Years_Of_Experience }}" />
                 </div>
                 <div class="col-3">
                     <x-input name="specialization[]" label="Area of Specialization :" placeholder="Area of Specialization"
-                        formLabelClass="form-label" required="true" value="{{ $experience->Specialization }}" />
+                        formLabelClass="form-label"  value="{{ $experience->Specialization }}" />
                 </div>
                 <div class="col-3">
                     <x-input name="institution[]" label="Previous Institutions :" placeholder="Previous Institutions"
-                        formLabelClass="form-label" required="true" value="{{ $experience->pre_Institutions }}" />
+                        formLabelClass="form-label"  value="{{ $experience->pre_Institutions }}" />
                 </div>
                 <div class="col-3">
                     <x-input name="position[]" label="Position Held :" placeholder="Position Held" formLabelClass="form-label"
-                        required="true" value="{{ $experience->Position_hold }}" />
+                         value="{{ $experience->Position_hold }}" />
                 </div>
                 <div class="col-3 mt-3">
                     <x-input type="number" name="duration[]" label="Duration :" placeholder="Duration"
-                        formLabelClass="form-label" min="0" required="true" value="{{ $experience->duration }}" />
+                        formLabelClass="form-label" min="0"  value="{{ $experience->duration }}" />
                 </div>
                 <div class="col-3 mt-3">
                     <x-input name="work[]" label="Nature of Work :" placeholder="Nature of Work" formLabelClass="form-label"
-                        required="true" value="{{ $experience->Nature_of_Work }}" />
+                         value="{{ $experience->Nature_of_Work }}" />
                 </div>
             </div>
         @endforeach
@@ -37,30 +37,30 @@
         <div class="row" id="experience_fields">
             <div class="col-3">
                 <x-input name="experience[]" label="Years of Experience :" placeholder="Years of Experience"
-                    formLabelClass="form-label" required="true" />
+                    formLabelClass="form-label"  />
             </div>
             <div class="col-3">
 
                 <x-input name="specialization[]" label="Area of Specialization :" placeholder="Area of Specialization"
-                    formLabelClass="form-label" required="true" />
+                    formLabelClass="form-label"  />
 
             </div>
             <div class="col-3">
                 <x-input name="institution[]" label="Previous Institutions :" placeholder="Previous Institutions"
-                    formLabelClass="form-label" required="true" />
+                    formLabelClass="form-label"  />
             </div>
             <div class="col-3">
                 <x-input name="position[]" label="Position Held :" placeholder="Position Held" formLabelClass="form-label"
-                    required="true" />
+                     />
 
             </div>
             <div class="col-3 mt-3">
                 <x-input type="number" name="duration[]" label="Duration :" placeholder="Duration"
-                    formLabelClass="form-label" min="0" required="true" />
+                    formLabelClass="form-label" min="0"  />
             </div>
             <div class="col-3 mt-3">
                 <x-input name="work[]" label="Nature of Work :" placeholder="Nature of Work" formLabelClass="form-label"
-                    required="true" />
+                     />
             </div>
             <div class="col-6">
 

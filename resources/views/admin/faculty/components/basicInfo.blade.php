@@ -13,7 +13,7 @@
                 label="Faculty Type :" 
                 formLabelClass="form-label"
                 :options="$facultyTypeList"
-                required="true"
+                
                 value="{{ $faculty->faculty_type }}"
                 />
         </div>
@@ -26,7 +26,7 @@
                 placeholder="First Name" 
                 formLabelClass="form-label"
                 value="{{ $faculty->first_name }}"
-                required="true"
+                
                 formInputClass="only-letters"
                 />
         </div>
@@ -39,7 +39,7 @@
                 label="Middle Name :" 
                 placeholder="Middle Name"
                 formLabelClass="form-label"
-                required="true"
+                
                 value="{{ $faculty->middle_name }}"
                 formInputClass="only-letters"
                 />
@@ -55,7 +55,7 @@
                 label="Last Name :" 
                 placeholder="Last Name"
                 formLabelClass="form-label"
-                required="true"
+                
                 value="{{ $faculty->last_name }}"
                 formInputClass="only-letters"
                 />
@@ -70,7 +70,7 @@
                 label="Full Name :" 
                 placeholder="Full Name"
                 formLabelClass="form-label"
-                required="true"
+                
                 value="{{ $faculty->full_name }}"
                 />
 
@@ -93,7 +93,7 @@
                 placeholder="Gender" 
                 formLabelClass="form-label" 
                 :options="$genderList" 
-                required="true"
+                
                 value="{{ $faculty->gender }}"
                 />
                 
@@ -108,7 +108,7 @@
                 label="Landline Number" 
                 placeholder="Landline Number" 
                 formLabelClass="form-label"
-                required="true"
+                
                 value="{{ $faculty->landline_no }}"
                 formInputClass="only-numbers"
                 />
@@ -123,7 +123,7 @@
                 label="Mobile Number :" 
                 placeholder="Mobile Number" 
                 formLabelClass="form-label"
-                required="true"
+                
                 value="{{ $faculty->mobile_no }}"
                 formInputClass="only-numbers"
                 />
@@ -137,7 +137,7 @@
                 placeholder="Country"
                 formLabelClass="form-label"
                 :options="$country" 
-                required="true"
+                
                 value="{{ $faculty->country_master_pk }}"
                 />
 
@@ -152,7 +152,7 @@
                 placeholder="State"
                 formLabelClass="form-label"
                 :options="$state"
-                required="true"
+                
                 value="{{ $faculty->state_master_pk }}"
                 />
 
@@ -167,7 +167,7 @@
                 placeholder="District"
                 formLabelClass="form-label"
                 :options="$district"
-                required="true"
+                
                 value="{{ $faculty->state_district_mapping_pk }}"
                 />
 
@@ -182,7 +182,7 @@
                 placeholder="City"
                 formLabelClass="form-label"
                 :options="$city"
-                required="true"
+                
                 value="{{ $faculty->city_master_pk }}"
                 />
 
@@ -196,7 +196,7 @@
                 label="Other City :"
                 placeholder="Other City"
                 formLabelClass="form-label"
-                required="true"
+                
                 value=""
                 />
 
@@ -233,7 +233,7 @@
             label="Photo upload :"
             placeholder="Photo upload :"
             formLabelClass="form-label"
-            labelRequired="true"
+            label
             helperSmallText="Please upload a recent passport-sized photo"
             />
         
