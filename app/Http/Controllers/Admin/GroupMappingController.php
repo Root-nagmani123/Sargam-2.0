@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, VenueMaster};
+use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, VenueMaster};
 use App\Exports\GroupMappingExport;
 use App\DataTables\GroupMappingDataTable;
 use Carbon\Carbon;
@@ -171,6 +172,7 @@ class GroupMappingController extends Controller
 
     /**
      * Fetch and return a paginated list of students for a specific group mapping.
+     * Filters students by both group mapping and course enrollment.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -179,18 +181,36 @@ class GroupMappingController extends Controller
     {
         try {
             $groupMappingID = decrypt($request->groupMappingID);
-            $groupMapping = GroupTypeMasterCourseMasterMap::with('facility')->findOrFail($groupMappingID);
-            // Apply pagination
+            $groupMapping = GroupTypeMasterCourseMasterMap::with(['facility', 'courseGroup'])->findOrFail($groupMappingID);
+            
+            // Get the course ID from the group mapping
+            $courseId = $groupMapping->course_name;
+            
+            // Filter students by:
+            // 1. Group mapping (group_type_master_course_master_map_pk)
+            // 2. Course enrollment (via StudentMasterCourseMap - students must be enrolled in the course)
             $students = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
+                ->whereHas('studentsMaster', function($query) use ($courseId) {
+                    $query->whereExists(function($subQuery) use ($courseId) {
+                        $subQuery->select(DB::raw(1))
+                                 ->from('student_master_course__map')
+                                 ->whereColumn('student_master_course__map.student_master_pk', 'student_master.pk')
+                                 ->where('student_master_course__map.course_master_pk', $courseId)
+                                 ->where('student_master_course__map.active_inactive', 1);
+                    });
+                })
                 ->paginate(10, ['*'], 'page', $request->page);
+            
             // Render the HTML partial
             $groupMappingPk = $groupMapping->pk;
+            $courseName = $groupMapping->courseGroup->course_name ?? 'N/A';
             $html = view('admin.group_mapping.student_list_ajax', [
                 'students' => $students,
                 'groupMappingPk' => $groupMappingPk,
                 'groupName' => $groupMapping->group_name,
                 'facilityName' => optional($groupMapping->facility)->venue_name,
+                'courseName' => $courseName,
             ])->render();
 
             return response()->json([
