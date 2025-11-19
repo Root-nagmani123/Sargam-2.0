@@ -44,104 +44,139 @@
         <x-breadcrum title="MDO Escrot Exemption" />
         <x-session_message />
         <!-- start Vertical Steps Example -->
-        <div class="card">
-            <div class="card-body">
-                <h4 class="card-title mb-3">
-                    {{ !empty($mdoDutyType) ? 'Edit MDO Escrot Exemption' : 'Create MDO Escrot Exemption' }}
-                </h4>
-                <hr>
-                <form action="{{ route('mdo-escrot-exemption.store') }}" method="POST" id="mdoDutyTypeForm">
-                    @csrf
-                    @if(!empty($mdoDutyType))
-                        <input type="hidden" name="id" value="{{ encrypt($mdoDutyType->pk) }}">
-                    @endif
-                    <div class="row">
+        <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
+    <div class="card-body p-4">
 
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <x-select name="course_master_pk" label="Course Name :" formLabelClass="form-label"
-                                    formSelectClass="select2 course-selected" :options="$courseMaster" labelRequired="true"
-                                    value="{{ old('course_master_pk', $mdoDutyType->course_master_pk ?? '') }}" />
-                            </div>
-                        </div>
+        <h4 class="fw-bold mb-2">
+            {{ !empty($mdoDutyType) ? 'Edit MDO Escort Exemption' : 'Create MDO Escort Exemption' }}
+        </h4>
+        <p class="text-muted mb-4 small">
+            Please fill in the required fields. Fields marked with <span class="text-danger">*</span> are mandatory.
+        </p>
 
-                        <div class="col-md-6">
-                            <div class="mb-3">
+        <form action="{{ route('mdo-escrot-exemption.store') }}" method="POST" id="mdoDutyTypeForm" novalidate>
+            @csrf
 
-                                <x-select name="mdo_duty_type_master_pk" label="Duty Type :" formLabelClass="form-label"
-                                    formSelectClass="select2 "
-                                    value="{{ old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '') }}"
-                                    :options="$MDODutyTypeMaster" labelRequired="true" />
-                            </div>
+            @if(!empty($mdoDutyType))
+                <input type="hidden" name="id" value="{{ encrypt($mdoDutyType->pk) }}">
+            @endif
 
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <x-input type="date" name="mdo_date" label="Select Date & Time :"
-                                    placeholder="Select Date & Time : " formLabelClass="form-label"
-                                    value="{{ old('mdo_date', $mdoDutyType->mdo_date ?? '') }}" labelRequired="true" />
-                            </div>
-                        </div>
+            <div class="row g-4">
 
-                        <div class="col-md-3">
+                <!-- Course Name -->
+                <div class="col-md-6">
+                    <x-select 
+                        name="course_master_pk" 
+                        label="Course Name" 
+                        formLabelClass="form-label fw-semibold"
+                        formSelectClass="form-select select2"
+                        :options="$courseMaster"
+                        labelRequired="true"
+                        value="{{ old('course_master_pk', $mdoDutyType->course_master_pk ?? '') }}"
+                    />
+                    <small class="text-muted">Select the course for which exemption is being created.</small>
+                </div>
 
-                            <x-input type="time" name="Time_from" label="From Time :" placeholder="From Time : "
-                                formLabelClass="form-label" labelRequired="true"
-                                value="{{ old('Time_from', $mdoDutyType->Time_from ?? '') }}" />
+                <!-- Duty Type -->
+                <div class="col-md-6">
+                    <x-select 
+                        name="mdo_duty_type_master_pk" 
+                        label="Duty Type" 
+                        formLabelClass="form-label fw-semibold"
+                        formSelectClass="form-select select2"
+                        :options="$MDODutyTypeMaster"
+                        labelRequired="true"
+                        value="{{ old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '') }}"
+                    />
+                </div>
 
-                        </div>
-                        <div class="col-md-3">
+                <!-- Date -->
+                <div class="col-md-6">
+                    <x-input 
+                        type="date" 
+                        name="mdo_date" 
+                        label="Select Date"
+                        formLabelClass="form-label fw-semibold"
+                        labelRequired="true"
+                        value="{{ old('mdo_date', $mdoDutyType->mdo_date ?? '') }}"
+                    />
+                </div>
 
-                            <x-input type="time" name="Time_to" label="To Time :" placeholder="To Time : "
-                                formLabelClass="form-label" labelRequired="true"
-                                value="{{ old('Time_to', $mdoDutyType->Time_to ?? '') }}" />
+                <!-- Time From -->
+                <div class="col-md-3">
+                    <x-input 
+                        type="time" 
+                        name="Time_from" 
+                        label="From Time"
+                        formLabelClass="form-label fw-semibold"
+                        labelRequired="true"
+                        value="{{ old('Time_from', $mdoDutyType->Time_from ?? '') }}"
+                    />
+                </div>
 
-                        </div>
+                <!-- Time To -->
+                <div class="col-md-3">
+                    <x-input 
+                        type="time" 
+                        name="Time_to" 
+                        label="To Time"
+                        formLabelClass="form-label fw-semibold"
+                        labelRequired="true"
+                        value="{{ old('Time_to', $mdoDutyType->Time_to ?? '') }}"
+                    />
+                </div>
 
-                        <div class="col-md-12">
-                            <label for="selected_student_list" class="form-label">Select Students</label>
-                            <select id="select" class="select1 form-control" name="selected_student_list[]" multiple>
+                <!-- Student List -->
+                <div class="col-md-12">
+                    <label for="select" class="form-label fw-semibold">
+                        Select Students <span class="text-danger">*</span>
+                    </label>
 
-                            </select>
-                            @error('selected_student_list')
-                                <span class="text-danger">{{ $message }}</span>
-                            @enderror
-                        </div>
+                    <select id="select" class="form-select select2" name="selected_student_list[]" multiple
+                        data-placeholder="Choose one or more students">
+                    </select>
 
-                        <div class="col-md-12 mt-4">
-                            <label for="textarea" class="form-label">Remarks (If Any) </label>
-                            <textarea class="form-control" id="textarea" rows="3" placeholder="Enter remarks..."
-                                name="Remark"></textarea>
-                            @error('Remark')
-                                <span class="text-danger">{{ $message }}</span>
-                            @enderror
-                        </div>
-                    </div>
-                    <hr>
-                    {{-- <div class="my-3 gap-2 d-flex justify-content-end">
-                        <button class="btn btn-primary" type="submit" id="saveFacultyForm">
-                            Save
-                        </button>
-                        <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn btn-secondary ">
-                            Back
-                        </a>
-                    </div> --}}
+                    @error('selected_student_list')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
 
-                    <div class="mb-3">
-                        <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                            <i class="material-icons menu-icon">save</i>
-                            Save
-                        </button>
-                        <a href="{{ route('mdo-escrot-exemption.index') }}"
-                            class="btn btn-secondary hstack gap-6 float-end me-2">
-                            <i class="material-icons menu-icon">arrow_back</i>
-                            Back
-                        </a>
-                    </div>
+                    <small class="text-muted">Select multiple students by holding CTRL (Windows) or CMD (Mac).</small>
+                </div>
 
-                </form>
+                <!-- Remarks -->
+                <div class="col-md-12">
+                    <label for="textarea" class="form-label fw-semibold">Remarks (Optional)</label>
+                    <textarea class="form-control" id="textarea" rows="3" 
+                        placeholder="Enter any additional remarks..."
+                        name="Remark">{{ old('Remark', $mdoDutyType->Remark ?? '') }}</textarea>
+
+                    @error('Remark')
+                        <small class="text-danger">{{ $message }}</small>
+                    @enderror
+                </div>
+
             </div>
-        </div>
+
+            <hr class="mt-4">
+
+            <!-- Buttons -->
+            <div class="d-flex justify-content-end gap-2">
+
+                <a href="{{ route('mdo-escrot-exemption.index') }}" 
+                   class="btn btn-light border px-4">
+                    Back
+                </a>
+
+                <button class="btn btn-primary px-4" type="submit">
+                    Save Details
+                </button>
+
+            </div>
+
+        </form>
+    </div>
+</div>
+
         <!-- end Vertical Steps Example -->
     </div>
 @endsection

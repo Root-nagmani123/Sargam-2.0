@@ -62,8 +62,34 @@ class MDODutyTypeMasterDataTable extends DataTable
                     ->minifiedAjax()
                     // ->orderBy(1)
                     ->parameters([
-                        'order' => [],
-                    ])
+    'order' => [],
+    'paging' => true,
+    'info' => true,               // show record count
+    'searching' => false,
+    'lengthChange' => true,       // dropdown: 10, 25, 50
+    'pageLength' => 10,           // default rows per page
+
+    // REQUIRED for Bootstrap 5 pagination styling
+    'dom' => '<"row mb-3"
+                    <"col-sm-6"l>
+                    <"col-sm-6 text-end"f>
+              >
+              rt
+              <"row mt-3"
+                    <"col-sm-6"i>
+                    <"col-sm-6 text-end"p>
+              >',
+
+    'language' => [
+        'paginate' => [
+            'previous' => '<i class="bi bi-chevron-left"></i>',
+            'next'     => '<i class="bi bi-chevron-right"></i>',
+        ],
+        'lengthMenu' => 'Show _MENU_ entries',
+        'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
+    ],
+])
+
                     ->selectStyleSingle()
                     ->buttons([
                         Button::make('excel'),
@@ -83,10 +109,11 @@ class MDODutyTypeMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('pk')->title('ID')->addClass('text-center')->orderable(false),
+            Column::make('pk')->title('S.No')->addClass('text-center')->orderable(false),
             Column::make('mdo_duty_type_name')->title('Duty Type Name')->addClass('text-center')->orderable(false),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
+            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false),
+            
         ];
     }
 

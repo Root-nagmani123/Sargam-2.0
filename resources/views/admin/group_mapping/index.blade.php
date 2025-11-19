@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Course Group Name Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Course Group Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
 <style>
@@ -44,7 +44,7 @@
 </style>
 <div class="container-fluid">
 
-    <x-breadcrum title="Course Group Name Mapping" />
+    <x-breadcrum title="Course Group Mapping" />
     <x-session_message />
 
     <div class="datatables">
@@ -53,7 +53,7 @@
                 <div class="table-responsive">
                     <div class="row mb-3">
                         <div class="col-6">
-                            <h4>Course Group Name Mapping</h4>
+                            <h4>Course Group Mapping</h4>
                         </div>
                         <div class="col-6 d-flex justify-content-end gap-2">
                             <a href="{{ route('group.mapping.create') }}"

@@ -9,7 +9,7 @@
         <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Edit Major Subject</h4>
+                    <h4 class="mb-4 mb-sm-0 card-title">Edit Subject</h4>
                     <nav aria-label="breadcrumb" class="ms-auto">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item d-flex align-items-center">

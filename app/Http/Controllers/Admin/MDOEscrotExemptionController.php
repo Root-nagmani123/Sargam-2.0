@@ -13,7 +13,8 @@ class MDOEscrotExemptionController extends Controller
 {
     public function index(MDOEscrotExemptionDataTable $dataTable)
     {
-        return $dataTable->render('admin.mdo_escrot_exemption.index');
+        $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
+        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('MDODutyTypeMaster'));
     }
 
     public function create()
