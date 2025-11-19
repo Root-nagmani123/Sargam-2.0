@@ -8,9 +8,6 @@
     <x-breadcrum title="Faculty" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}"
-    data-index-url="{{ route('faculty.index') }}" style="border-left: 4px solid #004a93;">
-    <div class="card-body"> --}}
 
         <form class="facultyForm">
             <div class="card" style="border-left: 4px solid #004a93;">
@@ -312,7 +309,6 @@
                     </div>
                 </div>
             </div>
-    </div>
 
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
@@ -536,8 +532,6 @@
     </div>
 
     </form>
-    {{-- </div>
-    </div> --}}
     <!-- end Vertical Steps Example -->
 </div>
 

@@ -25,7 +25,7 @@
                     <thead>
                         <tr>
                             <th class="col">S.No.</th>
-                            <th class="col">Major Subject Name</th>
+                            <th class="col">Subject Name</th>
                             <th class="col">Short Name</th>
                             <th class="col">Action</th>
                             <th class="col">Status</th>

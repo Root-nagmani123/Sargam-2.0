@@ -467,10 +467,10 @@ $(document).ready(function() {
     // Add first topic section on page load
     addTopicSection();
     
-    // Add topic button click handler
-    $('#addTopicBtn').on('click', function() {
-        addTopicSection();
-    });
+    // Topic button removed - only one topic allowed per current backend
+    // $('#addTopicBtn').on('click', function() {
+    //     addTopicSection();
+    // });
     
     // Function to add a new topic section
     function addTopicSection() {
@@ -528,9 +528,7 @@ $(document).ready(function() {
                             <legend class="h6 mb-3">
                                 <i class="bi bi-people-fill text-primary" aria-hidden="true"></i> Faculty
                             </legend>
-                            <button type="button" class="btn btn-sm btn-outline-primary btn-add-more add-faculty-btn mb-3" data-topic-index="${topicIndex}" aria-label="Add faculty member">
-                                <i class="bi bi-plus-circle" aria-hidden="true"></i> Add Faculty
-                            </button>
+                            <!-- Multiple faculty temporarily disabled - backend supports single faculty only -->
                             <div class="faculty-container" id="facultyContainer${topicIndex}" role="list" aria-label="Faculty members">
                                 <!-- Faculty sections will be added here dynamically -->
                             </div>
@@ -546,6 +544,7 @@ $(document).ready(function() {
                             <legend class="h6 mb-3">
                                 <i class="bi bi-geo-alt-fill text-primary" aria-hidden="true"></i> Venue
                             </legend>
+                            <!-- Multiple venues temporarily disabled - backend supports single venue only -->
                             <div class="venue-container" id="venueContainer${topicIndex}" role="list" aria-label="Event venues">
                                 <!-- Venue sections will be added here dynamically -->
                             </div>
@@ -563,8 +562,8 @@ $(document).ready(function() {
                                 <div class="col-md-3 mb-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" value="1"
-                                            name="feedback_checkbox" id="feedback_checkbox_${topicIndex}" checked>
-                                        <label class="form-check-label" for="feedback_checkbox_${topicIndex}">
+                                            name="feedback_checkbox" id="feedback_checkbox" checked>
+                                        <label class="form-check-label" for="feedback_checkbox">
                                             <i class="bi bi-chat-dots" aria-hidden="true"></i> Feedback
                                         </label>
                                     </div>
@@ -572,8 +571,8 @@ $(document).ready(function() {
                                 <div class="col-md-3 mb-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" value="1"
-                                            name="remarkCheckbox" id="remarkCheckbox_${topicIndex}">
-                                        <label class="form-check-label" for="remarkCheckbox_${topicIndex}">
+                                            name="remarkCheckbox" id="remarkCheckbox">
+                                        <label class="form-check-label" for="remarkCheckbox">
                                             <i class="bi bi-pencil-square" aria-hidden="true"></i> Remark
                                         </label>
                                     </div>
@@ -581,8 +580,8 @@ $(document).ready(function() {
                                 <div class="col-md-3 mb-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" value="1"
-                                            name="ratingCheckbox" id="ratingCheckbox_${topicIndex}">
-                                        <label class="form-check-label" for="ratingCheckbox_${topicIndex}">
+                                            name="ratingCheckbox" id="ratingCheckbox">
+                                        <label class="form-check-label" for="ratingCheckbox">
                                             <i class="bi bi-star" aria-hidden="true"></i> Rating
                                         </label>
                                     </div>
@@ -590,8 +589,8 @@ $(document).ready(function() {
                                 <div class="col-md-3 mb-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" value="1"
-                                            name="bio_attendanceCheckbox" id="bio_attendanceCheckbox_${topicIndex}">
-                                        <label class="form-check-label" for="bio_attendanceCheckbox_${topicIndex}">
+                                            name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
+                                        <label class="form-check-label" for="bio_attendanceCheckbox">
                                             <i class="bi bi-fingerprint" aria-hidden="true"></i> Bio Attendance
                                         </label>
                                     </div>
@@ -724,7 +723,7 @@ $(document).ready(function() {
 }
 function getShiftSection(topicIndex, facultyIndex) {
     return `
-        <div class="shift-section border rounded p-3 mb-3 bg-light" id="shiftSection${topicIndex}_${facultyIndex}">
+        <div class="shift-section border rounded p-3 mb-3 bg-light" id="shiftSection">
             <fieldset class="border-0">
                 <legend class="h6 mb-3">
                     <i class="bi bi-clock text-primary" aria-hidden="true"></i> Shift Configuration
@@ -738,18 +737,18 @@ function getShiftSection(topicIndex, facultyIndex) {
                             </label>
                             <div class="d-flex gap-3">
                                 <div class="form-check">
-                                    <input type="radio" name="shift_type_${topicIndex}_${facultyIndex}" 
+                                    <input type="radio" name="shift_type" 
                                            value="1" class="form-check-input normalShift" 
-                                           id="normalShift_${topicIndex}_${facultyIndex}" checked>
-                                    <label class="form-check-label" for="normalShift_${topicIndex}_${facultyIndex}">
+                                           id="normalShift" checked>
+                                    <label class="form-check-label" for="normalShift">
                                         <i class="bi bi-calendar-check" aria-hidden="true"></i> Normal Shift
                                     </label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="radio" name="shift_type_${topicIndex}_${facultyIndex}"
+                                    <input type="radio" name="shift_type"
                                            value="2" class="form-check-input manualShift"
-                                           id="manualShift_${topicIndex}_${facultyIndex}">
-                                    <label class="form-check-label" for="manualShift_${topicIndex}_${facultyIndex}">
+                                           id="manualShift">
+                                    <label class="form-check-label" for="manualShift">
                                         <i class="bi bi-pencil" aria-hidden="true"></i> Manual Shift
                                     </label>
                                 </div>
@@ -757,13 +756,13 @@ function getShiftSection(topicIndex, facultyIndex) {
                         </div>
                     </div>
                 </div>
-                <div id="shiftBox_${topicIndex}_${facultyIndex}">
+                <div id="shiftBox">
                     <div class="mb-3">
-                        <label for="shift_${topicIndex}_${facultyIndex}" class="form-label">
+                        <label for="shift" class="form-label">
                             Shift 
                             <span class="text-danger" aria-label="required">*</span>
                         </label>
-                        <select name="shift_${topicIndex}_${facultyIndex}" id="shift_${topicIndex}_${facultyIndex}" class="form-select" aria-required="true">
+                        <select name="shift" id="shift" class="form-select" aria-required="true">
                             <option value="">Select Shift</option>
                             @foreach($classSessionMaster as $shift)
                             <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
@@ -771,34 +770,34 @@ function getShiftSection(topicIndex, facultyIndex) {
                         </select>
                     </div>
                 </div>
-                <div id="manualShiftFields_${topicIndex}_${facultyIndex}" style="display:none;">
+                <div id="manualShiftFields" style="display:none;">
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input fullDay" type="checkbox" value="1" 
-                                   name="full_day_${topicIndex}_${facultyIndex}" 
-                                   id="fullDay_${topicIndex}_${facultyIndex}">
-                            <label class="form-check-label" for="fullDay_${topicIndex}_${facultyIndex}">
+                                   name="fullDayCheckbox" 
+                                   id="fullDayCheckbox">
+                            <label class="form-check-label" for="fullDayCheckbox">
                                 <i class="bi bi-calendar2-range" aria-hidden="true"></i> Full Day (8:00 AM - 8:00 PM)
                             </label>
                         </div>
                     </div>
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label for="start_time_${topicIndex}_${facultyIndex}" class="form-label">
+                            <label for="start_time" class="form-label">
                                 <i class="bi bi-clock-history" aria-hidden="true"></i> Start Time
                             </label>
                             <input type="time" class="form-control" 
-                                   id="start_time_${topicIndex}_${facultyIndex}"
-                                   name="start_time_${topicIndex}_${facultyIndex}"
+                                   id="start_time"
+                                   name="start_time"
                                    aria-label="Event start time">
                         </div>
                         <div class="col-md-6">
-                            <label for="end_time_${topicIndex}_${facultyIndex}" class="form-label">
+                            <label for="end_time" class="form-label">
                                 <i class="bi bi-clock" aria-hidden="true"></i> End Time
                             </label>
                             <input type="time" class="form-control" 
-                                   id="end_time_${topicIndex}_${facultyIndex}"
-                                   name="end_time_${topicIndex}_${facultyIndex}"
+                                   id="end_time"
+                                   name="end_time"
                                    aria-label="Event end time">
                         </div>
                     </div>
@@ -834,38 +833,38 @@ function getShiftSection(topicIndex, facultyIndex) {
         });
         
         // Shift type change handler
-        $(`input[name="shift_type[${topicIndex}]"]`).on('change', function() {
-            if ($(`#manualShift${topicIndex}`).is(':checked')) {
-                $(`#shiftSelect${topicIndex}`).hide();
-                $(`#manualShiftFields${topicIndex}`).show();
+        $(document).on('change', 'input[name="shift_type"]', function() {
+            if ($('#manualShift').is(':checked')) {
+                $('#shiftBox').hide();
+                $('#manualShiftFields').show();
             } else {
-                $(`#shiftSelect${topicIndex}`).show();
-                $(`#manualShiftFields${topicIndex}`).hide();
+                $('#shiftBox').show();
+                $('#manualShiftFields').hide();
             }
         });
         
         // Full day checkbox handler
-        $(`#fullDayCheckbox${topicIndex}`).on('change', function() {
+        $(document).on('change', '#fullDayCheckbox', function() {
             if ($(this).is(':checked')) {
-                $(`#start_time${topicIndex}`).val('08:00');
-                $(`#end_time${topicIndex}`).val('20:00');
+                $('#start_time').val('08:00');
+                $('#end_time').val('20:00');
             } else {
-                $(`#start_time${topicIndex}`).val('');
-                $(`#end_time${topicIndex}`).val('');
+                $('#start_time').val('');
+                $('#end_time').val('');
             }
         });
         
-        // Add faculty button handler
-        $(`#topicSection${topicIndex} .add-faculty-btn`).on('click', function() {
-            const facultyIndex = $(`#facultyContainer${topicIndex} .faculty-section`).length;
-            addFacultySection(topicIndex, facultyIndex);
-        });
+        // Add faculty button handler - disabled for now (backend supports single faculty only)
+        // $(`#topicSection${topicIndex} .add-faculty-btn`).on('click', function() {
+        //     const facultyIndex = $(`#facultyContainer${topicIndex} .faculty-section`).length;
+        //     addFacultySection(topicIndex, facultyIndex);
+        // });
         
-        // Add venue button handler
-        $(`#topicSection${topicIndex} .add-venue-btn`).on('click', function() {
-            const venueIndex = $(`#venueContainer${topicIndex} .venue-section`).length;
-            addVenueSection(topicIndex, venueIndex);
-        });
+        // Add venue button handler - disabled for now (backend supports single venue only)
+        // $(`#topicSection${topicIndex} .add-venue-btn`).on('click', function() {
+        //     const venueIndex = $(`#venueContainer${topicIndex} .venue-section`).length;
+        //     addVenueSection(topicIndex, venueIndex);
+        // });
     }
     
     // Remove topic handler
@@ -1426,116 +1425,123 @@ $('#eventForm').on('submit', function(e) {
     e.preventDefault();
 
     let isValid = true;
-    let errorMsg = "";
     const courseName = $('#Course_name').val();
-    const subjectName = $('#subject_name').val();
-    const subjectModule = $('#subject_module').val();
-    const faculty = $('#faculty').val();
-    const facultyType = $('#faculty_type').val();
-    const vanue = $('#vanue').val();
-    const shift_type = $('[name="shift_type"]').val();
-
-
-    const topic = $('#topic').val();
+    const groupType = $('#group_type').val();
+    
+    // Basic validations
     if (!courseName) {
         alert("Please select a Course Name.");
         $('#Course_name').focus();
         return false;
     }
-    if (!subjectName) {
-        alert("Please select a Subject Name.");
-        $('#subject_name').focus();
+    
+    if (!groupType) {
+        alert("Please select a Group Type.");
+        $('#group_type').focus();
         return false;
     }
-    // if (!subjectModule) {
-    //     alert("Please select a Subject Module.");
-    //     $('#subject_module').focus();
-    //     return false;
-    // }
-    if (!topic) {
-        alert("Please Enter topic.");
-        $('#topic').focus();
+    
+    // Check if at least one group type name is checked
+    if ($('input[name="type_names[]"]:checked').length === 0) {
+        alert("Please select at least one Group Type Name.");
         return false;
     }
-    if (!faculty) {
-        alert("Please select a Faculty.");
-        $('#faculty').focus();
-        return false;
-    }
-    if (!facultyType) {
-        alert("Please select Faculty Type.");
-        $('#faculty_type').focus();
-        return false;
-    }
-    if (!vanue) {
-        alert("Please select a Venue.");
-        $('#vanue').focus();
-        return false;
-    }
-
-
-    if (!shift_type) {
-        alert("Please select a shift.");
-        $('[name="shift_type"]').focus();
-        return false;
-    }
-    // Shift type specific validations
-    if ($('#normalShift').is(':checked')) {
-        const shift = $('#shift').val();
-        if (!shift) {
-            $('#shift').addClass('is-invalid');
-            $('#shift').next('.text-danger').text("Please select a Shift..");
-            isValid = false;
-        }
-    } else if ($('#manualShift').is(':checked')) {
-        const startTime = $('#start_time').val();
-        const endTime = $('#end_time').val();
-
-        if (!startTime) {
-            $('#start_time').addClass('is-invalid');
-            $('#start_time').next('.text-danger').text("Start Time is required.");
-            isValid = false;
-        }
-        if (!endTime) {
-            $('#end_time').addClass('is-invalid');
-            $('#end_time').next('.text-danger').text("End Time is required.");
-            isValid = false;
-        }
-    }
-    if ($('#feedback_checkbox').is(':checked')) {
-        if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
-            alert("Please select at least Remark or Rating when Feedback is checked.");
-            $('#remarkCheckbox').focus();
+    
+    // Validate each topic section
+    let topicValid = true;
+    $('.topic-section').each(function(index) {
+        const topicIndex = index;
+        const subjectModule = $(this).find('.subject-module-select').val();
+        const subjectName = $(this).find('.subject-name-select').val();
+        const topic = $(this).find('textarea[name="topic"]').val();
+        
+        if (!subjectModule) {
+            alert(`Please select Subject Module for Topic ${topicIndex + 1}.`);
+            topicValid = false;
             return false;
         }
-    }
-
-   if ($('#fullDayCheckbox').is(':checked')) {
-
-    let start_date = $('#start_datetime').val(); // format: "YYYY-MM-DD"
-    let start_time = $('#start_time').val();     // format: "HH:MM"
-
-    if (start_date && start_time) {
-        // Combine date and time into one Date object
-        let selectedDateTime = new Date(start_date + 'T' + start_time + ':00');
-
-        // Get current time + 1 hour
-        let now = new Date();
-        now.setHours(now.getHours() + 1);
-
-        // Compare
-        if (selectedDateTime < now) {
-            alert("Start Date & Time must be at least 1 hour ahead of current time.");
-            $('#start_time').focus();
+        
+        if (!subjectName) {
+            alert(`Please select Subject Name for Topic ${topicIndex + 1}.`);
+            topicValid = false;
             return false;
         }
-    }
-}
-
-    let formData = new FormData(this);
-    $('input[name="group_type_name[]"]:checked').each(function() {
-        formData.append('group_type_name[]', $(this).val());
+        
+        if (!topic || topic.trim() === '') {
+            alert(`Please enter Topic Description for Topic ${topicIndex + 1}.`);
+            topicValid = false;
+            return false;
+        }
+        
+        // Validate faculty in this topic
+        const facultySections = $(this).find('.faculty-section');
+        if (facultySections.length === 0) {
+            alert(`Please add at least one Faculty for Topic ${topicIndex + 1}.`);
+            topicValid = false;
+            return false;
+        }
+        
+        let facultyValid = true;
+        facultySections.each(function(fIndex) {
+            const faculty = $(this).find('.faculty-select').val();
+            const facultyType = $(this).find('select[name="faculty_type"]').val();
+            
+            if (!faculty) {
+                alert(`Please select Faculty for Faculty ${fIndex + 1} in Topic ${topicIndex + 1}.`);
+                facultyValid = false;
+                return false;
+            }
+            
+            if (!facultyType) {
+                alert(`Please select Faculty Type for Faculty ${fIndex + 1} in Topic ${topicIndex + 1}.`);
+                facultyValid = false;
+                return false;
+            }
+        });
+        
+        if (!facultyValid) {
+            topicValid = false;
+            return false;
+        }
+        
+        // Validate venue in this topic
+        const venueSections = $(this).find('.venue-section');
+        if (venueSections.length === 0) {
+            alert(`Please add at least one Venue for Topic ${topicIndex + 1}.`);
+            topicValid = false;
+            return false;
+        }
+        
+        let venueValid = true;
+        venueSections.each(function(vIndex) {
+            const venue = $(this).find('.venue-select').val();
+            
+            if (!venue) {
+                alert(`Please select Venue for Venue ${vIndex + 1} in Topic ${topicIndex + 1}.`);
+                venueValid = false;
+                return false;
+            }
+        });
+        
+        if (!venueValid) {
+            topicValid = false;
+            return false;
+        }
     });
+    
+    if (!topicValid) {
+        return false;
+    }
+    
+    // Start date validation
+    const startDate = $('#start_datetime').val();
+    if (!startDate) {
+        alert("Please select Event Date.");
+        $('#start_datetime').focus();
+        return false;
+    }
+    
+    // Submit form
     $.ajax({
         url: "{{ route('calendar.event.store') }}",
         method: "POST",
@@ -1544,15 +1550,15 @@ $('#eventForm').on('submit', function(e) {
             alert("Event created successfully!");
             $('#eventModal').modal('hide');
             $('#eventForm')[0].reset();
-
-            window.location.reload(); // now this will work
+            window.location.reload();
         },
         error: function(xhr) {
             if (xhr.status === 422) {
                 let errors = xhr.responseJSON.errors;
-                let messages = Object.values(errors).map(val => val.join('\n'))
-                    .join('\n');
+                let messages = Object.values(errors).map(val => val.join('\n')).join('\n');
                 alert("Server Validation Failed:\n\n" + messages);
+            } else {
+                alert("Error saving event. Please try again.");
             }
         }
     });

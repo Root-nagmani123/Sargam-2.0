@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Group Name Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Course Group Name Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
 <style>
@@ -44,7 +44,7 @@
 </style>
 <div class="container-fluid">
 
-    <x-breadcrum title="Group Name Mapping" />
+    <x-breadcrum title="Course Group Name Mapping" />
     <x-session_message />
 
     <div class="datatables">
@@ -53,13 +53,13 @@
                 <div class="table-responsive">
                     <div class="row mb-3">
                         <div class="col-6">
-                            <h4>Group Name Mapping</h4>
+                            <h4>Course Group Name Mapping</h4>
                         </div>
                         <div class="col-6 d-flex justify-content-end gap-2">
                             <a href="{{ route('group.mapping.create') }}"
                                 class="btn btn-primary d-flex align-items-center">
                                 <iconify-icon icon="ep:circle-plus-filled" width="1.2em" height="1.2em" class="me-1">
-                                </iconify-icon> Add Group Mapping
+                                </iconify-icon> Add Course Group Mapping
                             </a>
                             <!-- Import Excel Button (opens modal) -->
                             <button type="button" class="btn btn-success d-flex align-items-center"

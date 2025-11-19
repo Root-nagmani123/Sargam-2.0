@@ -31,23 +31,23 @@
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
-            <h4 class="card-title mb-3">Add Major Subject</h4>
+            <h4 class="card-title mb-3">Add Subject</h4>
             <hr>
             <form action="{{ route('subject.store') }}" method="POST">
                 @csrf
 
                 <!-- Major Subject Name -->
                 <div class="row">
-                    <div class="col-6">
+                    <div class="col-4">
                         <div class="mb-3">
-                            <label for="major_subject_name" class="form-label">Major Subject Name <span class="text-danger">*</span></label>
+                            <label for="major_subject_name" class="form-label">Subject Name <span class="text-danger">*</span></label>
                             <input type="text" name="major_subject_name" id="major_subject_name" class="form-control">
                             @error('major_subject_name')
                             <div class="text-danger">{{ $message }}</div>
                             @enderror
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <!-- Short Name -->
                         <div class="mb-3">
                             <label for="short_name" class="form-label">Short Name <span class="text-danger">*</span></label>
@@ -58,7 +58,7 @@
                         </div>
                     </div>
                     
-                    <div class="col-6">
+                    <div class="col-4">
                         <!-- Status -->
                         <div class="mb-3">
                             <label for="status" class="form-label">Status </label>

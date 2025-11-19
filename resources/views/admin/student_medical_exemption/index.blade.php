@@ -44,7 +44,12 @@
                                     <td>{{ $row->student->display_name ?? 'N/A' }}</td>
                                     <td>{{ $row->category->exemp_category_name ?? 'N/A' }}</td>
                                     <td>{{ $row->speciality->speciality_name ?? 'N/A' }}</td>
-                                    <td>{{ $row->from_date }} to {{ $row->to_date }}</td>
+                                    <td>
+    {{ \Carbon\Carbon::parse($row->from_date)->format('d-m-Y') }}
+    to
+    {{ \Carbon\Carbon::parse($row->to_date)->format('d-m-Y') }}
+</td>
+
                                     <td>{{ $row->opd_category }}</td>
                                     <td>
                                         <a href="{{ route('student.medical.exemption.edit', ['id' => encrypt(value: $row->pk)])  }}"
