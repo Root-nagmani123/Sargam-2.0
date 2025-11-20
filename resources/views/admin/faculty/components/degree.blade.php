@@ -9,19 +9,19 @@
         @foreach ($qualifications as $qualification)
             <div class="row mb-3 education_group">
                 <div class="col-3">
-                    <x-input name="degree[]" label="Degree :" placeholder="Degree" formLabelClass="form-label" required="true"
+                    <x-input name="degree[]" label="Degree :" placeholder="Degree" formLabelClass="form-label" 
                         helperSmallText="Bachelors, Masters, PhD" value="{{ $qualification->Degree_name }}" />
                 </div>
 
                 <div class="col-3">
                     <x-input name="university_institution_name[]" label="University/Institution Name :"
-                        placeholder="University/Institution Name" formLabelClass="form-label" required="true"
+                        placeholder="University/Institution Name" formLabelClass="form-label" 
                         value="{{ $qualification->University_Institution_Name }}" />
                 </div>
 
                 <div class="col-3">
                     {{-- <x-input type="number" name="year_of_passing[]" label="Year of Passing :" placeholder="Year of Passing"
-                        formLabelClass="form-label" min="1900" max="{{ date('Y') }}" step="1" required="true"
+                        formLabelClass="form-label" min="1900" max="{{ date('Y') }}" step="1" 
                         value="{{ $qualification->Year_of_passing }}" /> --}}
                         <x-select
                                         name="year_of_passing[]"
@@ -29,7 +29,7 @@
                                         placeholder="Year of Passing"
                                         formLabelClass="form-label"
                                         :options="$years"
-                                        required="true"
+                                        
                                         helperSmallText="Select the year of passing"
                                         value="{{ $qualification->Year_of_passing }}"
                                     />
@@ -37,7 +37,7 @@
 
                 <div class="col-3">
                     <x-input type="number" min="0" max="100" name="percentage_CGPA[]" label="Percentage/CGPA"
-                        placeholder="Percentage/CGPA" formLabelClass="form-label" required="true"
+                        placeholder="Percentage/CGPA" formLabelClass="form-label" 
                         value="{{ $qualification->Percentage_CGPA }}" />
                 </div>
 
@@ -60,13 +60,13 @@
         <div class="row" id="education_fields">
             <div class="col-3">
 
-                <x-input name="degree[]" label="Degree :" placeholder="Degree" formLabelClass="form-label" required="true"
+                <x-input name="degree[]" label="Degree :" placeholder="Degree" formLabelClass="form-label" 
                     helperSmallText="Bachelors, Masters, PhD" />
 
             </div>
             <div class="col-3">
                 <x-input name="university_institution_name[]" label="University/Institution Name :"
-                    placeholder="University/Institution Name" formLabelClass="form-label" required="true" />
+                    placeholder="University/Institution Name" formLabelClass="form-label"  />
             </div>
             <div class="col-3">
                 <x-select
@@ -75,20 +75,20 @@
                                         placeholder="Year of Passing"
                                         formLabelClass="form-label"
                                         :options="$years"
-                                        required="true"
+                                        
                                         helperSmallText="Select the year of passing"
                                         value="{{ $qualification->Year_of_passing ?? '' }}"
                                     />
             </div>
             <div class="col-3">
                 <x-input type="number" min="0" max="100" name="percentage_CGPA[]" label="Percentage/CGPA"
-                    placeholder="Percentage/CGPA" formLabelClass="form-label" required="true" />
+                    placeholder="Percentage/CGPA" formLabelClass="form-label"  />
 
             </div>
             <div class="col-3 mt-3">
 
                 <x-input type="file" name="certificate[]" label="Certificates/Documents Upload :"
-                    placeholder="Certificates/Documents Upload" formLabelClass="form-label" required="true"
+                    placeholder="Certificates/Documents Upload" formLabelClass="form-label" 
                     helperSmallText="Please upload your certificates/documents, if any" />
 
 

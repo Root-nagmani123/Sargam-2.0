@@ -2,17 +2,7 @@
 
     <div class="row">
         <div class="col-6">
-            
-            <x-input
-                type="file"
-                name="researchpublications"
-                label="Research Publications :"
-                placeholder="Research Publications"
-                formLabelClass="form-label"
-                required="true"
-                helperSmallText="Please upload your research publications, if any"
-                />
-
+            <x-input type="file" name="researchpublications" label="Research Publications :" placeholder="Research Publications" formLabelClass="form-label" helperSmallText="Please upload your research publications, if any" />
                 @if( !empty($faculty->Rech_Publi_Upload_path) )
                     <br>
                     <span class="text-info text-bold">Previously Uploaded Document</span>
@@ -22,19 +12,16 @@
                 @endif
         </div>
         <div class="col-6">
-            
             <x-input
                 type="file"
                 name="professionalmemberships"
                 label="Professional Memberships :"
                 placeholder="Professional Memberships"
                 formLabelClass="form-label"
-                required="true"
+                
                 helperSmallText="Please upload your professional memberships, if any"
                 />
                 <span>
-
-                
                     @if( !empty($faculty->Professional_Memberships_doc_upload_path) )
                         <br>
                         <span class="text-info text-bold">Previously Uploaded Document</span>
@@ -45,14 +32,13 @@
                 </span>
         </div>
         <div class="col-6 mt-3">
-            
             <x-input
                 type="file"
                 name="recommendationdetails"
                 label="Reference/Recommendation Details :"
                 placeholder="Reference/Recommendation Details"
                 formLabelClass="form-label"
-                required="true"
+                
                 helperSmallText="Please upload your reference/recommendation details, if any"
                 />
 
@@ -65,17 +51,15 @@
             @endif
         </div>
         <div class="col-6 mt-3">
-            
             <x-input
                 type="date"
                 name="joiningdate"
                 label="Joining Date :"
                 placeholder="Joining Date"
                 formLabelClass="form-label"
-                required="true"
+                
                 value="{{ optional($faculty->joining_date)->format('Y-m-d') }}"
             />
-            
         </div>
     </div>
 </div>
