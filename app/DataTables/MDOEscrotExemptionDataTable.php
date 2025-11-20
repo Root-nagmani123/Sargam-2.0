@@ -37,16 +37,30 @@ class MDOEscrotExemptionDataTable extends DataTable
             //         $q->where('mdo_duty_type_name', 'like', "%{$keyword}%");
             //     });
             // })
-            ->addColumn('actions', function ($row) {
+->addColumn('actions', function ($row) {
     return '
-        <a href="javascript:void(0)" 
-           class="openMdoExemptionModal" 
-           data-id="' . $row->pk . '">
-           <iconify-icon icon="solar:pen-bold" class="fs-5 text-primary"></iconify-icon>
+        <a href="javascript:void(0)"
+           class="openMdoExemptionModal"
+           data-id="' . $row->pk . '"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           data-bs-animation="true"
+           title="Edit">
+            <iconify-icon icon="solar:pen-bold" class="fs-5 text-primary"></iconify-icon>
+        </a>
+        <a href="javascript:void(0)"
+           class="deleteMdoExemption"
+           data-id="' . $row->pk . '"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           data-bs-animation="true"
+           title="Delete">
+            <iconify-icon icon="solar:trash-bin-trash-bold" class="fs-5 text-danger ms-2"></iconify-icon>
         </a>
     ';
 })
-            ->rawColumns(['student_name', 'course_name', 'mdo_name', 'actions']);
+
+->rawColumns(['student_name', 'course_name', 'mdo_name', 'actions']);
     }
 
     public function query(): QueryBuilder

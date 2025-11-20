@@ -4,6 +4,18 @@
 
 @section('content')
 <style>
+#searchBox {
+    transition: all 0.25s ease;
+    width: 0;
+    opacity: 0;
+}
+
+#searchBox.active {
+    width: 200px;
+    opacity: 1;
+}
+
+
 /* Header style - deep red + rounded corners */
 table.mdodutytable thead th {
     background-color: #b32826 !important;
@@ -45,136 +57,142 @@ table.mdodutytable tbody tr:hover {
     background: #f8f8f8 !important;
 }
 </style>
-    <div class="container-fluid">
+<div class="container-fluid">
 
-        <div class="datatables">
-            <!-- start Zero Configuration -->
-            <div class="card" style="border-left: 4px solid #004a93;">
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <div class="row">
-                            <div class="col-6">
-                                <h4>MDO Escrot Exemption</h4>
-                            </div>
-                            <div class="col-6">
-                                <div class="float-end gap-2">
-                                    <a href="{{route('mdo-escrot-exemption.create')}}" class="btn btn-primary">+ Add MDO
-                                        Escrot Exemption</a>
-                                </div>
-                            </div>
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-6">
+                            <h4 class="mb-0">MDO Escrot Exemption</h4>
                         </div>
-                        <hr>
-                        
-                        {!! $dataTable->table([
-    'class' => 'table table-hover align-middle w-100 mdodutytable table-striped'
-]) !!}
 
-                        
+                        <div class="col-md-6 d-flex justify-content-end align-items-center gap-2">
+
+                            <!-- Add Button -->
+                            <a href="{{ route('mdo-escrot-exemption.create') }}" class="btn btn-primary">
+                                + Add MDO Escrot Exemption
+                            </a>
+
+                            <!-- Search Icon -->
+                            <button class="btn btn-light bg-transparent border-0" id="toggleSearchBtn">
+                                <iconify-icon icon="solar:magnifer-linear" class="fs-5"></iconify-icon>
+                            </button>
+
+                            <!-- Hidden Search Input -->
+                            <input type="text" id="searchBox" class="form-control d-none" placeholder="Search...">
+                        </div>
                     </div>
+
+
+                    <hr>
+
+                    {!! $dataTable->table([
+                    'class' => 'table table-hover align-middle w-100 mdodutytable table-striped'
+                    ]) !!}
+
+
                 </div>
             </div>
-            <!-- end Zero Configuration -->
         </div>
+        <!-- end Zero Configuration -->
     </div>
+</div>
 
 <!-- MDO Escort Exemption Modal -->
-<div class="modal fade" id="mdoExemptionModal" tabindex="-1" aria-labelledby="mdoExemptionModalLabel" aria-hidden="true">
+<div class="modal fade" id="mdoExemptionModal" tabindex="-1" aria-labelledby="mdoExemptionModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content shadow">
 
             <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="mdoExemptionModalLabel">Loading...</h5>
+                <h5 class="modal-title fw-bold">
+                    Edit MDO Escrot Exemption for - 
+                    <span class="ms-2 fs-5" id="modalStudentName">—</span>
+                </h5>
+
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body" id="mdoExemptionModalBody">
-              <div class="row mb-4">
-                <div class="col-md-8">
-                    <div class="alert alert-info d-flex align-items-center" role="alert">
-                        <i class="material-icons me-2">person</i>
-                        <div>
-                            <strong>Student Name:</strong>
-                            <span class="ms-2 fs-5" id="studentName">—</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <form action="{{ route('mdo-escrot-exemption.update') }}" method="POST" id="mdoDutyTypeForm">
-                @csrf
-                <input type="hidden" name="pk" id="mdoDutyTypePk" value="">
-                <div class="row">
-
-                    
-
-                    <div class="col-md-3">
-                        <div class="mb-3">
-
-                            <x-select name="mdo_duty_type_master_pk" label="Duty Type :" formLabelClass="form-label"
-                                formSelectClass="select2 "
-                                value="" :options="$MDODutyTypeMaster" labelRequired="true" />
-                        </div>
-
-                    </div>
-                    <div class="col-md-3">
-                        <div class="mb-3">
-                            <x-input type="date" name="mdo_date" label="Select Date & Time :"
-                                placeholder="Select Date & Time : " formLabelClass="form-label" 
-                                value="" labelRequired="true"/>
-                        </div>
-                    </div>
-
-                    <div class="col-md-3">
-
-                        <x-input type="time" name="Time_from" label="From Time :" placeholder="From Time : "
-                            formLabelClass="form-label" labelRequired="true"
-                            value="" />
-
-                    </div>
-                    <div class="col-md-3">
-
-                        <x-input type="time" name="Time_to" label="To Time :" placeholder="To Time : "
-                            formLabelClass="form-label" labelRequired="true"
-                            value="" />
-
-                    </div>
-                </div>
-                <hr>
-                
-                <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-6 float-end" type="submit">
-                        <i class="material-icons menu-icon">save</i>
-                        Update
-                    </button>
-                    <a href="{{ route('mdo-escrot-exemption.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
-                        <i class="material-icons menu-icon">arrow_back</i>
-                        Back
-                    </a>
-                </div>
-
-            </form>
+                <!-- Edit form will be loaded here via AJAX -->
             </div>
 
         </div>
     </div>
 </div>
+@endsection
+@push('scripts')
+<script>
+$(document).ready(function() {
+
+    var table = $('#dataTable').DataTable(); // replace with your table ID
+
+    // Toggle search box
+    $('#toggleSearchBtn').on('click', function(e) {
+        e.stopPropagation(); // prevent auto-hide immediately
+        $('#searchBox').toggleClass('d-none active').focus();
+    });
+
+    // DataTable Search
+    $('#searchBox').on('keyup', function() {
+        table.search(this.value).draw();
+    });
+
+    // Auto-hide when clicking outside
+    $(document).on('click', function(e) {
+        var searchBox = $('#searchBox');
+        var button = $('#toggleSearchBtn');
+
+        // If search box is visible AND click is outside search/btn
+        if (searchBox.hasClass('active') &&
+            !searchBox.is(e.target) &&
+            !button.is(e.target) &&
+            button.has(e.target).length === 0) {
+            searchBox.addClass('d-none').removeClass('active').val('');
+            table.search('').draw(); // clear DataTable search
+        }
+    });
+});
+</script>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
 <script>
 $(document).on('click', '.openMdoExemptionModal', function() {
 
     var pk = $(this).data('id');
 
-    $('#studentName').text('Loading...');
-    $('#mdoDutyTypePk').val('');
+    $('#mdoExemptionModalBody').html('<div class="text-center py-5">Loading...</div>');
 
     $.ajax({
-        url: '/admin/mdo-escrot-exemption/details/' + pk,
+        url: '/mdo-escrot-exemption/edit/' + pk,
         type: 'GET',
         success: function(response) {
-            $('#studentName').text(response.student_name || '—');
-            $('#mdoDutyTypePk').val(response.pk || '');
+
+            // Inject the HTML into modal body
+            $('#mdoExemptionModalBody').html(response);
+
+            // Read student name from the loaded edit view
+            let studentName = $('#editStudentName').val();
+
+            // Set in modal header
+            $('#modalStudentName').text(studentName);
+
         },
         error: function() {
-            $('#studentName').text('Error loading data');
+            $('#mdoExemptionModalBody').html(
+                '<div class="text-danger text-center py-5">Error loading form</div>'
+            );
         }
     });
 
@@ -182,7 +200,5 @@ $(document).on('click', '.openMdoExemptionModal', function() {
 });
 </script>
 
-@endsection
-@push('scripts')
-    {!! $dataTable->scripts() !!}
+{!! $dataTable->scripts() !!}
 @endpush
