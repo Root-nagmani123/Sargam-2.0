@@ -83,8 +83,14 @@ $event->group_name = json_encode($request->type_names ?? []);
 $event->faculty_master = $request->faculty;
 $event->faculty_type = $request->faculty_type;
 $event->venue_id = $request->vanue;
-$event->START_DATE = $request->start_datetime;
-$event->END_DATE = $request->start_datetime;
+// $event->START_DATE = $request->start_datetime;
+$event->START_DATE = Carbon::parse($request->start_datetime)
+                    ->timezone('Asia/Kolkata')
+                    ->format('Y-m-d');
+// $event->END_DATE = $request->start_datetime;
+$event->END_DATE = Carbon::parse($request->start_datetime)
+                    ->timezone('Asia/Kolkata')
+                    ->format('Y-m-d');
 $event->session_type = $request->shift_type;
 if ($request->shift_type == 1) {
              $event->class_session = $request->shift;
@@ -207,7 +213,12 @@ public function getGroupTypes(Request $request)
 }
 function event_edit($id){
      $event = CalendarEvent::findOrFail($id);
-    return response()->json($event);
+     $event->START_DATE = \Carbon\Carbon::parse($event->START_DATE)->format('Y-m-d');
+$event->END_DATE   = \Carbon\Carbon::parse($event->END_DATE)->format('Y-m-d');
+
+return response()->json($event);
+
+    // return response()->json($event);
 }
     public function update_event(Request $request, $id)
 {
