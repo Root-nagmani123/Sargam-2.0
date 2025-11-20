@@ -7,12 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class CalendarEvent extends Model
 {
+    use HasFactory;
+
     protected $table = 'timetable';
 
-
-    protected $primaryKey = 'pk'; // yahan apni actual primary key lagayein
+    protected $primaryKey = 'pk';  
 
     public $timestamps = false;
+
     protected $fillable = [
         'course_master_pk',
         'subject_master_pk',
@@ -35,16 +37,12 @@ class CalendarEvent extends Model
         'modified_date',
     ];
 
-    public function scopeActive($query)
-    {
-        return $query->where('active_inactive', 1);
-    }
+      protected $casts = [
+        'START_DATE' => 'date:Y-m-d',
+        'END_DATE' => 'date:Y-m-d',
+    ];
 
-    public function scopeInactive($query)
-    {
-        return $query->where('active_inactive', 0);
-    }
-
+    // ---------- RELATIONSHIPS ----------
     public function courseGroupTypeMaster()
     {
         return $this->belongsTo(CourseMaster::class, 'course_group_type_master', 'pk');
@@ -52,7 +50,8 @@ class CalendarEvent extends Model
 
     public function classSession()
     {
-        return $this->belongsTo(ClassSessionMaster::class, 'class_session_master_pk', 'pk');
+        return $this->belongsTo(ClassSessionMaster::class, 'class_session', 'pk');
+        // NOTE: class_session_master_pk wrong tha (aapki table me ye column nahi hai)
     }
 
     public function venue()
@@ -64,4 +63,5 @@ class CalendarEvent extends Model
     {
         return $this->belongsTo(FacultyMaster::class, 'faculty_master', 'pk');
     }
+   
 }

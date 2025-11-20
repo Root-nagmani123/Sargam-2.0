@@ -410,23 +410,22 @@ $(document).ready(function() {
                     <div class="col-md-12">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6>Faculty</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary btn-add-more add-faculty-btn" data-topic-index="${topicIndex}">
+                            <!-- <button type="button" class="btn btn-sm btn-outline-primary btn-add-more add-faculty-btn" data-topic-index="${topicIndex}">
                                 <i class="bi bi-plus"></i> Add Faculty
-                            </button>
+                            </button> -->
                         </div>
                         <div class="faculty-container" id="facultyContainer${topicIndex}">
                             <!-- Faculty sections will be added here dynamically -->
                         </div>
                     </div>
-                    <div class="shift-section" id="shiftSection${topicIndex}_0">
-                      
-                            </div>
                     
                     <!-- Venue Section -->
                     <div class="col-md-12">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6>Venue</h6>
-                           
+                              <!-- <button type="button" class="btn btn-sm btn-outline-primary btn-add-more add-venue-btn" data-topic-index="${topicIndex}">
+                                <i class="bi bi-plus"></i> Add Venue
+                            </button> -->
                         </div>
                         <div class="venue-container" id="venueContainer${topicIndex}">
                             <!-- Venue sections will be added here dynamically -->
@@ -435,10 +434,52 @@ $(document).ready(function() {
                     
                     <!-- Shift Section -->
                     <div class="col-md-12">
-                      
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Shift Type<span class="text-danger">*</span></label>
+                                    <div>
+                                        <input type="radio" name="shift_type" id="normalShift" value="1" class="form-check-input" checked>
+                                        <label class="form-check-label" for="normalShift">Normal Shift</label>
+                                        <input type="radio" name="shift_type" id="manualShift" value="2" class="form-check-input">
+                                        <label class="form-check-label" for="manualShift">Manual Shift</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         
                         <div class="row">
+                            <div class="col-md-12" id="shiftSelect">
+                                <div class="mb-3">
+                                    <label class="form-label">Shift <span class="text-danger">*</span></label>
+                                    <select name="shift" class="form-control" id="shift">
+                                        <option value="">Select Shift</option>
+                                        @foreach($classSessionMaster as $shift)
+                                        <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
                             
+                            <div class="col-md-12" id="manualShiftFields" style="display: none;">
+                                <div class="mb-3 form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox" name="fullDayCheckbox">
+                                    <label class="form-check-label" for="fullDayCheckbox">Full Day</label>
+                                </div>
+                                
+                                <div id="dateTimeFields${topicIndex}">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
+                                            <input type="time" name="start_time" id="start_time" class="form-control">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
+                                            <input type="time" name="end_time" id="end_time" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="col-md-3 mb-3">
                                 <div>
                                     <label class="form-label">
@@ -521,7 +562,7 @@ $(document).ready(function() {
     const facultySection = `
         <div class="faculty-section" id="facultySection${topicIndex}_${facultyIndex}">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6>Faculty ${facultyIndex + 1}</h6>
+                <h6>Faculty</h6>
                 ${facultyIndex > 0 
                     ? `<button type="button" class="btn btn-sm btn-outline-danger remove-faculty" 
                           data-topic-index="${topicIndex}" 
@@ -561,9 +602,6 @@ $(document).ready(function() {
     `;
     
     $(`#facultyContainer${topicIndex}`).append(facultySection);
-     $(`#facultyContainer${topicIndex}`).append(
-        getShiftSection(topicIndex, facultyIndex)
-    );
 }
 
     
@@ -572,7 +610,8 @@ $(document).ready(function() {
     const venueSection = `
         <div class="venue-section" id="venueSection${topicIndex}_${venueIndex}">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6>Venue ${venueIndex + 1}</h6>
+                <h6>Venue </h6>
+                
                 ${venueIndex > 0 
                     ? `<button type="button" class="btn btn-sm btn-outline-danger remove-venue" 
                           data-topic-index="${topicIndex}" 
@@ -585,7 +624,7 @@ $(document).ready(function() {
             <div class="row">
                 <div class="col-md-12">
                     <div class="mb-3">
-                        <label class="form-label">Location. <span class="text-danger">*</span></label>
+                        <label class="form-label">Location <span class="text-danger">*</span></label>
                         <select name="vanue" class="form-control venue-select" id="vanue">
                             <option value="">Select Location</option>
                             @foreach($venueMaster as $loc)
@@ -602,57 +641,6 @@ $(document).ready(function() {
 
     // Initialize Select2 if needed
     // $(`#venueSection${topicIndex}_${venueIndex} .venue-select`).select2();
-}
-function getShiftSection(topicIndex, facultyIndex) {
-    return `
-        <div class="shift-section" id="shiftSection${topicIndex}_${facultyIndex}">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label class="form-label">Shift Type <span class="text-danger">*</span></label>
-                        <div>
-                            <input type="radio" name="shift_type_${topicIndex}_${facultyIndex}" 
-                                   value="1" class="form-check-input normalShift" checked>
-                            <label class="form-check-label">Normal Shift</label>
-                            <input type="radio" name="shift_type_${topicIndex}_${facultyIndex}"
-                                   value="2" class="form-check-input manualShift">
-                            <label class="form-check-label">Manual Shift</label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div id="shiftBox_${topicIndex}_${facultyIndex}">
-                <div class="mb-3">
-                    <label class="form-label">Shift <span class="text-danger">*</span></label>
-                    <select name="shift_${topicIndex}_${facultyIndex}" class="form-control">
-                        <option value="">Select Shift</option>
-                        @foreach($classSessionMaster as $shift)
-                        <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-            <div id="manualShiftFields_${topicIndex}_${facultyIndex}" style="display:none;">
-                <div class="mb-3 form-check">
-                    <input class="form-check-input fullDay" type="checkbox" value="1" 
-                           name="full_day_${topicIndex}_${facultyIndex}">
-                    <label class="form-check-label">Full Day</label>
-                </div>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Start Time</label>
-                        <input type="time" class="form-control"
-                               name="start_time_${topicIndex}_${facultyIndex}">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">End Time</label>
-                        <input type="time" class="form-control"
-                               name="end_time_${topicIndex}_${facultyIndex}">
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
 }
 
     
@@ -726,10 +714,7 @@ function getShiftSection(topicIndex, facultyIndex) {
     const topicIndex = $(this).data('topic-index');
     const facultyIndex = $(this).data('faculty-index');
     console.log(topicIndex, facultyIndex);
-
     $(`#facultySection${topicIndex}_${facultyIndex}`).remove();
-    $(`#shiftSection${topicIndex}_${facultyIndex}`).remove();
-    
 });
 
     
@@ -1568,6 +1553,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                         });
                                     $('#topic').val(event
                                         .subject_topic);
+                                        console.log(event.START_DATE);
+
+                                       
+
+
+
+
                                         $('#start_datetime').val(
                                         event.START_DATE);
                                     $('#faculty').val(event
