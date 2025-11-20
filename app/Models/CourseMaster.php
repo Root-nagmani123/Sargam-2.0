@@ -36,5 +36,6 @@ class CourseMaster extends Model
         return $this->belongsToMany(StudentMaster::class, 'student_master_course_map', 'course_master_pk', 'student_master_pk')
             ->withPivot('active_inactive', 'created_date', 'modified_date');
     }
+  
     
 }
