@@ -25,6 +25,8 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
     {
         $dataToInsert = [];
 
+        $processedMappings = [];
+
         foreach ($collection as $index => $row) {
             $rowNumber = $index + 2;
             $data = array_map('trim', $row->toArray());
@@ -74,6 +76,28 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
                 ]);
                 continue;
             }
+
+            $mappingKey = "{$studentMaster->pk}|{$groupMap->pk}";
+
+            if (isset($processedMappings[$mappingKey])) {
+                $this->addFailure($rowNumber, [
+                    "Duplicate row detected for student '{$data['otcode']}' and group '{$data['group_name']}' within the sheet"
+                ]);
+                continue;
+            }
+
+            $existingMapping = StudentCourseGroupMap::where('student_master_pk', $studentMaster->pk)
+                ->where('group_type_master_course_master_map_pk', $groupMap->pk)
+                ->exists();
+
+            if ($existingMapping) {
+                $this->addFailure($rowNumber, [
+                    "Mapping already exists for student '{$data['otcode']}' and group '{$data['group_name']}'"
+                ]);
+                continue;
+            }
+
+            $processedMappings[$mappingKey] = true;
 
             // Passed all checks → prepare insert
             $dataToInsert[] = [

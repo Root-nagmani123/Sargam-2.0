@@ -41,6 +41,74 @@
             background-color: #f8f9fa;
             border-color: #666;
         }
+
+        .student-table-wrapper .table {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(13, 45, 80, 0.08);
+        }
+
+        .student-table-wrapper thead th {
+            background: linear-gradient(90deg, #f5f9ff 0%, #eef4ff 100%);
+            color: #1b3155;
+            border-bottom: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .student-table-wrapper tbody tr {
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
+
+        .student-table-wrapper tbody tr:hover {
+            background: #f9fbff;
+            transform: translateX(3px);
+        }
+
+        .student-actions .student-action-btn {
+            border-radius: 999px;
+            font-weight: 600;
+            padding: 0.25rem 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border-width: 2px;
+        }
+
+        .student-actions .btn-soft-primary {
+            color: #0f4c81;
+            border-color: rgba(15, 76, 129, 0.2);
+            background: rgba(15, 76, 129, 0.08);
+        }
+
+        .student-actions .btn-soft-primary:hover {
+            color: #fff;
+            background: #0f4c81;
+            border-color: #0f4c81;
+        }
+
+        .student-actions .btn-soft-danger {
+            color: #b42318;
+            border-color: rgba(180, 35, 24, 0.2);
+            background: rgba(180, 35, 24, 0.08);
+        }
+
+        .student-actions .btn-soft-danger:hover {
+            color: #fff;
+            background: #b42318;
+            border-color: #b42318;
+        }
+
+        .student-table-wrapper th:first-child,
+        .student-table-wrapper td:first-child {
+            width: 55px;
+        }
+
+        .student-table-wrapper th:last-child,
+        .student-table-wrapper td:last-child {
+            width: 180px;
+        }
     </style>
     <div class="container-fluid">
 
@@ -61,6 +129,12 @@
                                     <iconify-icon icon="ep:circle-plus-filled" width="1.2em" height="1.2em"
                                         class="me-1"></iconify-icon> Add Group Mapping
                                 </a>
+                                <!-- Add Student Button (opens modal) -->
+                                <button type="button" class="btn btn-info d-flex align-items-center"
+                                    data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                                    <iconify-icon icon="mdi:account-plus" width="1.2em" height="1.2em"
+                                        class="me-1"></iconify-icon> Add Student
+                                </button>
                                 <!-- Import Excel Button (opens modal) -->
                                 <button type="button" class="btn btn-success d-flex align-items-center"
                                     data-bs-toggle="modal" data-bs-target="#importModal">
@@ -90,7 +164,85 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row g-3 mb-3 align-items-end">
+                            <div class="col-md-6 col-lg-4">
+                                <label for="courseFilter" class="form-label mb-1">Course Name</label>
+                                <select id="courseFilter" class="form-select">
+                                    <option value="">All Courses</option>
+                                    @foreach($courses ?? [] as $pk => $name)
+                                        <option value="{{ $pk }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <label for="groupTypeFilter" class="form-label mb-1">Group Type</label>
+                                <select id="groupTypeFilter" class="form-select">
+                                    <option value="">All Group Types</option>
+                                    @foreach($groupTypes ?? [] as $pk => $name)
+                                        <option value="{{ $pk }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-lg-4 d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                                </button>
+                                <button type="button" class="btn btn-outline-primary mt-4" id="reloadPage">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Reset
+                                </button>
+                            </div>
+                        </div>
                         
+                        <!-- Add Student Modal -->
+                        <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel"
+                            aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form id="addStudentForm">
+                                        @csrf
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="addStudentModalLabel">Add Student to Group</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="addStudentAlert" class="alert d-none" role="alert"></div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="studentName" class="form-label">Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="studentName" name="name" 
+                                                    placeholder="Enter student name" required maxlength="255">
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="studentOtCode" class="form-label">OT Code <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="studentOtCode" name="otcode" 
+                                                    placeholder="Enter OT code" required maxlength="255">
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="studentGroupType" class="form-label">Group Type <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="studentGroupType" name="group_type" 
+                                                    placeholder="Enter group type" required maxlength="255">
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="studentGroupName" class="form-label">Group Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="studentGroupName" name="group_name" 
+                                                    placeholder="Enter group name" required maxlength="255">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="mdi mdi-content-save"></i> Add Student
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End Add Student Modal -->
+
                         <!-- Import Excel Modal -->
                         <div class="modal fade modal-xl" id="importModal" tabindex="-1" aria-labelledby="importModalLabel"
                             aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
@@ -214,6 +366,43 @@
                             </div>
                         </div>
 
+                        <!-- Edit Student Modal -->
+                        <div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editStudentModalLabel">Edit Student</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <form id="editStudentForm">
+                                        @csrf
+                                        <div class="modal-body">
+                                            <div id="editStudentAlert" class="alert d-none" role="alert"></div>
+                                            <input type="hidden" name="student_id" id="editStudentId">
+                                            <div class="mb-3">
+                                                <label for="editStudentName" class="form-label">Display Name</label>
+                                                <input type="text" class="form-control" id="editStudentName" name="display_name" required maxlength="255">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editStudentEmail" class="form-label">Email</label>
+                                                <input type="email" class="form-control" id="editStudentEmail" name="email" maxlength="255">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editStudentContact" class="form-label">Contact No</label>
+                                                <input type="text" class="form-control" id="editStudentContact" name="contact_no" maxlength="20">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-save me-1"></i> Save Changes
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
   
                         <hr>
                         {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
@@ -228,6 +417,8 @@
     <script>
         $(document).on('preXhr.dt', '#group-mapping-table', function (e, settings, data) {
             data.status_filter = window.groupMappingCurrentFilter || 'active';
+            data.course_filter = $('#courseFilter').val();
+            data.group_type_filter = $('#groupTypeFilter').val();
         });
 
         $(document).ready(function () {
@@ -246,6 +437,20 @@
                     setActiveButton($(this));
                     window.groupMappingCurrentFilter = 'archive';
                     table.ajax.reload();
+                });
+
+                $('#courseFilter, #groupTypeFilter').on('change', function () {
+                    table.ajax.reload();
+                });
+
+                $('#resetFilters').on('click', function () {
+                    $('#courseFilter').val('');
+                    $('#groupTypeFilter').val('');
+                    table.ajax.reload();
+                });
+
+                $('#reloadPage').on('click', function () {
+                    window.location.reload();
                 });
 
                 function setActiveButton(activeBtn) {
@@ -273,6 +478,70 @@
                 // Ensure initial styling reflects default filter
                 setActiveButton($('#filterGroupActive'));
             }, 150);
+
+            // Handle Add Student Form Submission
+            $('#addStudentForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const form = $(this);
+                const submitBtn = form.find('button[type="submit"]');
+                const alertBox = $('#addStudentAlert');
+                
+                // Disable submit button
+                submitBtn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Adding...');
+                alertBox.addClass('d-none');
+
+                $.ajax({
+                    url: '{{ route("group.mapping.add.single.student") }}',
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertBox.removeClass('d-none alert-danger')
+                                .addClass('alert-success')
+                                .html('<i class="mdi mdi-check-circle"></i> ' + response.message);
+                            
+                            // Reset form
+                            form[0].reset();
+                            
+                            // Reload DataTable
+                            $('#group-mapping-table').DataTable().ajax.reload();
+                            
+                            // Close modal after 1.5 seconds
+                            setTimeout(function() {
+                                $('#addStudentModal').modal('hide');
+                                alertBox.addClass('d-none');
+                            }, 1500);
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'An error occurred while adding the student.';
+                        
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON.errors) {
+                                const errors = Object.values(xhr.responseJSON.errors).flat();
+                                errorMessage = errors.join('<br>');
+                            }
+                        }
+                        
+                        alertBox.removeClass('d-none alert-success')
+                            .addClass('alert-danger')
+                            .html('<i class="mdi mdi-alert-circle"></i> ' + errorMessage);
+                    },
+                    complete: function() {
+                        // Re-enable submit button
+                        submitBtn.prop('disabled', false).html('<i class="mdi mdi-content-save"></i> Add Student');
+                    }
+                });
+            });
+
+            // Reset alert when modal is closed
+            $('#addStudentModal').on('hidden.bs.modal', function() {
+                $('#addStudentForm')[0].reset();
+                $('#addStudentAlert').addClass('d-none');
+            });
         });
     </script>
 @endpush

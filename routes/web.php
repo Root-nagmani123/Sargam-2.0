@@ -211,7 +211,10 @@ Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])-
         Route::get('edit/{id}', 'edit')->name('edit');
         Route::post('store', 'store')->name('store');
         Route::post('import-group-mapping', 'importGroupMapping')->name('import');
+        Route::post('add-single-student', 'addSingleStudent')->name('add.single.student');
         Route::post('student-list', 'studentList')->name('student.list');
+        Route::post('student-update', 'updateStudent')->name('student.update');
+        Route::delete('student-delete', 'deleteStudent')->name('student.delete');
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
         Route::delete('delete/{id}', 'delete')->name('delete');

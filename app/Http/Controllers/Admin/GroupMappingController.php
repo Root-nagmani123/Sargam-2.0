@@ -4,11 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, VenueMaster};
+use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, FacultyMaster, StudentMaster};
 use App\Exports\GroupMappingExport;
 use App\DataTables\GroupMappingDataTable;
 use Carbon\Carbon;
@@ -29,7 +28,15 @@ class GroupMappingController extends Controller
 
     public function index(GroupMappingDataTable $dataTable)
     {
-        return $dataTable->render('admin.group_mapping.index');
+        $courses = CourseMaster::orderBy('course_name')
+            ->pluck('course_name', 'pk')
+            ->toArray();
+
+        $groupTypes = CourseGroupTypeMaster::orderBy('type_name')
+            ->pluck('type_name', 'pk')
+            ->toArray();
+
+        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
     }
 
 
@@ -47,9 +54,9 @@ class GroupMappingController extends Controller
             ->pluck('course_name', 'pk')
             ->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
-        $facilities = VenueMaster::where('active_inactive', 1)
-            ->orderBy('venue_name')
-            ->pluck('venue_name', 'venue_id')
+        $facilities = FacultyMaster::where('active_inactive', 1)
+            ->orderBy('full_name')
+            ->pluck('full_name', 'pk')
             ->toArray();
 
         return view('admin.group_mapping.create', compact('courses', 'courseGroupTypeMaster', 'facilities'));
@@ -84,15 +91,15 @@ class GroupMappingController extends Controller
         
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
 
-        $facilities = VenueMaster::where('active_inactive', 1)
-            ->orderBy('venue_name')
-            ->pluck('venue_name', 'venue_id')
+        $facilities = FacultyMaster::where('active_inactive', 1)
+            ->orderBy('full_name')
+            ->pluck('full_name', 'pk')
             ->toArray();
 
         if ($groupMapping && $groupMapping->facility_id && !isset($facilities[$groupMapping->facility_id])) {
-            $facility = VenueMaster::find($groupMapping->facility_id);
+            $facility = FacultyMaster::find($groupMapping->facility_id);
             if ($facility) {
-                $facilities[$facility->venue_id] = $facility->venue_name;
+                $facilities[$facility->pk] = $facility->full_name;
             }
         }
 
@@ -182,34 +189,19 @@ class GroupMappingController extends Controller
         try {
             $groupMappingID = decrypt($request->groupMappingID);
             $groupMapping = GroupTypeMasterCourseMasterMap::with(['facility', 'courseGroup'])->findOrFail($groupMappingID);
-            
-            // Get the course ID from the group mapping
-            $courseId = $groupMapping->course_name;
-            
-            // Filter students by:
-            // 1. Group mapping (group_type_master_course_master_map_pk)
-            // 2. Course enrollment (via StudentMasterCourseMap - students must be enrolled in the course)
-            $students = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
+
+            $students = StudentCourseGroupMap::with('studentsMaster:pk,display_name,email,contact_no')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
-                ->whereHas('studentsMaster', function($query) use ($courseId) {
-                    $query->whereExists(function($subQuery) use ($courseId) {
-                        $subQuery->select(DB::raw(1))
-                                 ->from('student_master_course__map')
-                                 ->whereColumn('student_master_course__map.student_master_pk', 'student_master.pk')
-                                 ->where('student_master_course__map.course_master_pk', $courseId)
-                                 ->where('student_master_course__map.active_inactive', 1);
-                    });
-                })
+                ->whereHas('studentsMaster')
                 ->paginate(10, ['*'], 'page', $request->page);
-            
-            // Render the HTML partial
+
             $groupMappingPk = $groupMapping->pk;
             $courseName = $groupMapping->courseGroup->course_name ?? 'N/A';
             $html = view('admin.group_mapping.student_list_ajax', [
                 'students' => $students,
                 'groupMappingPk' => $groupMappingPk,
                 'groupName' => $groupMapping->group_name,
-                'facilityName' => optional($groupMapping->facility)->venue_name,
+                'facilityName' => optional($groupMapping->facility)->full_name,
                 'courseName' => $courseName,
             ])->render();
 
@@ -222,6 +214,179 @@ class GroupMappingController extends Controller
                 'status' => 'error',
                 'message' => $e->getMessage(),
             ], 422);
+        }
+    }
+
+    public function updateStudent(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'student_id' => 'required|string',
+                'display_name' => 'required|string|max:255',
+                'email' => 'nullable|email|max:255',
+                'contact_no' => 'nullable|string|max:20',
+            ]);
+
+            try {
+                $studentId = decrypt($validated['student_id']);
+            } catch (\Throwable $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid student identifier.',
+                ], 422);
+            }
+
+            $student = StudentMaster::findOrFail($studentId);
+            $student->display_name = $validated['display_name'];
+            $student->email = $validated['email'];
+            $student->contact_no = $validated['contact_no'];
+            $student->save();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Student details updated successfully.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $validationException) {
+            throw $validationException;
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function deleteStudent(Request $request)
+    {
+        try {
+            $request->validate([
+                'mapping_id' => 'required|string',
+            ]);
+
+            try {
+                $mappingId = decrypt($request->mapping_id);
+            } catch (\Throwable $exception) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Invalid mapping identifier.',
+                ], 422);
+            }
+
+            $mapping = StudentCourseGroupMap::findOrFail($mappingId);
+            $mapping->delete();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Student removed from the group successfully.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $validationException) {
+            throw $validationException;
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Add a single student to group mapping (manual entry).
+     * Follows the same logic as Excel import but for a single record.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function addSingleStudent(Request $request)
+    {
+        try {
+            // Validate input
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'otcode' => 'required|string|max:255',
+                'group_name' => 'required|string|max:255',
+                'group_type' => 'required|string|max:255',
+            ]);
+
+            // Trim all inputs
+            $data = array_map('trim', $validated);
+
+            // Lookup: StudentMaster by OT code (case-insensitive)
+            $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
+                ->select('pk')->first();
+
+            if (!$studentMaster) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Student not found for OT code: {$data['otcode']}",
+                ], 422);
+            }
+
+            // Lookup: GroupTypeMasterCourseMasterMap by group name (case-insensitive)
+            $groupMap = GroupTypeMasterCourseMasterMap::whereRaw('LOWER(group_name) = ?', [strtolower($data['group_name'])])
+                ->first();
+
+            if (!$groupMap) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Group map not found for group name: {$data['group_name']}",
+                ], 422);
+            }
+
+            // Lookup: CourseGroupTypeMaster to verify group type
+            $courseGroupType = CourseGroupTypeMaster::where('pk', $groupMap->type_name)->first();
+
+            if (!$courseGroupType) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Course group type not found for type name ID: {$groupMap->type_name}",
+                ], 422);
+            }
+
+            // Compare group type (case-insensitive)
+            if (strcasecmp($courseGroupType->type_name, $data['group_type']) !== 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Group type mismatch: expected '{$courseGroupType->type_name}', got '{$data['group_type']}' for group '{$data['group_name']}'",
+                ], 422);
+            }
+
+            // Check if mapping already exists
+            $existingMapping = StudentCourseGroupMap::where('student_master_pk', $studentMaster->pk)
+                ->where('group_type_master_course_master_map_pk', $groupMap->pk)
+                ->exists();
+
+            if ($existingMapping) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Mapping already exists for student '{$data['otcode']}' and group '{$data['group_name']}'",
+                ], 422);
+            }
+
+            // Create the mapping (same as Excel import)
+            StudentCourseGroupMap::create([
+                'student_master_pk' => $studentMaster->pk,
+                'group_type_master_course_master_map_pk' => $groupMap->pk,
+                'active_inactive' => 1,
+                'created_date' => now(),
+                'modified_date' => now(),
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Student added to group successfully.',
+            ], 200);
+
+        } catch (\Illuminate\Validation\ValidationException $validationException) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed.',
+                'errors' => $validationException->errors(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 
