@@ -686,10 +686,10 @@ textarea:focus {
                         <small class="text-white" id="eventDate">Event Date</small><br>
                     </div>
                     <div>
-                        <button type="button" class="btn btn-sm btn-outline-primary me-1" id="editEventBtn">
+                        <button type="button" class="btn btn-sm btn-primary me-1" id="editEventBtn">
                             <i class="bi bi-pencil me-1"></i> Edit
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger me-1" id="deleteEventBtn">
+                        <button type="button" class="btn btn-sm btn-danger me-1" id="deleteEventBtn">
                             <i class="bi bi-trash me-1"></i> Delete
                         </button>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
