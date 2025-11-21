@@ -5,137 +5,443 @@
 @section('content')
 
 <style>
+:root {
+    --primary-color: #004a93;
+    --secondary-color: #af2910;
+    --light-bg: #f8f9fa;
+    --border-color: #dee2e6;
+    --text-dark: #212529;
+    --text-muted: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+}
+
 .readonly-checkbox {
     pointer-events: none;
     opacity: 0.6;
 }
 
-/* Month ke har din ke box ki height/padding badhao */
+/* Calendar styling with improved accessibility */
+.fc {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.fc .fc-button {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-dark);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+}
+
+.fc .fc-button:hover {
+    background-color: var(--light-bg);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
 .fc .fc-daygrid-day-frame {
     min-height: 110px !important;
     padding: 8px 4px !important;
+    transition: background-color 0.2s ease;
+}
+
+.fc .fc-daygrid-day:hover .fc-daygrid-day-frame {
+    background-color: rgba(0, 74, 147, 0.05) !important;
 }
 
 .fc .fc-daygrid-day {
     min-height: 110px !important;
 }
 
-/* Responsive ke liye thoda adjust */
-@media (max-width: 600px) {
+/* Improved event cards */
+.fc-event-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    padding: 8px;
+    margin-bottom: 6px;
+    font-size: 15px;
+    color: var(--text-dark);
+    border-left: 3px solid var(--primary-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
 
+.fc-event-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Custom colored cards for each day with improved contrast */
+.fc-daygrid-day[data-day="0"] .fc-daygrid-day-frame {
+    background-color: #fff5f5;
+    border-top: 2px solid #ffcccc;
+}
+
+.fc-daygrid-day[data-day="1"] .fc-daygrid-day-frame {
+    background-color: #f0f9ff;
+    border-top: 2px solid #cce7ff;
+}
+
+.fc-daygrid-day[data-day="2"] .fc-daygrid-day-frame {
+    background-color: #f0fff4;
+    border-top: 2px solid #ccffcc;
+}
+
+.fc-daygrid-day[data-day="3"] .fc-daygrid-day-frame {
+    background-color: #fffdf0;
+    border-top: 2px solid #fff2cc;
+}
+
+.fc-daygrid-day[data-day="4"] .fc-daygrid-day-frame {
+    background-color: #f9f0ff;
+    border-top: 2px solid #e6ccff;
+}
+
+.fc-daygrid-day[data-day="5"] .fc-daygrid-day-frame {
+    background-color: #f0f3ff;
+    border-top: 2px solid #ccd9ff;
+}
+
+.fc-daygrid-day[data-day="6"] .fc-daygrid-day-frame {
+    background-color: #fff8f0;
+    border-top: 2px solid #ffe6cc;
+}
+
+/* Today highlight */
+.fc .fc-daygrid-day.fc-day-today {
+    background-color: rgba(255, 220, 40, 0.15) !important;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-frame {
+    background-color: rgba(255, 220, 40, 0.1) !important;
+    border: 2px solid var(--warning-color) !important;
+}
+
+/* Improved responsive design */
+@media (max-width: 768px) {
+    .fc .fc-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1.25rem;
+    }
+    
+    .fc .fc-daygrid-day-frame,
+    .fc .fc-daygrid-day {
+        min-height: 80px !important;
+    }
+    
+    .fc-event-card {
+        font-size: 13px;
+        padding: 6px;
+    }
+}
+
+@media (max-width: 576px) {
     .fc .fc-daygrid-day-frame,
     .fc .fc-daygrid-day {
         min-height: 70px !important;
     }
+    
+    .fc-event-card {
+        font-size: 12px;
+        padding: 4px;
+    }
 }
 
-/* Custom colored cards for each day */
-
-/* Assign different colors for each weekday */
-.fc-daygrid-day[data-day="0"] .fc-daygrid-day-frame {
-    background-color: #ffe5e5;
+/* Improved modal styling */
+.modal-header {
+    background-color: var(--primary-color);
+    color: white;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
 }
 
-/* Sunday */
-.fc-daygrid-day[data-day="1"] .fc-daygrid-day-frame {
-    background-color: #e5f7ff;
+.modal-title {
+    font-weight: 600;
 }
 
-/* Monday */
-.fc-daygrid-day[data-day="2"] .fc-daygrid-day-frame {
-    background-color: #e5ffe5;
+.modal-content {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
-/* Tuesday */
-.fc-daygrid-day[data-day="3"] .fc-daygrid-day-frame {
-    background-color: #fffbe5;
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
 }
 
-/* Wednesday */
-.fc-daygrid-day[data-day="4"] .fc-daygrid-day-frame {
-    background-color: #f5e5ff;
+/* Improved form controls */
+.form-label {
+    font-weight: 500;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
 }
 
-/* Thursday */
-.fc-daygrid-day[data-day="5"] .fc-daygrid-day-frame {
-    background-color: #e5eaff;
+.form-control, .form-select {
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-/* Friday */
-.fc-daygrid-day[data-day="6"] .fc-daygrid-day-frame {
-    background-color: #fff0e5;
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
 }
 
-/* Saturday */
-/* Card content styling */
-.fc-event-card {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    padding: 8px;
-    margin-bottom: 6px;
-    font-size: 15px;
-    color: #222;
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Improved buttons */
+.btn {
+    font-weight: 500;
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #003d7a;
+    border-color: #003d7a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+/* Card improvements */
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Breadcrumb improvements */
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 0;
+}
+
+.breadcrumb-item a {
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: var(--primary-color);
+}
+
+/* Table improvements for list view */
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.table th {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: 600;
+    border: none;
+    padding: 0.75rem;
+}
+
+.table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border: 1px solid var(--border-color);
+}
+
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 74, 147, 0.05);
+}
+
+/* View controls */
+.view-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Focus styles for accessibility */
+button:focus, 
+input:focus, 
+select:focus, 
+textarea:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Loading state */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Success/error message styling */
+.alert {
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1.25rem;
+}
+
+.alert-success {
+    background-color: rgba(25, 135, 84, 0.1);
+    color: var(--success-color);
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: var(--danger-color);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Print styles */
+@media print {
+    .btn, .view-controls, .breadcrumb {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid var(--border-color);
+    }
 }
 </style>
 
 <div class="container-fluid">
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body py-3">
-            <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Calendar</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="#">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    @lang('Calendar')
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
+    <!-- Page Header -->
+    <x-breadcrum title="Academic Calendar" />
+    
+    <!-- Action Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="view-controls">
+            <button type="button" class="btn btn-outline-primary btn-sm active" id="btnMonthView">
+                <i class="bi bi-calendar-month me-1"></i> Month
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnWeekView">
+                <i class="bi bi-calendar-week me-1"></i> Week
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView">
+                <i class="bi bi-calendar-day me-1"></i> Day
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView">
+                <i class="bi bi-list-ul me-1"></i> List
+            </button>
         </div>
-        </div>
-    </div>
-    <div class="text-end mb-3 gap-3">
         <button type="button" class="btn btn-primary btn-sm" id="createEventupperButton">
-        <i class="bi bi-plus"></i> Add Event</button>
-        <button type="button" class="btn btn-outline-primary btn-sm" id="btnMonthView">Month</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnWeekView">Week</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView">Day</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView">List</button>
+            <i class="bi bi-plus-circle me-1"></i> Add Event
+        </button>
     </div>
-    <div class="card" style="border-left: 4px solid #004a93;">
+    
+    <!-- Calendar Container -->
+    <div class="card" style="border-left: 4px solid var(--primary-color);">
         <div class="card-body calender-sidebar app-calendar">
             <div id='calendar'></div>
+            
             <!-- List View Table -->
-                <div id="eventListView" style="display:none;">
-                    <div class="row mb-3">
-                        <div class="col-2">
-                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="lbsnaa logo" class="img-fluid mb-3"
-                                style="max-width: 100px;">
-                        </div>
-                        <div class="col-8">
-                            <h3 class="text-center" style="color:#af2910;">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी
-                            </h3>
-                            <h3 class="text-center" style="color:#af2910;">Lal Bahadur Shastri National Academy of
-                                Administration</h3>
-                            <h4 class="text-center" style="color:#af2910;">IAS Professional Course, Phase - I</h4>
-                            <h6 class="text-center">(Nov 06, 2023 to April 05, 2024)</h6>
-                        </div>
-                        <div class="col-2">
-                            <h5 class="text-center">Weekly Schedule</h5>
-                            <h3 class="text-center">19</h3>
-                        </div>
+            <div id="eventListView" style="display:none;">
+                <div class="row mb-4">
+                    <div class="col-12 col-md-2 text-center text-md-start">
+                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" class="img-fluid mb-3" style="max-width: 100px;">
                     </div>
+                    <div class="col-12 col-md-8 text-center">
+                        <h3 class="mb-1" style="color:var(--secondary-color);">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</h3>
+                        <h3 class="mb-1" style="color:var(--secondary-color);">Lal Bahadur Shastri National Academy of Administration</h3>
+                        <h4 class="mb-1" style="color:var(--secondary-color);">IAS Professional Course, Phase - I</h4>
+                        <h6 class="text-muted">(Nov 06, 2023 to April 05, 2024)</h6>
+                    </div>
+                    <div class="col-12 col-md-2 text-center text-md-end">
+                        <h5 class="mb-1">Weekly Schedule</h5>
+                        <h3 class="mb-0" style="color:var(--primary-color);">19</h3>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
                     <table class="table table-bordered table-striped table-hover" id="eventListTable">
                         <thead>
                             <tr>
@@ -164,15 +470,15 @@
                         </thead>
                         <tbody>
                             <!-- Events will be inserted here -->
-                           
                         </tbody>
                     </table>
                 </div>
+            </div>
         </div>
     </div>
-    <!-- BEGIN MODAL -->
-    <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true"
-        style="display: none;">
+    
+    <!-- Add/Edit Event Modal -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable modal-lg">
             <form id="eventForm">
                 @csrf
@@ -181,9 +487,11 @@
                         <h5 class="modal-title" id="eventModalLabel">
                             {{ $modalTitle ?? __('Add Calendar Event') }}
                         </h5>
-                        <input type="date" name="start_datetime" id="start_datetime" class="form-control w-50 mx-2"
-                            placeholder="Select Date" required>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="d-flex align-items-center">
+                            <label for="start_datetime" class="form-label me-2 mb-0">Date:</label>
+                            <input type="date" name="start_datetime" id="start_datetime" class="form-control w-auto" required>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
                         <div class="row">
@@ -206,18 +514,16 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-12 mb-3">
-                                <div>
-                                    <label class="form-label">Group Type Name </label>
-                                </div>
-                                <div id="type_name_container" class="mt-3">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Group Type Name</label>
+                                <div id="type_name_container" class="border rounded p-3 bg-light">
                                     <!-- Checkboxes will be appended here -->
+                                    <div class="text-muted text-center">Select a Group Type first</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Subject Module Name <span
-                                            class="text-danger">*</span></label>
+                                    <label class="form-label">Subject Module Name <span class="text-danger">*</span></label>
                                     <select name="subject_module" id="subject_module" class="form-control">
                                         <option value="">Select Subject Name</option>
                                         @foreach($subjects as $subject)
@@ -236,28 +542,24 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-12">
+                            <div class="col-12">
                                 <div class="mb-3">
                                     <label class="form-label">Topic <span class="text-danger">*</span></label>
-                                    <textarea name="topic" id="topic" class="form-control" row="5"></textarea>
-
+                                    <textarea name="topic" id="topic" class="form-control" rows="3" placeholder="Enter topic details"></textarea>
                                 </div>
                             </div>
-
-                            <div class="col-md-12">
+                            <div class="col-12">
                                 <div class="mb-3">
                                     <label class="form-label">Faculty <span class="text-danger">*</span></label>
                                     <select name="faculty" id="faculty" class="form-control">
                                         <option value="">Select Faculty</option>
                                         @foreach($facultyMaster as $faculty)
-                                        <option value="{{ $faculty->pk }}"
-                                            data-faculty_type="{{ $faculty->faculty_type }}">
+                                        <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
                                             {{ $faculty->full_name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                             </div>
-
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
@@ -278,24 +580,26 @@
                                         <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
                                         @endforeach
                                     </select>
-
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Shift Type<span class="text-danger">*</span></label>
-                                    <input type="radio" name="shift_type" id="normalShift" value="1"
-                                        class="form-check-input" checked>
-                                    <label class="form-check-label" for="normalShift">Normal Shift</label>
-                                    <input type="radio" name="shift_type" id="manualShift" value="2"
-                                        class="form-check-input">
-                                    <label class="form-check-label" for="manualShift">Manual Shift</label>
+                                    <label class="form-label d-block">Shift Type<span class="text-danger">*</span></label>
+                                    <div class="form-check form-check-inline">
+                                        <input type="radio" name="shift_type" id="normalShift" value="1" class="form-check-input" checked>
+                                        <label class="form-check-label" for="normalShift">Normal Shift</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input type="radio" name="shift_type" id="manualShift" value="2" class="form-check-input">
+                                        <label class="form-check-label" for="manualShift">Manual Shift</label>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div class="col-md-12" id="shiftSelect">
+                            
+                            <div class="col-12" id="shiftSelect">
                                 <div class="mb-3">
                                     <label class="form-label">Shift <span class="text-danger">*</span></label>
                                     <select name="shift" id="shift" class="form-control">
@@ -306,147 +610,105 @@
                                     </select>
                                 </div>
                             </div>
-
-                            <div class="col-md-12" id="manualShiftFields" style="display: none;">
+                            
+                            <div class="col-12" id="manualShiftFields" style="display: none;">
                                 <div class="mb-3 form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
-                                        name="fullDayCheckbox">
-                                    <label class="form-check-label" for="fullDayCheckbox">Full Day</label>
+                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox" name="fullDayCheckbox">
+                                    <label class="form-check-label" for="fullDayCheckbox">Full Day Event</label>
                                 </div>
-
+                                
                                 <div id="dateTimeFields">
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label for="start_time" class="form-label">Start Time <span
-                                                    class="text-danger">*</span></label>
+                                            <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
                                             <input type="time" name="start_time" id="start_time" class="form-control">
                                         </div>
                                         <div class="col-md-6">
-                                            <label for="end_time" class="form-label">End Time <span
-                                                    class="text-danger">*</span></label>
+                                            <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
                                             <input type="time" name="end_time" id="end_time" class="form-control">
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <div class="row py-3">
+                        
+                        <div class="row py-3 border-top">
                             <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="feedback_checkbox" id="feedback_checkbox" checked>
-                                            <label class="form-check-label" for="feedback_checkbox">
-                                                Feedback
-                                            </label>
-                                        </div>
-                                    </label>
-
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox" id="feedback_checkbox" checked>
+                                    <label class="form-check-label" for="feedback_checkbox">Feedback</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="remarkCheckbox" id="remarkCheckbox">
-                                            <label class="form-check-label" for="remarkCheckbox">
-                                                Remark
-                                            </label>
-                                        </div>
-                                    </label>
-
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" name="remarkCheckbox" id="remarkCheckbox">
+                                    <label class="form-check-label" for="remarkCheckbox">Remark</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="ratingCheckbox" id="ratingCheckbox">
-                                            <label class="form-check-label" for="ratingCheckbox">
-                                                Ratting
-                                            </label>
-                                        </div>
-                                    </label>
-
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" name="ratingCheckbox" id="ratingCheckbox">
+                                    <label class="form-check-label" for="ratingCheckbox">Rating</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                            <label class="form-check-label" for="bio_attendanceCheckbox">
-                                                Bio Attendance
-                                            </label>
-                                        </div>
-                                    </label>
-
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
+                                    <label class="form-check-label" for="bio_attendanceCheckbox">Bio Attendance</label>
                                 </div>
                             </div>
                         </div>
-
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn bg-danger-subtle text-danger" data-bs-dismiss="modal">
-                            Close
-                        </button>
-                        <button type="button" class="btn btn-success btn-update-event"
-                            data-fc-event-public-id="{{ $event->id ?? '' }}" style="display: none;">
-                            Update changes
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-success btn-update-event" data-fc-event-public-id="{{ $event->id ?? '' }}" style="display: none;">
+                            <i class="bi bi-check-circle me-1"></i> Update Event
                         </button>
                         <button type="submit" class="btn btn-primary btn-add-event">
-                            Add Calendar Event
+                            <i class="bi bi-plus-circle me-1"></i> Add Event
                         </button>
                     </div>
-
+                </div>
             </form>
         </div>
     </div>
-    </div>
-    <!-- END MODAL -->
-    <!-- eventDetails modal do-->
-    <!-- Modal -->
+    
+    <!-- Event Details Modal -->
     <div class="modal fade" id="eventDetails" tabindex="-1" aria-labelledby="eventDetailsLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-scrollable modal-lg">
             <div class="modal-content shadow rounded">
                 <div class="modal-header d-flex justify-content-between align-items-start">
                     <div>
                         <h5 class="modal-title" id="eventDetailsLabel">
-                            <span id="eventTitle">Event Title</span>:<span id="eventTopic"></span>
+                            <span id="eventTitle">Event Title</span>: <span id="eventTopic"></span>
                         </h5>
                         <small class="text-muted" id="eventDate">Event Date</small><br>
                     </div>
                     <div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="editEventBtn">
-                            <i class="bi bi-pencil"></i>
+                        <button type="button" class="btn btn-sm btn-outline-primary me-1" id="editEventBtn">
+                            <i class="bi bi-pencil me-1"></i> Edit
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-danger me-1" id="deleteEventBtn">
-                            <i class="bi bi-trash"></i>
+                            <i class="bi bi-trash me-1"></i> Delete
                         </button>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
-
+                
                 <div class="modal-body">
-                    <div class="mb-2">
-                        <i class="bi bi-person-fill me-2"></i>Faculty: <b><span id="eventfaculty"></span></b>
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <i class="bi bi-person-fill me-2 text-primary"></i>Faculty: <b><span id="eventfaculty"></span></b>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <i class="bi bi-geo-alt-fill me-2 text-primary"></i>Venue: <b><span id="eventVanue"></span></b>
+                        </div>
                     </div>
-                    <div class="mb-2">
-                        <i class="bi bi-geo-alt-fill me-2"></i>Venue: <b><span id="eventVanue"></span></b>
-                    </div>
-                    <!-- <div class="mb-2">
-                    <i class="bi bi-globe me-2"></i> <span id="eventAudience">Public</span>
-                </div> -->
+                    <!-- Additional event details can be added here -->
                 </div>
             </div>
         </div>
     </div>
-
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -827,22 +1089,37 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         events: '/calendar/full-calendar-details', // Data fetch karna
         eventContent: function(arg) {
+            // Color palette for event cards
+            const colors = [
+                '#4e73df', // blue
+                '#1cc88a', // green
+                '#36b9cc', // teal
+                '#f6c23e', // yellow
+                '#e74a3b', // red
+                '#858796', // gray
+                '#5a5c69', // dark
+                '#fd7e14', // orange
+                '#20c997', // cyan
+                '#6f42c1'  // purple
+            ];
+            // Assign color based on event id or index
+            const colorIdx = arg.event.id ? (parseInt(arg.event.id) % colors.length) : (arg.event._index % colors.length);
+            const cardColor = colors[colorIdx];
+
             // Get custom fields
             const topic = arg.event.title || '';
             const venue = arg.event.extendedProps.vanue || '';
             const start = arg.event.start ? new Date(arg.event.start).toLocaleDateString() : '';
 
-            // Design: topic (bold), venue (italic), start, end (each on new line)
+            // Modern card design with dynamic color
             let html = `
-        <div class="text-start p-2 text-dark fs-6 text-truncate">
-            <span>${topic}</span><br>
-            <span>${venue}</span><br>
-            <span>Date: ${start}</span><br>
-        </div>
-    `;
-            return {
-                html: html
-            };
+                <div class="fc-event-card" style="border-left: 6px solid ${cardColor}; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.10);">
+                    <div class="fw-bold mb-1" style="color: ${cardColor}; font-size: 1rem;">${topic}</div>
+                    <div class="fst-italic text-muted mb-1">${venue}</div>
+                    <div class="small text-secondary">${start}</div>
+                </div>
+            `;
+            return { html };
         },
         eventClick: function(info) {
                 

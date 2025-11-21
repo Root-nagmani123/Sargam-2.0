@@ -340,7 +340,10 @@ function studentFeedback() {
             'timetable.*',
             'faculty_master.full_name as faculty_name',
             'course_master.course_name as course_name',
-            'venue_master.venue_name as venue_name'
+            'venue_master.venue_name as venue_name',
+            DB::raw('timetable.START_DATE as from_date'),
+            DB::raw("CASE WHEN timetable.class_session LIKE '%-%' THEN SUBSTRING(timetable.class_session, 1, LOCATE('-', timetable.class_session) - 1) ELSE NULL END as from_time"),
+            DB::raw("CASE WHEN timetable.class_session LIKE '%-%' THEN TRIM(SUBSTRING(timetable.class_session, LOCATE('-', timetable.class_session) + 1)) ELSE NULL END as to_time")
         )
         ->get();
 
