@@ -172,7 +172,7 @@
 
         <!-- Assistant Coordinators -->
         <div class="text-center">
-          <span class="role-badge mb-3">Assistant Coordinators</span>
+          <span class="role-badge mb-3">Assistant Course Coordinators</span>
         </div>
         <div class="row g-4 justify-content-center">
           @forelse($assistantCoordinatorsData as $assistant)

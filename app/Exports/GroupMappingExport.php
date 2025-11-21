@@ -23,7 +23,7 @@ class GroupMappingExport implements FromCollection, WithHeadings
             'student:pk,display_name,generated_OT_code', 
             'groupTypeMasterCourseMasterMap.courseGroup:pk,course_name,course_year',
             'groupTypeMasterCourseMasterMap.courseGroupType:pk,type_name',
-            'groupTypeMasterCourseMasterMap.facility:venue_id,venue_name'
+            'groupTypeMasterCourseMasterMap.facility:pk,full_name'
         ]);
         
         if ($this->id) {
@@ -37,7 +37,7 @@ class GroupMappingExport implements FromCollection, WithHeadings
 
         return $data->map(function ($record) {
             $groupMap = $record->groupTypeMasterCourseMasterMap;
-            $facility = $groupMap && $groupMap->facility ? $groupMap->facility->venue_name : '';
+            $facility = $groupMap && $groupMap->facility ? $groupMap->facility->full_name : '';
             $groupType = $groupMap && $groupMap->courseGroupType ? $groupMap->courseGroupType->type_name : '';
 
             return [

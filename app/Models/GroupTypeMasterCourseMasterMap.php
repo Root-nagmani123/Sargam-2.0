@@ -34,7 +34,7 @@ class GroupTypeMasterCourseMasterMap extends Model
 
     public function facility()
     {
-        return $this->belongsTo(VenueMaster::class, 'facility_id', 'venue_id');
+        return $this->belongsTo(FacultyMaster::class, 'facility_id', 'pk');
     }
 
 }

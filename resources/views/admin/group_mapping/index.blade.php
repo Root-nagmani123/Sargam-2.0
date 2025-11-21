@@ -37,121 +37,216 @@
     border-color: #999;
 }
 
-.btn-outline-secondary:hover {
-    background-color: #f8f9fa;
-    border-color: #666;
-}
-</style>
-<style>
-/* Table Header Styling */
-#group-mapping-table thead {
-    background-color: #af2910 !important;
-    color: #ffffff !important;
-}
+        .btn-outline-secondary:hover {
+            background-color: #f8f9fa;
+            border-color: #666;
+        }
 
-#group-mapping-table thead th {
-    text-align: center;
-    vertical-align: middle;
-    font-weight: 600;
-    padding: 12px;
-}
-</style>
+        .student-table-wrapper .table {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(13, 45, 80, 0.08);
+        }
 
-<div class="container-fluid">
+        .student-table-wrapper thead th {
+            background: linear-gradient(90deg, #f5f9ff 0%, #eef4ff 100%);
+            color: #1b3155;
+            border-bottom: none;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-    <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+        .student-table-wrapper tbody tr {
+            transition: background 0.2s ease, transform 0.2s ease;
+        }
 
-            <div class="card-body">
-                <div class="table-responsive">
-                    <!-- Title + Actions -->
-                    <div
-                        class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom pb-3 mb-3">
+        .student-table-wrapper tbody tr:hover {
+            background: #f9fbff;
+            transform: translateX(3px);
+        }
 
-                        <h4 class="mb-0 text-primary fw-semibold">
-                            Course Group Mapping
-                        </h4>
+        .student-actions .student-action-btn {
+            border-radius: 999px;
+            font-weight: 600;
+            padding: 0.25rem 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border-width: 2px;
+        }
 
-                        <div class="d-flex justify-content-end align-items-center gap-2">
+        .student-actions .btn-soft-primary {
+            color: #0f4c81;
+            border-color: rgba(15, 76, 129, 0.2);
+            background: rgba(15, 76, 129, 0.08);
+        }
 
-                            <!-- Add Group Mapping -->
-                            <a href="{{ route('group.mapping.create') }}"
-                                class="btn btn-primary d-flex align-items-center">
-                                <iconify-icon icon="ep:circle-plus-filled" class="me-1"></iconify-icon>
-                                Add Group Mapping
-                            </a>
+        .student-actions .btn-soft-primary:hover {
+            color: #fff;
+            background: #0f4c81;
+            border-color: #0f4c81;
+        }
 
-                            <!-- Import Excel -->
-                            <button type="button" class="btn btn-success d-flex align-items-center"
-                                data-bs-toggle="modal" data-bs-target="#importModal">
-                                <iconify-icon icon="mdi:file-excel" class="me-1"></iconify-icon>
-                                Import Excel
-                            </button>
+        .student-actions .btn-soft-danger {
+            color: #b42318;
+            border-color: rgba(180, 35, 24, 0.2);
+            background: rgba(180, 35, 24, 0.08);
+        }
 
-                            <!-- Export -->
-                            <a href="{{ route('group.mapping.export.student.list') }}"
-                                class="btn btn-primary d-flex align-items-center">
-                                <iconify-icon icon="material-symbols:sim-card-download-rounded"></iconify-icon>
-                                Export Excel
-                            </a>
+        .student-actions .btn-soft-danger:hover {
+            color: #fff;
+            background: #b42318;
+            border-color: #b42318;
+        }
 
-                            <!-- Search Expand -->
-                            <div class="search-expand d-flex align-items-center">
-                                <a href="javascript:void(0)" id="searchToggle">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">search</i>
+        .student-table-wrapper th:first-child,
+        .student-table-wrapper td:first-child {
+            width: 55px;
+        }
+
+        .student-table-wrapper th:last-child,
+        .student-table-wrapper td:last-child {
+            width: 180px;
+        }
+    </style>
+    <div class="container-fluid">
+
+        <x-breadcrum title="Group Name Mapping" />
+        <x-session_message />
+
+        <div class="datatables">
+            <div class="card" style="border-left: 4px solid #004a93;">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <h4>Group Name Mapping</h4>
+                            </div>
+                            <div class="col-6 d-flex justify-content-end gap-2">
+                                <a href="{{ route('group.mapping.create') }}"
+                                    class="btn btn-primary d-flex align-items-center">
+                                    <iconify-icon icon="ep:circle-plus-filled" width="1.2em" height="1.2em"
+                                        class="me-1"></iconify-icon> Add Group Mapping
                                 </a>
-
-                                <input type="text" class="form-control search-input ms-2" id="searchInput"
-                                    placeholder="Search…" aria-label="Search">
+                                <!-- Add Student Button (opens modal) -->
+                                <button type="button" class="btn btn-info d-flex align-items-center"
+                                    data-bs-toggle="modal" data-bs-target="#addStudentModal">
+                                    <iconify-icon icon="mdi:account-plus" width="1.2em" height="1.2em"
+                                        class="me-1"></iconify-icon> Add Student
+                                </button>
+                                <!-- Import Excel Button (opens modal) -->
+                                <button type="button" class="btn btn-success d-flex align-items-center"
+                                    data-bs-toggle="modal" data-bs-target="#importModal">
+                                    <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em"
+                                        class="me-1"></iconify-icon> Import Excel
+                                </button>
+                                <a href="{{ route('group.mapping.export.student.list') }}"
+                                    class="btn btn-primary d-flex align-items-center">
+                                    <iconify-icon icon="material-symbols:sim-card-download-rounded" width="24" height="24"></iconify-icon> Export Excel
+                                </a>
                             </div>
 
                         </div>
 
-
-                    </div>
-
-                    <!-- Status Filters -->
-                    <div class="d-flex justify-content-end">
-                        <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
-                            aria-label="Group Mapping Status Filter">
-
-                            <button type="button" class="btn btn-success fw-semibold px-4 active" id="filterGroupActive"
-                                aria-pressed="true"> Active
-                            </button>
-
-                            <button type="button" class="btn btn-secondary fw-semibold px-4 text-dark"
-                                id="filterGroupArchive" aria-pressed="false"> Archive
-                            </button>
-
+                        <div class="row mb-3">
+                            <div class="col-12 text-end">
+                                <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
+                                    aria-label="Group Mapping Status Filter">
+                                    <button type="button" class="btn btn-success px-4 fw-semibold active"
+                                        id="filterGroupActive" aria-pressed="true">
+                                        <i class="bi bi-check-circle me-1"></i> Active
+                                    </button>
+                                    <button type="button"
+                                        class="btn btn-outline-secondary px-4 fw-semibold"
+                                        id="filterGroupArchive" aria-pressed="false">
+                                        <i class="bi bi-archive me-1"></i> Archive
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                    <hr>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle" id="group-mapping-table">
-                            <thead style="background-color:#af2910; color:#fff;">
-                                <tr>
-                                    <th class="text-center">S.No.</th>
-                                    <th class="text-center">Course Name</th>
-                                    <th class="text-center">Group Type</th>
-                                    <th class="text-center">Group Name</th>
-                                    <th class="text-center">Facility</th>
-                                    <th class="text-center">Student Count</th>
-                                    <th class="text-center">View/Download</th>
-                                    <th class="text-center">Action</th>
-                                    <th class="text-center">Status</th>
-                                </tr>
-                            </thead>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Import Excel Modal -->
-<div class="modal fade modal-xl" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true"
-    data-bs-backdrop="static" data-bs-keyboard="false">
+                        <div class="row g-3 mb-3 align-items-end">
+                            <div class="col-md-6 col-lg-4">
+                                <label for="courseFilter" class="form-label mb-1">Course Name</label>
+                                <select id="courseFilter" class="form-select">
+                                    <option value="">All Courses</option>
+                                    @foreach($courses ?? [] as $pk => $name)
+                                        <option value="{{ $pk }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <label for="groupTypeFilter" class="form-label mb-1">Group Type</label>
+                                <select id="groupTypeFilter" class="form-select">
+                                    <option value="">All Group Types</option>
+                                    @foreach($groupTypes ?? [] as $pk => $name)
+                                        <option value="{{ $pk }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-lg-4 d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                                </button>
+                                <button type="button" class="btn btn-outline-primary mt-4" id="reloadPage">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Reset
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Add Student Modal -->
+                        <div class="modal fade" id="addStudentModal" tabindex="-1" aria-labelledby="addStudentModalLabel"
+                            aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <form id="addStudentForm">
+                                        @csrf
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" id="addStudentModalLabel">Add Student to Group</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div id="addStudentAlert" class="alert d-none" role="alert"></div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="studentName" class="form-label">Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="studentName" name="name" 
+                                                    placeholder="Enter student name" required maxlength="255">
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="studentOtCode" class="form-label">OT Code <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="studentOtCode" name="otcode" 
+                                                    placeholder="Enter OT code" required maxlength="255">
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="studentGroupType" class="form-label">Group Type <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="studentGroupType" name="group_type" 
+                                                    placeholder="Enter group type" required maxlength="255">
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <label for="studentGroupName" class="form-label">Group Name <span class="text-danger">*</span></label>
+                                                <input type="text" class="form-control" id="studentGroupName" name="group_name" 
+                                                    placeholder="Enter group name" required maxlength="255">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="mdi mdi-content-save"></i> Add Student
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- End Add Student Modal -->
+
+                        <!-- Import Excel Modal -->
+                        <div class="modal fade modal-xl" id="importModal" tabindex="-1" aria-labelledby="importModalLabel"
+                            aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
 
     <div class="modal-dialog">
         <div class="modal-content">
@@ -263,51 +358,87 @@
                                 </div>
                             </div>
 
-                            <!-- Action Buttons -->
-                            <div class="d-flex justify-content-end gap-2">
-                                <button type="button" class="btn btn-outline-success send-bulk-message"
-                                    data-channel="sms">
-                                    <i class="bi bi-chat-text me-1"></i> Send SMS
-                                </button>
-                                <button type="button" class="btn btn-primary send-bulk-message" data-channel="email">
-                                    <i class="bi bi-envelope-paper-heart me-1"></i> Send Email
-                                </button>
+                                                    <div class="d-flex justify-content-end gap-2">
+                                                        <button type="button" class="btn btn-outline-success send-bulk-message" data-channel="sms">
+                                                            <i class="bi bi-chat-text me-1"></i> Send SMS
+                                                        </button>
+                                                        <button type="button" class="btn btn-primary send-bulk-message" data-channel="email">
+                                                            <i class="bi bi-envelope-paper-heart me-1"></i> Send Email
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="modal-footer justify-content-between align-items-center">
+                                        <div class="text-muted small" id="selectedOtCount">0 OT(s) selected</div>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-outline-primary" id="toggleBulkMessage">
+                                                <i class="bi bi-send-check me-1"></i> Send SMS / Send Email
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
                             </div>
-
                         </div>
+
+                        <!-- Edit Student Modal -->
+                        <div class="modal fade" id="editStudentModal" tabindex="-1" aria-labelledby="editStudentModalLabel" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editStudentModalLabel">Edit Student</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <form id="editStudentForm">
+                                        @csrf
+                                        <div class="modal-body">
+                                            <div id="editStudentAlert" class="alert d-none" role="alert"></div>
+                                            <input type="hidden" name="student_id" id="editStudentId">
+                                            <div class="mb-3">
+                                                <label for="editStudentName" class="form-label">Display Name</label>
+                                                <input type="text" class="form-control" id="editStudentName" name="display_name" required maxlength="255">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editStudentEmail" class="form-label">Email</label>
+                                                <input type="email" class="form-control" id="editStudentEmail" name="email" maxlength="255">
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="editStudentContact" class="form-label">Contact No</label>
+                                                <input type="text" class="form-control" id="editStudentContact" name="contact_no" maxlength="20">
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-save me-1"></i> Save Changes
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+  
+                        <hr>
+                        {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
                     </div>
                 </div>
-
             </div>
-
-            <!-- Footer -->
-            <div class="modal-footer border-0 d-flex justify-content-between align-items-center">
-                <div class="text-muted small" id="selectedOtCount" aria-live="polite">
-                    0 OT(s) selected
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-primary" id="toggleBulkMessage">
-                        <i class="bi bi-send-check me-1"></i> Send SMS / Email
-                    </button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close Modal">
-                        Close
-                    </button>
-                </div>
-            </div>
-
         </div>
     </div>
-</div>
 @endsection
 @push('scripts')
-{{ $dataTable->scripts() }}
-
-
-<script>
-$(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) {
-    data.status_filter = window.groupMappingCurrentFilter || 'active';
-});
+    {!! $dataTable->scripts() !!}
+    <script>
+        $(document).on('preXhr.dt', '#group-mapping-table', function (e, settings, data) {
+            data.status_filter = window.groupMappingCurrentFilter || 'active';
+            data.course_filter = $('#courseFilter').val();
+            data.group_type_filter = $('#groupTypeFilter').val();
+        });
 
 $(document).ready(function() {
     window.groupMappingCurrentFilter = 'active';
@@ -321,11 +452,25 @@ $(document).ready(function() {
             table.ajax.reload();
         });
 
-        $('#filterGroupArchive').on('click', function() {
-            setActiveButton($(this));
-            window.groupMappingCurrentFilter = 'archive';
-            table.ajax.reload();
-        });
+                $('#filterGroupArchive').on('click', function () {
+                    setActiveButton($(this));
+                    window.groupMappingCurrentFilter = 'archive';
+                    table.ajax.reload();
+                });
+
+                $('#courseFilter, #groupTypeFilter').on('change', function () {
+                    table.ajax.reload();
+                });
+
+                $('#resetFilters').on('click', function () {
+                    $('#courseFilter').val('');
+                    $('#groupTypeFilter').val('');
+                    table.ajax.reload();
+                });
+
+                $('#reloadPage').on('click', function () {
+                    window.location.reload();
+                });
 
         function setActiveButton(activeBtn) {
             $('#filterGroupActive')
@@ -349,9 +494,73 @@ $(document).ready(function() {
             }
         }
 
-        // Ensure initial styling reflects default filter
-        setActiveButton($('#filterGroupActive'));
-    }, 150);
-});
-</script>
+                // Ensure initial styling reflects default filter
+                setActiveButton($('#filterGroupActive'));
+            }, 150);
+
+            // Handle Add Student Form Submission
+            $('#addStudentForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const form = $(this);
+                const submitBtn = form.find('button[type="submit"]');
+                const alertBox = $('#addStudentAlert');
+                
+                // Disable submit button
+                submitBtn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Adding...');
+                alertBox.addClass('d-none');
+
+                $.ajax({
+                    url: '{{ route("group.mapping.add.single.student") }}',
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertBox.removeClass('d-none alert-danger')
+                                .addClass('alert-success')
+                                .html('<i class="mdi mdi-check-circle"></i> ' + response.message);
+                            
+                            // Reset form
+                            form[0].reset();
+                            
+                            // Reload DataTable
+                            $('#group-mapping-table').DataTable().ajax.reload();
+                            
+                            // Close modal after 1.5 seconds
+                            setTimeout(function() {
+                                $('#addStudentModal').modal('hide');
+                                alertBox.addClass('d-none');
+                            }, 1500);
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'An error occurred while adding the student.';
+                        
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON.errors) {
+                                const errors = Object.values(xhr.responseJSON.errors).flat();
+                                errorMessage = errors.join('<br>');
+                            }
+                        }
+                        
+                        alertBox.removeClass('d-none alert-success')
+                            .addClass('alert-danger')
+                            .html('<i class="mdi mdi-alert-circle"></i> ' + errorMessage);
+                    },
+                    complete: function() {
+                        // Re-enable submit button
+                        submitBtn.prop('disabled', false).html('<i class="mdi mdi-content-save"></i> Add Student');
+                    }
+                });
+            });
+
+            // Reset alert when modal is closed
+            $('#addStudentModal').on('hidden.bs.modal', function() {
+                $('#addStudentForm')[0].reset();
+                $('#addStudentAlert').addClass('d-none');
+            });
+        });
+    </script>
 @endpush

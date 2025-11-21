@@ -196,7 +196,7 @@ class CourseController extends Controller
 
     public function show($id)
     {
-        try {
+        // try {
             // Decrypt the ID
             $decryptedId = decrypt($id);
             
@@ -205,41 +205,57 @@ class CourseController extends Controller
             
             // Get coordinator details
             $coordinators = $course->courseCordinatorMater;
-            $coordinatorName = $coordinators->first()->Coordinator_name ?? 'Not Assigned';
             
-            // Get assistant coordinators - filter out null/empty values but keep valid names
-            $assistantCoordinators = $coordinators->pluck('Assistant_Coordinator_name')
-                ->filter(function($name) {
-                    return $name !== null && $name !== '';
+            // Get coordinator PK from the first coordinator record
+            $coordinatorPk = $coordinators->first()->Coordinator_name ?? null;
+            
+            // Get assistant coordinator PKs - filter out null/empty values
+            $assistantCoordinatorPks = $coordinators->pluck('Assistant_Coordinator_name')
+                ->filter(function($pk) {
+                    return $pk !== null && $pk !== '';
                 })
                 ->unique()
                 ->values()
                 ->toArray();
             
-            // Debug logging
-            \Log::info('Course coordinators data:', [
-                'course_id' => $decryptedId,
-                'coordinators_count' => $coordinators->count(),
-                'coordinator_name' => $coordinatorName,
-                'assistant_coordinators' => $assistantCoordinators,
-                'raw_coordinator_data' => $coordinators->toArray()
+            // Fetch coordinator faculty using PK
+            $coordinatorFaculty = null;
+            $coordinatorName = 'Not Assigned';
+            if ($coordinatorPk) {
+                $coordinatorFaculty = FacultyMaster::find($coordinatorPk);
+                $coordinatorName = $coordinatorFaculty ? $coordinatorFaculty->full_name : 'Not Assigned';
+            }
+            
+            // Fetch assistant coordinator faculties using PKs
+            $assistantCoordinatorFaculties = FacultyMaster::whereIn('pk', $assistantCoordinatorPks)->get();
+            
+            // Debug logging for assistant coordinators
+            \Log::info('Assistant Coordinator Debug:', [
+                'assistant_coordinator_pks' => $assistantCoordinatorPks,
+                'faculties_found_count' => $assistantCoordinatorFaculties->count(),
+                'faculties_data' => $assistantCoordinatorFaculties->map(function($faculty) {
+                    return [
+                        'pk' => $faculty->pk,
+                        'full_name' => $faculty->full_name,
+                        'photo_uplode_path' => $faculty->photo_uplode_path
+                    ];
+                })->toArray()
             ]);
             
-            // Additional debugging for assistant coordinators
-            $allAssistantNames = $coordinators->pluck('Assistant_Coordinator_name')->toArray();
-            \Log::info('All assistant coordinator names (before filtering):', $allAssistantNames);
-            
-            // Get faculty details for coordinators
-            $coordinatorFaculty = FacultyMaster::where('full_name', $coordinatorName)->first();
-            $assistantCoordinatorFaculties = FacultyMaster::whereIn('full_name', $assistantCoordinators)->get();
-            
-            // Map assistant coordinators with their photos and roles
+            // Map assistant coordinators with their names, photos and roles
             $assistantCoordinatorsData = [];
             foreach ($coordinators as $coordinator) {
                 if ($coordinator->Assistant_Coordinator_name) {
-                    $assistantFaculty = $assistantCoordinatorFaculties->firstWhere('full_name', $coordinator->Assistant_Coordinator_name);
+                    $assistantFaculty = $assistantCoordinatorFaculties->firstWhere('pk', $coordinator->Assistant_Coordinator_name);
+                    
+                    \Log::info('Mapping Assistant Coordinator:', [
+                        'coordinator_pk' => $coordinator->Assistant_Coordinator_name,
+                        'faculty_found' => $assistantFaculty ? 'Yes' : 'No',
+                        'photo_path' => $assistantFaculty ? $assistantFaculty->photo_uplode_path : 'NULL'
+                    ]);
+                    
                     $assistantCoordinatorsData[] = [
-                        'name' => $coordinator->Assistant_Coordinator_name,
+                        'name' => $assistantFaculty ? $assistantFaculty->full_name : 'Not Assigned',
                         'role' => $coordinator->assistant_coordinator_role ?? 'Not Specified',
                         'photo' => $assistantFaculty ? $assistantFaculty->photo_uplode_path : null
                     ];
@@ -252,16 +268,16 @@ class CourseController extends Controller
                 'coordinatorFaculty',
                 'assistantCoordinatorsData'
             ));
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            \Log::error('Decryption error in course show: ' . $e->getMessage());
-            return redirect()->route('programme.index')->with('error', 'Invalid course ID');
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            \Log::error('Course not found: ' . $e->getMessage());
-            return redirect()->route('programme.index')->with('error', 'Course not found');
-        } catch (\Exception $e) {
-            \Log::error('Course show error: ' . $e->getMessage());
-            return redirect()->route('programme.index')->with('error', 'An error occurred while loading course details');
-        }
+        // } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+        //     \Log::error('Decryption error in course show: ' . $e->getMessage());
+        //     return redirect()->route('programme.index')->with('error', 'Invalid course ID');
+        // } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        //     \Log::error('Course not found: ' . $e->getMessage());
+        //     return redirect()->route('programme.index')->with('error', 'Course not found');
+        // } catch (\Exception $e) {
+        //     \Log::error('Course show error: ' . $e->getMessage());
+        //     return redirect()->route('programme.index')->with('error', 'An error occurred while loading course details');
+        // }
     }
 
     public function downloadPdf($id)
@@ -275,20 +291,37 @@ class CourseController extends Controller
             
             // Get coordinator details
             $coordinators = $course->courseCordinatorMater;
-            $coordinatorName = $coordinators->first()->Coordinator_name ?? 'Not Assigned';
-            $assistantCoordinators = $coordinators->pluck('Assistant_Coordinator_name')->filter()->unique()->values()->toArray();
             
-            // Get faculty details for coordinators
-            $coordinatorFaculty = FacultyMaster::where('full_name', $coordinatorName)->first();
-            $assistantCoordinatorFaculties = FacultyMaster::whereIn('full_name', $assistantCoordinators)->get();
+            // Get coordinator PK from the first coordinator record
+            $coordinatorPk = $coordinators->first()->Coordinator_name ?? null;
             
-            // Map assistant coordinators with their photos and roles
+            // Get assistant coordinator PKs - filter out null/empty values
+            $assistantCoordinatorPks = $coordinators->pluck('Assistant_Coordinator_name')
+                ->filter(function($pk) {
+                    return $pk !== null && $pk !== '';
+                })
+                ->unique()
+                ->values()
+                ->toArray();
+            
+            // Fetch coordinator faculty using PK
+            $coordinatorFaculty = null;
+            $coordinatorName = 'Not Assigned';
+            if ($coordinatorPk) {
+                $coordinatorFaculty = FacultyMaster::find($coordinatorPk);
+                $coordinatorName = $coordinatorFaculty ? $coordinatorFaculty->full_name : 'Not Assigned';
+            }
+            
+            // Fetch assistant coordinator faculties using PKs
+            $assistantCoordinatorFaculties = FacultyMaster::whereIn('pk', $assistantCoordinatorPks)->get();
+            
+            // Map assistant coordinators with their names, photos and roles
             $assistantCoordinatorsData = [];
             foreach ($coordinators as $coordinator) {
                 if ($coordinator->Assistant_Coordinator_name) {
-                    $assistantFaculty = $assistantCoordinatorFaculties->firstWhere('full_name', $coordinator->Assistant_Coordinator_name);
+                    $assistantFaculty = $assistantCoordinatorFaculties->firstWhere('pk', $coordinator->Assistant_Coordinator_name);
                     $assistantCoordinatorsData[] = [
-                        'name' => $coordinator->Assistant_Coordinator_name,
+                        'name' => $assistantFaculty ? $assistantFaculty->full_name : 'Not Assigned',
                         'role' => $coordinator->assistant_coordinator_role ?? 'Not Specified',
                         'photo' => $assistantFaculty ? $assistantFaculty->photo_uplode_path : null
                     ];
