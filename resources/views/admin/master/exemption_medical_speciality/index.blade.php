@@ -43,7 +43,8 @@
                                     <tr>
                                         <td>{{ $index + 1 }}</td>
                                         <td>{{ $speciality->speciality_name }}</td>
-                                        <td>{{ $speciality->created_date }}</td>
+                                        <td>{{ \Carbon\Carbon::parse($speciality->created_date)->format('d-m-Y') }}</td>
+
 
                                         <td>
                                             <div class="form-check form-switch d-inline-block">

@@ -13,7 +13,8 @@ class MDOEscrotExemptionController extends Controller
 {
     public function index(MDOEscrotExemptionDataTable $dataTable)
     {
-        return $dataTable->render('admin.mdo_escrot_exemption.index');
+        $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
+        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('MDODutyTypeMaster'));
     }
 
     public function create()
@@ -31,9 +32,10 @@ class MDOEscrotExemptionController extends Controller
     public function edit($id)
     {
         $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
-
         $mdoDutyType = MDOEscotDutyMap::with(['studentMaster'])->findOrFail($id);
-
+        if (request()->ajax()) {
+            return view('admin.mdo_escrot_exemption._edit_form', compact('id', 'MDODutyTypeMaster', 'mdoDutyType'))->render();
+        }
         return view('admin.mdo_escrot_exemption.edit', compact('id', 'MDODutyTypeMaster', 'mdoDutyType'));
     }
 
@@ -113,7 +115,6 @@ class MDOEscrotExemptionController extends Controller
 
     function update(Request $request) {
         try{
-            
             $mdoDutyType = MDOEscotDutyMap::findOrFail(decrypt($request->pk));
             $mdoDutyType->update($request->only('mdo_duty_type_master_pk', 'mdo_date', 'Time_from', 'Time_to'));
 
@@ -121,5 +122,18 @@ class MDOEscrotExemptionController extends Controller
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => 'Error occurred while updating MDO Escrot Exemption.']);
         }
+    }
+
+    public function details($id)
+    {
+        $mdoDutyType = MDOEscotDutyMap::with(['studentMaster'])->findOrFail($id);
+        return response()->json([
+            'pk' => $mdoDutyType->pk,
+            'student_name' => $mdoDutyType->studentMaster->display_name ?? '—',
+            'mdo_duty_type_master_pk' => $mdoDutyType->mdo_duty_type_master_pk,
+            'mdo_date' => $mdoDutyType->mdo_date,
+            'Time_from' => $mdoDutyType->Time_from,
+            'Time_to' => $mdoDutyType->Time_to,
+        ]);
     }
 }

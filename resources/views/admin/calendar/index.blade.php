@@ -5,149 +5,205 @@
 @section('content')
 
 <style>
+/* Accessibility: Readonly checkbox with better visual feedback */
 .readonly-checkbox {
     pointer-events: none; 
-    opacity: 0.6;
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
-/* Month ke har din ke box ki height/padding badhao */
+/* Calendar day cells with improved spacing */
 .fc .fc-daygrid-day-frame {
     min-height: 110px !important;
     padding: 8px 4px !important;
+    transition: background-color 0.2s ease;
 }
 
 .fc .fc-daygrid-day {
     min-height: 110px !important;
 }
 
-/* Responsive ke liye thoda adjust */
-@media (max-width: 600px) {
+.fc .fc-daygrid-day-frame:hover {
+    background-color: rgba(0, 0, 0, 0.02) !important;
+}
 
+/* Responsive adjustments for mobile */
+@media (max-width: 600px) {
     .fc .fc-daygrid-day-frame,
     .fc .fc-daygrid-day {
         min-height: 70px !important;
     }
 }
 
-/* Custom colored cards for each day */
+/* Custom colored cards with WCAG compliant contrast ratios */
 
-/* Assign different colors for each weekday */
+/* Sunday - Light red with better contrast */
 .fc-daygrid-day[data-day="0"] .fc-daygrid-day-frame {
-    background-color: #ffe5e5;
+    background-color: #ffd4d4;
 }
 
-/* Sunday */
+/* Monday - Light blue */
 .fc-daygrid-day[data-day="1"] .fc-daygrid-day-frame {
-    background-color: #e5f7ff;
+    background-color: #d4edff;
 }
 
-/* Monday */
+/* Tuesday - Light green */
 .fc-daygrid-day[data-day="2"] .fc-daygrid-day-frame {
-    background-color: #e5ffe5;
+    background-color: #d4ffd4;
 }
 
-/* Tuesday */
+/* Wednesday - Light yellow */
 .fc-daygrid-day[data-day="3"] .fc-daygrid-day-frame {
-    background-color: #fffbe5;
+    background-color: #fff9d4;
 }
 
-/* Wednesday */
+/* Thursday - Light purple */
 .fc-daygrid-day[data-day="4"] .fc-daygrid-day-frame {
-    background-color: #f5e5ff;
+    background-color: #ead4ff;
 }
 
-/* Thursday */
+/* Friday - Light indigo */
 .fc-daygrid-day[data-day="5"] .fc-daygrid-day-frame {
-    background-color: #e5eaff;
+    background-color: #d4dfff;
 }
 
-/* Friday */
+/* Saturday - Light orange */
 .fc-daygrid-day[data-day="6"] .fc-daygrid-day-frame {
-    background-color: #fff0e5;
+    background-color: #ffe8d4;
 }
-
-/* Saturday */
-/* Card content styling */
+/* Event card with modern styling */
 .fc-event-card {
     background: #fff;
     border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    padding: 8px;
-    margin-bottom: 6px;
-    font-size: 15px;
-    color: #222;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    padding: 10px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #212529;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-/* Multiple selection styling */
+.fc-event-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Multiple selection with improved accessibility */
 .select2-container--default .select2-selection--multiple {
     border: 1px solid #ced4da;
     border-radius: 0.375rem;
     min-height: calc(1.5em + 0.75rem + 2px);
     padding: 0.375rem 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
 .select2-container--default.select2-container--focus .select2-selection--multiple {
-    border-color: #86b7fe;
+    border-color: #0d6efd;
     outline: 0;
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
-/* Faculty and Venue sections styling */
+/* Faculty and Venue sections with modern cards */
 .faculty-section, .venue-section {
-    border: 1px solid #e9ecef;
+    border: 1px solid #dee2e6;
+    border-left: 4px solid #0d6efd;
     border-radius: 0.375rem;
-    padding: 1rem;
+    padding: 1.25rem;
     margin-bottom: 1rem;
     background-color: #f8f9fa;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.2s ease;
+}
+
+.faculty-section:hover, .venue-section:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .faculty-section h6, .venue-section h6 {
     margin-bottom: 0.75rem;
-    color: #495057;
+    color: #212529;
     font-weight: 600;
+    font-size: 1rem;
 }
 
 .remove-faculty, .remove-venue {
     margin-top: 0.5rem;
 }
 
-/* Topic sections styling */
+/* Topic sections with enhanced styling */
 .topic-section {
-    border: 1px solid #e9ecef;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background-color: #fff;
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background-color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .topic-section h6 {
-    margin-bottom: 0.75rem;
-    color: #495057;
+    margin-bottom: 1rem;
+    color: #212529;
     font-weight: 600;
+    font-size: 1.1rem;
 }
 
 .remove-topic {
     margin-top: 0.5rem;
 }
 
-/* Add button styling */
+/* Add button with better visibility */
 .btn-add-more {
     margin-bottom: 1rem;
+    font-weight: 500;
+}
+
+/* Form labels with consistent styling */
+.form-label {
+    font-weight: 500;
+    color: #212529;
+    margin-bottom: 0.5rem;
+}
+
+/* Required field indicator */
+.text-danger {
+    font-weight: 600;
+}
+
+/* Focus styles for accessibility */
+.form-control:focus, .form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Button hover effects */
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Tooltip styling */
+.tooltip-inner {
+    max-width: 300px;
+    text-align: left;
 }
 </style>
 
 <div class="container-fluid">
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card shadow-sm" style="border-left: 4px solid #004a93;" role="region" aria-label="Calendar header">
         <div class="card-body py-3">
             <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Calendar</h4>
+                    <h1 class="mb-4 mb-sm-0 card-title h4">Calendar Management</h1>
                     <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
+                        <ol class="breadcrumb mb-0">
                             <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="#">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
+                                <a class="text-muted text-decoration-none d-flex" href="#" aria-label="Home">
+                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6" aria-hidden="true"></iconify-icon>
                                 </a>
                             </li>
                             <li class="breadcrumb-item" aria-current="page">
@@ -162,17 +218,28 @@
         </div>
         </div>
     </div>
-    <div class="text-end mb-3 gap-3">
-        <button type="button" class="btn btn-primary btn-sm" id="createEventupperButton">
-        <i class="bi bi-plus"></i> Add Event</button>
-        <button type="button" class="btn btn-outline-primary btn-sm" id="btnMonthView">Month</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnWeekView">Week</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView">Day</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView">List</button>
+    <div class="d-flex justify-content-between align-items-center mb-3 gap-3" role="toolbar" aria-label="Calendar controls">
+        <button type="button" class="btn btn-primary btn-sm shadow-sm" id="createEventupperButton" aria-label="Add new calendar event">
+            <i class="bi bi-plus-circle" aria-hidden="true"></i> Add Event
+        </button>
+        <div class="btn-group" role="group" aria-label="Calendar view options">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnMonthView" aria-label="Month view">
+                <i class="bi bi-calendar-month" aria-hidden="true"></i> Month
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnWeekView" aria-label="Week view">
+                <i class="bi bi-calendar-week" aria-hidden="true"></i> Week
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView" aria-label="Day view">
+                <i class="bi bi-calendar-day" aria-hidden="true"></i> Day
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView" aria-label="List view">
+                <i class="bi bi-list-ul" aria-hidden="true"></i> List
+            </button>
+        </div>
     </div>
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card shadow-sm" style="border-left: 4px solid #004a93;" role="region" aria-label="Calendar view">
         <div class="card-body calender-sidebar app-calendar">
-            <div id='calendar'></div>
+            <div id='calendar' role="application" aria-label="Interactive calendar"></div>
             <!-- List View Table -->
                 <div id="eventListView" style="display:none;">
                     <div class="row mb-3">
@@ -193,16 +260,16 @@
                             <h3 class="text-center">19</h3>
                         </div>
                     </div>
-                    <table class="table table-bordered table-striped table-hover" id="eventListTable">
+                    <table class="table table-bordered table-striped table-hover" id="eventListTable" role="table" aria-label="Weekly schedule table">
                         <thead>
                             <tr>
-                                <th rowspan="3" class="text-center align-middle">Time</th>
-                                <th rowspan="3" class="text-center align-middle">Group</th>
-                                <th class="text-center align-middle">HRM Module</th>
-                                <th class="text-center align-middle">Economics Module</th>
-                                <th class="text-center align-middle">Economics Module</th>
-                                <th class="text-center align-middle">Election Module</th>
-                                <th class="text-center align-middle">Election/Economics/Law Module</th>
+                                <th scope="col" rowspan="3" class="text-center align-middle">Time</th>
+                                <th scope="col" rowspan="3" class="text-center align-middle">Group</th>
+                                <th scope="col" class="text-center align-middle">HRM Module</th>
+                                <th scope="col" class="text-center align-middle">Economics Module</th>
+                                <th scope="col" class="text-center align-middle">Economics Module</th>
+                                <th scope="col" class="text-center align-middle">Election Module</th>
+                                <th scope="col" class="text-center align-middle">Election/Economics/Law Module</th>
                             </tr>
                             <tr>
                                 <th class="text-center align-middle">Monday</th>
@@ -229,73 +296,101 @@
     </div>
     <!-- BEGIN MODAL -->
     <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true"
-        style="display: none;">
+        role="dialog" aria-modal="true">
         <div class="modal-dialog modal-dialog-scrollable modal-xl">
-            <form id="eventForm">
+            <form id="eventForm" novalidate>
                 @csrf
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="eventModalLabel">
-                            {{ $modalTitle ?? __('Add Calendar Event') }}
-                        </h5>
-                        <input type="date" name="start_datetime" id="start_datetime" class="form-control w-50 mx-2"
-                            placeholder="Select Date" required>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body" style="overflow-y: scroll; height: 700px;overflow-x: hidden;">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Course name <span class="text-danger">*</span></label>
-                                    <select name="Course_name" id="Course_name" class="form-control">
-                                        <option value="">Select Course</option>
-                                        @foreach($courseMaster as $course)
-                                        <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Group Type <span class="text-danger">*</span></label>
-                                    <select name="group_type" id="group_type" class="form-control">
-                                        <option value="">Select Group Type</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-12 mb-3">
-                                <div>
-                                    <label class="form-label">Group Type Name </label>
-                                </div>
-                                <div id="type_name_container" class="mt-3">
-                                    <!-- Checkboxes will be appended here -->
-                                </div>
-                            </div>
-                            
-                            <!-- Topics Section -->
-                            <div class="col-md-12">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h5>Topics</h5>
-                                    <!-- <button type="button" class="btn btn-sm btn-outline-primary btn-add-more" id="addTopicBtn">
-                                        <i class="bi bi-plus"></i> Add Topic
-                                    </button> -->
-                                </div>
-                                <div id="topicsContainer">
-                                    <!-- Topic sections will be added here dynamically -->
-                                </div>
+                    <div class="modal-header bg-light">
+                        <div class="d-flex align-items-center gap-3 flex-grow-1">
+                            <h5 class="modal-title mb-0" id="eventModalLabel">
+                                <i class="bi bi-calendar-event text-primary" aria-hidden="true"></i>
+                                {{ $modalTitle ?? __('Add Calendar Event') }}
+                            </h5>
+                            <div class="flex-grow-1">
+                                <label for="start_datetime" class="visually-hidden">Event Date</label>
+                                <input type="date" name="start_datetime" id="start_datetime" 
+                                    class="form-control w-50" 
+                                    placeholder="Select Date" 
+                                    aria-label="Event date" 
+                                    required>
                             </div>
                         </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close modal"></button>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn bg-danger-subtle text-danger" data-bs-dismiss="modal">
-                            Close
+                    <div class="modal-body" style="overflow-y: auto; max-height: 700px;">
+                        <fieldset class="border-0">
+                            <legend class="visually-hidden">Event Basic Information</legend>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="Course_name" class="form-label">
+                                            Course Name 
+                                            <span class="text-danger" aria-label="required">*</span>
+                                            <i class="bi bi-info-circle text-muted" 
+                                               data-bs-toggle="tooltip" 
+                                               data-bs-placement="top" 
+                                               title="Select the course for this event"
+                                               aria-label="Course name help"></i>
+                                        </label>
+                                        <select name="Course_name" id="Course_name" class="form-select" aria-required="true">
+                                            <option value="">Select Course</option>
+                                            @foreach($courseMaster as $course)
+                                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="group_type" class="form-label">
+                                            Group Type 
+                                            <span class="text-danger" aria-label="required">*</span>
+                                            <i class="bi bi-info-circle text-muted" 
+                                               data-bs-toggle="tooltip" 
+                                               data-bs-placement="top" 
+                                               title="Select the group type for this event"
+                                               aria-label="Group type help"></i>
+                                        </label>
+                                        <select name="group_type" id="group_type" class="form-select" aria-required="true">
+                                            <option value="">Select Group Type</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <fieldset>
+                                        <legend class="form-label">Group Type Name</legend>
+                                        <div id="type_name_container" class="mt-2" role="group" aria-label="Group type selections">
+                                            <!-- Checkboxes will be appended here -->
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            </div>
+                        </fieldset>
+                            
+                        <!-- Topics Section -->
+                        <fieldset class="col-md-12 border-0">
+                            <legend class="h5 mb-3">
+                                <i class="bi bi-book text-primary" aria-hidden="true"></i> Topics
+                            </legend>
+                            <div id="topicsContainer" role="list" aria-label="Event topics">
+                                <!-- Topic sections will be added here dynamically -->
+                            </div>
+                        </fieldset>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" aria-label="Close dialog without saving">
+                            <i class="bi bi-x-circle" aria-hidden="true"></i> Cancel
                         </button>
                         <button type="button" class="btn btn-success btn-update-event"
-                            data-fc-event-public-id="{{ $event->id ?? '' }}" style="display: none;">
-                            Update changes
+                            data-fc-event-public-id="{{ $event->id ?? '' }}" 
+                            style="display: none;"
+                            aria-label="Update calendar event">
+                            <i class="bi bi-check-circle" aria-hidden="true"></i> Update Event
                         </button>
-                        <button type="submit" class="btn btn-primary btn-add-event">
-                            Add Calendar Event
+                        <button type="submit" class="btn btn-primary btn-add-event" aria-label="Add new calendar event">
+                            <i class="bi bi-plus-circle" aria-hidden="true"></i> Add Event
                         </button>
                     </div>
 
@@ -304,39 +399,48 @@
     </div>
     </div>
     <!-- END MODAL -->
-    <!-- eventDetails modal do-->
-    <!-- Modal -->
-    <div class="modal fade" id="eventDetails" tabindex="-1" aria-labelledby="eventDetailsLabel" aria-hidden="true">
+    <!-- Event Details Modal -->
+    <div class="modal fade" id="eventDetails" tabindex="-1" aria-labelledby="eventDetailsLabel" aria-hidden="true" role="dialog" aria-modal="true">
         <div class="modal-dialog modal-dialog-scrollable modal-lg">
-            <div class="modal-content shadow rounded">
-                <div class="modal-header d-flex justify-content-between align-items-start">
-                    <div>
-                        <h5 class="modal-title" id="eventDetailsLabel">
-                            <span id="eventTitle">Event Title</span>:<span id="eventTopic"></span>
+            <div class="modal-content shadow-lg rounded">
+                <div class="modal-header bg-light">
+                    <div class="flex-grow-1">
+                        <h5 class="modal-title mb-1" id="eventDetailsLabel">
+                            <i class="bi bi-calendar-event text-primary" aria-hidden="true"></i>
+                            <span id="eventTitle">Event Details</span>
                         </h5>
-                        <small class="text-muted" id="eventDate">Event Date</small><br>
+                        <div class="mt-2">
+                            <h6 class="mb-1"><strong>Topic:</strong> <span id="eventTopic"></span></h6>
+                            <small class="text-muted" id="eventDate" aria-label="Event date">Event Date</small>
+                        </div>
                     </div>
-                    <div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="editEventBtn">
-                            <i class="bi bi-pencil"></i>
+                    <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="editEventBtn" aria-label="Edit this event">
+                            <i class="bi bi-pencil" aria-hidden="true"></i>
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger me-1" id="deleteEventBtn">
-                            <i class="bi bi-trash"></i>
+                        <button type="button" class="btn btn-sm btn-outline-danger" id="deleteEventBtn" aria-label="Delete this event">
+                            <i class="bi bi-trash" aria-hidden="true"></i>
                         </button>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close dialog"></button>
                     </div>
                 </div>
 
                 <div class="modal-body">
-                    <div class="mb-2">
-                        <i class="bi bi-person-fill me-2"></i>Faculty: <b><span id="eventfaculty"></span></b>
-                    </div>
-                    <div class="mb-2">
-                        <i class="bi bi-geo-alt-fill me-2"></i>Venue: <b><span id="eventVanue"></span></b>
-                    </div>
-                    <!-- <div class="mb-2">
-                    <i class="bi bi-globe me-2"></i> <span id="eventAudience">Public</span>
-                </div> -->
+                    <dl class="row mb-0">
+                        <dt class="col-sm-3">
+                            <i class="bi bi-person-fill me-2 text-primary" aria-hidden="true"></i>Faculty
+                        </dt>
+                        <dd class="col-sm-9">
+                            <strong><span id="eventfaculty"></span></strong>
+                        </dd>
+                        
+                        <dt class="col-sm-3">
+                            <i class="bi bi-geo-alt-fill me-2 text-primary" aria-hidden="true"></i>Venue
+                        </dt>
+                        <dd class="col-sm-9">
+                            <strong><span id="eventVanue"></span></strong>
+                        </dd>
+                    </dl>
                 </div>
             </div>
         </div>
@@ -363,26 +467,32 @@ $(document).ready(function() {
     // Add first topic section on page load
     addTopicSection();
     
-    // Add topic button click handler
-    $('#addTopicBtn').on('click', function() {
-        addTopicSection();
-    });
+    // Topic button removed - only one topic allowed per current backend
+    // $('#addTopicBtn').on('click', function() {
+    //     addTopicSection();
+    // });
     
     // Function to add a new topic section
     function addTopicSection() {
         const topicIndex = $('.topic-section').length;
         const topicSection = `
-            <div class="topic-section" id="topicSection${topicIndex}">
+            <div class="topic-section" id="topicSection${topicIndex}" role="listitem">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6>Topic ${topicIndex + 1}</h6>
-                    ${topicIndex > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger remove-topic" data-index="' + topicIndex + '"><i class="bi bi-trash"></i> Remove</button>' : ''}
+                    <h6 class="mb-0">
+                        <i class="bi bi-bookmark-fill text-primary" aria-hidden="true"></i> 
+                        Topic ${topicIndex + 1}
+                    </h6>
+                    ${topicIndex > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger remove-topic" data-index="' + topicIndex + '" aria-label="Remove topic ' + (topicIndex + 1) + '"><i class="bi bi-trash" aria-hidden="true"></i> Remove</button>' : ''}
                 </div>
                 <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Subject Module Name <span class="text-danger">*</span></label>
-                            <select name="subject_module" class="form-control subject-module-select" id="subject_module">
-                                <option value="">Select Subject Name</option>
+                            <label for="subject_module_${topicIndex}" class="form-label">
+                                Subject Module Name 
+                                <span class="text-danger" aria-label="required">*</span>
+                            </label>
+                            <select name="subject_module" class="form-select subject-module-select" id="subject_module_${topicIndex}" aria-required="true">
+                                <option value="">Select Subject Module</option>
                                 @foreach($subjects as $subject)
                                 <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
                                     {{ $subject->module_name }}
@@ -393,150 +503,100 @@ $(document).ready(function() {
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Subject Name <span class="text-danger">*</span></label>
-                            <select name="subject_name" id="subject_name" class="form-control subject-name-select">
+                            <label for="subject_name_${topicIndex}" class="form-label">
+                                Subject Name 
+                                <span class="text-danger" aria-label="required">*</span>
+                            </label>
+                            <select name="subject_name" id="subject_name_${topicIndex}" class="form-select subject-name-select" aria-required="true">
                                 <option value="">Select Subject Name</option>
                             </select>
                         </div>
                     </div>
                     <div class="col-md-12">
                         <div class="mb-3">
-                            <label class="form-label">Topic <span class="text-danger">*</span></label>
-                            <textarea name="topic" id="topic" class="form-control" rows="3"></textarea>
+                            <label for="topic_${topicIndex}" class="form-label">
+                                Topic Description 
+                                <span class="text-danger" aria-label="required">*</span>
+                            </label>
+                            <textarea name="topic" id="topic_${topicIndex}" class="form-control" rows="3" aria-required="true" placeholder="Enter topic description"></textarea>
                         </div>
                     </div>
                     
                     <!-- Faculty Section -->
                     <div class="col-md-12">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6>Faculty</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary btn-add-more add-faculty-btn" data-topic-index="${topicIndex}">
-                                <i class="bi bi-plus"></i> Add Faculty
-                            </button>
-                        </div>
-                        <div class="faculty-container" id="facultyContainer${topicIndex}">
-                            <!-- Faculty sections will be added here dynamically -->
-                        </div>
+                        <fieldset class="border-0">
+                            <legend class="h6 mb-3">
+                                <i class="bi bi-people-fill text-primary" aria-hidden="true"></i> Faculty
+                            </legend>
+                            <!-- Multiple faculty temporarily disabled - backend supports single faculty only -->
+                            <div class="faculty-container" id="facultyContainer${topicIndex}" role="list" aria-label="Faculty members">
+                                <!-- Faculty sections will be added here dynamically -->
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div class="shift-section" id="shiftSection${topicIndex}_0">
+                      
                     </div>
                     
                     <!-- Venue Section -->
                     <div class="col-md-12">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6>Venue</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary btn-add-more add-venue-btn" data-topic-index="${topicIndex}">
-                                <i class="bi bi-plus"></i> Add Venue
-                            </button>
-                        </div>
-                        <div class="venue-container" id="venueContainer${topicIndex}">
-                            <!-- Venue sections will be added here dynamically -->
-                        </div>
+                        <fieldset class="border-0">
+                            <legend class="h6 mb-3">
+                                <i class="bi bi-geo-alt-fill text-primary" aria-hidden="true"></i> Venue
+                            </legend>
+                            <!-- Multiple venues temporarily disabled - backend supports single venue only -->
+                            <div class="venue-container" id="venueContainer${topicIndex}" role="list" aria-label="Event venues">
+                                <!-- Venue sections will be added here dynamically -->
+                            </div>
+                        </fieldset>
                     </div>
                     
-                    <!-- Shift Section -->
+                    <!-- Feedback & Attendance Section -->
                     <div class="col-md-12">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Shift Type<span class="text-danger">*</span></label>
-                                    <div>
-                                        <input type="radio" name="shift_type" id="normalShift" value="1" class="form-check-input" checked>
-                                        <label class="form-check-label" for="normalShift">Normal Shift</label>
-                                        <input type="radio" name="shift_type" id="manualShift" value="2" class="form-check-input">
-                                        <label class="form-check-label" for="manualShift">Manual Shift</label>
+                        <fieldset class="border rounded p-3 bg-light">
+                            <legend class="h6 mb-3">
+                                <i class="bi bi-chat-square-text text-primary" aria-hidden="true"></i> 
+                                Feedback & Attendance Options
+                            </legend>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="1"
+                                            name="feedback_checkbox" id="feedback_checkbox" checked>
+                                        <label class="form-check-label" for="feedback_checkbox">
+                                            <i class="bi bi-chat-dots" aria-hidden="true"></i> Feedback
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="1"
+                                            name="remarkCheckbox" id="remarkCheckbox">
+                                        <label class="form-check-label" for="remarkCheckbox">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i> Remark
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="1"
+                                            name="ratingCheckbox" id="ratingCheckbox">
+                                        <label class="form-check-label" for="ratingCheckbox">
+                                            <i class="bi bi-star" aria-hidden="true"></i> Rating
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="1"
+                                            name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
+                                        <label class="form-check-label" for="bio_attendanceCheckbox">
+                                            <i class="bi bi-fingerprint" aria-hidden="true"></i> Bio Attendance
+                                        </label>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-12" id="shiftSelect">
-                                <div class="mb-3">
-                                    <label class="form-label">Shift <span class="text-danger">*</span></label>
-                                    <select name="shift" class="form-control" id="shift">
-                                        <option value="">Select Shift</option>
-                                        @foreach($classSessionMaster as $shift)
-                                        <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            
-                            <div class="col-md-12" id="manualShiftFields" style="display: none;">
-                                <div class="mb-3 form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox" name="fullDayCheckbox">
-                                    <label class="form-check-label" for="fullDayCheckbox">Full Day</label>
-                                </div>
-                                
-                                <div id="dateTimeFields${topicIndex}">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
-                                            <input type="time" name="start_time" id="start_time" class="form-control">
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
-                                            <input type="time" name="end_time" id="end_time" class="form-control">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="feedback_checkbox" id="feedback_checkbox" checked>
-                                            <label class="form-check-label" for="feedback_checkbox">
-                                                Feedback
-                                            </label>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="remarkCheckbox" id="remarkCheckbox">
-                                            <label class="form-check-label" for="remarkCheckbox">
-                                                Remark
-                                            </label>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="ratingCheckbox" id="ratingCheckbox">
-                                            <label class="form-check-label" for="ratingCheckbox">
-                                                Ratting
-                                            </label>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                            <label class="form-check-label" for="bio_attendanceCheckbox">
-                                                Bio Attendance
-                                            </label>
-                                        </div>
-                                    </label>
-
-                                </div>
-                            </div>
-                        </div>
+                        </fieldset>
                     </div>
                 </div>
             </div>
@@ -560,14 +620,18 @@ $(document).ready(function() {
     function addFacultySection(topicIndex, facultyIndex) {
     console.log(topicIndex, facultyIndex); // e.g. 0 1
     const facultySection = `
-        <div class="faculty-section" id="facultySection${topicIndex}_${facultyIndex}">
+        <div class="faculty-section" id="facultySection${topicIndex}_${facultyIndex}" role="listitem">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6>Faculty ${facultyIndex + 1}</h6>
+                <h6 class="mb-0">
+                    <i class="bi bi-person-badge text-primary" aria-hidden="true"></i> 
+                    Faculty ${facultyIndex + 1}
+                </h6>
                 ${facultyIndex > 0 
                     ? `<button type="button" class="btn btn-sm btn-outline-danger remove-faculty" 
                           data-topic-index="${topicIndex}" 
-                          data-faculty-index="${facultyIndex}">
-                          <i class="bi bi-trash"></i> Remove
+                          data-faculty-index="${facultyIndex}"
+                          aria-label="Remove faculty ${facultyIndex + 1}">
+                          <i class="bi bi-trash" aria-hidden="true"></i> Remove
                        </button>` 
                     : ''
                 }
@@ -575,8 +639,11 @@ $(document).ready(function() {
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label">Faculty <span class="text-danger">*</span></label>
-                        <select name="faculty" id="faculty" class="form-control faculty-select">
+                        <label for="faculty_${topicIndex}_${facultyIndex}" class="form-label">
+                            Faculty 
+                            <span class="text-danger" aria-label="required">*</span>
+                        </label>
+                        <select name="faculty" id="faculty_${topicIndex}_${facultyIndex}" class="form-select faculty-select" aria-required="true">
                             <option value="">Select Faculty</option>
                             @foreach($facultyMaster as $faculty)
                             <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
@@ -588,8 +655,11 @@ $(document).ready(function() {
                 </div>
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
-                        <select name="faculty_type" class="form-control" id="faculty_type">
+                        <label for="faculty_type_${topicIndex}_${facultyIndex}" class="form-label">
+                            Faculty Type 
+                            <span class="text-danger" aria-label="required">*</span>
+                        </label>
+                        <select name="faculty_type" class="form-select" id="faculty_type_${topicIndex}_${facultyIndex}" aria-required="true">
                             <option value="">Select Faculty Type</option>
                             <option value="1">Internal</option>
                             <option value="2">Guest</option>
@@ -602,20 +672,27 @@ $(document).ready(function() {
     `;
     
     $(`#facultyContainer${topicIndex}`).append(facultySection);
+     $(`#facultyContainer${topicIndex}`).append(
+        getShiftSection(topicIndex, facultyIndex)
+    );
 }
 
     
     // Function to add a venue section
    function addVenueSection(topicIndex, venueIndex) {
     const venueSection = `
-        <div class="venue-section" id="venueSection${topicIndex}_${venueIndex}">
+        <div class="venue-section" id="venueSection${topicIndex}_${venueIndex}" role="listitem">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6>Venue ${venueIndex + 1}</h6>
+                <h6 class="mb-0">
+                    <i class="bi bi-pin-map text-primary" aria-hidden="true"></i> 
+                    Venue ${venueIndex + 1}
+                </h6>
                 ${venueIndex > 0 
                     ? `<button type="button" class="btn btn-sm btn-outline-danger remove-venue" 
                           data-topic-index="${topicIndex}" 
-                          data-venue-index="${venueIndex}">
-                          <i class="bi bi-trash"></i> Remove
+                          data-venue-index="${venueIndex}"
+                          aria-label="Remove venue ${venueIndex + 1}">
+                          <i class="bi bi-trash" aria-hidden="true"></i> Remove
                        </button>` 
                     : ''
                 }
@@ -623,8 +700,11 @@ $(document).ready(function() {
             <div class="row">
                 <div class="col-md-12">
                     <div class="mb-3">
-                        <label class="form-label">Location <span class="text-danger">*</span></label>
-                        <select name="vanue" class="form-control venue-select" id="vanue">
+                        <label for="vanue_${topicIndex}_${venueIndex}" class="form-label">
+                            Location 
+                            <span class="text-danger" aria-label="required">*</span>
+                        </label>
+                        <select name="vanue" class="form-select venue-select" id="vanue_${topicIndex}_${venueIndex}" aria-required="true">
                             <option value="">Select Location</option>
                             @foreach($venueMaster as $loc)
                             <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
@@ -640,6 +720,91 @@ $(document).ready(function() {
 
     // Initialize Select2 if needed
     // $(`#venueSection${topicIndex}_${venueIndex} .venue-select`).select2();
+}
+function getShiftSection(topicIndex, facultyIndex) {
+    return `
+        <div class="shift-section border rounded p-3 mb-3 bg-light" id="shiftSection">
+            <fieldset class="border-0">
+                <legend class="h6 mb-3">
+                    <i class="bi bi-clock text-primary" aria-hidden="true"></i> Shift Configuration
+                </legend>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                Shift Type 
+                                <span class="text-danger" aria-label="required">*</span>
+                            </label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input type="radio" name="shift_type" 
+                                           value="1" class="form-check-input normalShift" 
+                                           id="normalShift" checked>
+                                    <label class="form-check-label" for="normalShift">
+                                        <i class="bi bi-calendar-check" aria-hidden="true"></i> Normal Shift
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input type="radio" name="shift_type"
+                                           value="2" class="form-check-input manualShift"
+                                           id="manualShift">
+                                    <label class="form-check-label" for="manualShift">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i> Manual Shift
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="shiftBox">
+                    <div class="mb-3">
+                        <label for="shift" class="form-label">
+                            Shift 
+                            <span class="text-danger" aria-label="required">*</span>
+                        </label>
+                        <select name="shift" id="shift" class="form-select" aria-required="true">
+                            <option value="">Select Shift</option>
+                            @foreach($classSessionMaster as $shift)
+                            <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div id="manualShiftFields" style="display:none;">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input fullDay" type="checkbox" value="1" 
+                                   name="fullDayCheckbox" 
+                                   id="fullDayCheckbox">
+                            <label class="form-check-label" for="fullDayCheckbox">
+                                <i class="bi bi-calendar2-range" aria-hidden="true"></i> Full Day (8:00 AM - 8:00 PM)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="start_time" class="form-label">
+                                <i class="bi bi-clock-history" aria-hidden="true"></i> Start Time
+                            </label>
+                            <input type="time" class="form-control" 
+                                   id="start_time"
+                                   name="start_time"
+                                   aria-label="Event start time">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="end_time" class="form-label">
+                                <i class="bi bi-clock" aria-hidden="true"></i> End Time
+                            </label>
+                            <input type="time" class="form-control" 
+                                   id="end_time"
+                                   name="end_time"
+                                   aria-label="Event end time">
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    `;
 }
 
     
@@ -668,38 +833,38 @@ $(document).ready(function() {
         });
         
         // Shift type change handler
-        $(`input[name="shift_type[${topicIndex}]"]`).on('change', function() {
-            if ($(`#manualShift${topicIndex}`).is(':checked')) {
-                $(`#shiftSelect${topicIndex}`).hide();
-                $(`#manualShiftFields${topicIndex}`).show();
+        $(document).on('change', 'input[name="shift_type"]', function() {
+            if ($('#manualShift').is(':checked')) {
+                $('#shiftBox').hide();
+                $('#manualShiftFields').show();
             } else {
-                $(`#shiftSelect${topicIndex}`).show();
-                $(`#manualShiftFields${topicIndex}`).hide();
+                $('#shiftBox').show();
+                $('#manualShiftFields').hide();
             }
         });
         
         // Full day checkbox handler
-        $(`#fullDayCheckbox${topicIndex}`).on('change', function() {
+        $(document).on('change', '#fullDayCheckbox', function() {
             if ($(this).is(':checked')) {
-                $(`#start_time${topicIndex}`).val('08:00');
-                $(`#end_time${topicIndex}`).val('20:00');
+                $('#start_time').val('08:00');
+                $('#end_time').val('20:00');
             } else {
-                $(`#start_time${topicIndex}`).val('');
-                $(`#end_time${topicIndex}`).val('');
+                $('#start_time').val('');
+                $('#end_time').val('');
             }
         });
         
-        // Add faculty button handler
-        $(`#topicSection${topicIndex} .add-faculty-btn`).on('click', function() {
-            const facultyIndex = $(`#facultyContainer${topicIndex} .faculty-section`).length;
-            addFacultySection(topicIndex, facultyIndex);
-        });
+        // Add faculty button handler - disabled for now (backend supports single faculty only)
+        // $(`#topicSection${topicIndex} .add-faculty-btn`).on('click', function() {
+        //     const facultyIndex = $(`#facultyContainer${topicIndex} .faculty-section`).length;
+        //     addFacultySection(topicIndex, facultyIndex);
+        // });
         
-        // Add venue button handler
-        $(`#topicSection${topicIndex} .add-venue-btn`).on('click', function() {
-            const venueIndex = $(`#venueContainer${topicIndex} .venue-section`).length;
-            addVenueSection(topicIndex, venueIndex);
-        });
+        // Add venue button handler - disabled for now (backend supports single venue only)
+        // $(`#topicSection${topicIndex} .add-venue-btn`).on('click', function() {
+        //     const venueIndex = $(`#venueContainer${topicIndex} .venue-section`).length;
+        //     addVenueSection(topicIndex, venueIndex);
+        // });
     }
     
     // Remove topic handler
@@ -713,7 +878,10 @@ $(document).ready(function() {
     const topicIndex = $(this).data('topic-index');
     const facultyIndex = $(this).data('faculty-index');
     console.log(topicIndex, facultyIndex);
+
     $(`#facultySection${topicIndex}_${facultyIndex}`).remove();
+    $(`#shiftSection${topicIndex}_${facultyIndex}`).remove();
+    
 });
 
     
@@ -1257,116 +1425,123 @@ $('#eventForm').on('submit', function(e) {
     e.preventDefault();
 
     let isValid = true;
-    let errorMsg = "";
     const courseName = $('#Course_name').val();
-    const subjectName = $('#subject_name').val();
-    const subjectModule = $('#subject_module').val();
-    const faculty = $('#faculty').val();
-    const facultyType = $('#faculty_type').val();
-    const vanue = $('#vanue').val();
-    const shift_type = $('[name="shift_type"]').val();
-
-
-    const topic = $('#topic').val();
+    const groupType = $('#group_type').val();
+    
+    // Basic validations
     if (!courseName) {
         alert("Please select a Course Name.");
         $('#Course_name').focus();
         return false;
     }
-    if (!subjectName) {
-        alert("Please select a Subject Name.");
-        $('#subject_name').focus();
+    
+    if (!groupType) {
+        alert("Please select a Group Type.");
+        $('#group_type').focus();
         return false;
     }
-    // if (!subjectModule) {
-    //     alert("Please select a Subject Module.");
-    //     $('#subject_module').focus();
-    //     return false;
-    // }
-    if (!topic) {
-        alert("Please Enter topic.");
-        $('#topic').focus();
+    
+    // Check if at least one group type name is checked
+    if ($('input[name="type_names[]"]:checked').length === 0) {
+        alert("Please select at least one Group Type Name.");
         return false;
     }
-    if (!faculty) {
-        alert("Please select a Faculty.");
-        $('#faculty').focus();
-        return false;
-    }
-    if (!facultyType) {
-        alert("Please select Faculty Type.");
-        $('#faculty_type').focus();
-        return false;
-    }
-    if (!vanue) {
-        alert("Please select a Venue.");
-        $('#vanue').focus();
-        return false;
-    }
-
-
-    if (!shift_type) {
-        alert("Please select a shift.");
-        $('[name="shift_type"]').focus();
-        return false;
-    }
-    // Shift type specific validations
-    if ($('#normalShift').is(':checked')) {
-        const shift = $('#shift').val();
-        if (!shift) {
-            $('#shift').addClass('is-invalid');
-            $('#shift').next('.text-danger').text("Please select a Shift..");
-            isValid = false;
-        }
-    } else if ($('#manualShift').is(':checked')) {
-        const startTime = $('#start_time').val();
-        const endTime = $('#end_time').val();
-
-        if (!startTime) {
-            $('#start_time').addClass('is-invalid');
-            $('#start_time').next('.text-danger').text("Start Time is required.");
-            isValid = false;
-        }
-        if (!endTime) {
-            $('#end_time').addClass('is-invalid');
-            $('#end_time').next('.text-danger').text("End Time is required.");
-            isValid = false;
-        }
-    }
-    if ($('#feedback_checkbox').is(':checked')) {
-        if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
-            alert("Please select at least Remark or Rating when Feedback is checked.");
-            $('#remarkCheckbox').focus();
+    
+    // Validate each topic section
+    let topicValid = true;
+    $('.topic-section').each(function(index) {
+        const topicIndex = index;
+        const subjectModule = $(this).find('.subject-module-select').val();
+        const subjectName = $(this).find('.subject-name-select').val();
+        const topic = $(this).find('textarea[name="topic"]').val();
+        
+        if (!subjectModule) {
+            alert(`Please select Subject Module for Topic ${topicIndex + 1}.`);
+            topicValid = false;
             return false;
         }
-    }
-
-   if ($('#fullDayCheckbox').is(':checked')) {
-
-    let start_date = $('#start_datetime').val(); // format: "YYYY-MM-DD"
-    let start_time = $('#start_time').val();     // format: "HH:MM"
-
-    if (start_date && start_time) {
-        // Combine date and time into one Date object
-        let selectedDateTime = new Date(start_date + 'T' + start_time + ':00');
-
-        // Get current time + 1 hour
-        let now = new Date();
-        now.setHours(now.getHours() + 1);
-
-        // Compare
-        if (selectedDateTime < now) {
-            alert("Start Date & Time must be at least 1 hour ahead of current time.");
-            $('#start_time').focus();
+        
+        if (!subjectName) {
+            alert(`Please select Subject Name for Topic ${topicIndex + 1}.`);
+            topicValid = false;
             return false;
         }
-    }
-}
-
-    let formData = new FormData(this);
-    $('input[name="group_type_name[]"]:checked').each(function() {
-        formData.append('group_type_name[]', $(this).val());
+        
+        if (!topic || topic.trim() === '') {
+            alert(`Please enter Topic Description for Topic ${topicIndex + 1}.`);
+            topicValid = false;
+            return false;
+        }
+        
+        // Validate faculty in this topic
+        const facultySections = $(this).find('.faculty-section');
+        if (facultySections.length === 0) {
+            alert(`Please add at least one Faculty for Topic ${topicIndex + 1}.`);
+            topicValid = false;
+            return false;
+        }
+        
+        let facultyValid = true;
+        facultySections.each(function(fIndex) {
+            const faculty = $(this).find('.faculty-select').val();
+            const facultyType = $(this).find('select[name="faculty_type"]').val();
+            
+            if (!faculty) {
+                alert(`Please select Faculty for Faculty ${fIndex + 1} in Topic ${topicIndex + 1}.`);
+                facultyValid = false;
+                return false;
+            }
+            
+            if (!facultyType) {
+                alert(`Please select Faculty Type for Faculty ${fIndex + 1} in Topic ${topicIndex + 1}.`);
+                facultyValid = false;
+                return false;
+            }
+        });
+        
+        if (!facultyValid) {
+            topicValid = false;
+            return false;
+        }
+        
+        // Validate venue in this topic
+        const venueSections = $(this).find('.venue-section');
+        if (venueSections.length === 0) {
+            alert(`Please add at least one Venue for Topic ${topicIndex + 1}.`);
+            topicValid = false;
+            return false;
+        }
+        
+        let venueValid = true;
+        venueSections.each(function(vIndex) {
+            const venue = $(this).find('.venue-select').val();
+            
+            if (!venue) {
+                alert(`Please select Venue for Venue ${vIndex + 1} in Topic ${topicIndex + 1}.`);
+                venueValid = false;
+                return false;
+            }
+        });
+        
+        if (!venueValid) {
+            topicValid = false;
+            return false;
+        }
     });
+    
+    if (!topicValid) {
+        return false;
+    }
+    
+    // Start date validation
+    const startDate = $('#start_datetime').val();
+    if (!startDate) {
+        alert("Please select Event Date.");
+        $('#start_datetime').focus();
+        return false;
+    }
+    
+    // Submit form
     $.ajax({
         url: "{{ route('calendar.event.store') }}",
         method: "POST",
@@ -1375,15 +1550,15 @@ $('#eventForm').on('submit', function(e) {
             alert("Event created successfully!");
             $('#eventModal').modal('hide');
             $('#eventForm')[0].reset();
-
-            window.location.reload(); // now this will work
+            window.location.reload();
         },
         error: function(xhr) {
             if (xhr.status === 422) {
                 let errors = xhr.responseJSON.errors;
-                let messages = Object.values(errors).map(val => val.join('\n'))
-                    .join('\n');
+                let messages = Object.values(errors).map(val => val.join('\n')).join('\n');
                 alert("Server Validation Failed:\n\n" + messages);
+            } else {
+                alert("Error saving event. Please try again.");
             }
         }
     });

@@ -9,7 +9,7 @@
         <div class="row align-items-center">
             <div class="col-12">
                 <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Edit Major Subject</h4>
+                    <h4 class="mb-4 mb-sm-0 card-title">Edit Subject</h4>
                     <nav aria-label="breadcrumb" class="ms-auto">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item d-flex align-items-center">
@@ -31,17 +31,17 @@
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">
-            <h4 class="card-title mb-3">Edit Major Subject</h4>
+            <h4 class="card-title mb-3">Edit Subject</h4>
             <hr>
             <form action="{{ route('subject.update', $subject->pk) }}" method="POST">
                 @csrf
                 @method('PUT')
                 <!-- This is necessary for the update request -->
                 <div class="row">
-                    <div class="col-6">
+                    <div class="col-4">
                         <!-- Major Subject Name -->
                         <div class="mb-3">
-                            <label for="major_subject_name" class="form-label">Major Subject Name <span
+                            <label for="major_subject_name" class="form-label">Subject Name <span
                                     class="text-danger">*</span></label>
                             <input type="text" name="major_subject_name" id="major_subject_name" class="form-control"
                                 value="{{ old('major_subject_name', $subject->subject_name) }}" required>
@@ -50,7 +50,7 @@
                             @enderror
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <!-- Short Name -->
                         <div class="mb-3">
                             <label for="short_name" class="form-label">Short Name <span
@@ -62,7 +62,7 @@
                             @enderror
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
 
                         <!-- Status -->
                         <div class="mb-3">

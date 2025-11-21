@@ -8,11 +8,13 @@ use App\Models\CourseGroupTypeMaster;
 
 class CourseGroupTypeController extends Controller
 {
-    function index()
-    {
-        $courseGroupTypeMaster = CourseGroupTypeMaster::all();
-        return view('admin.master.course_group_type_master.index', compact('courseGroupTypeMaster'));
-    }
+function index()
+{
+    $courseGroupTypeMaster = CourseGroupTypeMaster::orderBy('pk', 'DESC')->get();
+    return view('admin.master.course_group_type_master.index', compact('courseGroupTypeMaster'));
+}
+
+
     function create()
     {
         return view('admin.master.course_group_type_master.create');

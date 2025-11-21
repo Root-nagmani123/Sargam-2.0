@@ -37,20 +37,30 @@ class MDOEscrotExemptionDataTable extends DataTable
             //         $q->where('mdo_duty_type_name', 'like', "%{$keyword}%");
             //     });
             // })
-            ->addColumn('actions', function ($row) {
-                $editUrl = route('mdo-escrot-exemption.edit', $row->pk);
-                // $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
-                return '
-                    <a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>
-                    
-                ';
-                // <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
-                //         ' . csrf_field() . '
-                //         <input type="hidden" name="_method" value="DELETE">
-                //         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                //     </form>
-            })
-            ->rawColumns(['student_name', 'course_name', 'mdo_name', 'actions']);
+->addColumn('actions', function ($row) {
+    return '
+        <a href="javascript:void(0)"
+           class="openMdoExemptionModal"
+           data-id="' . $row->pk . '"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           data-bs-animation="true"
+           title="Edit">
+            <iconify-icon icon="solar:pen-bold" class="fs-5 text-primary"></iconify-icon>
+        </a>
+        <a href="javascript:void(0)"
+           class="deleteMdoExemption"
+           data-id="' . $row->pk . '"
+           data-bs-toggle="tooltip"
+           data-bs-placement="top"
+           data-bs-animation="true"
+           title="Delete">
+            <iconify-icon icon="solar:trash-bin-trash-bold" class="fs-5 text-danger ms-2"></iconify-icon>
+        </a>
+    ';
+})
+
+->rawColumns(['student_name', 'course_name', 'mdo_name', 'actions']);
     }
 
     public function query(): QueryBuilder
@@ -71,11 +81,33 @@ class MDOEscrotExemptionDataTable extends DataTable
             ->minifiedAjax()
             ->responsive(true)
             ->parameters([
-                'responsive' => true,
-                'scrollX' => true,
-                'autoWidth' => false,
-                'order' => [],
-            ])
+    'ordering' => false,
+    'paging' => true,
+    'info' => true,
+    'searching' => false,
+    'lengthChange' => true,
+    'pageLength' => 10,
+
+    'dom' => '<"row mb-3"
+                <"col-sm-6"l>
+                <"col-sm-6 text-end"f>
+              >
+              <"table-responsive"rt>
+              <"row mt-3"
+                <"col-sm-6"i>
+                <"col-sm-6 text-end"p>
+              >',
+
+    'language' => [
+        'paginate' => [
+            'previous' => '<i class="bi bi-chevron-left"></i>',
+            'next'     => '<i class="bi bi-chevron-right"></i>',
+        ],
+        'lengthMenu' => 'Show _MENU_ entries',
+        'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
+    ],
+])
+
             ->buttons(['excel', 'csv', 'pdf', 'print', 'reset', 'reload']);
     }
 

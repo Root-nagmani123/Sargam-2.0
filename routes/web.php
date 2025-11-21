@@ -235,6 +235,7 @@ Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])-
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/destroy', 'destroy')->name('destroy');
         Route::post('/update', 'update')->name('update');
+        Route::get('/details/{id}', 'details')->name('details');
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
 
