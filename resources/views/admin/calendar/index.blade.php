@@ -175,7 +175,7 @@
 
 /* Improved modal styling */
 .modal-header {
-    background-color: var(--primary-color);
+    background-color: var(--secondary-color);
     color: white;
     border-bottom: none;
     padding: 1rem 1.5rem;
@@ -183,6 +183,7 @@
 
 .modal-title {
     font-weight: 600;
+    color: white;
 }
 
 .modal-content {
@@ -682,7 +683,7 @@ textarea:focus {
                         <h5 class="modal-title" id="eventDetailsLabel">
                             <span id="eventTitle">Event Title</span>: <span id="eventTopic"></span>
                         </h5>
-                        <small class="text-muted" id="eventDate">Event Date</small><br>
+                        <small class="text-white" id="eventDate">Event Date</small><br>
                     </div>
                     <div>
                         <button type="button" class="btn btn-sm btn-outline-primary me-1" id="editEventBtn">
