@@ -28,7 +28,8 @@
     </div>
 @endif
 
-<table class="table table-bordered table-hover align-middle">
+<div class="student-table-wrapper">
+<table class="table table-bordered table-hover align-middle mb-0">
     <thead class="table-primary">
         <tr>
             <th scope="col" style="width: 45px;">
@@ -40,6 +41,7 @@
             <th>Display Name</th>
             <th>Email</th>
             <th>Contact No</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -66,14 +68,45 @@
                 <td>{{ $student->display_name ?? 'N/A' }}</td>
                 <td>{{ $student->email ?? 'N/A' }}</td>
                 <td>{{ $student->contact_no ?? 'N/A' }}</td>
+                <td class="student-actions text-center">
+                    @if($student && $student->pk)
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Student Actions">
+                            <button
+                                type="button"
+                                class="btn btn-soft-primary student-action-btn edit-student student-action-tooltip"
+                                data-student-id="{{ encrypt($student->pk) }}"
+                                data-name="{{ e($student->display_name ?? '') }}"
+                                data-email="{{ e($student->email ?? '') }}"
+                                data-contact="{{ e($student->contact_no ?? '') }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="top"
+                                title="Edit student details"
+                            >
+                                <i class="bi bi-pencil-square"></i> Edit
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-soft-danger student-action-btn delete-student student-action-tooltip"
+                                data-mapping-id="{{ encrypt($studentMap->pk) }}"
+                                data-name="{{ e($student->display_name ?? 'this student') }}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="top"
+                                title="Remove from this group"
+                            >
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    @endif
+                </td>
             </tr>
         @empty
             <tr>
-                <td colspan="5" class="text-center text-muted">No students found.</td>
+                <td colspan="6" class="text-center text-muted">No students found.</td>
             </tr>
         @endforelse
     </tbody>
 </table>
+</div>
 
 <div class="d-flex justify-content-between align-items-center flex-wrap mt-3">
     <div class="text-muted mb-2">

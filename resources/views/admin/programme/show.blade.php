@@ -186,32 +186,32 @@
                     <p class="fw-semibold text-primary">{{ $coordinatorName }}</p>
                 </div>
 
-                <!-- Assistant Coordinators -->
-                <div class="text-center">
-                    <span class="role-badge mb-3">Assistant Coordinators</span>
-                </div>
-                <div class="row g-4 justify-content-center">
-                    @forelse($assistantCoordinatorsData as $assistant)
-                    <div class="col-6 col-md-3 text-center">
-                        <div class="photo-frame mb-2">
-                            @if($assistant['photo'])
-                            <img src="{{ asset('storage/' . $assistant['photo']) }}"
-                                alt="Photo of {{ $assistant['name'] }}"
-                                onerror="this.onerror=null; this.src='{{ asset('images/dummypic.jpeg') }}';">
-                            @else
-                            <img src="{{ asset('images/dummypic.jpeg') }}" alt="No photo available">
-                            @endif
-                        </div>
-                        <p class="fw-semibold text-primary">{{ $assistant['name'] }}</p>
-                        <span class="role-badge">{{ $assistant['role'] }}</span>
-                    </div>
-                    @empty
-                    <div class="text-muted text-center py-3">
-                        <i class="bi bi-info-circle"></i> No Assistant Coordinators assigned
-                    </div>
-                    @endforelse
-                </div>
-            </section>
+        <!-- Assistant Coordinators -->
+        <div class="text-center">
+          <span class="role-badge mb-3">Assistant Course Coordinators</span>
+        </div>
+        <div class="row g-4 justify-content-center">
+          @forelse($assistantCoordinatorsData as $assistant)
+            <div class="col-6 col-md-3 text-center">
+              <div class="photo-frame mb-2">
+                @if($assistant['photo'])
+                  <img src="{{ asset('storage/' . $assistant['photo']) }}"
+                       alt="Photo of {{ $assistant['name'] }}"
+                       onerror="this.onerror=null; this.src='{{ asset('images/user-placeholder.png') }}';">
+                @else
+                  <img src="{{ asset('images/user-placeholder.png') }}" alt="No photo available">
+                @endif
+              </div>
+              <p class="fw-semibold text-primary">{{ $assistant['name'] }}</p>
+              <span class="role-badge">{{ $assistant['role'] }}</span>
+            </div>
+          @empty
+            <div class="text-muted text-center py-3">
+              <i class="bi bi-info-circle"></i> No Assistant Coordinators assigned
+            </div>
+          @endforelse
+        </div>
+      </section>
 
         </div>
 

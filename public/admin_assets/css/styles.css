@@ -19606,7 +19606,7 @@ fieldset:disabled .btn {
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 100%;
+    width: 120%;
     color: var(--bs-modal-color);
     pointer-events: auto;
     background-color: var(--bs-modal-bg);
