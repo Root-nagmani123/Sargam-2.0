@@ -63,5 +63,10 @@ class CalendarEvent extends Model
     {
         return $this->belongsTo(FacultyMaster::class, 'faculty_master', 'pk');
     }
+    public function scopeActive($query)
+{
+    return $query->where('active_inactive', 1);
+}
+
    
 }
