@@ -25,7 +25,7 @@ class GroupMappingDataTable extends DataTable
                 return $row->group_name ?? '';
             })
             ->addColumn('facility', function ($row) {
-                return $row->facility->venue_name ?? '-';
+                return $row->facility->full_name ?? '-';
             })
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
             ->addColumn('view_download', function ($row) {
@@ -89,13 +89,30 @@ class GroupMappingDataTable extends DataTable
             ->filterColumn('group_name', function ($query, $keyword) {
                 $query->where('group_name', 'like', "%{$keyword}%");
             })
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('group_name', 'like', "%{$searchValue}%")
+                            ->orWhereHas('courseGroup', function ($courseQuery) use ($searchValue) {
+                                $courseQuery->where('course_name', 'like', "%{$searchValue}%");
+                            })
+                            ->orWhereHas('courseGroupType', function ($typeQuery) use ($searchValue) {
+                                $typeQuery->where('type_name', 'like', "%{$searchValue}%");
+                            });
+                    });
+                }
+            }, true)
             ->rawColumns(['course_name', 'group_name', 'view_download', 'action', 'status']);
     }
 
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
     {
         $statusFilter = request('status_filter', 'active');
-        $currentDate = Carbon::now()->format('d-m-Y');
+        $courseFilter = request('course_filter');
+        $groupTypeFilter = request('group_type_filter');
+        $currentDate = Carbon::now()->format('Y-m-d');
 
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
@@ -125,6 +142,12 @@ class GroupMappingDataTable extends DataTable
                         $courseQuery->whereNotNull('end_date')
                             ->whereDate('end_date', '<', $currentDate);
                     });
+                })
+                ->when(!empty($courseFilter), function ($query) use ($courseFilter) {
+                    $query->where('course_name', $courseFilter);
+                })
+                ->when(!empty($groupTypeFilter), function ($query) use ($groupTypeFilter) {
+                    $query->where('type_name', $groupTypeFilter);
                 })
                 ->orderBy('pk', 'desc');
                 // <- check karo ki data aa raha hai ya nahi
@@ -167,7 +190,7 @@ public function html(): HtmlBuilder
             Column::make('course_name')
                 ->title('Course Name')
                 ->addClass('text-center')
-                ->searchable(false)
+                ->searchable(true)
                 ->orderable(false),
             Column::make('type_name')
                 ->title('Group Type')

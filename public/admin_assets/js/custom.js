@@ -834,6 +834,50 @@ function initializeStudentListSelection() {
     updateSelectedOtCount();
 }
 
+function showEditStudentAlert(type, message) {
+    const alertEl = $('#editStudentAlert');
+    alertEl.removeClass('d-none alert-success alert-danger alert-warning alert-info')
+        .addClass(`alert alert-${type}`)
+        .text(message);
+}
+
+function clearEditStudentAlert() {
+    $('#editStudentAlert').addClass('d-none').removeClass('alert-success alert-danger alert-warning alert-info').text('');
+}
+
+function reloadStudentDetails(pageUrl = null) {
+    const groupMappingID = $('#groupMappingEncryptedId').val() || window.currentGroupMappingId;
+    const token = $('meta[name="csrf-token"]').attr('content');
+
+    if (!groupMappingID || !token || !routes.groupMappingStudentList) {
+        return;
+    }
+
+    $.ajax({
+        url: pageUrl || routes.groupMappingStudentList,
+        type: 'POST',
+        data: {
+            _token: token,
+            groupMappingID: groupMappingID
+        },
+        success: function (response) {
+            if (!response || !response.html) {
+                return;
+            }
+            $('#studentDetailsContent').html(response.html);
+            const encryptedId = $('#groupMappingEncryptedId').val();
+            if (encryptedId) {
+                window.currentGroupMappingId = encryptedId;
+            }
+            initializeStudentListSelection();
+            initStudentActionTooltips();
+        },
+        error: function () {
+            alert('Error refreshing student details.');
+        }
+    });
+}
+
 function setSendingState(channel, isSending) {
     const button = $(`.send-bulk-message[data-channel="${channel}"]`);
     if (!button.length) {
@@ -882,6 +926,7 @@ $(document).on('click', '.view-student', function (e) {
                 window.currentGroupMappingId = encryptedId;
             }
             initializeStudentListSelection();
+            initStudentActionTooltips();
             $('#studentDetailsModal').modal('show');
         },
         error: function () {
@@ -895,28 +940,7 @@ $(document).on('click', '.student-list-pagination .pagination a', function (e) {
     e.preventDefault();
 
     const pageUrl = $(this).attr('href');
-    const token = $('meta[name="csrf-token"]').attr('content');
-    const groupMappingID = $('#groupMappingEncryptedId').val() || window.currentGroupMappingId;
-
-    $.ajax({
-        url: pageUrl,
-        type: 'POST',
-        data: {
-            _token: token,
-            groupMappingID: groupMappingID
-        },
-        success: function (response) {
-            $('#studentDetailsContent').html(response.html);
-            const encryptedId = $('#groupMappingEncryptedId').val();
-            if (encryptedId) {
-                window.currentGroupMappingId = encryptedId;
-            }
-            initializeStudentListSelection();
-        },
-        error: function () {
-            alert('Error loading student list');
-        }
-    });
+    reloadStudentDetails(pageUrl);
 });
 
 $(document).on('change', '.student-select', function () {
@@ -1049,6 +1073,111 @@ $('#studentDetailsModal').on('hidden.bs.modal', function () {
     window.currentGroupMappingId = null;
     resetBulkMessageForm();
     updateSelectedOtCount();
+});
+
+function initStudentActionTooltips() {
+    if (typeof bootstrap === 'undefined' || !bootstrap.Tooltip) {
+        return;
+    }
+
+    document.querySelectorAll('.student-action-btn').forEach(function (el) {
+        const existingTooltip = bootstrap.Tooltip.getInstance(el);
+        if (existingTooltip) {
+            existingTooltip.dispose();
+        }
+        new bootstrap.Tooltip(el);
+    });
+}
+
+
+$(document).on('click', '.edit-student', function () {
+    const button = $(this);
+    const studentId = button.data('student-id');
+    if (!studentId) {
+        return;
+    }
+
+    clearEditStudentAlert();
+    $('#editStudentId').val(studentId);
+    $('#editStudentName').val(button.data('name') || '');
+    $('#editStudentEmail').val(button.data('email') || '');
+    $('#editStudentContact').val(button.data('contact') || '');
+    $('#editStudentModal').modal('show');
+});
+
+$('#editStudentForm').on('submit', function (e) {
+    e.preventDefault();
+
+    const form = $(this);
+    const submitButton = form.find('button[type="submit"]');
+
+    clearEditStudentAlert();
+    submitButton.prop('disabled', true);
+
+    $.ajax({
+        url: routes.groupMappingStudentUpdate,
+        type: 'POST',
+        data: form.serialize(),
+        success: function (response) {
+            showEditStudentAlert('success', (response && response.message) ? response.message : 'Student updated successfully.');
+            reloadStudentDetails();
+            setTimeout(function () {
+                $('#editStudentModal').modal('hide');
+            }, 800);
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message
+                : 'Unable to update student details.';
+            showEditStudentAlert('danger', message);
+        },
+        complete: function () {
+            submitButton.prop('disabled', false);
+        }
+    });
+});
+
+$(document).on('click', '.delete-student', function () {
+    const button = $(this);
+    const mappingId = button.data('mapping-id');
+    const studentName = button.data('name') || 'this student';
+
+    if (!mappingId) {
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to remove ${studentName} from this group?`)) {
+        return;
+    }
+
+    const token = $('meta[name="csrf-token"]').attr('content');
+
+    $.ajax({
+        url: routes.groupMappingStudentDelete,
+        type: 'DELETE',
+        data: {
+            _token: token,
+            mapping_id: mappingId
+        },
+        success: function (response) {
+            if (response && response.message) {
+                alert(response.message);
+            }
+            reloadStudentDetails();
+        },
+        error: function (xhr) {
+            const message = xhr.responseJSON && xhr.responseJSON.message
+                ? xhr.responseJSON.message
+                : 'Unable to remove the student from this group.';
+            alert(message);
+        }
+    });
+});
+
+$('#editStudentModal').on('hidden.bs.modal', function () {
+    $('#editStudentForm')[0].reset();
+    $('#editStudentId').val('');
+    clearEditStudentAlert();
 });
 
 // End Group Mapping Modules
