@@ -167,7 +167,7 @@ class OTHostelRoomDetailsDataTable extends DataTable
         return [
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('course_name')->title('Course Name')->addClass('text-center')->orderable(false),
-            Column::make('user_name')->title('User Name')->addClass('text-center')->orderable(false),
+            Column::make('user_name')->title('Student Name')->addClass('text-center')->orderable(false),
             Column::make('hostel_room_name')->title('Hostel Room Name')->addClass('text-center')->orderable(false),
             Column::make('action')->title('Action')->addClass('text-center')->orderable(false),
         ];

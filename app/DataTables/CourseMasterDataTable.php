@@ -38,16 +38,16 @@ class CourseMasterDataTable extends DataTable
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
                 $viewUrl = route('programme.show', ['id' => encrypt($row->pk)]);
                 $encryptedId = encrypt($row->pk);
-                return '<a href="'.$editUrl.'" class="btn btn-primary btn-sm me-1">Edit</a>
-                        <a href="'.$viewUrl.'" class="btn btn-info btn-sm me-1" target="_blank">View</a>
-                        <!-- <button type="button" class="btn btn-secondary btn-sm view-course-btn" data-id="'.$encryptedId.'" data-bs-toggle="modal" data-bs-target="#viewCourseModal">Quick View</button> -->';
+                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm me-1">Edit</a>
+                        <a href="' . $viewUrl . '" class="btn btn-info btn-sm me-1" target="_blank">View</a>
+                        <!-- <button type="button" class="btn btn-secondary btn-sm view-course-btn" data-id="' . $encryptedId . '" data-bs-toggle="modal" data-bs-target="#viewCourseModal">Quick View</button> -->';
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return '
                 <div class="form-check form-switch d-inline-block">
                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                        data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
+                        data-table="course_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
                 </div>';
             })
             ->filterColumn('course_name', function ($query, $keyword) {
@@ -78,11 +78,11 @@ class CourseMasterDataTable extends DataTable
     public function query(CourseMaster $model): QueryBuilder
     {
         $query = $model->orderBy('pk', 'desc')->newQuery();
-        
+
         // Apply status filter if provided
         $statusFilter = request('status_filter');
-        $currentDate = Carbon::now()->format('d-m-Y');
-        
+        $currentDate = Carbon::today()->toDateString();
+
         if ($statusFilter === 'active' || !$statusFilter) {
             // Active courses: end_date is today or in the future (current and upcoming courses)
             $query->where('end_date', '>=', $currentDate);
@@ -90,7 +90,7 @@ class CourseMasterDataTable extends DataTable
             // Archived courses: end_date has already passed (expired courses)
             $query->where('end_date', '<', $currentDate);
         }
-        
+
         return $query;
     }
 

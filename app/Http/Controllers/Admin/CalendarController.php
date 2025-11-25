@@ -34,8 +34,6 @@ class CalendarController extends Controller
         $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
             ->select('pk', 'shift_name','shift_time', 'start_time', 'end_time')
             ->get();
-            // print_r($classSessionMaster);die;
-    
         return view('admin.calendar.index', compact(
             'courseMaster',
             'facultyMaster',

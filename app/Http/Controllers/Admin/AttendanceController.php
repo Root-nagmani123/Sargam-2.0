@@ -15,7 +15,6 @@ class AttendanceController extends Controller
     function index()
     {
         try {
-
             $sessions = ClassSessionMaster::get();
             $maunalSessions = Timetable::select('class_session')
                 ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
@@ -25,7 +24,10 @@ class AttendanceController extends Controller
 
 
             $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
-            $courseMasters = CourseMaster::whereIn('pk', $courseMasterPK)->select('course_name', 'pk')->get()->toArray();
+            $courseMasters = CourseMaster::select('course_name', 'pk')
+                ->where('active_inactive', 1)
+                ->orderBy('pk', 'ASC')
+                ->get();
 
             return view('admin.attendance.index', compact('courseMasters', 'sessions', 'maunalSessions'));
         } catch (\Exception $e) {
@@ -33,7 +35,6 @@ class AttendanceController extends Controller
             // Handle the exception
             return redirect()->route('attendance.index')->with('error', 'An error occurred: ' . $e->getMessage());
         }
-
     }
 
     function getAttendanceList(Request $request)
@@ -88,7 +89,6 @@ class AttendanceController extends Controller
                     return $startTime && $endTime
                         ? $startTime . ' to ' . $endTime
                         : $startTime . $endTime;
-
                 })
                 ->addColumn('session_time', content: function ($row) {
                     $classSession = optional($row->timetable)->class_session ?? '';
@@ -117,7 +117,6 @@ class AttendanceController extends Controller
                 'status' => 'error',
                 'message' => $e->getMessage(),
             ], 500);
-
         }
     }
 
@@ -180,7 +179,6 @@ class AttendanceController extends Controller
                             'status' => $attendanceStatus,
                         ]
                     );
-
                 }
             }
             return redirect()->back()->with('success', 'Attendance saved successfully.');
