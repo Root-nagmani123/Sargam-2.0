@@ -6,11 +6,10 @@
 
 <div class="container-fluid">
 
-    <div class="row">
+    <div class="row mb-3">
         <div class="col-9">
             <div class="container my-4">
-                <div class="row g-3">
-
+                <div class="row g-3 mb-3">
                     <!-- Total Students -->
                     <div class="col-md-3">
                         <div class="p-3 rounded-4 shadow-sm h-100" style="background: #EFF2FF;">
@@ -120,12 +119,12 @@
 
     </div>
     <div class="card">
-        <div class="card-header my-2">
+        <div class="card-header my-2" style="background:transparent;">
             <h2 class="card-title fw-bold" style="font-size:24px;">Admin Summary</h2>
         </div>
         <hr class="my-2">
         <div class="card-body">
-            <div class="row">
+            <div class="row mb-3">
                 <div class="col-8">
                     <!-- Content goes here -->
                     <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick access
@@ -138,14 +137,7 @@
                         to various administrative functions.</p>
                 </div>
                 <div class="col-4">
-                    <div class="card h-100 mt-2">
-                        <div class="card-header bg-danger text-white py-2">
-                            <h5 class="card-title mb-0 text-white">Calendar Events</h5>
-                        </div>
-                        <div class="card-body p-2">
-                            <!-- <div id="dashboard-calendar"></div> -->
-                        </div>
-                    </div>
+                    <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events" theme="gov-red" />
                 </div>
             </div>
             <h3 class="fw-bold py-3">Today Birthdays</h3>
@@ -259,84 +251,67 @@
 
 @push('scripts')
 <script>
-const holidays = [{
-        date: "2025-01-26",
-        name: "Republic Day"
-    },
-    {
-        date: "2025-03-08",
-        name: "Holi"
-    },
-    {
-        date: "2025-04-14",
-        name: "Ambedkar Jayanti"
-    },
-    {
-        date: "2025-08-15",
-        name: "Independence Day"
-    },
-    {
-        date: "2025-10-02",
-        name: "Gandhi Jayanti"
-    },
-    {
-        date: "2025-12-25",
-        name: "Christmas"
-    }
-    // Add LBSNAA-specific holidays here
-];
+    // Lightweight calendar interactions (vanilla JS)
+document.addEventListener('DOMContentLoaded', function(){
+document.querySelectorAll('.calendar-component').forEach(function(comp){
+const yearSel = comp.querySelector('.calendar-year');
+const monthSel = comp.querySelector('.calendar-month');
+const cells = comp.querySelectorAll('.calendar-cell');
 
-function renderCalendar(year, month) {
-    const calendarDiv = document.getElementById("dashboard-calendar");
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    let html = `
-            <table class="calendar table-bordered">
-                <thead>
-                    <tr class="text-center">
-                        <th colspan="7">
-                            ${new Date(year, month).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
-                        </th>
-                    </tr>
-                    <tr>
-                        <th>Sun</th><th>Mon</th><th>Tue</th><th>Wed</th>
-                        <th>Thu</th><th>Fri</th><th>Sat</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+// Click a date -> emit custom event
+comp.addEventListener('click', function(e){
+const td = e.target.closest('.calendar-cell');
+if(!td) return;
+const prev = comp.querySelector('.calendar-cell.is-selected');
+if(prev) prev.classList.remove('is-selected');
+td.classList.add('is-selected');
 
-    let dayCount = 1;
-    for (let i = 0; i < 6; i++) {
-        html += "<tr>";
-        for (let j = 0; j < 7; j++) {
-            if (i === 0 && j < firstDay) {
-                html += "<td></td>";
-            } else if (dayCount > daysInMonth) {
-                html += "<td></td>";
-            } else {
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayCount).padStart(2, '0')}`;
-                const holiday = holidays.find(h => h.date === dateStr);
 
-                if (holiday) {
-                    html += `<td class="holiday">${dayCount}<span>${holiday.name}</span></td>`;
-                } else {
-                    html += `<td>${dayCount}</td>`;
-                }
-                dayCount++;
-            }
-        }
-        html += "</tr>";
-    }
+const date = td.dataset.date;
+comp.dispatchEvent(new CustomEvent('dateSelected', { detail: { date } }));
+});
 
-    html += "</tbody></table>";
-    calendarDiv.innerHTML = html;
+
+// keyboard support for cells
+cells.forEach(function(cell){
+cell.addEventListener('keydown', function(ev){
+if(ev.key === 'Enter' || ev.key === ' ') {
+ev.preventDefault();
+cell.click();
 }
+// Arrow navigation (left/right/up/down)
+const idx = Array.prototype.indexOf.call(cells, cell);
+let targetIdx = null;
+if(ev.key === 'ArrowLeft') targetIdx = idx - 1;
+if(ev.key === 'ArrowRight') targetIdx = idx + 1;
+if(ev.key === 'ArrowUp') targetIdx = idx - 7;
+if(ev.key === 'ArrowDown') targetIdx = idx + 7;
+if(targetIdx !== null && cells[targetIdx]) {
+cells[targetIdx].focus();
+ev.preventDefault();
+}
+});
+});
 
-// Load current month
-const now = new Date();
-renderCalendar(now.getFullYear(), now.getMonth());
+
+// Change month/year -> navigate by query params (simple behavior)
+yearSel.addEventListener('change', function(){
+const y = this.value; const m = monthSel.value;
+const url = new URL(window.location.href);
+url.searchParams.set('year', y);
+url.searchParams.set('month', m);
+window.location.href = url.toString();
+});
+monthSel.addEventListener('change', function(){
+const y = yearSel.value; const m = this.value;
+const url = new URL(window.location.href);
+url.searchParams.set('year', y);
+url.searchParams.set('month', m);
+window.location.href = url.toString();
+});
+});
+});
 </script>
 
 @endpush

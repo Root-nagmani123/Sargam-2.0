@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\{
     HostelBuildingFloorMappingController,
     HostelBuildingFloorRoomMappingController
 };
+use App\Http\Controllers\Dashboard\Calendar1Controller;
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -53,8 +54,13 @@ Route::middleware(['auth'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', function () {
-        return view('admin.dashboard');
+        $year = request('year', now()->year);
+        $month = request('month', now()->month);
+        $events = []; // Add your events logic here if needed
+        return view('admin.dashboard', compact('year', 'month', 'events'));
+
     })->name('admin.dashboard');
+    Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
 	

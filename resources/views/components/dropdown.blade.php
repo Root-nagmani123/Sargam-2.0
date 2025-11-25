@@ -1,32 +1,34 @@
 @props([
     'label' => 'Select Option',
     'items' => [],
-    'id' => 'dropdown_'.uniqid(),
+    'id' => 'dd_'.uniqid(),
 ])
 
-<div class="dropdown w-100 position-relative">
-    <label class="form-label fw-semibold" for="{{ $id }}">{{ $label }}</label>
+<div class="modern-bottom-dd mb-3">
 
-    <button 
-        class="btn w-100 shadow-none text-start fw-semibold dropdown-toggle custom-dd d-flex justify-content-between align-items-center"
-        type="button"
+    <button
         id="{{ $id }}"
+        class="dd-trigger w-100 d-flex justify-content-between align-items-center"
         data-bs-toggle="dropdown"
-        aria-expanded="false" style="border-bottom: 2px solid #004a93;"
+        aria-expanded="false"
+        aria-haspopup="true"
+        type="button"
     >
-        <span>{{ $label }}</span>
-        <span class="ms-2">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align:end;"><path d="M7 10l5 5 5-5" stroke="#004a93" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="dd-text">{{ $label }}</span>
+
+        <span class="dd-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M7 10l5 5 5-5" stroke="#004a93" stroke-width="2" stroke-linecap="round"
+                      stroke-linejoin="round"/>
+            </svg>
         </span>
     </button>
 
-    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="{{ $id }}" style="min-width:200px;">
+    <ul class="dropdown-menu w-100 dd-menu" aria-labelledby="{{ $id }}">
         @foreach ($items as $item)
-            <li>
-                <button class="dropdown-item" type="button">
-                    {{ $item }}
-                </button>
-            </li>
+        <li>
+            <button class="dropdown-item dd-menu-item" type="button">{{ $item }}</button>
+        </li>
         @endforeach
     </ul>
 </div>

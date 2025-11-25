@@ -58,7 +58,6 @@
                                         href="{{ route('group.mapping.index') }}">
                                         <span
                                             class="hide-menu">Course Group Mapping</span>
-                                            class="hide-menu">Course Group Mapping</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
                                         <span class="hide-menu">Subject Master</span>
