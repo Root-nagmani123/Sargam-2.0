@@ -14,7 +14,14 @@ class MDOEscrotExemptionController extends Controller
     public function index(MDOEscrotExemptionDataTable $dataTable)
     {
         $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
-        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('MDODutyTypeMaster'));
+        
+        // Get all courses for the dropdown filter
+        $courses = CourseMaster::select('pk', 'course_name')
+            ->orderBy('course_name')
+            ->get()
+            ->pluck('course_name', 'pk');
+            
+        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('MDODutyTypeMaster', 'courses'));
     }
 
     public function create()
