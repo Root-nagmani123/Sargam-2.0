@@ -125,71 +125,6 @@ class EnrollementController extends Controller
     /**
      * Student–Course list (simple listing with pk values)
      */
-    // public function studentCourses()
-    // {
-    //     // Get students with courses and service, eager load everything
-    //     $students = StudentMaster::with(['courses', 'service'])->get();
-    //     $courses = CourseMaster::pluck('name', 'id'); // id => name
-
-
-    //     return view('admin.registration.student_courselist', compact('students', 'courses'));
-    // }
-
-    // public function studentCourses(Request $request)
-    // {
-    //     // If course filter is applied
-    //     $courseId = $request->input('course_id');
-    //     $students = StudentMaster::with(['courses', 'service'])
-    //         ->when($courseId, function ($query) use ($courseId) {
-    //             $query->whereHas('courses', function ($q) use ($courseId) {
-    //                 $q->where('course_master.pk', $courseId);
-    //             });
-    //         })
-    //         ->get();
-    //         @dump($students);
-
-    //     // Count total students (all records, without filter)
-    //     $totalStudents = StudentMaster::count();
-
-    //     // Count filtered students (with filter or all if no filter)
-    //     $filteredCount = $students->count();
-
-    //     // Get courses for filter dropdown
-    //     $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk'); // pk => course_name
-
-    //     return view('admin.registration.student_courselist', compact('students', 'courses', 'courseId', 'totalStudents', 'filteredCount'));
-    // }
-
-    //     public function studentCourses(Request $request)
-    // {
-    //     $courseId = $request->input('course_id');
-
-    //     // Total count of all course mappings (not distinct students)
-    //     $totalStudents = \App\Models\StudentMaster::with('courses')->get()->pluck('courses')->flatten()->count();
-
-    //     // Query with filter (if course applied)
-    //     $students = StudentMaster::with(['courses', 'service'])
-    //         ->when($courseId, function ($query) use ($courseId) {
-    //             $query->whereHas('courses', function ($q) use ($courseId) {
-    //                 $q->where('course_master.pk', $courseId);
-    //             });
-    //         })
-    //         ->get();
-
-    //     // Count filtered records (including duplicates per course mapping)
-    //     $filteredCount = $students->map(function ($student) use ($courseId) {
-    //         return $student->courses->when($courseId, function ($courses) use ($courseId) {
-    //             return $courses->where('pk', $courseId);
-    //         });
-    //     })->flatten()->count();
-
-    //     // Courses for filter dropdown
-    //     $courses = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk');
-
-    //     return view('admin.registration.student_courselist', compact(
-    //         'students', 'courses', 'courseId', 'totalStudents', 'filteredCount'
-    //     ));
-    // }
 
     public function studentCourses(Request $request)
     {
@@ -201,21 +136,28 @@ class EnrollementController extends Controller
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
 
-        // Base enrollments (each row = one student-course mapping)
+        // Base enrollments query
         $enrollments = StudentMasterCourseMap::with([
-            'studentMaster.service', // student + service
-            'course'                 // course
+            'studentMaster.service',
+            'course'
         ])
             ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
             ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
             ->orderByDesc('created_date')
-            ->get(); // use get() because DataTables will handle paging
+            ->get();
 
-        // Counts (rows, not distinct students)
-        $totalCount    = StudentMasterCourseMap::count();
-        $filteredCount = $courseId
-            ? StudentMasterCourseMap::where('course_master_pk', $courseId)->count()
-            : $totalCount;
+        // Counts - fixed to consider both filters
+        $baseQuery = StudentMasterCourseMap::query();
+
+        if ($courseId) {
+            $baseQuery->where('course_master_pk', $courseId);
+        }
+        if ($status !== null && $status !== '') {
+            $baseQuery->where('active_inactive', $status);
+        }
+
+        $filteredCount = $baseQuery->count();
+        $totalCount = StudentMasterCourseMap::count();
 
         return view('admin.registration.student_courselist', compact(
             'enrollments',
@@ -227,48 +169,26 @@ class EnrollementController extends Controller
         ));
     }
 
-    // Enrollment Export functionality finally working
-    //    public function StudenEnroll_export(Request $request)
-    // {
-    //     $format = $request->input('format');
-    //     $course = $request->input('course');
-    //     $status = $request->input('status');
-
-    //     // Excel / CSV
-    //     if (in_array($format, ['xlsx', 'csv'])) {
-    //         return Excel::download(new StudentEnrollmentExport($course, $status), "students.$format");
-    //     }
-
-    //     // PDF
-    //     if ($format === 'pdf') {
-    //         $students = (new StudentEnrollmentExport($course, $status))->collection();
-    //         $pdf = Pdf::loadView('admin.report.studentsenroll_pdf', compact('students'));
-    //         return $pdf->download('students.pdf');
-    //     }
-
-    //     return back()->with('error', 'Invalid export format selected.');
-    // }
-
     public function StudenEnroll_export(Request $request)
     {
         $courseId = $request->input('course');
-        $status = $request->input('status'); // 1=Active, 2=Inactive
+        $status = $request->input('status'); // 1=Active, 0=Inactive
         $format = $request->input('format');
 
         $export = new StudentEnrollmentExport($courseId, $status);
 
         if ($format === 'xlsx') {
-            return Excel::download($export, 'students.xlsx');
+            return Excel::download($export, 'student_enrollments.xlsx');
         }
 
         if ($format === 'csv') {
-            return Excel::download($export, 'students.csv');
+            return Excel::download($export, 'student_enrollments.csv');
         }
 
         if ($format === 'pdf') {
             $students = $export->collection();
             $pdf = Pdf::loadView('admin.report.studentsenroll_pdf', compact('students'));
-            return $pdf->download('students.pdf');
+            return $pdf->download('student_enrollments.pdf');
         }
 
         return back()->with('error', 'Invalid export format selected.');
