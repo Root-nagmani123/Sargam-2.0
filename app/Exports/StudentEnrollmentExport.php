@@ -12,6 +12,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Carbon\Carbon;
 
 class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
@@ -40,10 +41,17 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
             });
         }
 
-        // Flatten pivoted course data for export
+        // Get students and then flatten the course relationships
+        $students = $query->get();
         $enrollments = [];
-        foreach ($query->get() as $student) {
+
+        foreach ($students as $student) {
             foreach ($student->courses as $course) {
+                // Apply additional status filter at collection level if needed
+                if ($this->status !== null && $this->status !== '' && $course->pivot->active_inactive != $this->status) {
+                    continue;
+                }
+                
                 $enrollments[] = (object)[
                     'student' => $student,
                     'course' => $course,
@@ -63,21 +71,21 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
         $course = $enrollment->course;
 
         return [
-            $student->display_name,
-            $student->email,
+            trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? '')),
+            $student->email ?? '-',
             $course->course_name ?? 'N/A',
             $student->generated_OT_code ?? '-',
             $student->service->service_name ?? 'N/A',
-            $enrollment->active_inactive == 1 ? 'Active' : 'Inactive',
-            $enrollment->created_date,
-            $enrollment->modified_date,
+            (int) $enrollment->active_inactive === 1 ? 'Active' : 'Inactive',
+            $enrollment->created_date ? Carbon::parse($enrollment->created_date)->format('d M Y H:i') : '-',
+            $enrollment->modified_date ? Carbon::parse($enrollment->modified_date)->format('d M Y H:i') : '-',
         ];
     }
 
     public function headings(): array
     {
         return [
-            'Student',
+            'Student Name',
             'Email',
             'Course',
             'OT Code',
@@ -93,7 +101,21 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
         $lastRow    = $sheet->getHighestRow();
         $lastColumn = $sheet->getHighestColumn();
 
-        // Borders + alignment for all cells
+        // Header styling
+        $sheet->getStyle("A1:{$lastColumn}1")
+            ->applyFromArray([
+                'font' => ['bold' => true],
+                'fill' => [
+                    'fillType'   => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'FFCC00'],
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical'   => Alignment::VERTICAL_CENTER,
+                ],
+            ]);
+
+        // All cells borders and alignment
         $sheet->getStyle("A1:{$lastColumn}{$lastRow}")
             ->applyFromArray([
                 'borders' => [
@@ -108,15 +130,13 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
                 ],
             ]);
 
-        // Header styling
-        return [
-            1 => [
-                'font' => ['bold' => true],
-                'fill' => [
-                    'fillType'   => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => 'FFCC00'], // Light Yellow
-                ],
-            ],
-        ];
+        // Data rows left alignment for better readability
+        if ($lastRow > 1) {
+            $sheet->getStyle("A2:{$lastColumn}{$lastRow}")
+                ->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        }
+
+        return [];
     }
 }
