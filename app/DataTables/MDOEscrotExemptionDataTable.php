@@ -27,28 +27,21 @@ class MDOEscrotExemptionDataTable extends DataTable
                     $q->where('display_name', 'like', "%{$keyword}%");
                 });
             })
-            // ->filterColumn('course_name', function ($query, $keyword) {
-            //     $query->whereHas('courseMaster', function ($q) use ($keyword) {
-            //         $q->where('course_name', 'like', "%{$keyword}%");
-            //     });
-            // })
-            // ->filterColumn('mdo_name', function ($query, $keyword) {
-            //     $query->whereHas('mdoDutyTypeMaster', function ($q) use ($keyword) {
-            //         $q->where('mdo_duty_type_name', 'like', "%{$keyword}%");
-            //     });
-            // })
             ->addColumn('actions', function ($row) {
                 $editUrl = route('mdo-escrot-exemption.edit', $row->pk);
-                // $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
+                $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
                 return '
-                    <a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>
-                    
+                    <a href="' . $editUrl . '" title="Edit">
+                        <i class="material-icons menu-icon text-muted">edit</i>
+                    </a>
+                    <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
+                        ' . csrf_field() . '
+                        <input type="hidden" name="_method" value="DELETE">
+                        <button type="submit" class="btn btn-link p-0 m-0" title="Delete" style="vertical-align: baseline;">
+                            <i class="material-icons menu-icon text-muted">delete</i>
+                        </button>
+                    </form>
                 ';
-                // <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
-                //         ' . csrf_field() . '
-                //         <input type="hidden" name="_method" value="DELETE">
-                //         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                //     </form>
             })
             ->rawColumns(['student_name', 'course_name', 'mdo_name', 'actions']);
     }
@@ -63,21 +56,28 @@ class MDOEscrotExemptionDataTable extends DataTable
 
     }
 
-    public function html(): HtmlBuilder
-    {
-        return $this->builder()
-            ->setTableId('mdoescot-table')
-            ->columns($this->getColumns())
-            ->minifiedAjax()
-            ->responsive(true)
-            ->parameters([
-                'responsive' => true,
-                'scrollX' => true,
-                'autoWidth' => false,
-                'order' => [],
-            ])
-            ->buttons(['excel', 'csv', 'pdf', 'print', 'reset', 'reload']);
-    }
+public function html(): HtmlBuilder
+{
+    return $this->builder()
+        ->setTableId('mdoescot-table')
+        ->addTableClass('table custom-mdo-table align-middle')
+        ->columns($this->getColumns())
+        ->minifiedAjax()
+        ->parameters([
+            'responsive' => false,
+            'autoWidth' => false,
+            'ordering' => false,
+            'searching' => false,
+            'lengthChange' => true,
+            'pageLength' => 10,
+            'language' => [
+                'paginate' => [
+                    'previous' => '<i class="material-icons">chevron_left</i>',
+                    'next' => '<i class="material-icons">chevron_right</i>'
+                ]
+            ],
+        ]);
+}
 
     public function getColumns(): array
     {

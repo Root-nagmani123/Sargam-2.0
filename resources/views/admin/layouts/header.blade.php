@@ -15,13 +15,19 @@
     }
 
     .navbar-nav .nav-link.active {
-        background-color: #c62828;
-        color: #fff !important;
-    }
-
-    .navbar-nav {
-        background-color: #f9f9f9;
-        border-radius: 50rem;
+        background-color: #B12923;
+        color: #fbf8f8 !important;
+        font-size: 16px !important;
+        line-height: 24px;
+        font-weight: 500 !important;
+        padding:10px !important;
+        border-radius: 26px !important;
+        Width:90px !important;
+        Height:40px !important;
+        text-align: center !important;
+        justify-content: center !important;
+        transition: all 0.3s ease-in-out;
+        box-shadow:3px 0 3px 0 rgba(232,191,189,0.8);
     }
 
     .btn-link {
@@ -102,52 +108,84 @@
 
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
-                    <ul class="navbar-nav rounded-pill bg-light shadow-sm px-3 py-1 gap-1">
-                        <li class="nav-item"><a href="#" class="nav-link active rounded-pill px-4 py-1 fw-semibold">Home</a></li>
-                        <li class="nav-item"><a href="#tab-setup" class="nav-link rounded-pill px-3 py-1 fw-semibold">Setup</a></li>
-                        <li class="nav-item"><a href="#tab-communications" class="nav-link rounded-pill px-3 py-1 fw-semibold">Communications</a></li>
-                        <li class="nav-item"><a href="#tab-academics" class="nav-link rounded-pill px-3 py-1 fw-semibold">Academics</a></li>
-                        <li class="nav-item"><a href="#tab-material-management" class="nav-link rounded-pill px-3 py-1 fw-semibold">Material Management</a></li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle rounded-pill px-3 py-1 fw-semibold" href="#"
-                                id="financialDropdown" data-bs-toggle="dropdown" aria-expanded="false">Financial</a>
-                            <ul class="dropdown-menu" aria-labelledby="financialDropdown">
-                                <li><a class="dropdown-item" href="#">Budget</a></li>
-                                <li><a class="dropdown-item" href="#">Accounts</a></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
 
-                <div class="d-flex align-items-center ms-auto gap-3">
-                    <!-- 🔍 Search Button + Expandable Input -->
-                    <div class="search-wrapper">
-                        <button class="btn btn-link p-0 text-dark" id="searchToggleBtn" aria-label="Search">
-                            <i class="bi bi-search fs-5"></i>
-                        </button>
+    <ul class="navbar-nav shadow-sm px-3 py-1 gap-1 align-items-center"
+        style="border-radius: 30px; height: 60px;background-color: #F2F2F2">
 
-                        <div id="searchContainer" class="search-box">
-                            <div class="input-group input-group-sm">
-                                <input type="text" id="tableSearchInput" class="form-control" placeholder="Search..."
-                                    aria-label="Search in table">
-                                <button class="btn btn-outline-secondary" id="closeSearchBtn" aria-label="Close Search">
-                                    <i class="bi bi-x"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+        <!-- Home -->
+        <li class="nav-item">
+            <a href="#" class="nav-link active rounded-pill px-4 py-1 fw-semibold">
+                Home
+            </a>
+        </li>
+
+        <!-- Setup -->
+        <li class="nav-item">
+            <a href="#tab-setup" class="nav-link rounded-pill px-3 py-1 fw-semibold">
+                Setup
+            </a>
+        </li>
+
+        <!-- Communications -->
+        <li class="nav-item">
+            <a href="#tab-communications" class="nav-link rounded-pill px-3 py-1 fw-semibold">
+                Communications
+            </a>
+        </li>
+
+        <!-- Academics -->
+        <li class="nav-item">
+            <a href="#tab-academics" class="nav-link rounded-pill px-3 py-1 fw-semibold">
+                Academics
+            </a>
+        </li>
+
+        <!-- Material Management -->
+        <li class="nav-item">
+            <a href="#tab-material-management" class="nav-link rounded-pill px-3 py-1 fw-semibold">
+                Material Management
+            </a>
+        </li>
+
+        <!-- CUSTOM DROPDOWN WITH ARROW -->
+        <li class="nav-item dropdown">
+            <a class="nav-link rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1 dropdown-toggle-custom"
+               href="#" id="financialDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                Financial
+                <i class="material-icons material-symbols-rounded fs-5 dropdown-arrow">expand_more</i>
+            </a>
+
+            <ul class="dropdown-menu shadow-sm border-0" aria-labelledby="financialDropdown">
+                <li><a class="dropdown-item" href="#">Budget</a></li>
+                <li><a class="dropdown-item" href="#">Accounts</a></li>
+            </ul>
+        </li>
+
+        <!-- SEARCH ICON (AT THE END) -->
+        <li class="nav-item">
+            <a href="javascript:void(0)" class="nav-link rounded-pill px-2 py-1 ">
+                <i class="material-icons material-symbols-rounded text-dark" style="font-size: 24px;">search</i>
+            </a>
+        </li>
+
+    </ul>
+
+</div>
+
+
+                <div class="d-flex align-items-center ms-auto gap-3" style="margin-right:56px;">
 
                     <!-- 🔐 Logout -->
                     <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline">
                         @csrf
                         <button type="submit" class="btn btn-link p-0 text-danger" aria-label="Sign Out">
-                            <iconify-icon icon="solar:login-3-outline" class="fs-7"></iconify-icon>
+                             <i class="material-icons material-symbols-rounded" style="font-size: 24px; color:#333333;">logout</i>
                         </button>
                     </form>
 
                     <!-- ⏰ Last Login -->
-                    <div class="text-end small text-muted lh-sm">
-                        <div>Last login:</div>
+                    <div class="text-end small text-muted lh-sm justify-content-center" >
+                        <div class="text-center" style="font-size: 12px;line-height: 16px;">Last login:</div>
                         <time datetime="2025-05-14T13:56:02">2025-05-14 13:56:02</time>
                     </div>
                 </div>

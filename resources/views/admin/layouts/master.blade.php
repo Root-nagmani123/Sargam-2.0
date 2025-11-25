@@ -15,7 +15,78 @@
             color: #ffffff !important;
     transition: all 0.3s ease-in-out;
 }
+.mini-nav {
+    display: flex;
+    flex-direction: column;
+}
+
+.mini-nav-ul {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.mini-bottom {
+    margin-top: auto !important;
+}
+/* Remove default Bootstrap dropdown arrow */
+.dropdown-toggle-custom::after {
+    display: none !important;
+}
+
+/* Custom arrow icon animation */
+.dropdown-toggle-custom .dropdown-arrow {
+    transition: transform 0.25s ease;
+}
+
+/* Rotate arrow when open */
+.show > .dropdown-toggle-custom .dropdown-arrow {
+    transform: rotate(180deg);
+}
+    .my-filled-icon {
+        font-variation-settings: 'FILL' 1; /* Sets the fill to its maximum value (1) */
+        color: blue; /* You can also change the color of the icon */
+    }
+
+    .my-unfilled-icon {
+        font-variation-settings: 'FILL' 0; /* Sets the fill to its minimum value (0) */
+    }
     </style>
+    <style>
+    .calendar {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    .calendar th {
+        background: #f8f9fa;
+        padding: 8px;
+        text-align: center;
+        font-weight: 600;
+    }
+    .calendar td {
+        width: 14.28%;
+        height: 65px;
+        padding: 6px;
+        vertical-align: top;
+        border: 1px solid #e5e5e5;
+        text-align: right;
+        position: relative;
+    }
+    .holiday {
+        background-color: #ffe5e5 !important;
+        border-left: 4px solid #dc3545 !important;
+        font-weight: 600;
+    }
+    .holiday span {
+        font-size: 11px;
+        display: block;
+        color: #dc3545;
+        text-align: left;
+        margin-top: 4px;
+    }
+</style>
+
 </head>
 
 <body>
