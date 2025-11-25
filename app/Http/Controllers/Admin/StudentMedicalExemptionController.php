@@ -14,11 +14,50 @@ use Illuminate\Support\Facades\DB;
 
 class StudentMedicalExemptionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-       $records = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course'])->get();
+        $statusFilter = $request->input('status_filter', 'active');
+        $courseFilter = $request->input('course_filter');
+        $dateRangeFilter = $request->input('date_range_filter', 'all'); // all or current
+        $currentDate = now()->format('Y-m-d');
+
+        $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course']);
+
+        // Filter by course status (active/archive) based on course end_date
+        if ($statusFilter === 'active' || empty($statusFilter)) {
+            $query->whereHas('course', function ($courseQuery) use ($currentDate) {
+                $courseQuery->where(function ($q) use ($currentDate) {
+                    $q->whereNull('end_date')
+                      ->orWhereDate('end_date', '>=', $currentDate);
+                });
+            });
+        } elseif ($statusFilter === 'archive') {
+            $query->whereHas('course', function ($courseQuery) use ($currentDate) {
+                $courseQuery->whereNotNull('end_date')
+                    ->whereDate('end_date', '<', $currentDate);
+            });
+        }
+
+        // Filter by specific course
+        if (!empty($courseFilter)) {
+            $query->where('course_master_pk', $courseFilter);
+        }
+
+        // Filter by date range - show only exemptions that are currently active (today's date falls within the range)
+        if ($dateRangeFilter === 'current') {
+            $query->whereDate('from_date', '<=', $currentDate)
+                  ->whereDate('to_date', '>=', $currentDate);
+        }
+
+        $records = $query->get();
+
+        // Get all courses for the dropdown
+        $courses = CourseMaster::select('pk', 'course_name')
+            ->orderBy('course_name')
+            ->get()
+            ->pluck('course_name', 'pk');
     
-        return view('admin.student_medical_exemption.index', compact('records'));
+        return view('admin.student_medical_exemption.index', compact('records', 'courses'));
     }
 
    public function create()
