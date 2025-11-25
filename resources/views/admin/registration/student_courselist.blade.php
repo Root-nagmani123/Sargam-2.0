@@ -5,57 +5,60 @@
 @section('content')
     <div class="container-fluid">
         <x-breadcrum title="Student - Course Mapping" />
-    <x-session_message />
+        <x-session_message />
 
         {{-- Filters + Counts + Export --}}
         <div class="card mb-3 p-3" style="border-left: 4px solid #004a93;">
             <div class="row align-items-end g-3">
 
-                <!-- Course Filter -->
-                <div class="col-md-3 col-sm-12">
+                <!-- Filters (Course + Status) -->
+                <div class="col-md-6 col-sm-12">
                     <form id="filterForm" method="GET" action="{{ route('student.courses') }}">
-                        <label for="course_id" class="form-label fw-bold">Filter by Course</label>
-                        <select name="course_id" id="course_id" class="form-select"
-                            onchange="document.getElementById('filterForm').submit();">
-                            <option value="">-- All Courses --</option>
-                            @foreach ($courses as $id => $name)
-                                <option value="{{ $id }}"
-                                    {{ (string) $courseId === (string) $id ? 'selected' : '' }}>
-                                    {{ $name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <div class="row g-3">
+
+                            <!-- Course Filter -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Filter by Course</label>
+                                <select name="course_id" id="course_id" class="form-select">
+                                    <option value="">-- All Courses --</option>
+                                    @foreach ($courses as $id => $name)
+                                        <option value="{{ $id }}"
+                                            {{ (string) $courseId === (string) $id ? 'selected' : '' }}>
+                                            {{ $name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <!-- Status Filter -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Filter by Status</label>
+                                <select name="status" id="status" class="form-select">
+                                    <option value="">-- All Status --</option>
+                                    <option value="1" {{ (string) $status === '1' ? 'selected' : '' }}>Active</option>
+                                    <option value="0" {{ (string) $status === '0' ? 'selected' : '' }}>Inactive
+                                    </option>
+                                </select>
+                            </div>
+
+                        </div>
                     </form>
                 </div>
 
-                <!-- Status Filter -->
-                <div class="col-md-3 col-sm-12">
-                    <form id="statusForm" method="GET" action="{{ route('student.courses') }}">
-                        <label for="status" class="form-label fw-bold">Filter by Status</label>
-                        <select name="status" id="status" class="form-select"
-                            onchange="document.getElementById('statusForm').submit();">
-                            <option value="">-- All Status --</option>
-                            <option value="1" {{ (string) $status === '1' ? 'selected' : '' }}>Active</option>
-                            <option value="0" {{ (string) $status === '0' ? 'selected' : '' }}>Inactive</option>
-                        </select>
-                    </form>
-                </div>
-
-                <!-- Total / Showing -->
+                <!-- Total Count -->
                 <div class="col-md-3 col-sm-12 text-md-end">
-                    <div class="fw-bold">
-                        <span>Total Records: {{ $totalCount }}</span> &nbsp; | &nbsp;
-                        <span>Showing: {{ $filteredCount }}</span>
+                    <div class="fw-bold mt-2 mt-md-0">
+                        Total Records: {{ $filteredCount }}
                     </div>
                 </div>
 
-                <!-- Export Form -->
+                <!-- Export Section -->
                 <div class="col-md-3 col-sm-12">
                     <form method="GET" action="{{ route('studentEnroll.report.export') }}">
                         <input type="hidden" name="course" value="{{ $courseId }}">
                         <input type="hidden" name="status" value="{{ $status }}">
 
-                        <label for="format" class="form-label fw-bold">Export Format</label>
+                        <label class="form-label fw-bold">Export Format</label>
                         <div class="input-group">
                             <select name="format" id="format" class="form-select">
                                 <option value="">-- Select Format --</option>
@@ -70,6 +73,7 @@
 
             </div>
         </div>
+
 
         {{-- Data Table --}}
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -112,7 +116,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">No records found.</td>
+                                    <td colspan="8" class="text-center text-muted">No records found.</td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -136,10 +140,14 @@
                 searching: true,
                 lengthChange: true,
                 columnDefs: [{
-                        orderable: false,
-                        targets: [4]
-                    } // Status column non-orderable
-                ]
+                    orderable: false,
+                    targets: [4] // Status column non-orderable
+                }]
+            });
+
+            // Auto-submit when either filter changes (optional)
+            $('#course_id, #status').change(function() {
+                $('#filterForm').submit();
             });
         });
     </script>
