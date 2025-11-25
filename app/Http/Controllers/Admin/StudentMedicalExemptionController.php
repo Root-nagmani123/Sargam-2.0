@@ -17,6 +17,7 @@ class StudentMedicalExemptionController extends Controller
     public function index(Request $request)
     {
 <<<<<<< HEAD
+<<<<<<< HEAD
         $records = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course'])
             ->whereHas('student', function ($q) {
                 $q->whereNotNull('display_name')
@@ -26,6 +27,8 @@ class StudentMedicalExemptionController extends Controller
             ->get();
         return view('admin.student_medical_exemption.index', compact('records'));
 =======
+=======
+>>>>>>> 4cf775d655eaca8109fed2fc8506aba2a45111fc
         $statusFilter = $request->input('status_filter', 'active');
         $courseFilter = $request->input('course_filter');
         $dateRangeFilter = $request->input('date_range_filter', 'all'); // all or current
@@ -68,7 +71,10 @@ class StudentMedicalExemptionController extends Controller
             ->pluck('course_name', 'pk');
     
         return view('admin.student_medical_exemption.index', compact('records', 'courses'));
+<<<<<<< HEAD
 >>>>>>> 4cf775d6 (Mdo chnages)
+=======
+>>>>>>> 4cf775d655eaca8109fed2fc8506aba2a45111fc
     }
 
     public function create()
