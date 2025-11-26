@@ -4,7 +4,7 @@
 
 @section('content')
     <div class="container-fluid">
-        <x-breadcrum title="Student - Course Mapping" />
+        <x-breadcrum title="Course wise OT's List" />
         <x-session_message />
 
         {{-- Filters + Counts + Export --}}
@@ -12,10 +12,9 @@
             <div class="row align-items-end g-3">
 
                 <!-- Filters (Course + Status) -->
-                <div class="col-md-6 col-sm-12">
-                    <form id="filterForm" method="GET" action="{{ route('student.courses') }}">
+                <div class="col-md-5 col-sm-12">
+                    <form id="filterForm" method="GET">
                         <div class="row g-3">
-
                             <!-- Course Filter -->
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Filter by Course</label>
@@ -36,37 +35,39 @@
                                 <select name="status" id="status" class="form-select">
                                     <option value="">-- All Status --</option>
                                     <option value="1" {{ (string) $status === '1' ? 'selected' : '' }}>Active</option>
-                                    <option value="0" {{ (string) $status === '0' ? 'selected' : '' }}>Inactive
-                                    </option>
+                                    <option value="0" {{ (string) $status === '0' ? 'selected' : '' }}>Inactive</option>
                                 </select>
                             </div>
-
                         </div>
                     </form>
                 </div>
 
-                <!-- Total Count -->
-                <div class="col-md-3 col-sm-12 text-md-end">
-                    <div class="fw-bold mt-2 mt-md-0">
-                        Total Records: {{ $filteredCount }}
+                <!-- Total Count - Centered -->
+                <div class="col-md-2 col-sm-12 text-center">
+                    <div class="fw-bold fs-5 text-primary mt-2 mt-md-0">
+                        Total: <span id="filteredCount">{{ $filteredCount }}</span>
                     </div>
                 </div>
 
                 <!-- Export Section -->
-                <div class="col-md-3 col-sm-12">
-                    <form method="GET" action="{{ route('studentEnroll.report.export') }}">
-                        <input type="hidden" name="course" value="{{ $courseId }}">
-                        <input type="hidden" name="status" value="{{ $status }}">
-
-                        <label class="form-label fw-bold">Export Format</label>
-                        <div class="input-group">
-                            <select name="format" id="format" class="form-select">
-                                <option value="">-- Select Format --</option>
-                                <option value="pdf">PDF</option>
-                                <option value="xlsx">Excel</option>
-                                <option value="csv">CSV</option>
-                            </select>
-                            <button type="submit" class="btn btn-success">Export</button>
+                <div class="col-md-5 col-sm-12">
+                    <form method="GET" action="{{ route('studentEnroll.report.export') }}" id="exportForm">
+                        <input type="hidden" name="course" id="exportCourse" value="{{ $courseId }}">
+                        <input type="hidden" name="status" id="exportStatus" value="{{ $status }}">
+                        
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-8">
+                                <label class="form-label fw-bold">Export Format</label>
+                                <select name="format" class="form-select">
+                                    <option value="">-- Select Format --</option>
+                                    <option value="pdf">PDF</option>
+                                    <option value="xlsx">Excel</option>
+                                    <option value="csv">CSV</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-success w-100 mt-3 mt-md-0">Export</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -74,13 +75,20 @@
             </div>
         </div>
 
-
-        {{-- Data Table --}}
+        {{-- Data Table with Loading State --}}
         <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
+            <div class="card-body position-relative">
+                <!-- Loading Overlay -->
+                <div id="loadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex justify-content-center align-items-center d-none" style="z-index: 10;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span class="ms-2">Loading records...</span>
+                </div>
+
                 <div class="table-responsive">
-                    <table id="zero_config" class="table table-striped table-bordered text-nowrap align-middle">
-                        <thead class="table-light">
+                    <table  class="table table-bordered text-nowrap align-middle">
+                        <thead style="background:#af2910; color:#fff;">
                             <tr>
                                 <th>S.No</th>
                                 <th>Student</th>
@@ -92,33 +100,14 @@
                                 <th>Modified Date</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse ($enrollments as $index => $row)
-                                @php
-                                    $student = $row->studentMaster;
-                                    $course = $row->course;
-                                @endphp
+                        <tbody id="tableBody">
+                            @if($enrollments->count() > 0)
+                                @include('admin.registration.student_courses_table', ['enrollments' => $enrollments])
+                            @else
                                 <tr>
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? '')) }}
-                                    </td>
-                                    <td>{{ $course->course_name ?? '' }}</td>
-                                    <td>{{ $student->service->service_name ?? 'N/A' }}</td>
-                                    <td>{{ $student->generated_OT_code ?? '-' }}</td>
-                                    <td>
-                                        <span
-                                            class="badge {{ (int) $row->active_inactive === 1 ? 'bg-success' : 'bg-danger' }}">
-                                            {{ (int) $row->active_inactive === 1 ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ \Carbon\Carbon::parse($row->created_date)->format('d M Y H:i') }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($row->modified_date)->format('d M Y H:i') }}</td>
+                                    <td colspan="8" class="text-center text-muted">Apply filters to see records</td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="8" class="text-center text-muted">No records found.</td>
-                                </tr>
-                            @endforelse
+                            @endif
                         </tbody>
                     </table>
                 </div>
@@ -129,26 +118,89 @@
 @endsection
 
 @section('scripts')
-    <script>
-        $(function() {
-            if ($.fn.DataTable.isDataTable('#zero_config')) {
-                $('#zero_config').DataTable().destroy();
-            }
-            $('#zero_config').DataTable({
-                pageLength: 10,
-                ordering: true,
-                searching: true,
-                lengthChange: true,
-                columnDefs: [{
-                    orderable: false,
-                    targets: [4] // Status column non-orderable
-                }]
-            });
+<script>
+$(function() {
+    let dataTable = null;
 
-            // Auto-submit when either filter changes (optional)
-            $('#course_id, #status').change(function() {
-                $('#filterForm').submit();
-            });
+    // Initialize basic table for empty state
+    function initializeBasicTable() {
+        if (dataTable !== null) {
+            dataTable.destroy();
+        }
+        return $('#dataTable').DataTable({
+            searching: false,
+            ordering: false,
+            paging: false,
+            info: false,
+            responsive: true
         });
-    </script>
+    }
+
+    // Initialize full featured DataTable
+    function initializeFullDataTable() {
+        if (dataTable !== null) {
+            dataTable.destroy();
+        }
+        return $('#dataTable').DataTable({
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100],
+            ordering: true,
+            searching: true,
+            responsive: true,
+            columnDefs: [{
+                orderable: false,
+                targets: [5]
+            }]
+        });
+    }
+
+    // Start with basic table
+    dataTable = initializeBasicTable();
+
+    // AJAX Filter Function
+    function applyFilters() {
+        const courseId = $('#course_id').val();
+        const status = $('#status').val();
+        
+        // Don't make AJAX call if no filters are selected
+        if (!courseId && (status === '' || status === null)) {
+            $('#tableBody').html('<tr><td colspan="8" class="text-center text-muted">Apply filters to see records</td></tr>');
+            dataTable = initializeBasicTable();
+            $('#filteredCount').text('0');
+            return;
+        }
+        
+        $('#loadingOverlay').removeClass('d-none');
+        $('#exportCourse').val(courseId);
+        $('#exportStatus').val(status);
+        
+        $.ajax({
+            url: "{{ route('student.courses') }}",
+            type: "GET",
+            data: { course_id: courseId, status: status },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                $('#tableBody').html(response.html);
+                $('#filteredCount').text(response.filteredCount);
+                
+                setTimeout(() => {
+                    if (response.filteredCount > 0) {
+                        dataTable = initializeFullDataTable();
+                    } else {
+                        dataTable = initializeBasicTable();
+                    }
+                    $('#loadingOverlay').addClass('d-none');
+                }, 100);
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                alert('Error applying filters. Please try again.');
+                $('#loadingOverlay').addClass('d-none');
+            }
+        });
+    }
+
+    $('#course_id, #status').change(applyFilters);
+});
+</script>
 @endsection
