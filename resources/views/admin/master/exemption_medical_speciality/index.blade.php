@@ -38,7 +38,7 @@
                                 <tbody>
                                     @forelse($specialities as $index => $speciality)
                                     <tr>
-                                        <td>{{ $index + 1 }}</td>
+                                        <td>{{ $specialities->firstItem() + $index }}</td>
                                         <td>{{ $speciality->speciality_name }}</td>
                                         <td>{{ $speciality->created_date }}</td>
 
@@ -81,6 +81,16 @@
                                     @endforelse
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                Showing {{ $specialities->firstItem() ?? 0 }} to {{ $specialities->lastItem() ?? 0 }} of {{ $specialities->total() }} entries
+                            </div>
+                            <div>
+                                {{ $specialities->links('pagination::bootstrap-5') }}
+                            </div>
                         </div>
                     </div>
                 </div>

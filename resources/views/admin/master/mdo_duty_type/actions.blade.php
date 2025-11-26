@@ -5,7 +5,8 @@
        class="action-btn edit-btn"
        aria-label="Edit MDO Duty Type"
        title="Edit">
-        <span class="material-icons">edit</span>
+        <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">edit</i>
     </a>
 
     {{-- DELETE BUTTON --}}
@@ -17,13 +18,14 @@
         @csrf
         @method('DELETE')
 
-        <button type="submit"
+        <a href="javascript:void(0)"
                 class="action-btn delete-btn {{ $row->active_inactive == 1 ? 'disabled-btn' : '' }}"
                 aria-label="{{ $row->active_inactive == 1 ? 'Delete disabled for active duty type' : 'Delete MDO Duty Type' }}"
                 title="{{ $row->active_inactive == 1 ? 'Cannot delete active MDO Duty Type' : 'Delete' }}"
                 {{ $row->active_inactive == 1 ? 'disabled' : '' }}>
-            <span class="material-icons">delete</span>
-        </button>
+            <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">delete</i>
+        </a>
 
     </form>
 

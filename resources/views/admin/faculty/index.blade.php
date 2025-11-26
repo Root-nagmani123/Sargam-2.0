@@ -4,8 +4,6 @@
 
 @section('content')
 <div class="container-fluid">
-
-    <x-breadcrum title="Faculty" />
     <!--<x-session_message />-->
     <div id="status-msg"></div>
 
@@ -16,28 +14,76 @@
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Faculty</h4>
+                            <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
+                                Faculty
+                            </h4>
                         </div>
+
                         <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('faculty.create')}}" class="btn btn-primary">+ Add Faculty</a>
-                                <a href="{{ route('faculty.excel.export') }}" class="btn btn-primary">
-                                    <iconify-icon icon="material-symbols:sim-card-download-rounded" ></iconify-icon> Export Excel
+                            <div class="d-flex justify-content-end align-items-center gap-3">
+
+                                <!-- Add Faculty -->
+                                <a href="{{ route('faculty.create') }}"
+                                    class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
+                                    style="background-color:#004a93; border-color:#004a93;"
+                                    aria-label="Add New Faculty">
+                                    <span class="material-symbols-rounded fs-5">add</span>
+                                    Add Faculty
                                 </a>
+
+                                <!-- Export Excel -->
+                                <a href="{{ route('faculty.excel.export') }}"
+                                    class="btn btn-outline-primary d-flex align-items-center gap-1 shadow-sm"
+                                    style="border-color:#004a93; color:#004a93;" aria-label="Export Faculty Excel">
+                                    <span class="material-symbols-rounded fs-5">export_notes</span>
+                                    Export Excel
+                                </a>
+
+                                <!-- Search Expand -->
+                                <!-- Search Expand -->
+                                <div class="search-expand d-flex align-items-center">
+                                    <a href="javascript:void(0)" id="searchToggle">
+                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">search</i>
+                                    </a>
+
+                                    <input type="text" class="form-control search-input ms-2" id="searchInput"
+                                        placeholder="Search…" aria-label="Search">
+                                </div>
                             </div>
                         </div>
                     </div>
+
                     <hr>
-                    {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
+                    {!! $dataTable->table(['class' => 'table w-100']) !!}
                 </div>
             </div>
         </div>
         <!-- end Zero Configuration -->
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('searchToggle');
+    const input = document.getElementById('searchInput');
 
+    toggle.addEventListener('click', () => {
+        input.classList.toggle('active');
+        if (input.classList.contains('active')) {
+            input.focus();
+        }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-expand')) {
+            input.classList.remove('active');
+        }
+    });
+});
+</script>
 
 @endsection
 @push('scripts')
-    {!! $dataTable->scripts() !!}
+{!! $dataTable->scripts() !!}
 @endpush

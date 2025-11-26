@@ -12,7 +12,7 @@ class MemoTypeMasterController extends Controller
 {
     public function index()
     {
-        $memoTypes = MemoTypeMaster::all();
+        $memoTypes = MemoTypeMaster::paginate(10);
         return view('admin.master.memo_type.index', compact('memoTypes'));
     }
 

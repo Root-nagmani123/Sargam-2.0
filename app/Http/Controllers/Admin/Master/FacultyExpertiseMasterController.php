@@ -10,7 +10,7 @@ use Stringable;
 class FacultyExpertiseMasterController extends Controller
 {
     public function index() {
-        $faculties = FacultyExpertiseMaster::latest('pk')->get();
+        $faculties = FacultyExpertiseMaster::latest('pk')->paginate(10);
         return view("admin.master.faculty_expertise_master.index", compact('faculties'));
     }
 

@@ -306,7 +306,7 @@ $events = DB::table('timetable')
     )
      ->orderBy('timetable.pk', 'desc')
     ->distinct() // prevent duplicates if multiple feedbacks
-    ->get();
+    ->paginate(10);
 
 
      return view('admin.feedback.index', compact('events'));
