@@ -109,7 +109,8 @@
 
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('student.courses') }}">
-                    <span class="hide-menu">Student Course Mapping</span>
+                    <iconify-icon icon="mdi:image-outline"></iconify-icon>
+                    <span class="hide-menu">Course wise OT's List</span>
                 </a>
             </li>
         </ul>
