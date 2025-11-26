@@ -52,7 +52,7 @@
                                                          style="font-size: 32px;">note_add</i>
                                                  </a>
                                                  <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2 text-dark">FC
+                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2 text-dark text-wrap">FC
                                                      Registration</span>
                                              </li>
                                          </div>

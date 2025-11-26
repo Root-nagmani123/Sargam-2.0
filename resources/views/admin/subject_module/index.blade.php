@@ -4,8 +4,6 @@
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Subject module" />
-    <x-session_message />
 
     <div class="datatables">
         <!-- start Zero Configuration -->
@@ -24,65 +22,72 @@
                         </div>
                     </div>
                     <hr>
-                    <div id="zero_config_wrapper" class="dataTables_wrapper">
+                    <div class="table-responsive">
 
-                        <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                            aria-describedby="zero_config_info">
-                            <thead>
+                        <table class="table table-bordered text-nowrap align-middle dataTable">
+                            <thead style="background-color: #af2910;">
                                 <!-- start row -->
-                                <tr >
+                                <tr>
                                     <th class="col text-center">S.No.</th>
                                     <th class="col text-center">Stream Name</th>
-                                    <th class="col text-center">Status</th>
                                     <th class="col text-center">Action</th>
-
-
+                                    <th class="col text-center">Status</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
                             <tbody>
-                                @foreach($modules as $key => $modules)
+                                @foreach($modules as $key => $module)
                                 <tr class="{{ $loop->odd ? 'odd' : 'even' }} ">
-                                    <td class="text-center">{{ $key + 1 }}</td>
+                                    <td class="text-center">{{ $modules->firstItem() + $key }}</td>
                                     <td class="text-center">
-                                        {{ $modules->module_name }}
+                                        {{ $module->module_name }}
                                     </td>
-                                    <td class="text-center">
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="subject_module_master" data-column="active_inactive"
-                                                data-id="{{ $modules->pk }}"
-                                                {{ $modules->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                     <td class="text-center">
-                                        <div class="d-flex justify-content-start align-items-start gap-2">
-                                            <a href="{{ route('subject-module.edit', $modules->pk) }}"
-                                                class="btn btn-primary text-white btn-sm">
-                                                Edit
+                                      <td class="text-center">
+                                        <div class="d-flex justify-content-center align-items-center gap-2">
+                                            <a href="{{ route('subject-module.edit', $module->pk) }}">
+                                                <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">edit</i>
                                             </a>
-                                            <form action="{{ route('subject-module.destroy', $modules->pk) }}"
+                                            <form action="{{ route('subject-module.destroy', $module->pk) }}"
                                                 method="POST" class="m-0 delete-form"
-                                                data-status="{{ $modules->active_inactive }}">
+                                                data-status="{{ $module->active_inactive }}">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-danger text-white btn-sm" onclick="event.preventDefault();
+                                                <a href="javascript:void(0)" onclick="event.preventDefault();
                                                 if(confirm('Are you sure you want to delete this Subject modules?')) {
                                                     this.closest('form').submit();
-                                                }"
-                                                {{ $modules->active_inactive == 1 ? 'disabled' : '' }}>
-                                                    Delete
-                                                </button>
+                                                }" {{ $module->active_inactive == 1 ? 'disabled' : '' }}>
+                                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">delete</i>
+                                                </a>
                                             </form>
 
                                         </div>
                                     </td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch m-auto d-flex justify-content-center align-items-center">
+                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                data-table="subject_module_master" data-column="active_inactive"
+                                                data-id="{{ $module->pk }}"
+                                                {{ $module->active_inactive == 1 ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
+                                  
 
                                 </tr>
                                 @endforeach
                             </tbody>
+                        </table>
 
+                        <!-- Bootstrap 5 Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="text-muted">
+                                Showing {{ $modules->firstItem() ?? 0 }} to {{ $modules->lastItem() ?? 0 }} of {{ $modules->total() }} entries
+                            </div>
+                            <div>
+                                {{ $modules->links('pagination::bootstrap-5') }}
+                            </div>
+                        </div>
 
                     </div>
                 </div>

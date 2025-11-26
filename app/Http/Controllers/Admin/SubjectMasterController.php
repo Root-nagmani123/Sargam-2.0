@@ -10,7 +10,15 @@ class SubjectMasterController extends Controller
 {
     public function index()
     {
-        $subjects = SubjectMaster::all();
+        $search = request('search');
+
+        $subjects = SubjectMaster::when($search, function ($q) use ($search) {
+            $q->where('subject_name', 'like', "%$search%")
+              ->orWhere('sub_short_name', 'like', "%$search%");
+        })
+        ->paginate(10)
+        ->appends(['search' => $search]);
+        
         return view('admin.subject.index', compact('subjects'));
     }
 

@@ -4,9 +4,6 @@
 <head>
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
-    {{-- <link href="{{ asset('css/forms.css') }}" rel="stylesheet"> --}}
-    {{-- @stack('styles') --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
     @section('css')
     <style>
     .nav-item .tab-item .active {
@@ -131,6 +128,7 @@
     }
 
 
+
     .calendar-cell {
         border-radius: 8px;
         transition: background .12s ease;
@@ -205,7 +203,7 @@
 .dd-trigger {
     border: none;
     border-bottom: 1px solid #4c8ec5; /* Soft Blue like screenshot */
-    border-radius: 10px 0 0 10px;
+    border-radius: 10px;
     background: transparent;
     padding: 8px 0 10px 0;
     font-weight: 600;
@@ -260,6 +258,53 @@
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+.pagination .page-link {
+    border: none !important;
+    padding: 4px 10px;
+    font-size: 14px;
+    color: #3a3a3a;
+    background: transparent;
+}
+
+.pagination .page-item.active .page-link.current-page {
+    border: 2px solid #0d6efd !important;
+    border-radius: 8px !important;
+    color: #0d6efd !important;
+    font-weight: 600;
+    background: transparent !important;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #aaa;
+}
+
+.pagination li {
+    margin-right: 4px;
+}
+
+.pagination .page-link:hover {
+    color: #0d6efd;
+}
+.search-expand {
+    position: relative;
+}
+
+.search-input {
+    width: 0;
+    opacity: 0;
+    padding: 0;
+    transition: width .35s ease, opacity .25s ease;
+    border-radius: 50rem;
+    border: 1px solid #ced4da;
+}
+
+/* Expanded state */
+.search-input.active {
+    width: 200px;           /* You can increase this */
+    opacity: 1;
+    padding: .375rem .75rem;
+}
+
 
     </style>
 

@@ -12,7 +12,7 @@ class ExemptionCategoryController extends Controller
    
     public function index()
     {
-        $categories = ExemptionCategoryMaster::all();
+        $categories = ExemptionCategoryMaster::paginate(10);
         return view('admin.master.exemption_categories_master.index', compact('categories'));
     }
 

@@ -42,55 +42,115 @@
     border-color: #666;
 }
 </style>
-<div class="container-fluid">
+<style>
+/* Table Header Styling */
+#group-mapping-table thead {
+    background-color: #af2910 !important;
+    color: #ffffff !important;
+}
 
-    <x-breadcrum title="Group Name Mapping" />
-    <x-session_message />
+#group-mapping-table thead th {
+    text-align: center;
+    vertical-align: middle;
+    font-weight: 600;
+    padding: 12px;
+}
+</style>
+
+<div class="container-fluid">
 
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
+
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row mb-3">
-                        <div class="col-6">
-                            <h4>Group Name Mapping</h4>
-                        </div>
-                        <div class="col-6 d-flex justify-content-end gap-2">
+                    <!-- Title + Actions -->
+                    <div
+                        class="d-flex flex-wrap justify-content-between align-items-center gap-2 py-2 border-bottom pb-3 mb-3">
+
+                        <h4 class="mb-0 text-primary fw-semibold">
+                            Group Name Mapping
+                        </h4>
+
+                        <div class="d-flex justify-content-end align-items-center gap-2">
+
+                            <!-- Add Group Mapping -->
                             <a href="{{ route('group.mapping.create') }}"
                                 class="btn btn-primary d-flex align-items-center">
-                                <iconify-icon icon="ep:circle-plus-filled" width="1.2em" height="1.2em" class="me-1">
-                                </iconify-icon> Add Group Mapping
+                                <iconify-icon icon="ep:circle-plus-filled" class="me-1"></iconify-icon>
+                                Add Group Mapping
                             </a>
-                            <!-- Import Excel Button (opens modal) -->
+
+                            <!-- Import Excel -->
                             <button type="button" class="btn btn-success d-flex align-items-center"
                                 data-bs-toggle="modal" data-bs-target="#importModal">
-                                <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em" class="me-1">
-                                </iconify-icon> Import Excel
+                                <iconify-icon icon="mdi:file-excel" class="me-1"></iconify-icon>
+                                Import Excel
                             </button>
+
+                            <!-- Export -->
                             <a href="{{ route('group.mapping.export.student.list') }}"
                                 class="btn btn-primary d-flex align-items-center">
-                                <iconify-icon icon="material-symbols:sim-card-download-rounded" width="24" height="24">
-                                </iconify-icon> Export Excel
+                                <iconify-icon icon="material-symbols:sim-card-download-rounded"></iconify-icon>
+                                Export Excel
                             </a>
-                        </div>
-                    </div>
 
-                    <div class="row mb-3">
-                        <div class="col-12 text-end">
-                            <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
-                                aria-label="Group Mapping Status Filter">
-                                <button type="button" class="btn btn-success px-4 fw-semibold active"
-                                    id="filterGroupActive" aria-pressed="true">
-                                    <i class="bi bi-check-circle me-1"></i> Active
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold"
-                                    id="filterGroupArchive" aria-pressed="false">
-                                    <i class="bi bi-archive me-1"></i> Archive
-                                </button>
+                            <!-- Search Expand -->
+                            <div class="search-expand d-flex align-items-center">
+                                <a href="javascript:void(0)" id="searchToggle">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">search</i>
+                                </a>
+
+                                <input type="text" class="form-control search-input ms-2" id="searchInput"
+                                    placeholder="Search…" aria-label="Search">
                             </div>
+
                         </div>
+
+
                     </div>
 
+                    <!-- Status Filters -->
+                    <div class="d-flex justify-content-end">
+                        <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
+                            aria-label="Group Mapping Status Filter">
+
+                            <button type="button" class="btn btn-success fw-semibold px-4 active" id="filterGroupActive"
+                                aria-pressed="true">
+                                <i class="bi bi-check-circle me-1"></i> Active
+                            </button>
+
+                            <button type="button" class="btn btn-outline-secondary fw-semibold px-4"
+                                id="filterGroupArchive" aria-pressed="false">
+                                <i class="bi bi-archive me-1"></i> Archive
+                            </button>
+
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle" id="group-mapping-table">
+                            <thead style="background-color:#af2910; color:#fff;">
+                                <tr>
+                                    <th class="text-center">S.No.</th>
+                                    <th class="text-center">Course Name</th>
+                                    <th class="text-center">Group Type</th>
+                                    <th class="text-center">Group Name</th>
+                                    <th class="text-center">Facility</th>
+                                    <th class="text-center">Student Count</th>
+                                    <th class="text-center">View/Download</th>
+                                    <th class="text-center">Action</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
                     <!-- Import Excel Modal -->
                     <div class="modal fade modal-xl" id="importModal" tabindex="-1" aria-labelledby="importModalLabel"
                         aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
@@ -249,19 +309,31 @@
                             </div>
                         </div>
                     </div>
-
-
-
-                    <hr>
-                    {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
 @push('scripts')
-{!! $dataTable->scripts() !!}
+{{ $dataTable->scripts() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('searchToggle');
+    const input = document.getElementById('searchInput');
+
+    toggle.addEventListener('click', () => {
+        input.classList.toggle('active');
+        if (input.classList.contains('active')) {
+            input.focus();
+        }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-expand')) {
+            input.classList.remove('active');
+        }
+    });
+});
+</script>
+
+
 <script>
 $(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) {
     data.status_filter = window.groupMappingCurrentFilter || 'active';
