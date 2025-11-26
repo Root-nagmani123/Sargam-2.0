@@ -15661,8 +15661,8 @@ progress {
     --bs-table-color-state: initial;
     --bs-table-bg-state: initial;
     --bs-table-color: var(--bs-body-color);
-    --bs-table-bg: #fff;
     --bs-table-border-color: var(--bs-border-color);
+     --bs-table-border-radius: 10px !important;
     --bs-table-accent-bg: transparent;
     --bs-table-striped-color: var(--bs-body-color);
     --bs-table-striped-bg: #eff4fa;
@@ -30990,8 +30990,7 @@ pre.code-view code.hljs {
     position: relative;
     background: #ECEDF8;
     width: 120px;
-    margin-top: 70px;
-    border-radius: 10px;
+    margin-top: 71.5px;
 }
 .side-mini-panel .mini-nav ul.mini-nav-ul {
     height: calc(100vh - 70px);
@@ -31067,7 +31066,7 @@ font-size: 14px;
     display: none;
     padding: 0 20px 24px 20px;
     z-index: 98;
-    border-radius: 0 10px 0 10px;
+    border-radius: 0 20px 20px 0;
 }
 .brand-logo {
     min-height: 72px;
@@ -32584,7 +32583,7 @@ html[data-layout="horizontal"]  > .container-xxl {
     border-color: var(--bs-table-border-color);
 }
 .table th {
-    color: var(--bs-heading-color);
+    color: #ffffff !important;
 }
 .table.table-dark th,
 .table.table-dark.border {

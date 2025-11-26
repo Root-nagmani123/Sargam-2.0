@@ -186,7 +186,8 @@
                     <!-- ⏰ Last Login -->
                     <div class="text-end small text-muted lh-sm justify-content-center" >
                         <div class="text-center" style="font-size: 12px;line-height: 16px;">Last login:</div>
-                        <time datetime="2025-05-14T13:56:02">2025-05-14 13:56:02</time>
+                        <time id="myTime" datetime="2025-05-14T13:56:02">2025-05-14 13:56:02</time>
+
                     </div>
                 </div>
             </div>
@@ -195,6 +196,24 @@
 </header>
 
 <!-- 🧠 Search Toggle Script -->
+ <script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll("time").forEach(function (el) {
+        const dt = new Date(el.getAttribute("datetime"));
+
+        const day   = String(dt.getDate()).padStart(2, '0');
+        const month = String(dt.getMonth() + 1).padStart(2, '0'); // JS months start at 0
+        const year  = dt.getFullYear();
+
+        const hours   = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        const seconds = String(dt.getSeconds()).padStart(2, '0');
+
+        el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    });
+});
+</script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const toggleBtn = document.getElementById('searchToggleBtn');

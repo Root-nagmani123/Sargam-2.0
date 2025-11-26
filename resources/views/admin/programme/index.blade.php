@@ -336,14 +336,44 @@
         <div class="card-body">
 
             <!-- Title -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="fw-semibold text-dark mb-0">Duty Type Master</h4>
+           <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="fw-semibold text-dark mb-0">Duty Type Master</h4>
 
-                <a href="{{ route('programme.create') }}"
-                   class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
-                    <i class="bi bi-plus-circle me-1"></i> Add New
-                </a>
-            </div>
+    <div class="d-flex align-items-center gap-2">
+
+        <!-- Add New Button -->
+        <a href="{{ route('programme.create') }}"
+            class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
+            <i class="material-icons menu-icon material-symbols-rounded"
+               style="font-size: 20px; vertical-align: middle;">add</i>
+            Add New
+        </a>
+
+        <!-- Search Box + Icon -->
+        <div class="position-relative">
+
+            <!-- Hidden Search Input -->
+            <form action="{{ route('programme.index') }}" method="GET"
+                  class="search-box d-none" id="searchBox">
+                <input type="text" name="search"
+                       class="form-control"
+                       placeholder="Search..."
+                       style="width: 220px;">
+            </form>
+
+            <!-- Search Icon Button -->
+            <button type="button" class="btn btn-outline-primary"
+                    id="searchToggleBtn"
+                    style="padding: 7px 10px;">
+                <i class="material-icons material-symbols-rounded"
+                   style="font-size: 22px;">search</i>
+            </button>
+
+        </div>
+
+    </div>
+</div>
+
 
             <!-- DataTable -->
             <div class="table-responsive">
@@ -386,7 +416,17 @@
 @endsection
 @push('scripts')
 {!! $dataTable->scripts() !!}
+<script>
+    document.getElementById("searchToggleBtn").addEventListener("click", function () {
+    const box = document.getElementById("searchBox");
+    box.classList.toggle("d-none");
 
+    if (!box.classList.contains("d-none")) {
+        box.querySelector("input").focus();
+    }
+});
+
+</script>
 <script>
 $(document).ready(function() {
     var table;

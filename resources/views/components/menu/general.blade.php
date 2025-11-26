@@ -90,20 +90,7 @@
                                         <span
                                             class="hide-menu">Exemption Medical Speciality</span>
                                     </a></li>
-                            </ul>
-
-                            {{-- EXEMPTION DUTY --}}
-                            <li class="sidebar-item">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#exemptionDutyCollapse" role="button"
-                                    aria-expanded="false" aria-controls="exemptionDutyCollapse"
-                                    >
-                                    <span class="hide-menu fw-bold">Exemption Duty</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
-                                </a>
-                            </li>
-                            <ul class="collapse list-unstyled ps-3" id="exemptionDutyCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
+                                    <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('student.medical.exemption.index') }}">
                                         <span
                                             class="hide-menu">Student Medical Exemption</span>

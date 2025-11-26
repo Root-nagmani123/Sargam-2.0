@@ -12,7 +12,7 @@
                 <div class="row g-3 mb-3">
                     <!-- Total Students -->
                     <div class="col-md-3">
-                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #EFF2FF;">
+                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #ECEDF8;">
                             <div class="row">
                                 <div class="col-3 d-flex align-items-center justify-content-center">
                                     <!-- <i class="material-icons menu-icon material-symbols-rounded text-primary my-filled-icon"
@@ -35,7 +35,7 @@
 
                     <!-- Active Teachers -->
                     <div class="col-md-3">
-                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #E8F7ED;">
+                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #EBF5E8;">
                             <div class="row">
                                 <div class="col-3 d-flex align-items-center justify-content-center">
                                     <!-- <i class="material-icons menu-icon material-symbols-rounded text-success my-filled-icon"
@@ -57,7 +57,7 @@
 
                     <!-- Total Classes -->
                     <div class="col-md-3">
-                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #FFF4E6;">
+                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #FEF5E7;">
                             <div class="row">
                                 <div class="col-3 d-flex align-items-center justify-content-center">
                                     <!-- <i class="material-icons menu-icon material-symbols-rounded text-warning"
@@ -79,7 +79,7 @@
 
                     <!-- Attendance Rate -->
                     <div class="col-md-3">
-                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #F0EDFF;">
+                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #ECEDF8;">
                             <div class="row">
                                 <div class="col-3 d-flex align-items-center justify-content-center">
                                     <!-- <i class="material-icons menu-icon material-symbols-rounded text-purple"
@@ -118,7 +118,7 @@
 </div>
 
     </div>
-    <div class="card">
+    <div class="card" style="border-radius:30px;">
         <div class="card-header my-2" style="background:transparent;">
             <h2 class="card-title fw-bold" style="font-size:24px;">Admin Summary</h2>
         </div>
@@ -151,7 +151,7 @@
                             <div class="card-body d-flex align-items-start gap-3 p-4">
 
                                 <!-- Profile Image -->
-                                <img src="/mnt/data/Frame 1000002820.png" alt="Profile photo of Dalip Bisht"
+                                <img src="{{ asset('admin_assets/images/profile/user-1.jpg') }}" alt="Profile photo of Dalip Bisht"
                                     class="rounded-circle" style="width:60px; height:60px; object-fit:cover;">
 
                                 <!-- Details -->
@@ -171,7 +171,7 @@
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100" style="background:#FFF7DF; border-radius:20px;">
                             <div class="card-body d-flex align-items-start gap-3 p-4">
-                                <img src="/mnt/data/Frame 1000002820.png" class="rounded-circle"
+                                <img src="{{ asset('admin_assets/images/profile/user-2.jpg') }}" class="rounded-circle"
                                     style="width:60px; height:60px; object-fit:cover;" alt="Profile photo">
                                 <div>
                                     <h5 class="fw-bold mb-1">Abhishek</h5>
@@ -185,7 +185,7 @@
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100" style="background:#E8E8E9; border-radius:20px;">
                             <div class="card-body d-flex align-items-start gap-3 p-4">
-                                <img src="/mnt/data/Frame 1000002820.png" class="rounded-circle"
+                                <img src="{{ asset('admin_assets/images/profile/user-3.jpg') }}" class="rounded-circle"
                                     style="width:60px; height:60px; object-fit:cover;" alt="Profile photo">
                                 <div>
                                     <h5 class="fw-bold mb-1">Abhishek</h5>
@@ -200,7 +200,7 @@
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100" style="background:#ECEAF5; border-radius:20px;">
                             <div class="card-body d-flex align-items-start gap-3 p-4">
-                                <img src="/mnt/data/Frame 1000002820.png" class="rounded-circle"
+                                <img src="{{ asset('admin_assets/images/profile/user-4.jpg') }}" class="rounded-circle"
                                     style="width:60px; height:60px; object-fit:cover;" alt="Profile photo">
                                 <div>
                                     <h5 class="fw-bold mb-1">Amitaj Pangtey</h5>
@@ -214,7 +214,7 @@
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100" style="background:#F5DCE0; border-radius:20px;">
                             <div class="card-body d-flex align-items-start gap-3 p-4">
-                                <img src="/mnt/data/Frame 1000002820.png" class="rounded-circle"
+                                <img src="{{ asset('admin_assets/images/profile/user-5.jpg') }}" class="rounded-circle"
                                     style="width:60px; height:60px; object-fit:cover;" alt="Profile photo">
                                 <div>
                                     <h5 class="fw-bold mb-1">Amitaj Pangtey</h5>
@@ -228,7 +228,7 @@
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100" style="background:#D3E1EF; border-radius:20px;">
                             <div class="card-body d-flex align-items-start gap-3 p-4">
-                                <img src="/mnt/data/Frame 1000002820.png" class="rounded-circle"
+                                <img src="{{ asset('admin_assets/images/profile/user-6.jpg') }}" class="rounded-circle"
                                     style="width:60px; height:60px; object-fit:cover;" alt="Profile photo">
                                 <div>
                                     <h5 class="fw-bold mb-1">Amitaj Pangtey</h5>
