@@ -4,10 +4,6 @@
 
 @section('content')
 <div class="container-fluid">
-
-    <x-breadcrum title="Employee Type Master" />
-    <x-session_message />
-
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">

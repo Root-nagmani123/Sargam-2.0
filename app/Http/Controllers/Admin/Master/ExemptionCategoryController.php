@@ -76,7 +76,7 @@ public function store(Request $request)
 
     public function medicalSpecialityIndex()
 {
-    $specialities = ExemptionMedicalSpecialityMaster::all();
+    $specialities = ExemptionMedicalSpecialityMaster::paginate(10);
     return view('admin.master.exemption_medical_speciality.index', compact('specialities'));
 }
 

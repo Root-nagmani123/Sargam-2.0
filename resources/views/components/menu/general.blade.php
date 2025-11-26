@@ -7,7 +7,7 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 0px 20px 24px;">
+                    <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
                         <ul class="sidebar-menu" id="sidebarnav">
 
                             {{-- GENERAL --}}

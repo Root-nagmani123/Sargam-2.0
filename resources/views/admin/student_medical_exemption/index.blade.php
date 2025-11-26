@@ -4,8 +4,6 @@
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Student Medical Exemption" />
-    <x-session_message />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
@@ -13,19 +11,37 @@
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Student Medical Exemption</h4>
+                            <h4>Exemption Medical Speciality Master</h4>
                         </div>
                         <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{route('student.medical.exemption.create')}}" class="btn btn-primary">+ Add
-                                    Student Medical Exemption</a>
+                            <div class="d-flex justify-content-end align-items-center gap-2">
+
+                                <!-- Add Group Mapping -->
+                                <a href="{{route('student.medical.exemption.create')}}"
+                                    class="btn btn-primary d-flex align-items-center">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">add</i>
+                                    Add Student Medical Exemption
+                                </a>
+                                <!-- Search Expand -->
+                                <div class="search-expand d-flex align-items-center">
+                                    <a href="javascript:void(0)" id="searchToggle">
+                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">search</i>
+                                    </a>
+
+                                    <input type="text" class="form-control search-input ms-2" id="searchInput"
+                                        placeholder="Search…" aria-label="Search">
+                                </div>
+
                             </div>
                         </div>
                     </div>
+
                     <hr>
                     <div class="table-responsive">
-                        <table id="zero_config" class="table table-bordered table-striped w-100">
-                            <thead>
+                        <table class="table table-bordered w-100">
+                            <thead style="background-color: #af2910;">
                                 <tr>
                                     <th class="col">#</th>
                                     <th class="col">Student</th>
@@ -40,15 +56,22 @@
                             <tbody>
                                 @forelse($records as $index => $row)
                                 <tr>
-                                    <td>{{ $index + 1 }}</td>
+                                    <td>{{ $records->firstItem() + $index }}</td>
                                     <td>{{ $row->student->display_name ?? 'N/A' }}</td>
                                     <td>{{ $row->category->exemp_category_name ?? 'N/A' }}</td>
                                     <td>{{ $row->speciality->speciality_name ?? 'N/A' }}</td>
-                                    <td>{{ $row->from_date }} to {{ $row->to_date }}</td>
+                                    <td>
+                                        {{ \Carbon\Carbon::parse($row->from_date)->format('d-m-Y') }}
+                                        to
+                                        {{ \Carbon\Carbon::parse($row->to_date)->format('d-m-Y') }}
+                                    </td>
+
                                     <td>{{ $row->opd_category }}</td>
                                     <td>
-                                        <a href="{{ route('student.medical.exemption.edit', ['id' => encrypt(value: $row->pk)])  }}"
-                                            class="btn btn-sm btn-info">Edit</a>
+                                        <a
+                                            href="{{ route('student.medical.exemption.edit', ['id' => encrypt(value: $row->pk)])  }}"><i
+                                                class="material-icons menu-icon material-symbols-rounded"
+                                                style="font-size: 24px;">edit</i></a>
 
                                         <form
                                             title="{{ $row->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
@@ -56,12 +79,13 @@
                                                     ['id' => encrypt($row->pk)]) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
+                                            <a href="javascript:void(0)" onclick="event.preventDefault(); 
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
                                                         }" {{ $row->active_inactive == 1 ? 'disabled' : '' }}>
-                                                Delete
-                                            </button>
+                                                <i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">delete</i>
+                                            </a>
                                         </form>
                                     </td>
                                     <td>
@@ -78,6 +102,17 @@
                                 @endforelse
                             </tbody>
                         </table>
+
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                Showing {{ $records->firstItem() ?? 0 }} to {{ $records->lastItem() ?? 0 }} of
+                                {{ $records->total() }} entries
+                            </div>
+                            <div>
+                                {{ $records->links('pagination::bootstrap-5') }}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -85,5 +120,25 @@
         </div>
     </div>
 </div>
-</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggle = document.getElementById('searchToggle');
+    const input = document.getElementById('searchInput');
+
+    toggle.addEventListener('click', () => {
+        input.classList.toggle('active');
+        if (input.classList.contains('active')) {
+            input.focus();
+        }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-expand')) {
+            input.classList.remove('active');
+        }
+    });
+});
+</script>
+
 @endsection
