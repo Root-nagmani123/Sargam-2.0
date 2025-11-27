@@ -11,7 +11,7 @@ class FacultyTypeMasterController extends Controller
 {
     function index()
     {
-        $facultyTypes = FacultyTypeMaster::all();
+        $facultyTypes = FacultyTypeMaster::paginate(10);
         return view('admin.master.faculty_type.index', compact('facultyTypes'));
     }
 

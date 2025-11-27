@@ -11,13 +11,17 @@
         <strong>Group Code:</strong> {{ $group->code ?? 'N/A' }}
     </div>
 </div> --}}
-@if(!empty($groupName) || !empty($facilityName))
+@if(!empty($groupName) || !empty($facilityName) || !empty($courseName))
     <div class="row mb-3">
-        <div class="col-md-6">
+        <div class="col-md-4">
+            <strong>Course Name:</strong>
+            <span class="text-muted">{{ $courseName ?? 'N/A' }}</span>
+        </div>
+        <div class="col-md-4">
             <strong>Group Name:</strong>
             <span class="text-muted">{{ $groupName ?? 'N/A' }}</span>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-4">
             <strong>Facility:</strong>
             <span class="text-muted">{{ $facilityName ?? 'N/A' }}</span>
         </div>

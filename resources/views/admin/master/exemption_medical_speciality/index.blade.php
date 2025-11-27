@@ -5,12 +5,9 @@
 @section('content')
 <div class="container-fluid">
 
-    <x-breadcrum title="Exemption Medical Speciality Master" />
-    <x-session_message />
-
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
@@ -25,11 +22,11 @@
                         </div>
                     </div>
                     <hr>
-                    <div id="zero_config_wrapper" class="dataTables_wrapper">
+                    <div class="table-responsive">
 
                         <div class="table-responsive">
-                            <table class="table table-bordered" id="zero_config" style="width: 100%;">
-                                <thead>
+                            <table class="table table-bordered" style="width: 100%;">
+                                <thead style="background-color: #af2910;">
                                     <tr>
                                         <th class="col">#</th>
                                         <th class="col">Speciality Name</th>
@@ -41,7 +38,7 @@
                                 <tbody>
                                     @forelse($specialities as $index => $speciality)
                                     <tr>
-                                        <td>{{ $index + 1 }}</td>
+                                        <td>{{ $specialities->firstItem() + $index }}</td>
                                         <td>{{ $speciality->speciality_name }}</td>
                                         <td>{{ $speciality->created_date }}</td>
 
@@ -56,8 +53,9 @@
 
                                         <td>
                                             <a href="{{ route('master.exemption.medical.speciality.edit', 
-                                                    ['id' => encrypt(value: $speciality->pk)]) }}"
-                                                class="btn btn-primary btn-sm">Edit</a>
+                                                    ['id' => encrypt(value: $speciality->pk)]) }}"><i
+                                                class="material-icons menu-icon material-symbols-rounded"
+                                                style="font-size: 24px;">edit</i></a>
                                             <form
                                                 title="{{ $speciality->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
                                                 action="{{ route('master.exemption.medical.speciality.delete', 
@@ -65,12 +63,14 @@
                                                 class="d-inline">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
+                                                <a href="javascript:void(0)" onclick="event.preventDefault(); 
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
                                                         }" {{ $speciality->active_inactive == 1 ? 'disabled' : '' }}>
-                                                    Delete
-                                                </button>
+                                                    <i
+                                                class="material-icons menu-icon material-symbols-rounded"
+                                                style="font-size: 24px;">delete</i>
+                                                </a>
                                             </form>
                                         </td>
                                     </tr>
@@ -81,6 +81,16 @@
                                     @endforelse
                                 </tbody>
                             </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                Showing {{ $specialities->firstItem() ?? 0 }} to {{ $specialities->lastItem() ?? 0 }} of {{ $specialities->total() }} entries
+                            </div>
+                            <div>
+                                {{ $specialities->links('pagination::bootstrap-5') }}
+                            </div>
                         </div>
                     </div>
                 </div>

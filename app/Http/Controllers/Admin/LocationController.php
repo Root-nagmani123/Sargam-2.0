@@ -67,7 +67,7 @@ class LocationController extends Controller
     // State
     public function stateIndex()
     {
-        $states = State::get();
+        $states = State::paginate(10);
         // print_r($states);die;
         return view('admin.state.index', compact('states'));
     }
@@ -207,8 +207,7 @@ class LocationController extends Controller
     // City
     public function cityIndex()
     {
-
-        $cities = City::with(['state', 'district'])->get();
+        $cities = City::with(['state', 'district'])->paginate(10);
         return view('admin.city.index', compact('cities'));
     }
 

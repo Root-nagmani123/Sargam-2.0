@@ -10,7 +10,7 @@ class MemoConclusionMasterController extends Controller
 {
     public function index()
     {
-        $conclusions = MemoConclusionMaster::all();
+        $conclusions = MemoConclusionMaster::paginate(10);
         return view('admin.master.memo_conclusion_master.index', compact('conclusions'));
     }
 

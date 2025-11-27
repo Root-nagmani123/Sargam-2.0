@@ -5,194 +5,444 @@
 @section('content')
 
 <style>
+:root {
+    --primary-color: #004a93;
+    --secondary-color: #af2910;
+    --light-bg: #f8f9fa;
+    --border-color: #dee2e6;
+    --text-dark: #212529;
+    --text-muted: #6c757d;
+    --success-color: #198754;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --info-color: #0dcaf0;
+}
+
 .readonly-checkbox {
     pointer-events: none;
     opacity: 0.6;
 }
 
-/* Month ke har din ke box ki height/padding badhao */
+/* Calendar styling with improved accessibility */
+.fc {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.fc .fc-toolbar-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+
+.fc .fc-button {
+    background-color: white;
+    border: 1px solid var(--border-color);
+    color: var(--text-dark);
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+}
+
+.fc .fc-button:hover {
+    background-color: var(--light-bg);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
 .fc .fc-daygrid-day-frame {
     min-height: 110px !important;
     padding: 8px 4px !important;
+    transition: background-color 0.2s ease;
+}
+
+.fc .fc-daygrid-day:hover .fc-daygrid-day-frame {
+    background-color: rgba(0, 74, 147, 0.05) !important;
 }
 
 .fc .fc-daygrid-day {
     min-height: 110px !important;
 }
 
-/* Responsive ke liye thoda adjust */
-@media (max-width: 600px) {
+/* Improved event cards */
+.fc-event-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    padding: 8px;
+    margin-bottom: 6px;
+    font-size: 15px;
+    color: var(--text-dark);
+    border-left: 3px solid var(--primary-color);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
 
+.fc-event-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Custom colored cards for each day with improved contrast */
+.fc-daygrid-day[data-day="0"] .fc-daygrid-day-frame {
+    background-color: #fff5f5;
+    border-top: 2px solid #ffcccc;
+}
+
+.fc-daygrid-day[data-day="1"] .fc-daygrid-day-frame {
+    background-color: #f0f9ff;
+    border-top: 2px solid #cce7ff;
+}
+
+.fc-daygrid-day[data-day="2"] .fc-daygrid-day-frame {
+    background-color: #f0fff4;
+    border-top: 2px solid #ccffcc;
+}
+
+.fc-daygrid-day[data-day="3"] .fc-daygrid-day-frame {
+    background-color: #fffdf0;
+    border-top: 2px solid #fff2cc;
+}
+
+.fc-daygrid-day[data-day="4"] .fc-daygrid-day-frame {
+    background-color: #f9f0ff;
+    border-top: 2px solid #e6ccff;
+}
+
+.fc-daygrid-day[data-day="5"] .fc-daygrid-day-frame {
+    background-color: #f0f3ff;
+    border-top: 2px solid #ccd9ff;
+}
+
+.fc-daygrid-day[data-day="6"] .fc-daygrid-day-frame {
+    background-color: #fff8f0;
+    border-top: 2px solid #ffe6cc;
+}
+
+/* Today highlight */
+.fc .fc-daygrid-day.fc-day-today {
+    background-color: rgba(255, 220, 40, 0.15) !important;
+}
+
+.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-frame {
+    background-color: rgba(255, 220, 40, 0.1) !important;
+    border: 2px solid var(--warning-color) !important;
+}
+
+/* Improved responsive design */
+@media (max-width: 768px) {
+    .fc .fc-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1.25rem;
+    }
+    
+    .fc .fc-daygrid-day-frame,
+    .fc .fc-daygrid-day {
+        min-height: 80px !important;
+    }
+    
+    .fc-event-card {
+        font-size: 13px;
+        padding: 6px;
+    }
+}
+
+@media (max-width: 576px) {
     .fc .fc-daygrid-day-frame,
     .fc .fc-daygrid-day {
         min-height: 70px !important;
     }
+    
+    .fc-event-card {
+        font-size: 12px;
+        padding: 4px;
+    }
 }
 
-/* Custom colored cards for each day */
-
-/* Assign different colors for each weekday */
-.fc-daygrid-day[data-day="0"] .fc-daygrid-day-frame {
-    background-color: #ffe5e5;
+/* Improved modal styling */
+.modal-header {
+    background-color: var(--secondary-color);
+    color: white;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
 }
 
-/* Sunday */
-.fc-daygrid-day[data-day="1"] .fc-daygrid-day-frame {
-    background-color: #e5f7ff;
-}
-
-/* Monday */
-.fc-daygrid-day[data-day="2"] .fc-daygrid-day-frame {
-    background-color: #e5ffe5;
-}
-
-/* Tuesday */
-.fc-daygrid-day[data-day="3"] .fc-daygrid-day-frame {
-    background-color: #fffbe5;
-}
-
-/* Wednesday */
-.fc-daygrid-day[data-day="4"] .fc-daygrid-day-frame {
-    background-color: #f5e5ff;
-}
-
-/* Thursday */
-.fc-daygrid-day[data-day="5"] .fc-daygrid-day-frame {
-    background-color: #e5eaff;
-}
-
-/* Friday */
-.fc-daygrid-day[data-day="6"] .fc-daygrid-day-frame {
-    background-color: #fff0e5;
-}
-
-/* Saturday */
-/* Card content styling */
-.fc-event-card {
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    padding: 8px;
-    margin-bottom: 6px;
-    font-size: 15px;
-    color: #222;
-}
-
-/* Multiple selection styling */
-.select2-container--default .select2-selection--multiple {
-    border: 1px solid #ced4da;
-    border-radius: 0.375rem;
-    min-height: calc(1.5em + 0.75rem + 2px);
-    padding: 0.375rem 0.75rem;
-}
-
-.select2-container--default.select2-container--focus .select2-selection--multiple {
-    border-color: #86b7fe;
-    outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-
-/* Faculty and Venue sections styling */
-.faculty-section, .venue-section {
-    border: 1px solid #e9ecef;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background-color: #f8f9fa;
-}
-
-.faculty-section h6, .venue-section h6 {
-    margin-bottom: 0.75rem;
-    color: #495057;
+.modal-title {
     font-weight: 600;
+    color: white;
 }
 
-.remove-faculty, .remove-venue {
-    margin-top: 0.5rem;
+.modal-content {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
-/* Topic sections styling */
-.topic-section {
-    border: 1px solid #e9ecef;
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
+}
+
+/* Improved form controls */
+.form-label {
+    font-weight: 500;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+}
+
+.form-control, .form-select {
+    border: 1px solid var(--border-color);
     border-radius: 0.375rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    background-color: #fff;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-.topic-section h6 {
-    margin-bottom: 0.75rem;
-    color: #495057;
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Improved buttons */
+.btn {
+    font-weight: 500;
+    border-radius: 0.375rem;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #003d7a;
+    border-color: #003d7a;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+/* Card improvements */
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.5rem;
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Breadcrumb improvements */
+.breadcrumb {
+    background-color: transparent;
+    padding: 0;
+    margin-bottom: 0;
+}
+
+.breadcrumb-item a {
+    color: var(--text-muted);
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: var(--primary-color);
+}
+
+/* Table improvements for list view */
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+}
+
+.table th {
+    background-color: var(--primary-color);
+    color: white;
     font-weight: 600;
+    border: none;
+    padding: 0.75rem;
 }
 
-.remove-topic {
-    margin-top: 0.5rem;
+.table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border: 1px solid var(--border-color);
 }
 
-/* Add button styling */
-.btn-add-more {
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0, 74, 147, 0.05);
+}
+
+/* View controls */
+.view-controls {
+    display: flex;
+    gap: 0.5rem;
     margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+/* Focus styles for accessibility */
+button:focus, 
+input:focus, 
+select:focus, 
+textarea:focus {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Loading state */
+.loading {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Success/error message styling */
+.alert {
+    border: none;
+    border-radius: 0.375rem;
+    padding: 0.75rem 1.25rem;
+}
+
+.alert-success {
+    background-color: rgba(25, 135, 84, 0.1);
+    color: var(--success-color);
+}
+
+.alert-danger {
+    background-color: rgba(220, 53, 69, 0.1);
+    color: var(--danger-color);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Print styles */
+@media print {
+    .btn, .view-controls, .breadcrumb {
+        display: none !important;
+    }
+    
+    .card {
+        box-shadow: none;
+        border: 1px solid var(--border-color);
+    }
 }
 </style>
 
 <div class="container-fluid">
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body py-3">
-            <div class="row align-items-center">
-            <div class="col-12">
-                <div class="d-sm-flex align-items-center justify-space-between">
-                    <h4 class="mb-4 mb-sm-0 card-title">Calendar</h4>
-                    <nav aria-label="breadcrumb" class="ms-auto">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item d-flex align-items-center">
-                                <a class="text-muted text-decoration-none d-flex" href="#">
-                                    <iconify-icon icon="solar:home-2-line-duotone" class="fs-6"></iconify-icon>
-                                </a>
-                            </li>
-                            <li class="breadcrumb-item" aria-current="page">
-                                <span class="badge fw-medium fs-2 bg-primary-subtle text-primary">
-                                    @lang('Calendar')
-                                </span>
-                            </li>
-                        </ol>
-                    </nav>
-                </div>
-            </div>
+    <!-- Page Header -->
+    <x-breadcrum title="Academic Calendar" />
+    
+    <!-- Action Controls -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="view-controls">
+            <button type="button" class="btn btn-outline-primary btn-sm active" id="btnMonthView">
+                <i class="bi bi-calendar-month me-1"></i> Month
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnWeekView">
+                <i class="bi bi-calendar-week me-1"></i> Week
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView">
+                <i class="bi bi-calendar-day me-1"></i> Day
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView">
+                <i class="bi bi-list-ul me-1"></i> List
+            </button>
         </div>
-        </div>
-    </div>
-    <div class="text-end mb-3 gap-3">
         <button type="button" class="btn btn-primary btn-sm" id="createEventupperButton">
-        <i class="bi bi-plus"></i> Add Event</button>
-        <button type="button" class="btn btn-outline-primary btn-sm" id="btnMonthView">Month</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnWeekView">Week</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnDayView">Day</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView">List</button>
+            <i class="bi bi-plus-circle me-1"></i> Add Event
+        </button>
     </div>
-    <div class="card" style="border-left: 4px solid #004a93;">
+    
+    <!-- Calendar Container -->
+    <div class="card" style="border-left: 4px solid var(--primary-color);">
         <div class="card-body calender-sidebar app-calendar">
             <div id='calendar'></div>
+            
             <!-- List View Table -->
-                <div id="eventListView" style="display:none;">
-                    <div class="row mb-3">
-                        <div class="col-2">
-                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="lbsnaa logo" class="img-fluid mb-3"
-                                style="max-width: 100px;">
-                        </div>
-                        <div class="col-8">
-                            <h3 class="text-center" style="color:#af2910;">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी
-                            </h3>
-                            <h3 class="text-center" style="color:#af2910;">Lal Bahadur Shastri National Academy of
-                                Administration</h3>
-                            <h4 class="text-center" style="color:#af2910;">IAS Professional Course, Phase - I</h4>
-                            <h6 class="text-center">(Nov 06, 2023 to April 05, 2024)</h6>
-                        </div>
-                        <div class="col-2">
-                            <h5 class="text-center">Weekly Schedule</h5>
-                            <h3 class="text-center">19</h3>
-                        </div>
+            <div id="eventListView" style="display:none;">
+                <div class="row mb-4">
+                    <div class="col-12 col-md-2 text-center text-md-start">
+                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" class="img-fluid mb-3" style="max-width: 100px;">
                     </div>
+                    <div class="col-12 col-md-8 text-center">
+                        <h3 class="mb-1" style="color:var(--secondary-color);">लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी</h3>
+                        <h3 class="mb-1" style="color:var(--secondary-color);">Lal Bahadur Shastri National Academy of Administration</h3>
+                        <h4 class="mb-1" style="color:var(--secondary-color);">IAS Professional Course, Phase - I</h4>
+                        <h6 class="text-muted">(Nov 06, 2023 to April 05, 2024)</h6>
+                    </div>
+                    <div class="col-12 col-md-2 text-center text-md-end">
+                        <h5 class="mb-1">Weekly Schedule</h5>
+                        <h3 class="mb-0" style="color:var(--primary-color);">19</h3>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
                     <table class="table table-bordered table-striped table-hover" id="eventListTable">
                         <thead>
                             <tr>
@@ -221,16 +471,16 @@
                         </thead>
                         <tbody>
                             <!-- Events will be inserted here -->
-                           
                         </tbody>
                     </table>
                 </div>
+            </div>
         </div>
     </div>
-    <!-- BEGIN MODAL -->
-    <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true"
-        style="display: none;">
-        <div class="modal-dialog modal-dialog-scrollable modal-xl">
+    
+    <!-- Add/Edit Event Modal -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
             <form id="eventForm">
                 @csrf
                 <div class="modal-content">
@@ -238,11 +488,13 @@
                         <h5 class="modal-title" id="eventModalLabel">
                             {{ $modalTitle ?? __('Add Calendar Event') }}
                         </h5>
-                        <input type="date" name="start_datetime" id="start_datetime" class="form-control w-50 mx-2"
-                            placeholder="Select Date" required>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="d-flex align-items-center">
+                            <label for="start_datetime" class="form-label me-2 mb-0">Date:</label>
+                            <input type="date" name="start_datetime" id="start_datetime" class="form-control w-auto" required>
+                        </div>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <div class="modal-body" style="overflow-y: scroll; height: 700px;overflow-x: hidden;">
+                    <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -263,196 +515,95 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-12 mb-3">
-                                <div>
-                                    <label class="form-label">Group Type Name </label>
-                                </div>
-                                <div id="type_name_container" class="mt-3">
+                            <div class="col-12 mb-3">
+                                <label class="form-label">Group Type Name</label>
+                                <div id="type_name_container" class="border rounded p-3 bg-light">
                                     <!-- Checkboxes will be appended here -->
+                                    <div class="text-muted text-center">Select a Group Type first</div>
                                 </div>
                             </div>
-                            
-                            <!-- Topics Section -->
-                            <div class="col-md-12">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h5>Topics</h5>
-                                    <button type="button" class="btn btn-sm btn-outline-primary btn-add-more" id="addTopicBtn">
-                                        <i class="bi bi-plus"></i> Add Topic
-                                    </button>
-                                </div>
-                                <div id="topicsContainer">
-                                    <!-- Topic sections will be added here dynamically -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn bg-danger-subtle text-danger" data-bs-dismiss="modal">
-                            Close
-                        </button>
-                        <button type="button" class="btn btn-success btn-update-event"
-                            data-fc-event-public-id="{{ $event->id ?? '' }}" style="display: none;">
-                            Update changes
-                        </button>
-                        <button type="submit" class="btn btn-primary btn-add-event">
-                            Add Calendar Event
-                        </button>
-                    </div>
-
-            </form>
-        </div>
-    </div>
-    </div>
-    <!-- END MODAL -->
-    <!-- eventDetails modal do-->
-    <!-- Modal -->
-    <div class="modal fade" id="eventDetails" tabindex="-1" aria-labelledby="eventDetailsLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-scrollable modal-lg">
-            <div class="modal-content shadow rounded">
-                <div class="modal-header d-flex justify-content-between align-items-start">
-                    <div>
-                        <h5 class="modal-title" id="eventDetailsLabel">
-                            <span id="eventTitle">Event Title</span>:<span id="eventTopic"></span>
-                        </h5>
-                        <small class="text-muted" id="eventDate">Event Date</small><br>
-                    </div>
-                    <div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary me-1" id="editEventBtn">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger me-1" id="deleteEventBtn">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                </div>
-
-                <div class="modal-body">
-                    <div class="mb-2">
-                        <i class="bi bi-person-fill me-2"></i>Faculty: <b><span id="eventfaculty"></span></b>
-                    </div>
-                    <div class="mb-2">
-                        <i class="bi bi-geo-alt-fill me-2"></i>Venue: <b><span id="eventVanue"></span></b>
-                    </div>
-                    <!-- <div class="mb-2">
-                    <i class="bi bi-globe me-2"></i> <span id="eventAudience">Public</span>
-                </div> -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
-<script>
-$(document).ready(function() {
-    // Initialize Select2 for multiple select elements
-    $('.faculty-select').select2({
-        placeholder: "Select Faculty",
-        allowClear: true
-    });
-    
-    $('.venue-select').select2({
-        placeholder: "Select Venue",
-        allowClear: true
-    });
-    
-    // Add first topic section on page load
-    addTopicSection();
-    
-    // Add topic button click handler
-    $('#addTopicBtn').on('click', function() {
-        addTopicSection();
-    });
-    
-    // Function to add a new topic section
-    function addTopicSection() {
-        const topicIndex = $('.topic-section').length;
-        const topicSection = `
-            <div class="topic-section" id="topicSection${topicIndex}">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6>Topic ${topicIndex + 1}</h6>
-                    ${topicIndex > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger remove-topic" data-index="' + topicIndex + '"><i class="bi bi-trash"></i> Remove</button>' : ''}
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Subject Module Name <span class="text-danger">*</span></label>
-                            <select name="subject_module[]" class="form-control subject-module-select">
-                                <option value="">Select Subject Name</option>
-                                @foreach($subjects as $subject)
-                                <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
-                                    {{ $subject->module_name }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Subject Name <span class="text-danger">*</span></label>
-                            <select name="subject_name[]" class="form-control subject-name-select">
-                                <option value="">Select Subject Name</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <label class="form-label">Topic <span class="text-danger">*</span></label>
-                            <textarea name="topic[]" class="form-control" rows="3"></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- Faculty Section -->
-                    <div class="col-md-12">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6>Faculty</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary btn-add-more add-faculty-btn" data-topic-index="${topicIndex}">
-                                <i class="bi bi-plus"></i> Add Faculty
-                            </button>
-                        </div>
-                        <div class="faculty-container" id="facultyContainer${topicIndex}">
-                            <!-- Faculty sections will be added here dynamically -->
-                        </div>
-                    </div>
-                    
-                    <!-- Venue Section -->
-                    <div class="col-md-12">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6>Venue</h6>
-                            <button type="button" class="btn btn-sm btn-outline-primary btn-add-more add-venue-btn" data-topic-index="${topicIndex}">
-                                <i class="bi bi-plus"></i> Add Venue
-                            </button>
-                        </div>
-                        <div class="venue-container" id="venueContainer${topicIndex}">
-                            <!-- Venue sections will be added here dynamically -->
-                        </div>
-                    </div>
-                    
-                    <!-- Shift Section -->
-                    <div class="col-md-12">
-                        <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Shift Type<span class="text-danger">*</span></label>
-                                    <div>
-                                        <input type="radio" name="shift_type[${topicIndex}]" id="normalShift${topicIndex}" value="1" class="form-check-input" checked>
-                                        <label class="form-check-label" for="normalShift${topicIndex}">Normal Shift</label>
-                                        <input type="radio" name="shift_type[${topicIndex}]" id="manualShift${topicIndex}" value="2" class="form-check-input">
-                                        <label class="form-check-label" for="manualShift${topicIndex}">Manual Shift</label>
-                                    </div>
+                                    <label class="form-label">Subject Module Name <span class="text-danger">*</span></label>
+                                    <select name="subject_module" id="subject_module" class="form-control">
+                                        <option value="">Select Subject Name</option>
+                                        @foreach($subjects as $subject)
+                                        <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
+                                            {{ $subject->module_name }}
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Subject Name <span class="text-danger">*</span></label>
+                                    <select name="subject_name" id="subject_name" class="form-control">
+                                        <option value="">Select subject Name</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Topic <span class="text-danger">*</span></label>
+                                    <textarea name="topic" id="topic" class="form-control" rows="3" placeholder="Enter topic details"></textarea>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Faculty <span class="text-danger">*</span></label>
+                                    <select name="faculty" id="faculty" class="form-control">
+                                        <option value="">Select Faculty</option>
+                                        @foreach($facultyMaster as $faculty)
+                                        <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                            {{ $faculty->full_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
+                                    <select name="faculty_type" id="faculty_type" class="form-control">
+                                        <option value="">Select Faculty Type</option>
+                                        <option value="1">Internal</option>
+                                        <option value="2">Guest</option>
+                                        <option value="3">Research</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Location <span class="text-danger">*</span></label>
+                                    <select name="vanue" id="vanue" class="form-control">
+                                        <option value="">Select Location</option>
+                                        @foreach($venueMaster as $loc)
+                                        <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
+                                        @endforeach
+                                    </select>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-12" id="shiftSelect${topicIndex}">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Shift Type<span class="text-danger">*</span></label>
+                                    <div class="form-check form-check-inline">
+                                        <input type="radio" name="shift_type" id="normalShift" value="1" class="form-check-input" checked>
+                                        <label class="form-check-label" for="normalShift">Normal Shift</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input type="radio" name="shift_type" id="manualShift" value="2" class="form-check-input">
+                                        <label class="form-check-label" for="manualShift">Manual Shift</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12" id="shiftSelect">
                                 <div class="mb-3">
                                     <label class="form-label">Shift <span class="text-danger">*</span></label>
-                                    <select name="shift[${topicIndex}]" class="form-control">
+                                    <select name="shift" id="shift" class="form-control">
                                         <option value="">Select Shift</option>
                                         @foreach($classSessionMaster as $shift)
                                         <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
@@ -461,570 +612,107 @@ $(document).ready(function() {
                                 </div>
                             </div>
                             
-                            <div class="col-md-12" id="manualShiftFields${topicIndex}" style="display: none;">
+                            <div class="col-12" id="manualShiftFields" style="display: none;">
                                 <div class="mb-3 form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox${topicIndex}" name="fullDayCheckbox[${topicIndex}]">
-                                    <label class="form-check-label" for="fullDayCheckbox${topicIndex}">Full Day</label>
+                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox" name="fullDayCheckbox">
+                                    <label class="form-check-label" for="fullDayCheckbox">Full Day Event</label>
                                 </div>
                                 
-                                <div id="dateTimeFields${topicIndex}">
+                                <div id="dateTimeFields">
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label for="start_time${topicIndex}" class="form-label">Start Time <span class="text-danger">*</span></label>
-                                            <input type="time" name="start_time[${topicIndex}]" id="start_time${topicIndex}" class="form-control">
+                                            <label for="start_time" class="form-label">Start Time <span class="text-danger">*</span></label>
+                                            <input type="time" name="start_time" id="start_time" class="form-control">
                                         </div>
                                         <div class="col-md-6">
-                                            <label for="end_time${topicIndex}" class="form-label">End Time <span class="text-danger">*</span></label>
-                                            <input type="time" name="end_time[${topicIndex}]" id="end_time${topicIndex}" class="form-control">
+                                            <label for="end_time" class="form-label">End Time <span class="text-danger">*</span></label>
+                                            <input type="time" name="end_time" id="end_time" class="form-control">
                                         </div>
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                        
+                        <div class="row py-3 border-top">
                             <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="feedback_checkbox" id="feedback_checkbox" checked>
-                                            <label class="form-check-label" for="feedback_checkbox">
-                                                Feedback
-                                            </label>
-                                        </div>
-                                    </label>
-
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox" id="feedback_checkbox" checked>
+                                    <label class="form-check-label" for="feedback_checkbox">Feedback</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="remarkCheckbox" id="remarkCheckbox">
-                                            <label class="form-check-label" for="remarkCheckbox">
-                                                Remark
-                                            </label>
-                                        </div>
-                                    </label>
-
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" name="remarkCheckbox" id="remarkCheckbox">
+                                    <label class="form-check-label" for="remarkCheckbox">Remark</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="ratingCheckbox" id="ratingCheckbox">
-                                            <label class="form-check-label" for="ratingCheckbox">
-                                                Ratting
-                                            </label>
-                                        </div>
-                                    </label>
-
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" name="ratingCheckbox" id="ratingCheckbox">
+                                    <label class="form-check-label" for="ratingCheckbox">Rating</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-3">
-                                <div>
-                                    <label class="form-label">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="1"
-                                                name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                            <label class="form-check-label" for="bio_attendanceCheckbox">
-                                                Bio Attendance
-                                            </label>
-                                        </div>
-                                    </label>
-
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
+                                    <label class="form-check-label" for="bio_attendanceCheckbox">Bio Attendance</label>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-success btn-update-event" data-fc-event-public-id="{{ $event->id ?? '' }}" style="display: none;">
+                            <i class="bi bi-check-circle me-1"></i> Update Event
+                        </button>
+                        <button type="submit" class="btn btn-primary btn-add-event">
+                            <i class="bi bi-plus-circle me-1"></i> Add Event
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Event Details Modal -->
+    <div class="modal fade" id="eventDetails" tabindex="-1" aria-labelledby="eventDetailsLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content shadow rounded">
+                <div class="modal-header d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 class="modal-title" id="eventDetailsLabel">
+                            <span id="eventTitle">Event Title</span>: <span id="eventTopic"></span>
+                        </h5>
+                        <small class="text-white" id="eventDate">Event Date</small><br>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-primary me-1" id="editEventBtn">
+                            <i class="bi bi-pencil me-1"></i> Edit
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger me-1" id="deleteEventBtn">
+                            <i class="bi bi-trash me-1"></i> Delete
+                        </button>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <i class="bi bi-person-fill me-2 text-primary"></i>Faculty: <b><span id="eventfaculty"></span></b>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <i class="bi bi-geo-alt-fill me-2 text-primary"></i>Venue: <b><span id="eventVanue"></span></b>
+                        </div>
+                    </div>
+                    <!-- Additional event details can be added here -->
                 </div>
             </div>
-        `;
-        
-        $('#topicsContainer').append(topicSection);
-        
-        // Initialize Select2 for new selects
-        $(`#topicSection${topicIndex} .subject-module-select`).select2();
-        $(`#topicSection${topicIndex} .subject-name-select`).select2();
-        
-        // Add first faculty and venue for this topic
-        addFacultySection(topicIndex, 0);
-        addVenueSection(topicIndex, 0);
-        
-        // Set up event handlers for this topic
-        setupTopicEventHandlers(topicIndex);
-    }
-    
-    // Function to add a faculty section
-    function addFacultySection(topicIndex, facultyIndex) {
-        const facultySection = `
-            <div class="faculty-section" id="facultySection${topicIndex}_${facultyIndex}">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6>Faculty ${facultyIndex + 1}</h6>
-                    ${facultyIndex > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger remove-faculty" data-topic-index="${topicIndex}" data-faculty-index="${facultyIndex}"><i class="bi bi-trash"></i> Remove</button>' : ''}
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Faculty <span class="text-danger">*</span></label>
-                            <select name="faculty[${topicIndex}][]" class="form-control faculty-select" multiple="multiple">
-                                <option value="">Select Faculty</option>
-                                @foreach($facultyMaster as $faculty)
-                                <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                    {{ $faculty->full_name }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Faculty Type <span class="text-danger">*</span></label>
-                            <select name="faculty_type[${topicIndex}][]" class="form-control" multiple="multiple">
-                                <option value="">Select Faculty Type</option>
-                                <option value="1">Internal</option>
-                                <option value="2">Guest</option>
-                                <option value="3">Research</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        $(`#facultyContainer${topicIndex}`).append(facultySection);
-        
-        // Initialize Select2 for new selects
-        $(`#facultySection${topicIndex}_${facultyIndex} .faculty-select`).select2();
-        $(`#facultySection${topicIndex}_${facultyIndex} select[name="faculty_type[${topicIndex}][]"]`).select2();
-    }
-    
-    // Function to add a venue section
-    function addVenueSection(topicIndex, venueIndex) {
-        const venueSection = `
-            <div class="venue-section" id="venueSection${topicIndex}_${venueIndex}">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6>Venue ${venueIndex + 1}</h6>
-                    ${venueIndex > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger remove-venue" data-topic-index="${topicIndex}" data-venue-index="${venueIndex}"><i class="bi bi-trash"></i> Remove</button>' : ''}
-                </div>
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="mb-3">
-                            <label class="form-label">Location <span class="text-danger">*</span></label>
-                            <select name="vanue[${topicIndex}][]" class="form-control venue-select" multiple="multiple">
-                                <option value="">Select Location</option>
-                                @foreach($venueMaster as $loc)
-                                <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        $(`#venueContainer${topicIndex}`).append(venueSection);
-        
-        // Initialize Select2 for new selects
-        $(`#venueSection${topicIndex}_${venueIndex} .venue-select`).select2();
-    }
-    
-    // Function to set up event handlers for a topic
-    function setupTopicEventHandlers(topicIndex) {
-        // Subject module change handler
-        $(`#topicSection${topicIndex} .subject-module-select`).on('change', function() {
-            const dataId = $(this).find(':selected').data('id');
-            const subjectNameSelect = $(this).closest('.topic-section').find('.subject-name-select');
-            
-            if (dataId) {
-                $.ajax({
-                    url: "{{ route('calendar.get.subject.name') }}",
-                    type: 'GET',
-                    data: { data_id: dataId },
-                    success: function(response) {
-                        subjectNameSelect.empty().append('<option value="">Select Subject Name</option>');
-                        $.each(response, function(key, module) {
-                            subjectNameSelect.append('<option value="' + module.pk + '">' + module.subject_name + '</option>');
-                        });
-                    }
-                });
-            } else {
-                subjectNameSelect.empty().append('<option value="">Select Subject Name</option>');
-            }
-        });
-        
-        // Shift type change handler
-        $(`input[name="shift_type[${topicIndex}]"]`).on('change', function() {
-            if ($(`#manualShift${topicIndex}`).is(':checked')) {
-                $(`#shiftSelect${topicIndex}`).hide();
-                $(`#manualShiftFields${topicIndex}`).show();
-            } else {
-                $(`#shiftSelect${topicIndex}`).show();
-                $(`#manualShiftFields${topicIndex}`).hide();
-            }
-        });
-        
-        // Full day checkbox handler
-        $(`#fullDayCheckbox${topicIndex}`).on('change', function() {
-            if ($(this).is(':checked')) {
-                $(`#start_time${topicIndex}`).val('08:00');
-                $(`#end_time${topicIndex}`).val('20:00');
-            } else {
-                $(`#start_time${topicIndex}`).val('');
-                $(`#end_time${topicIndex}`).val('');
-            }
-        });
-        
-        // Add faculty button handler
-        $(`#topicSection${topicIndex} .add-faculty-btn`).on('click', function() {
-            const facultyIndex = $(`#facultyContainer${topicIndex} .faculty-section`).length;
-            addFacultySection(topicIndex, facultyIndex);
-        });
-        
-        // Add venue button handler
-        $(`#topicSection${topicIndex} .add-venue-btn`).on('click', function() {
-            const venueIndex = $(`#venueContainer${topicIndex} .venue-section`).length;
-            addVenueSection(topicIndex, venueIndex);
-        });
-    }
-    
-    // Remove topic handler
-    $(document).on('click', '.remove-topic', function() {
-        const index = $(this).data('index');
-        $(`#topicSection${index}`).remove();
-    });
-    
-    // Remove faculty handler
-    $(document).on('click', '.remove-faculty', function() {
-        const topicIndex = $(this).data('topic-index');
-        const facultyIndex = $(this).data('faculty-index');
-        $(`#facultySection${topicIndex}_${facultyIndex}`).remove();
-    });
-    
-    // Remove venue handler
-    $(document).on('click', '.remove-venue', function() {
-        const topicIndex = $(this).data('topic-index');
-        const venueIndex = $(this).data('venue-index');
-        $(`#venueSection${topicIndex}_${venueIndex}`).remove();
-    });
-    
-    // Faculty change handler for faculty type
-    $(document).on('change', '.faculty-select', function() {
-        const selectedOptions = $(this).find('option:selected');
-        const facultyTypeSelect = $(this).closest('.faculty-section').find('select[name^="faculty_type"]');
-        
-        // Clear previous selections
-        facultyTypeSelect.val(null).trigger('change');
-        
-        // Add faculty types based on selected faculty
-        selectedOptions.each(function() {
-            const facultyType = $(this).data('faculty_type');
-            if (facultyType) {
-                facultyTypeSelect.find(`option[value="${facultyType}"]`).prop('selected', true);
-            }
-        });
-        
-        facultyTypeSelect.trigger('change');
-    });
-    
-    // Toggle shift fields on page load
-    toggleShiftFields();
+        </div>
+    </div>
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-    // On change of shift type
-    $('input[name="shift_type"]').on('change', function() {
-        toggleShiftFields();
-    });
-
-    function toggleShiftFields() {
-        if ($('#manualShift').is(':checked')) {
-            $('#shiftSelect').hide();
-            $('#manualShiftFields').show();
-        } else {
-            $('#shiftSelect').show();
-            $('#manualShiftFields').hide();
-        }
-    }
-
-    function toggleRemarkRating() {
-        if ($('#feedback_checkbox').is(':checked')) {
-            $('#remarkCheckbox').off('click.readonly').removeClass('readonly-checkbox');
-            $('#ratingCheckbox').off('click.readonly').removeClass('readonly-checkbox');
-        } else {
-            $('#remarkCheckbox')
-                .prop('checked', false)
-                .on('click.readonly', function(e) { e.preventDefault(); })
-                .addClass('readonly-checkbox');
-
-            $('#ratingCheckbox')
-                .prop('checked', false)
-                .on('click.readonly', function(e) { e.preventDefault(); })
-                .addClass('readonly-checkbox');
-        }
-    }
-
-    // Initial call
-    toggleRemarkRating();
-
-    // On change of Feedback checkbox
-    $('#feedback_checkbox').on('change', function() {
-        toggleRemarkRating();
-    });
-
-    // Course name change handler
-    $('#Course_name').on('change', function() {
-        var courseName = $(this).val();
-        if (courseName) {
-            $.ajax({
-                url: "{{ route('calendar.get.group.types') }}",
-                type: 'GET',
-                data: { course_id: courseName },
-                success: function(response) {
-                    // Step 1: Group by group_type_name
-                    let groupedData = {};
-
-                    response.forEach(item => {
-                        if (!groupedData[item.group_type_name]) {
-                            groupedData[item.group_type_name] = [];
-                        }
-                        groupedData[item.group_type_name].push(item);
-                    });
-
-                    // Step 2: Fill the dropdown with unique group_type_name
-                    $('#group_type').empty().append('<option value="">Select Group Type</option>');
-                    $('#type_name_container').html('');
-                    for (const key in groupedData) {
-                        if (groupedData[key].length > 0) {
-                            const typeName = groupedData[key][0].type_name;
-                            $('#group_type').append(`<option value="${key}">${typeName}</option>`);
-                        }
-                    }
-
-                    $('#group_type').off('change').on('change', function() {
-                        const selectedType = $(this).val();
-                        let html = '';
-                        let groupNames = window.selectedGroupNames;
-
-                        if (groupedData[selectedType]) {
-                            // Agar create ke time hai, toh sab checked
-                            let allChecked = groupNames === 'ALL';
-                            groupedData[selectedType].forEach(group => {
-                                let checked = '';
-                                if (allChecked) {
-                                    checked = 'checked';
-                                } else if (Array.isArray(groupNames) && groupNames.includes(group.pk)) {
-                                    checked = 'checked';
-                                }
-                                html += `
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" 
-                                            name="type_names[]" 
-                                            value="${group.pk}" 
-                                            id="type_${group.pk}" ${checked}>
-                                        <label class="form-check-label" for="type_${group.pk}">
-                                            ${group.group_name} (${group.type_name})
-                                        </label>
-                                    </div>
-                                `;
-                            });
-                        }
-
-                        $('#type_name_container').html(html);
-                    });
-                }
-            });
-        } else {
-            $('#group_type').empty().append('<option value="">Select Group Type</option>');
-            $('#type_name_container').html('');
-        }
-    });
-
-    // Form submission handler
-    $('#eventForm').on('submit', function(e) {
-        e.preventDefault();
-        
-        // Validate form
-        if (!validateForm()) {
-            return false;
-        }
-        
-        // Prepare form data
-        let formData = new FormData(this);
-        
-        // Add group type names
-        $('input[name="type_names[]"]:checked').each(function() {
-            formData.append('group_type_name[]', $(this).val());
-        });
-        
-        // Submit form via AJAX
-        $.ajax({
-            url: "{{ route('calendar.event.store') }}",
-            method: "POST",
-            data: $(this).serialize(),
-            success: function(response) {
-                alert("Event created successfully!");
-                $('#eventModal').modal('hide');
-                $('#eventForm')[0].reset();
-                window.location.reload();
-            },
-            error: function(xhr) {
-                if (xhr.status === 422) {
-                    let errors = xhr.responseJSON.errors;
-                    let messages = Object.values(errors).map(val => val.join('\n')).join('\n');
-                    alert("Server Validation Failed:\n\n" + messages);
-                }
-            }
-        });
-    });
-    
-    // Form validation function
-    function validateForm() {
-        let isValid = true;
-        
-        // Basic validations
-        const courseName = $('#Course_name').val();
-        const startDate = $('#start_datetime').val();
-        
-        if (!courseName) {
-            alert("Please select a Course Name.");
-            $('#Course_name').focus();
-            return false;
-        }
-        
-        if (!startDate) {
-            alert("Please select a Start Date.");
-            $('#start_datetime').focus();
-            return false;
-        }
-        
-        // Validate each topic
-        $('.topic-section').each(function(index) {
-            const topicIndex = index;
-            const subjectModule = $(this).find('.subject-module-select').val();
-            const subjectName = $(this).find('.subject-name-select').val();
-            const topic = $(this).find('textarea[name="topic[]"]').val();
-            
-            if (!subjectModule) {
-                alert(`Please select a Subject Module for Topic ${topicIndex + 1}.`);
-                $(this).find('.subject-module-select').focus();
-                isValid = false;
-                return false;
-            }
-            
-            if (!subjectName) {
-                alert(`Please select a Subject Name for Topic ${topicIndex + 1}.`);
-                $(this).find('.subject-name-select').focus();
-                isValid = false;
-                return false;
-            }
-            
-            if (!topic) {
-                alert(`Please enter a Topic for Topic ${topicIndex + 1}.`);
-                $(this).find('textarea[name="topic[]"]').focus();
-                isValid = false;
-                return false;
-            }
-            
-            // Validate faculty for this topic
-            const facultySections = $(this).find('.faculty-section');
-            if (facultySections.length === 0) {
-                alert(`Please add at least one Faculty for Topic ${topicIndex + 1}.`);
-                isValid = false;
-                return false;
-            }
-            
-            facultySections.each(function(facultyIndex) {
-                const facultySelect = $(this).find('.faculty-select');
-                const facultyTypeSelect = $(this).find('select[name^="faculty_type"]');
-                
-                if (facultySelect.val() === null || facultySelect.val().length === 0) {
-                    alert(`Please select at least one Faculty for Faculty ${facultyIndex + 1} in Topic ${topicIndex + 1}.`);
-                    facultySelect.focus();
-                    isValid = false;
-                    return false;
-                }
-                
-                if (facultyTypeSelect.val() === null || facultyTypeSelect.val().length === 0) {
-                    alert(`Please select at least one Faculty Type for Faculty ${facultyIndex + 1} in Topic ${topicIndex + 1}.`);
-                    facultyTypeSelect.focus();
-                    isValid = false;
-                    return false;
-                }
-            });
-            
-            // Validate venue for this topic
-            const venueSections = $(this).find('.venue-section');
-            if (venueSections.length === 0) {
-                alert(`Please add at least one Venue for Topic ${topicIndex + 1}.`);
-                isValid = false;
-                return false;
-            }
-            
-            venueSections.each(function(venueIndex) {
-                const venueSelect = $(this).find('.venue-select');
-                
-                if (venueSelect.val() === null || venueSelect.val().length === 0) {
-                    alert(`Please select at least one Venue for Venue ${venueIndex + 1} in Topic ${topicIndex + 1}.`);
-                    venueSelect.focus();
-                    isValid = false;
-                    return false;
-                }
-            });
-            
-            // Validate shift for this topic
-            const shiftType = $(this).find(`input[name="shift_type[${topicIndex}]"]:checked`).val();
-            
-            if (!shiftType) {
-                alert(`Please select a Shift Type for Topic ${topicIndex + 1}.`);
-                isValid = false;
-                return false;
-            }
-            
-            if (shiftType == 1) {
-                // Normal shift
-                const shift = $(this).find(`select[name="shift[${topicIndex}]"]`).val();
-                if (!shift) {
-                    alert(`Please select a Shift for Topic ${topicIndex + 1}.`);
-                    $(this).find(`select[name="shift[${topicIndex}]"]`).focus();
-                    isValid = false;
-                    return false;
-                }
-            } else {
-                // Manual shift
-                const startTime = $(this).find(`#start_time${topicIndex}`).val();
-                const endTime = $(this).find(`#end_time${topicIndex}`).val();
-                
-                if (!startTime) {
-                    alert(`Please enter a Start Time for Topic ${topicIndex + 1}.`);
-                    $(this).find(`#start_time${topicIndex}`).focus();
-                    isValid = false;
-                    return false;
-                }
-                
-                if (!endTime) {
-                    alert(`Please enter an End Time for Topic ${topicIndex + 1}.`);
-                    $(this).find(`#end_time${topicIndex}`).focus();
-                    isValid = false;
-                    return false;
-                }
-            }
-        });
-        
-        // Validate feedback options
-        if ($('#feedback_checkbox').is(':checked')) {
-            if (!$('#remarkCheckbox').is(':checked') && !$('#ratingCheckbox').is(':checked')) {
-                alert("Please select at least Remark or Rating when Feedback is checked.");
-                $('#remarkCheckbox').focus();
-                isValid = false;
-            }
-        }
-        
-        return isValid;
-    }
-});
-
-// Rest of your existing JavaScript code for calendar functionality...
-</script>
 <script>
 $(document).ready(function() {
     $(document).ready(function() {
@@ -1402,22 +1090,37 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         events: '/calendar/full-calendar-details', // Data fetch karna
         eventContent: function(arg) {
+            // Color palette for event cards
+            const colors = [
+                '#4e73df', // blue
+                '#1cc88a', // green
+                '#36b9cc', // teal
+                '#f6c23e', // yellow
+                '#e74a3b', // red
+                '#858796', // gray
+                '#5a5c69', // dark
+                '#fd7e14', // orange
+                '#20c997', // cyan
+                '#6f42c1'  // purple
+            ];
+            // Assign color based on event id or index
+            const colorIdx = arg.event.id ? (parseInt(arg.event.id) % colors.length) : (arg.event._index % colors.length);
+            const cardColor = colors[colorIdx];
+
             // Get custom fields
             const topic = arg.event.title || '';
             const venue = arg.event.extendedProps.vanue || '';
             const start = arg.event.start ? new Date(arg.event.start).toLocaleDateString() : '';
 
-            // Design: topic (bold), venue (italic), start, end (each on new line)
+            // Modern card design with dynamic color
             let html = `
-        <div class="text-start p-2 text-dark fs-6 text-truncate">
-            <span>${topic}</span><br>
-            <span>${venue}</span><br>
-            <span>Date: ${start}</span><br>
-        </div>
-    `;
-            return {
-                html: html
-            };
+                <div class="fc-event-card" style="border-left: 6px solid ${cardColor}; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.10);">
+                    <div class="fw-bold mb-1" style="color: ${cardColor}; font-size: 1rem;">${topic}</div>
+                    <div class="fst-italic text-muted mb-1">${venue}</div>
+                    <div class="small text-secondary">${start}</div>
+                </div>
+            `;
+            return { html };
         },
         eventClick: function(info) {
                 
@@ -1962,4 +1665,5 @@ function makeCheckboxReadonly(selector, isReadonly, isChecked = false) {
   const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
   dateInput.setAttribute('min', today);
 </script>
+
 @endsection

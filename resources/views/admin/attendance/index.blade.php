@@ -5,9 +5,6 @@
 @section('content')
 <div class="container-fluid">
 
-    <x-breadcrum title="Attendance" />
-    <x-session_message />
-
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-header">
             <div class="row">
@@ -94,16 +91,14 @@
             <hr>
             <div class="text-end">
                 <button class="btn btn-primary hstack gap-6 float-end" id="searchAttendance" type="button">
-                    <i class="material-icons menu-icon">
-                        search
-                    </i>
+                    <span class="material-symbols-rounded text-white fs-6">search</span>
                     Search
                 </button>
             </div>
         </div>
         <div class="card-body d-none" id="attendanceTableCard">
             <div class="table-responsive" id="attendanceTableDiv">
-                    <table id="attendanceTable" class="table table-bordered table-striped table-hover">
+                    <table id="attendanceTable" class="table">
                         <thead>
                             <tr>
                                 <th class="col">#</th>

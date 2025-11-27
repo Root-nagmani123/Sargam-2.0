@@ -25,10 +25,11 @@ class CalendarController extends Controller
         $subjects = SubjectModuleMaster::where('active_inactive', 1)
             ->select('pk', 'module_name')
             ->get();
+            // print_r($subjects);die;
     
         $venueMaster = VenueMaster::where('active_inactive', 1)
             ->select('venue_id', 'venue_name')
-            ->get();
+            ->get(); 
     
         $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
             ->select('pk', 'shift_name','shift_time', 'start_time', 'end_time')
@@ -49,7 +50,7 @@ class CalendarController extends Controller
 
     // Change the field name accordingly (assuming subject_module_master.pk = $dataId)
    $modules = SubjectMaster::where('active_inactive', 1)
-                              ->where('subject_module_master_pk', $dataId)
+                            //   ->where('subject_module_master_pk', $dataId)
                               ->get();
 
 
@@ -82,8 +83,14 @@ $event->group_name = json_encode($request->type_names ?? []);
 $event->faculty_master = $request->faculty;
 $event->faculty_type = $request->faculty_type;
 $event->venue_id = $request->vanue;
-$event->START_DATE = $request->start_datetime;
-$event->END_DATE = $request->start_datetime;
+// $event->START_DATE = $request->start_datetime;
+$event->START_DATE = Carbon::parse($request->start_datetime)
+                    ->timezone('Asia/Kolkata')
+                    ->format('Y-m-d');
+// $event->END_DATE = $request->start_datetime;
+$event->END_DATE = Carbon::parse($request->start_datetime)
+                    ->timezone('Asia/Kolkata')
+                    ->format('Y-m-d');
 $event->session_type = $request->shift_type;
 if ($request->shift_type == 1) {
              $event->class_session = $request->shift;
@@ -206,7 +213,12 @@ public function getGroupTypes(Request $request)
 }
 function event_edit($id){
      $event = CalendarEvent::findOrFail($id);
-    return response()->json($event);
+     $event->START_DATE = \Carbon\Carbon::parse($event->START_DATE)->format('Y-m-d');
+$event->END_DATE   = \Carbon\Carbon::parse($event->END_DATE)->format('Y-m-d');
+
+return response()->json($event);
+
+    // return response()->json($event);
 }
     public function update_event(Request $request, $id)
 {
@@ -294,7 +306,7 @@ $events = DB::table('timetable')
     )
      ->orderBy('timetable.pk', 'desc')
     ->distinct() // prevent duplicates if multiple feedbacks
-    ->get();
+    ->paginate(10);
 
 
      return view('admin.feedback.index', compact('events'));
@@ -328,7 +340,10 @@ function studentFeedback() {
             'timetable.*',
             'faculty_master.full_name as faculty_name',
             'course_master.course_name as course_name',
-            'venue_master.venue_name as venue_name'
+            'venue_master.venue_name as venue_name',
+            DB::raw('timetable.START_DATE as from_date'),
+            DB::raw("CASE WHEN timetable.class_session LIKE '%-%' THEN SUBSTRING(timetable.class_session, 1, LOCATE('-', timetable.class_session) - 1) ELSE NULL END as from_time"),
+            DB::raw("CASE WHEN timetable.class_session LIKE '%-%' THEN TRIM(SUBSTRING(timetable.class_session, LOCATE('-', timetable.class_session) + 1)) ELSE NULL END as to_time")
         )
         ->get();
 

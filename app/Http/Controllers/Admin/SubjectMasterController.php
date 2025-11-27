@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\SubjectMaster;
-use App\Models\SubjectModuleMaster;
 use Illuminate\Http\Request;
 
 
@@ -11,17 +10,22 @@ class SubjectMasterController extends Controller
 {
     public function index()
     {
-        $subjects = SubjectMaster::all();
+        $search = request('search');
+
+        $subjects = SubjectMaster::when($search, function ($q) use ($search) {
+            $q->where('subject_name', 'like', "%$search%")
+              ->orWhere('sub_short_name', 'like', "%$search%");
+        })
+        ->paginate(10)
+        ->appends(['search' => $search]);
+        
         return view('admin.subject.index', compact('subjects'));
     }
 
     // Show the form for creating a new subject
     public function create()
-    { 
-        $subjects = SubjectModuleMaster::where('active_inactive', 1)
-                              ->get();
-        
-        return view('admin.subject.create',compact('subjects'));
+    {
+        return view('admin.subject.create');
     }
 
     // Store a newly created subject
@@ -31,15 +35,13 @@ class SubjectMasterController extends Controller
     $request->validate([
         'major_subject_name' => 'required|string|max:255',
         'short_name' => 'required|string|max:100',
-         'subject_module' => 'required|exists:subject_module_master,pk',
     ]);
 
     // Data insertion
     $subject = new SubjectMaster();
     $subject->subject_name = $request->major_subject_name;
     $subject->sub_short_name = $request->short_name;
-    $subject->subject_module_master_pk = $request->subject_module;
-    $subject->active_inactive = $request->has('status') ? 1 : 0;
+    $subject->active_inactive = (int) $request->input('status', 1);
 
     $subject->save();
 
@@ -58,9 +60,7 @@ class SubjectMasterController extends Controller
             return redirect()->route('subject.index')->with('error', 'Subject not found.');
         }
     
-        // Fetch the subject modules to populate the select box
-        $subjects = SubjectModuleMaster::all();
-        return view('admin.subject.edit', compact('subject', 'subjects'));
+        return view('admin.subject.edit', compact('subject'));
     }
 
     // Update the subject
@@ -70,8 +70,6 @@ class SubjectMasterController extends Controller
     $request->validate([
         'major_subject_name' => 'required|string|max:255',
         'short_name' => 'required|string|max:100',
-      
-        'subject_module' => 'required|exists:subject_module_master,pk',
     ]);
 
     // Find the subject record by ID
@@ -85,8 +83,7 @@ class SubjectMasterController extends Controller
     // Update the subject record with the new data
     $subject->subject_name = $request->major_subject_name;
     $subject->sub_short_name = $request->short_name;
-    $subject->subject_module_master_pk = $request->subject_module;
-    $subject->active_inactive = $request->has('status') ? 1 : 0;
+    $subject->active_inactive = (int) $request->input('status', 1);
 
     // Save the updated record
     $subject->save();

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Crypt;
 class VenueMasterController extends Controller
 {
     public function index() {
-        $venues = VenueMaster::all();
+        $venues = VenueMaster::paginate(10);
         return view('admin.venueMaster.index', compact('venues'));
     }
 

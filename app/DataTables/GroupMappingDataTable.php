@@ -30,38 +30,38 @@ class GroupMappingDataTable extends DataTable
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
             ->addColumn('view_download', function ($row) {
                 $id = encrypt($row->pk);
-
-                if( !empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
-                    return "
-                    <a 
-                        href='javascript:void(0)'
-                        class='btn btn-info btn-sm view-student'
-                        data-id='{$id}'
-                    >View Student</a>
-                    <a href='" . route('group.mapping.export.student.list', $id) . "' class='btn btn-sm btn-primary'>
-                        <i class='fa fa-download'></i> Download
-                    </a>
-                    ";
+                    if (!empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
+                        $exportUrl = route('group.mapping.export.student.list', $id);
+                        $html = <<<HTML
+    <a href="javascript:void(0)" class="view-student" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students">
+        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">person</i>
+    </a>
+    <a href="{$exportUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List">
+        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">download</i>
+    </a>
+    HTML;
+                    return $html;
                 }
-                return "
-                <span class='text-muted'>No Students</span>
-                ";
+                return "<span class='text-muted'>No Students</span>";
             })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
                 $csrf = csrf_token();
-
                 $editUrl = route('group.mapping.edit', ['id' => $id]);
                 $deleteUrl = route('group.mapping.delete', ['id' => $id]);
-
-                return '
-                    <a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>
-                    <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
-                        <input type="hidden" name="_token" value="'.$csrf.'">
-                        <input type="hidden" name="_method" value="DELETE">
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>    
-                ';
+                $html = <<<HTML
+    <a href="{$editUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Mapping">
+        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">edit</i>
+    </a>
+    <form action="{$deleteUrl}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this record?')">
+        <input type="hidden" name="_token" value="{$csrf}">
+        <input type="hidden" name="_method" value="DELETE">
+        <a href="javascript:void(0)" onclick="event.preventDefault(); this.closest('form').submit();" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Mapping">
+            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
+        </a>
+    </form>
+    HTML;
+                return $html;
                 
             })
 
@@ -95,22 +95,20 @@ class GroupMappingDataTable extends DataTable
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
     {
         $statusFilter = request('status_filter', 'active');
-        $currentDate = Carbon::now()->format('Y-m-d');
+        $currentDate = Carbon::now()->format('d-m-Y');
 
-        return $model->newQuery()
+        $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
                 ->with(['courseGroup', 'courseGroupType', 'facility'])
                 ->when($statusFilter === 'active' || empty($statusFilter), function ($query) use ($currentDate) {
                     $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
-                        $courseQuery->where(function ($dateQuery) use ($currentDate) {
-                            $dateQuery->whereNull('start_year')
-                                ->orWhereDate('start_year', '<=', $currentDate);
-                        })->where(function ($dateQuery) use ($currentDate) {
-                            $dateQuery->whereNull('end_date')
-                                ->orWhereDate('end_date', '>=', $currentDate);
+                        $courseQuery->where(function ($q) use ($currentDate) {
+                            $q->whereNull('end_date')              // end date NULL ho (kabhi khatam nahi)
+                              ->orWhereDate('end_date', '>=', $currentDate); // ya abhi ya future me active
                         });
                     });
                 })
+                
                 ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
                     $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
                         $courseQuery->whereNotNull('end_date')
@@ -118,24 +116,37 @@ class GroupMappingDataTable extends DataTable
                     });
                 })
                 ->orderBy('pk', 'desc');
+                // <- check karo ki data aa raha hai ya nahi
+
+        return $query;
     }
 
-    public function html(): HtmlBuilder
-    {
-        return $this->builder()
-            ->setTableId('group-mapping-table')
-            ->columns($this->getColumns())
-            ->minifiedAjax()
-            ->orderBy(1)
-            ->responsive(true)
-            ->selectStyleSingle()
-            ->parameters([
-                'responsive' => true,
-                'scrollX' => true,
-                'autoWidth' => false,
-                'order' => [],
-            ]);
-    }
+public function html(): HtmlBuilder
+{
+    return $this->builder()
+       ->setTableId('group-mapping-table')
+        ->setTableAttribute('id', 'group-mapping-table')
+        ->columns($this->getColumns())
+        ->minifiedAjax()
+        ->orderBy(1)
+        ->responsive(true)
+        ->selectStyleSingle()
+        ->addTableClass('table table-bordered table-hover align-middle custom-mapping-table')
+        ->parameters([
+            'responsive' => true,
+            'scrollX' => true,
+            'autoWidth' => false,
+            'order' => [],
+            'pagingType' => 'simple_numbers', // Bootstrap 5 pagination style
+            'language' => [
+                'paginate' => [
+                    'previous' => '&laquo;',
+                    'next' => '&raquo;',
+                ]
+            ]
+        ]);
+}
+
 
 
     public function getColumns(): array

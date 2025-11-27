@@ -11,7 +11,7 @@ class ClassSessionMasterController extends Controller
 {
     function index() {
 
-        $classSessionMaster = ClassSessionMaster::all();
+        $classSessionMaster = ClassSessionMaster::paginate(10);
         return view('admin.master.class_session_master.index', compact('classSessionMaster'));
     }
     function create() {

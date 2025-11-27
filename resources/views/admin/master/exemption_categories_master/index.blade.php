@@ -4,13 +4,9 @@
 
 @section('content')
 <div class="container-fluid">
-
-    <x-breadcrum title="Exemption categories" />
-    <x-session_message />
-
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
@@ -25,11 +21,10 @@
                         </div>
                     </div>
                     <hr>
-                    <div id="zero_config_wrapper" class="dataTables_wrapper">
-                        <table id="zero_config"
-                            class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                            aria-describedby="zero_config_info">
-                            <thead>
+                    <div class="table-responsive">
+                        <table
+                            class="table table-bordered text-nowrap align-middle">
+                            <thead style="background-color: #af2910;">
                                 <!-- start row -->
                                 <tr>
                                     <th class="col">S.No.</th>
@@ -44,25 +39,28 @@
                                 @if (!empty($categories) && count($categories) > 0)
                                 @foreach ($categories as $cat)
                                 <tr class="odd">
-                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $categories->firstItem() + $loop->index }}</td>
                                     <td>{{ $cat->exemp_category_name }}</td>
                                     <td>{{ $cat->exemp_cat_short_name }}</td>
                                     <td>
                                         <a href="{{ route('master.exemption.category.master.edit', 
-                                                    ['id' => encrypt(value: $cat->pk)]) }}"
-                                            class="btn btn-primary btn-sm">Edit</a>
+                                                    ['id' => encrypt(value: $cat->pk)]) }}"><i
+                                                class="material-icons menu-icon material-symbols-rounded"
+                                                style="font-size: 24px;">edit</i></a>
                                         <form
                                             title="{{ $cat->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
                                             action="{{ route('master.exemption.category.master.delete', 
                                                     ['id' => encrypt($cat->pk)]) }}" method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="button" class="btn btn-danger btn-sm" onclick="event.preventDefault(); 
+                                            <a href="javascript:void(0)" onclick="event.preventDefault(); 
                                                         if(confirm('Are you sure you want to delete this record?')) {
                                                             this.closest('form').submit();
                                                         }" {{ $cat->active_inactive == 1 ? 'disabled' : '' }}>
-                                                Delete
-                                            </button>
+                                                <i
+                                                class="material-icons menu-icon material-symbols-rounded"
+                                                style="font-size: 24px;">delete</i>
+                                            </a>
                                         </form>
                                     </td>
                                     <td>
@@ -81,6 +79,16 @@
 
                             </tbody>
                         </table>
+
+                        <!-- Bootstrap 5 Pagination -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div class="text-muted">
+                                Showing {{ $categories->firstItem() ?? 0 }} to {{ $categories->lastItem() ?? 0 }} of {{ $categories->total() }} entries
+                            </div>
+                            <div>
+                                {{ $categories->links('pagination::bootstrap-5') }}
+                            </div>
+                        </div>
 
                     </div>
                 </div>

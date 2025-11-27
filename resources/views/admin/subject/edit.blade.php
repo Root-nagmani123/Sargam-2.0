@@ -63,32 +63,13 @@
                         </div>
                     </div>
                     <div class="col-6">
-                        <!-- Subject Module -->
-                        <div class="mb-3">
-                            <label for="subject_module" class="form-label">Subject Module <span
-                                    class="text-danger">*</span></label>
-                            <select name="subject_module" id="subject_module" class="form-select" required>
-                                <option value="">-- Select Subject Module --</option>
-                                @foreach($subjects as $module)
-                                <option value="{{ $module->pk }}"
-                                    {{ $subject->subject_module_master_pk == $module->pk ? 'selected' : '' }}>
-                                    {{ $module->module_name }}
-                                </option>
-                                @endforeach
-                            </select>
-                            @error('subject_module')
-                            <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-6">
 
                         <!-- Status -->
                         <div class="mb-3">
                             <label for="status" class="form-label">Status</label>
                             <select name="status" id="status" class="form-control">
-                                <option value="1" {{ $subject->active_inactive ? 'selected' : '' }}>Active</option>
-                                <option value="0" {{ !$subject->active_inactive ? 'selected' : '' }}>Inactive</option>
+                                <option value="1" {{ (old('status', $subject->active_inactive) == 1) ? 'selected' : '' }}>Active</option>
+                                <option value="0" {{ (old('status', $subject->active_inactive) == 0) ? 'selected' : '' }}>Inactive</option>
                             </select>
 
                         </div>
