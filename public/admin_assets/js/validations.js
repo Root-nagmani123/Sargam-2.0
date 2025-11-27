@@ -8,6 +8,9 @@ const observer = new MutationObserver(function (mutationsList) {
                 if (node.matches('.only-letters') || node.querySelector('.only-letters')) {
                     bindOnlyLetters(node);
                 }
+				if (node.matches('.letters-with-space') || node.querySelector('.letters-with-space')) {
+                    bindLettersWithSpace(node);
+                }
             }
         });
     });
@@ -38,6 +41,16 @@ function bindOnlyLetters(context = document) {
     });
 }
 
+function bindLettersWithSpace(context = document) {
+    context.querySelectorAll('.letters-with-space').forEach(function (input) {
+        input.addEventListener('input', function () {
+            this.value = this.value.replace(/[^A-Za-z ]/g, '');
+        });
+    });
+}
+
+
 // Initial bind
 bindOnlyNumbers();
 bindOnlyLetters();
+bindLettersWithSpace();
