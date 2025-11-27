@@ -5,8 +5,6 @@
 @section('content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Venue Master" />
-    <x-session_message />
     <!-- start Vertical Steps Example -->
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
