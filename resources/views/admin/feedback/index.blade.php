@@ -187,26 +187,6 @@
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const toggle = document.getElementById('searchToggle');
-    const input = document.getElementById('searchInput');
-
-    toggle.addEventListener('click', () => {
-        input.classList.toggle('active');
-        if (input.classList.contains('active')) {
-            input.focus();
-        }
-    });
-
-    // Close on outside click
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.search-expand')) {
-            input.classList.remove('active');
-        }
-    });
-});
-</script>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
     const viewButtons = document.querySelectorAll('.view-btn');
 
     viewButtons.forEach(btn => {
@@ -236,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-</script>
+</>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const viewButtons = document.querySelectorAll('.view-btn');

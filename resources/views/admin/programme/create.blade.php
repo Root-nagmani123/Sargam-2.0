@@ -5,14 +5,11 @@
 @section('content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Programme" />
-    <x-session_message />
-
     <!-- start Vertical Steps Example -->
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">
-                {{ !empty($courseMasterObj) && $courseMasterObj->pk ? 'Edit Programme' : 'Create Programme' }}
+                {{ !empty($courseMasterObj) && $courseMasterObj->pk ? 'Edit Course' : 'Create Course' }}
             </h4>
             <hr>
             <form action="{{ route('programme.store') }}" method="POST">

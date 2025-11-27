@@ -125,7 +125,7 @@
                     <hr>
 
                     {!! $dataTable->table([
-                        'class' => 'table custom-mdo-table align-middle w-100 table-bordered'
+                        'class' => 'table'
                     ]) !!}
 
                 </div>

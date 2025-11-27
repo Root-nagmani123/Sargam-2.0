@@ -10,7 +10,7 @@ class PermissionController extends Controller
     public function index()
     {
         return view('admin.user_management.permissions.index', [
-            'permissions' => Permission::all(),
+            'permissions' => Permission::paginate(10),
         ]);
     }
 

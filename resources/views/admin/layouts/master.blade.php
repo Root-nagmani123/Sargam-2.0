@@ -322,7 +322,45 @@
             @include('admin.layouts.header')
             @include('admin.layouts.aside')
             <div class="body-wrapper">
-                @yield('content')
+                <!-- Tab Content Container -->
+                <div class="tab-content" id="mainNavbarContent">
+                    <!-- Home Tab -->
+                    <div class="tab-pane fade show active" id="home" role="tabpanel">
+                        @yield('content')
+                    </div>
+
+                    <!-- Setup Tab -->
+                    <div class="tab-pane fade" id="tab-setup" role="tabpanel">
+                        <div class="container-fluid p-4">
+                            <h3>Setup Section</h3>
+                            <p>Configuration and setup content will appear here.</p>
+                        </div>
+                    </div>
+
+                    <!-- Communications Tab -->
+                    <div class="tab-pane fade" id="tab-communications" role="tabpanel">
+                        <div class="container-fluid p-4">
+                            <h3>Communications</h3>
+                            <p>Communication tools and settings will appear here.</p>
+                        </div>
+                    </div>
+
+                    <!-- Academics Tab -->
+                    <div class="tab-pane fade" id="tab-academics" role="tabpanel">
+                        <div class="container-fluid p-4">
+                            <h3>Academics</h3>
+                            <p>Academic content and management will appear here.</p>
+                        </div>
+                    </div>
+
+                    <!-- Material Management Tab -->
+                    <div class="tab-pane fade" id="tab-material-management" role="tabpanel">
+                        <div class="container-fluid p-4">
+                            <h3>Material Management</h3>
+                            <p>Material inventory and management will appear here.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

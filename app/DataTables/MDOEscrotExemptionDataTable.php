@@ -32,13 +32,15 @@ class MDOEscrotExemptionDataTable extends DataTable
                 $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
                 return '
                     <a href="' . $editUrl . '" title="Edit">
-                        <i class="material-icons menu-icon text-muted">edit</i>
+                         <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">edit</i>
                     </a>
                     <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
                         ' . csrf_field() . '
                         <input type="hidden" name="_method" value="DELETE">
                         <button type="submit" class="btn btn-link p-0 m-0" title="Delete" style="vertical-align: baseline;">
-                            <i class="material-icons menu-icon text-muted">delete</i>
+                            <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">delete</i>
                         </button>
                     </form>
                 ';
@@ -60,7 +62,7 @@ public function html(): HtmlBuilder
 {
     return $this->builder()
         ->setTableId('mdoescot-table')
-        ->addTableClass('table custom-mdo-table align-middle')
+        ->addTableClass('table')
         ->columns($this->getColumns())
         ->minifiedAjax()
         ->parameters([
@@ -72,8 +74,10 @@ public function html(): HtmlBuilder
             'pageLength' => 10,
             'language' => [
                 'paginate' => [
-                    'previous' => '<i class="material-icons">chevron_left</i>',
-                    'next' => '<i class="material-icons">chevron_right</i>'
+                    'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">chevron_left</i>',
+                    'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">chevron_right</i>'
                 ]
             ],
         ]);
