@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\StudentMaster;
+use App\Models\StudentMasterCourseMap;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -16,61 +16,26 @@ use Carbon\Carbon;
 
 class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
 {
-    protected $courseId;
-    protected $status;
+    protected $enrollments;
 
-    public function __construct($courseId = null, $status = null)
+    public function __construct($enrollments)
     {
-        $this->courseId = $courseId;
-        $this->status = $status;
+        $this->enrollments = $enrollments;
     }
 
     public function collection()
     {
-        $query = StudentMaster::with(['courses', 'service']);
-
-        if ($this->courseId) {
-            $query->whereHas('courses', function ($q) {
-                $q->where('course_master.pk', $this->courseId);
-            });
-        }
-
-        if ($this->status !== null && $this->status !== '') {
-            $query->whereHas('courses', function ($q) {
-                $q->where('student_master_course__map.active_inactive', $this->status);
-            });
-        }
-
-        // Get students and then flatten the course relationships
-        $students = $query->get();
-        $enrollments = [];
-
-        foreach ($students as $student) {
-            foreach ($student->courses as $course) {
-                // Apply additional status filter at collection level if needed
-                if ($this->status !== null && $this->status !== '' && $course->pivot->active_inactive != $this->status) {
-                    continue;
-                }
-                
-                $enrollments[] = (object)[
-                    'student' => $student,
-                    'course' => $course,
-                    'active_inactive' => $course->pivot->active_inactive,
-                    'created_date' => $course->pivot->created_date,
-                    'modified_date' => $course->pivot->modified_date
-                ];
-            }
-        }
-
-        return collect($enrollments);
+        // Return the pre-filtered enrollments
+        return $this->enrollments;
     }
 
     public function map($enrollment): array
     {
-        $student = $enrollment->student;
+        $student = $enrollment->studentMaster;
         $course = $enrollment->course;
 
         return [
+            $enrollment->id ?? '-', // Add serial number or unique identifier
             trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? '')),
             $student->email ?? '-',
             $course->course_name ?? 'N/A',
@@ -85,6 +50,7 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
     public function headings(): array
     {
         return [
+            'S.No',
             'Student Name',
             'Email',
             'Course',

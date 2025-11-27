@@ -74,6 +74,7 @@
                 </div>
 
                 <!-- Export Section -->
+                <!-- Export Section -->
                 <div class="col-md-4 col-sm-12">
                     <form method="GET" action="{{ route('studentEnroll.report.export') }}" id="exportForm">
                         <input type="hidden" name="course" id="exportCourse" value="{{ $courseId }}">
@@ -83,10 +84,11 @@
                         <div class="row g-3 align-items-end">
                             <div class="col-md-8">
                                 <label class="form-label fw-bold">Export Format</label>
-                                <select name="format" class="form-select">
+                                <select name="format" class="form-select" required>
                                     <option value="">-- Select Format --</option>
                                     <option value="pdf">PDF</option>
-                                    <option value="xlsx">Excel</option <option value="csv">CSV</option>
+                                    <option value="xlsx">Excel</option>
+                                    <option value="csv">CSV</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
