@@ -38,10 +38,6 @@
 </style>
 <div class="container-fluid">
 
-    <x-breadcrum title="Notice /Memo Management" />
-    <x-session_message />
-
-
     <!-- start Zero Configuration -->
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
@@ -50,9 +46,27 @@
                     <h4 class="card-title">Notice /Memo Management</h4>
                 </div>
                 <div class="col-6">
-                    <div class="float-end gap-2">
-                        <a href="{{ route('memo.notice.management.create') }}" class="btn btn-primary">+ Add
-                            Notice</a>
+                    <div class="d-flex justify-content-end align-items-center gap-2">
+
+                        <!-- Add Group Mapping -->
+                        <a href="{{ route('memo.notice.management.create') }}"
+                            class="btn btn-primary d-flex align-items-center">
+                            <i class="material-icons menu-icon material-symbols-rounded"
+                                style="font-size: 24px;">add</i>
+                            Add Notice
+                        </a>
+
+                        <!-- Search Expand -->
+                        <div class="search-expand d-flex align-items-center">
+                            <a href="javascript:void(0)" id="searchToggle">
+                                <i class="material-icons menu-icon material-symbols-rounded"
+                                    style="font-size: 24px;">search</i>
+                            </a>
+
+                            <input type="text" class="form-control search-input ms-2" id="searchInput"
+                                placeholder="Search…" aria-label="Search">
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -90,9 +104,8 @@
             </div>
             <hr>
             <div class="table-responsive">
-                <table class="table table-striped table-bordered text-nowrap" id="alt_pagination"
-                    data-toggle="data-table">
-                    <thead>
+                <table class="table text-nowrap" style="border-radius: 10px; overflow: hidden; width: 100%;">
+                    <thead style="background-color: #af2910;">
                         <!-- start row -->
                         <tr>
                             <th class="col">S.No.</th>
@@ -117,10 +130,10 @@
                             </td>
                         </tr>
                         @else
-                        @foreach ($memos as $memo)
+                        @foreach ($memos as $index => $memo)
                         <tr>
                             <!-- Serial -->
-                            <td class="sno">{{ $loop->iteration }}</td>
+                            <td class="sno">{{ $memos->firstItem() + $index }}</td>
 
                             <!-- Student -->
                             <td class="s_name fw-medium">{{ $memo->student_name }}</td>
@@ -246,6 +259,21 @@
                     </tbody>
 
                 </table>
+
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+
+                    <div class="text-muted small mb-2">
+                        Showing {{ $memos->firstItem() ?? 0 }}
+                        to {{ $memos->lastItem() }}
+                        of {{ $memos->total() }} items
+                    </div>
+
+                    <div>
+                        {{ $memos->links('vendor.pagination.custom') }}
+                    </div>
+
+                </div>
             </div>
 
         </div>

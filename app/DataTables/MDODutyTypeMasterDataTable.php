@@ -63,6 +63,20 @@ class MDODutyTypeMasterDataTable extends DataTable
                     // ->orderBy(1)
                     ->parameters([
                         'order' => [],
+                        'responsive' => true,
+                        'autoWidth' => false,
+                        'scrollX' => true,
+                        'scrollY' => '100vh',
+                        'scrollCollapse' => true,
+                        'lengthMenu' => [[10, 25, 50, 100], [10, 25, 50, 100]],
+                        'buttons' => ['excel', 'csv', 'pdf', 'print', 'reset', 'reload'],
+                        'columnDefs' => [
+                            ['orderable' => false, 'targets' => 0],
+                            ['orderable' => false, 'targets' => 1],
+                            ['orderable' => false, 'targets' => 2],
+                            ['orderable' => false, 'targets' => 3],
+                        ],
+
                     ])
                     ->selectStyleSingle()
                     ->buttons([
@@ -85,8 +99,8 @@ class MDODutyTypeMasterDataTable extends DataTable
         return [
             Column::make('pk')->title('ID')->addClass('text-center')->orderable(false),
             Column::make('mdo_duty_type_name')->title('Duty Type Name')->addClass('text-center')->orderable(false),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
+            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false),
         ];
     }
 

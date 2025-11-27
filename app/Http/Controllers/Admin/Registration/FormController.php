@@ -35,7 +35,7 @@ class FormController extends Controller
         $forms = $query
             ->orderBy('parent_id')
             ->orderBy('sortorder')
-            ->get();
+            ->paginate(10);
 
 
         // Group forms by parent_id (null or 0 for parents)

@@ -4,9 +4,6 @@
 @section('content')
 <div class="container-fluid">
 
-    <x-breadcrum title="Users" />
-    <x-session_message />
-
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -23,7 +20,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        {{ $dataTable->table(['class' => 'table  table-hover table-check table-bordered table-striped ']) }}
+                        {{ $dataTable->table(['class' => 'table w-100']) }}
                     </div>
             </div>
         </div>

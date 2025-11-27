@@ -8,14 +8,6 @@
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 
     <div class="container-fluid">
-        <x-session_message />
-         <x-breadcrum title="Front Page" />
-        {{-- @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif --}}
 
         <!--display errors if any -->
         @if ($errors->any())
@@ -145,8 +137,7 @@
 
                         <!-- Submit Button -->
                         <div class="col-12 text-end">
-                            <button class="btn btn-primary" type="submit">
-                                <i class="material-icons menu-icon">send</i> Submit
+                            <button class="btn btn-primary" type="submit">Submit
                             </button>
                         </div>
                     </div>

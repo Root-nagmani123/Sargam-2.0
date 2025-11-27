@@ -4,8 +4,6 @@
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Member" />
-    <x-session_message />
 
     <div class="datatables">
         <!-- start Zero Configuration -->

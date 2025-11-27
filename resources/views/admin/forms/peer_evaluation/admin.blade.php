@@ -1,8 +1,34 @@
+<!-- DataTables CSS/JS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 @extends('admin.layouts.master')
+@section('title', 'Peer Evaluation - Admin Panel | Sargam Admin')
 @section('content')
+<style>
+    /* ✅ Improve focus visibility */
+    .table a:focus, .btn:focus, .form-check-input:focus {
+        outline: 2px solid #0d6efd;
+        outline-offset: 2px;
+        box-shadow: none !important;
+    }
+
+    /* ✅ Custom toggle color for clarity */
+    .form-switch .form-check-input:checked {
+        background-color: #198754 !important; /* Bootstrap success green */
+        border-color: #198754 !important;
+    }
+
+    /* ✅ Hover feedback for rows */
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    /* ✅ High contrast for badges */
+    .badge.bg-info { color: #000; }
+</style>
+
 <div class="container-fluid">
-     <x-breadcrum title="Peer Evaluation - Admin Panel" />
-        <x-session_message />
     <div class="card p-3" style="border-left: 4px solid #004a93;">
         <h4 class="mb-4">Peer Evaluation - Admin Panel</h4>
 
@@ -16,40 +42,57 @@
 
             {{-- Courses List --}}
             <div class="mt-3">
-                <h6>Existing Courses:</h6>
-                @foreach ($courses as $course)
-                    <div class="card mb-3">
-                        <div class="card-header d-flex justify-content-between align-items-center">
+    <h6>Existing Courses:</h6>
+
+    <div class="accordion" id="coursesAccordion">
+        @foreach ($courses as $index => $course)
+            <div class="accordion-item mb-2">
+                <h2 class="accordion-header" id="heading{{ $course->id }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#collapse{{ $course->id }}" aria-expanded="false"
+                        aria-controls="collapse{{ $course->id }}">
+                        <div class="d-flex justify-content-between align-items-center w-100">
                             <strong>{{ $course->course_name }}</strong>
                             <div>
                                 <span class="badge bg-primary">{{ $course->events_count }} Events</span>
                                 <span class="badge bg-secondary ms-1">{{ $course->groups_count }} Groups</span>
                             </div>
                         </div>
-                        <div class="card-body">
-                            {{-- Add Event to this Course --}}
-                            <div class="input-group input-group-sm mb-3">
-                                <input type="text" class="form-control event-input"
-                                    placeholder="Add Event to {{ $course->course_name }}"
-                                    data-course-id="{{ $course->id }}">
-                                <button class="btn btn-outline-primary add-event-btn"
-                                    data-course-id="{{ $course->id }}">Add Event</button>
-                            </div>
+                    </button>
+                </h2>
+                <div id="collapse{{ $course->id }}" class="accordion-collapse collapse"
+                    aria-labelledby="heading{{ $course->id }}" data-bs-parent="#coursesAccordion">
+                    <div class="accordion-body">
 
-                            {{-- Events List --}}
-                            @foreach ($course->events as $event)
-                                <div class="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>{{ $event->event_name }}</strong>
-                                        <span class="badge bg-secondary ms-2">{{ $event->groups->count() }} Groups</span>
-                                    </div>
-                                    <small class="text-muted">Event ID: {{ $event->id }}</small>
-                                </div>
-                            @endforeach
+                        {{-- Add Event to this Course --}}
+                        <div class="input-group input-group-sm mb-3">
+                            <input type="text" class="form-control event-input"
+                                placeholder="Add Event to {{ $course->course_name }}"
+                                data-course-id="{{ $course->id }}">
+                            <button class="btn btn-outline-primary add-event-btn"
+                                data-course-id="{{ $course->id }}">Add Event</button>
                         </div>
+
+                        {{-- Events List --}}
+                        @foreach ($course->events as $event)
+                            <div
+                                class="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ $event->event_name }}</strong>
+                                    <span
+                                        class="badge bg-secondary ms-2">{{ $event->groups->count() }} Groups</span>
+                                </div>
+                                <small class="text-muted">Event ID: {{ $event->id }}</small>
+                            </div>
+                        @endforeach
+
                     </div>
-                @endforeach
+                </div>
             </div>
+        @endforeach
+    </div>
+</div>
+
         </div>
 
         {{-- Manage Groups Section --}}
@@ -88,75 +131,97 @@
             {{-- Groups List --}}
             <div class="mt-3">
                 <h6>Groups List:</h6>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead class="table-white bg-primary text-white">
-                            <tr>
-                                <th>Course</th>
-                                <th>Event</th>
-                                <th>Group Name</th>
-                                <th>Max Marks</th>
-                                <th>Status</th>
-                                <th>Members</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($groups as $group)
-                                <tr>
-                                    <td>
-                                        <span class="badge bg-info">{{ $group->course->course_name ?? 'N/A' }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ $group->event->event_name ?? 'N/A' }}</span>
-                                    </td>
-                                    <td>{{ $group->group_name }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <input type="number" class="form-control form-control-sm max-marks-input"
-                                                data-id="{{ $group->id }}" value="{{ $group->max_marks ?? 10 }}"
-                                                step="0.01" min="1" max="100" style="width: 80px;">
-                                            <button class="btn btn-sm btn-outline-primary update-marks ms-2"
-                                                data-id="{{ $group->id }}">
-                                                <i class="fas fa-save"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge {{ $group->is_form_active ? 'bg-success' : 'bg-danger' }}">
-                                            {{ $group->is_form_active ? 'Active' : 'Inactive' }}
-                                        </span>
-                                        <input type="checkbox" class="toggle-form ms-2" data-id="{{ $group->id }}"
-                                            {{ $group->is_form_active ? 'checked' : '' }}>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-dark">{{ $group->members_count }} members</span>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{{ route('admin.peer.group.members', $group->id) }}"
-                                                class="btn btn-info" title="View Members">
-                                                <i class="fas fa-users"></i>
-                                            </a>
-                                            <a href="{{ route('admin.peer.group.import', $group->id) }}"
-                                                class="btn btn-warning" title="Import Users">
-                                                <i class="fas fa-upload"></i>
-                                            </a>
-                                            <a href="{{ route('admin.peer.group.submissions', $group->id) }}"
-                                                class="btn btn-primary" title="View Submissions">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <button class="btn btn-danger delete-group" data-id="{{ $group->id }}"
-                                                title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                <div class="table-responsive mt-3">
+    <table class="table table-hover align-middle shadow-sm rounded-3 overflow-hidden" id="datatable-courses">
+        <thead class="bg-primary text-white">
+            <tr>
+                <th scope="col">Course</th>
+                <th scope="col">Event</th>
+                <th scope="col">Group Name</th>
+                <th scope="col">Max Marks</th>
+                <th scope="col" class="text-center">Status</th>
+                <th scope="col" class="text-center">Members</th>
+                <th scope="col" class="text-center">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach ($groups as $group)
+                <tr>
+                    <td>
+                        <span class="badge bg-info text-dark fw-semibold px-2 py-1">
+                            {{ $group->course->course_name ?? 'N/A' }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary fw-semibold px-2 py-1">
+                            {{ $group->event->event_name ?? 'N/A' }}
+                        </span>
+                    </td>
+                    <td class="fw-medium text-dark">{{ $group->group_name }}</td>
+
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <label for="maxMarks{{ $group->id }}" class="visually-hidden">Max Marks</label>
+                            <input type="number" id="maxMarks{{ $group->id }}"
+                                class="form-control form-control-sm max-marks-input"
+                                data-id="{{ $group->id }}" value="{{ $group->max_marks ?? 10 }}"
+                                step="0.01" min="1" max="100" style="width: 90px;"
+                                aria-label="Enter Max Marks">
+                            <button class="btn btn-sm btn-outline-primary update-marks ms-2"
+                                data-id="{{ $group->id }}" title="Save Marks" aria-label="Save Max Marks">
+                                <i class="fas fa-save"></i>
+                            </button>
+                        </div>
+                    </td>
+
+                    <td class="text-center">
+                        <div class="d-flex justify-content-center align-items-center gap-2">
+                            <div class="form-check form-switch m-0">
+                                <input type="checkbox" role="switch" 
+                                    class="form-check-input toggle-form"
+                                    id="toggleForm{{ $group->id }}"
+                                    data-id="{{ $group->id }}"
+                                    {{ $group->is_form_active ? 'checked' : '' }}
+                                    aria-label="Toggle Form Status">
+                            </div>
+                            <span class="badge {{ $group->is_form_active ? 'bg-success' : 'bg-danger' }}">
+                                {{ $group->is_form_active ? 'Active' : 'Inactive' }}
+                            </span>
+                        </div>
+                    </td>
+
+                    <td class="text-center">
+                        <span class="badge bg-dark text-white fw-semibold px-2 py-1">
+                            {{ $group->members_count }} Members
+                        </span>
+                    </td>
+
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm" role="group" aria-label="Group Actions">
+                            <a href="{{ route('admin.peer.group.members', $group->id) }}"
+                                class="btn btn-outline-info" title="View Members" aria-label="View Members">
+                                <i class="fas fa-users"></i>
+                            </a>
+                            <a href="{{ route('admin.peer.group.import', $group->id) }}"
+                                class="btn btn-outline-warning" title="Import Users" aria-label="Import Users">
+                                <i class="fas fa-upload"></i>
+                            </a>
+                            <a href="{{ route('admin.peer.group.submissions', $group->id) }}"
+                                class="btn btn-outline-primary" title="View Submissions" aria-label="View Submissions">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-outline-danger delete-group"
+                                data-id="{{ $group->id }}" title="Delete Group" aria-label="Delete Group">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+</div>
+
             </div>
         </div>
 
@@ -189,45 +254,67 @@
             </div>
 
             {{-- Columns List --}}
-            <div class="mt-3">
-                <h6>Existing Columns:</h6>
-                <div class="row">
-                    @foreach ($columns as $column)
-                        <div class="col-md-4 mb-2">
-                            <div class="card">
-                                <div class="card-body p-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span
-                                                class="badge {{ $column->is_visible ? 'bg-success' : 'bg-secondary' }} me-1">
-                                                {{ $column->column_name }}
-                                            </span>
-                                            @if ($column->course)
-                                                <small class="text-muted">
-                                                    ({{ $column->course->course_name }})
-                                                </small>
-                                            @endif
-                                            @if ($column->event)
-                                                <small class="text-muted">
-                                                    - {{ $column->event->event_name }}
-                                                </small>
-                                            @endif
-                                        </div>
-                                        <div>
-                                            <input type="checkbox" class="toggle-column" data-id="{{ $column->id }}"
-                                                {{ $column->is_visible ? 'checked' : '' }} title="Toggle Visibility">
-                                            <button class="btn btn-sm btn-danger delete-column ms-1"
-                                                data-id="{{ $column->id }}" title="Delete">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
+          <div class="mt-3">
+    <h6>Existing Columns:</h6>
+    <div class="table-responsive">
+    <table class="table table-bordered align-middle" id="datatable-groups">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Column Name</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Event</th>
+                    <th scope="col" class="text-center">Visible</th>
+                    <th scope="col" class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($columns as $column)
+                    <tr>
+                        <td>
+                            <span
+                                class="badge {{ $column->is_visible ? 'bg-success' : 'bg-secondary' }} me-1">
+                                {{ $column->column_name }}
+                            </span>
+                        </td>
+                        <td>
+                            @if ($column->course)
+                                <small class="text-muted">{{ $column->course->course_name }}</small>
+                            @else
+                                <small class="text-muted">—</small>
+                            @endif
+                        </td>
+                        <td>
+                            @if ($column->event)
+                                <small class="text-muted">{{ $column->event->event_name }}</small>
+                            @else
+                                <small class="text-muted">—</small>
+                            @endif
+                        </td>
+                        <td class="text-center">
+    <div class="form-check form-switch d-inline-block">
+        <input type="checkbox" 
+            class="form-check-input toggle-column"
+            data-id="{{ $column->id }}"
+            id="toggleColumn{{ $column->id }}"
+            {{ $column->is_visible ? 'checked' : '' }}
+            title="Toggle Visibility">
+    </div>
+</td>
+
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-danger delete-column"
+                                data-id="{{ $column->id }}" title="Delete">
+                                <iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7">
+                                                     </iconify-icon>
+                            </button>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+
         </div>
 
         {{-- Manage Reflection Fields --}}
@@ -270,35 +357,95 @@
                             ->get();
                     @endphp
 
-                    @foreach ($reflectionFields as $field)
-                        <div class="col-md-4 mb-2">
-                            <div class="card">
-                                <div class="card-body p-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <span
-                                                class="badge {{ $field->is_active ? 'bg-success' : 'bg-secondary' }} me-1">
-                                                {{ $field->field_label }}
-                                            </span>
-                                            @if ($field->course_name)
-                                                <small class="text-muted">({{ $field->course_name }})</small>
-                                            @endif
-                                            @if ($field->event_name)
-                                                <small class="text-muted">- {{ $field->event_name }}</small>
-                                            @endif
-                                        </div>
-                                        <div>
-                                            <input type="checkbox" class="toggle-reflection"
-                                                data-id="{{ $field->id }}" {{ $field->is_active ? 'checked' : '' }}
-                                                title="Toggle Active">
-                                            <button class="btn btn-sm btn-danger ms-1 delete-reflection"
-                                                data-id="{{ $field->id }}" title="Delete">×</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @endforeach
+                    <div class="mt-3">
+    <h6>Existing Reflection Fields:</h6>
+    <div class="table-responsive">
+    <table class="table table-bordered align-middle" id="datatable-columns">
+<script>
+$(document).ready(function() {
+    $('#datatable-courses').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthMenu: [5, 10, 25, 50],
+        pageLength: 10,
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            paginate: { previous: "Prev", next: "Next" }
+        }
+    });
+    $('#datatable-groups').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthMenu: [5, 10, 25, 50],
+        pageLength: 10
+    });
+    $('#datatable-columns').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthMenu: [5, 10, 25, 50],
+        pageLength: 10
+    });
+});
+</script>
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Field Label</th>
+                    <th scope="col">Course</th>
+                    <th scope="col">Event</th>
+                    <th scope="col" class="text-center">Active</th>
+                    <th scope="col" class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach ($reflectionFields as $field)
+                    <tr>
+                        <td>
+                            <span class="badge {{ $field->is_active ? 'bg-success' : 'bg-secondary' }} me-1">
+                                {{ $field->field_label }}
+                            </span>
+                        </td>
+                        <td>
+                            @if ($field->course_name)
+                                <small class="text-muted">{{ $field->course_name }}</small>
+                            @else
+                                <small class="text-muted">—</small>
+                            @endif
+                        </td>
+                        <td>
+                            @if ($field->event_name)
+                                <small class="text-muted">{{ $field->event_name }}</small>
+                            @else
+                                <small class="text-muted">—</small>
+                            @endif
+                        </td>
+                        <td class="text-center">
+    <div class="form-check form-switch d-inline-block">
+        <input type="checkbox"
+            class="form-check-input toggle-reflection"
+            data-id="{{ $field->id }}"
+            id="toggleReflection{{ $field->id }}"
+            {{ $field->is_active ? 'checked' : '' }}
+            title="Toggle Active">
+    </div>
+</td>
+
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-danger delete-reflection"
+                                data-id="{{ $field->id }}" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7">
+                                                     </iconify-icon></button>
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+</div>
+
                 </div>
             </div>
 

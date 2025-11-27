@@ -9,8 +9,6 @@
         }
     </style>
     <div class="container-fluid">
-        <x-breadcrum title="Registration List" />
-        <x-session_message />
 
         <div class="card" style="border-left: 4px solid #004a93;">
             {{-- <div class="card-body">

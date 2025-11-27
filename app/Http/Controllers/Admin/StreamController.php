@@ -9,7 +9,7 @@ class StreamController extends Controller
 {
     public function index()
     {
-        $streams = Stream::all();
+        $streams = Stream::paginate(10);
         return view('admin.stream.index', compact('streams'));
     }
 

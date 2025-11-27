@@ -121,6 +121,18 @@ class CourseAttendanceNoticeMapController extends Controller
     $venue = VenueMaster::where('active_inactive', 1)->get();
     $memo_master = MemoTypeMaster::where('active_inactive', 1)->get();
 
+    // Paginate the collection
+    $perPage = 10;
+    $currentPage = request()->get('page', 1);
+    $pagedData = $memos->slice(($currentPage - 1) * $perPage, $perPage)->values();
+    $memos = new \Illuminate\Pagination\LengthAwarePaginator(
+        $pagedData,
+        $memos->count(),
+        $perPage,
+        $currentPage,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+
     return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master'));
 }
 
@@ -798,6 +810,18 @@ public function noticedeleteMessage($id,$type)
         }
     }
     // print_r($memos);die;
+
+    // Paginate the collection
+    $perPage = 10;
+    $currentPage = request()->get('page', 1);
+    $pagedData = $memos->slice(($currentPage - 1) * $perPage, $perPage)->values();
+    $memos = new \Illuminate\Pagination\LengthAwarePaginator(
+        $pagedData,
+        $memos->count(),
+        $perPage,
+        $currentPage,
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
 
     return view('admin.courseAttendanceNoticeMap.uers_notice_list', compact('memos'));
 }

@@ -1,8 +1,8 @@
 @extends('admin.layouts.master')
+@section('title', 'Peer Evaluation Groups | Sargam User Panel')
+
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Peer Evaluation Groups" />
-        <x-session_message />
     <div class="card p-3" style="border-left: 4px solid #004a93;">
         <h4>All Peer Evaluation Groups</h4>
 

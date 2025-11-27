@@ -1,17 +1,96 @@
-<!--  Header Start -->
+<!-- 🌟 Header Start -->
+<style>
+/* --- Navbar Styling --- */
+.navbar-nav .nav-link {
+    color: #333;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+}
+
+.navbar-nav .nav-link:hover,
+.navbar-nav .nav-link:focus {
+    background-color: #f2f2f2;
+    color: #000;
+    outline: none;
+}
+
+.navbar-nav .nav-link.active {
+    background-color: #B12923;
+    color: #fbf8f8 !important;
+    font-size: 16px !important;
+    line-height: 24px;
+    font-weight: 500 !important;
+    padding: 10px !important;
+    border-radius: 26px !important;
+    Width: 90px !important;
+    Height: 40px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 3px 0 3px 0 rgba(232, 191, 189, 0.8);
+}
+
+.btn-link {
+    text-decoration: none !important;
+}
+
+.btn-link:hover {
+    opacity: 0.8;
+}
+
+@media (max-width: 991.98px) {
+    .navbar-nav {
+        border-radius: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .navbar-nav .nav-link {
+        width: 100%;
+        border-radius: 0.5rem;
+    }
+}
+
+/* --- Search Animation --- */
+.search-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.search-box {
+    position: absolute;
+    top: 50%;
+    left: 120%;
+    transform: translateY(-50%) scale(0.95);
+    opacity: 0;
+    display: none;
+    min-width: 220px;
+    transition: all 0.3s ease;
+    z-index: 1050;
+}
+
+.search-box.show {
+    display: block !important;
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+}
+
+.input-group-sm .form-control {
+    border-radius: 50rem 0 0 50rem;
+}
+
+.input-group-sm .btn {
+    border-radius: 0 50rem 50rem 0;
+}
+</style>
+
 <header class="topbar">
     <div class="with-vertical">
-
-        <!-- ---------------------------------- -->
-        <!-- Start Vertical Layout Header -->
-        <!-- ---------------------------------- -->
         <nav class="navbar navbar-expand-lg p-0">
-
-
-
             <ul class="navbar-nav">
                 <li class="nav-item d-flex d-xl-none">
-                    <a class="nav-link nav-icon-hover-bg rounded-circle  sidebartoggler " id="headerCollapse"
+                    <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
                         href="javascript:void(0)">
                         <iconify-icon icon="solar:hamburger-menu-line-duotone" class="fs-6"></iconify-icon>
                     </a>
@@ -19,105 +98,207 @@
             </ul>
 
             <div class="d-block d-lg-none py-9 py-xl-0">
-                <img src="{{asset('admin_assets/images/logos/logo.svg')}}" alt="sargam-img">
+                <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo">
             </div>
-            <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" href="javascript:void(0)"
-                data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
+
+            <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
+                data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
                 aria-label="Toggle navigation">
                 <iconify-icon icon="solar:menu-dots-bold-duotone" class="fs-6"></iconify-icon>
             </a>
+
             <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
 
-                <div class="d-flex align-items-center justify-content-between">
-                    <ul class="navbar-nav flex-row mx-auto ms-lg-auto align-items-center justify-content-center">
-                        <li class="nav-item dropdown">
-                            <a href="javascript:void(0)"
-                                class="nav-link nav-icon-hover-bg rounded-circle d-flex d-lg-none align-items-center justify-content-center"
-                                type="button" data-bs-toggle="offcanvas" data-bs-target="#mobilenavbar"
-                                aria-controls="offcanvasWithBothOptions">
-                                <iconify-icon icon="solar:sort-line-duotone" class="fs-6"></iconify-icon>
+                    <ul class="navbar-nav shadow-sm px-3 py-1 gap-1 align-items-center"
+                        style="border-radius: 30px; height: 60px;background-color: #F2F2F2">
+
+                        <!-- Home -->
+                        <li class="nav-item">
+                            <a href="#home" class="nav-link active rounded-pill px-4 py-1 fw-semibold"
+                                data-bs-toggle="tab" role="tab">
+                                Home
                             </a>
                         </li>
 
-
-                        <!-- ------------------------------- -->
-                        <!-- start profile Dropdown -->
-                        <!-- ------------------------------- -->
-                        <li class="nav-item dropdown">
-                            <a class="nav-link" href="javascript:void(0)" id="drop1" aria-expanded="false">
-                                <div class="d-flex align-items-center gap-2 lh-base">
-                                    <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
-                                        class="rounded-circle" width="35" height="35" alt="matdash-img">
-                                    <iconify-icon icon="solar:alt-arrow-down-bold" class="fs-2"></iconify-icon>
-                                </div>
+                        <!-- Setup -->
+                        <li class="nav-item">
+                            <a href="#tab-setup" class="nav-link rounded-pill px-3 py-1 fw-semibold"
+                                data-bs-toggle="tab" role="tab">
+                                Setup
                             </a>
-                            <div class="dropdown-menu profile-dropdown dropdown-menu-end dropdown-menu-animate-up"
-                                aria-labelledby="drop1">
-                                <div class="position-relative px-4 pt-3 pb-2">
-                                    <div class="d-flex align-items-center mb-3 pb-3 border-bottom gap-6">
-                                        <img src="{{asset('admin_assets/images/profile/user-1.jpg')}}"
-                                            class="rounded-circle" width="56" height="56" alt="matdash-img">
-                                        <div>
-                                            <h5 class="mb-0 fs-12">Admin</h5>
-                                            <p class="mb-0 text-dark">
-                                                admin@gmail.com
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div class="message-body">
-                                        <a href="#" class="p-2 dropdown-item h6 rounded-1">
-                                            My Profile
-                                        </a>
-                                        <form action="{{route('logout')}}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="p-2 dropdown-item h6 rounded-1">
-                                                Sign Out
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
                         </li>
-                        <!-- ------------------------------- -->
-                        <!-- end profile Dropdown -->
-                        <!-- ------------------------------- -->
+
+                        <!-- Communications -->
+                        <li class="nav-item">
+                            <a href="#tab-communications" class="nav-link rounded-pill px-3 py-1 fw-semibold"
+                                data-bs-toggle="tab" role="tab">
+                                Communications
+                            </a>
+                        </li>
+
+                        <!-- Academics -->
+                        <li class="nav-item">
+                            <a href="#tab-academics" class="nav-link rounded-pill px-3 py-1 fw-semibold"
+                                data-bs-toggle="tab" role="tab">
+                                Academics
+                            </a>
+                        </li>
+
+                        <!-- Material Management -->
+                        <li class="nav-item">
+                            <a href="#tab-material-management" class="nav-link rounded-pill px-3 py-1 fw-semibold"
+                                data-bs-toggle="tab" role="tab">
+                                Material Management
+                            </a>
+                        </li>
+
+                        <!-- CUSTOM DROPDOWN WITH ARROW -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link rounded-pill px-3 py-1 fw-semibold d-flex align-items-center gap-1 dropdown-toggle-custom"
+                                href="#" id="financialDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Financial
+                                <i class="material-icons material-symbols-rounded fs-5 dropdown-arrow">expand_more</i>
+                            </a>
+
+                            <ul class="dropdown-menu shadow-sm border-0" aria-labelledby="financialDropdown">
+                                <li><a class="dropdown-item" href="#">Budget</a></li>
+                                <li><a class="dropdown-item" href="#">Accounts</a></li>
+                            </ul>
+                        </li>
+
+                        <!-- SEARCH ICON (AT THE END) -->
+                        <li class="nav-item">
+                            <a href="javascript:void(0)" class="nav-link rounded-pill px-2 py-1 ">
+                                <i class="material-icons material-symbols-rounded text-dark"
+                                    style="font-size: 24px;">search</i>
+                            </a>
+                        </li>
+
                     </ul>
+
+                </div>
+
+
+                <div class="d-flex align-items-center ms-auto gap-3" style="margin-right:56px;">
+
+                    <!-- 🔐 Logout -->
+                    <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-link p-0 text-danger" aria-label="Sign Out">
+                            <i class="material-icons material-symbols-rounded"
+                                style="font-size: 24px; color:#333333;">logout</i>
+                        </button>
+                    </form>
+
+                    <!-- ⏰ Last Login -->
+                    <div class="text-end small text-muted lh-sm justify-content-center">
+                        <div class="text-center" style="font-size: 12px;line-height: 16px;">Last login:</div>
+                        <time id="myTime" datetime="2025-05-14T13:56:02">2025-05-14 13:56:02</time>
+
+                    </div>
                 </div>
             </div>
         </nav>
-        <!-- ---------------------------------- -->
-        <!-- End Vertical Layout Header -->
-        <!-- ---------------------------------- -->
     </div>
 </header>
-<!--  Header End -->
+
+
+
+<!-- 🧠 Search Toggle Script -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.tab-item').forEach(item => {
-        item.addEventListener('click', function(e) {
-            e.preventDefault();
+    document.querySelectorAll("time").forEach(function(el) {
+        const dt = new Date(el.getAttribute("datetime"));
 
-            // Remove active class from all tab items
-            document.querySelectorAll('.tab-item').forEach(tab => tab.classList.remove(
-                'active'));
+        const day = String(dt.getDate()).padStart(2, '0');
+        const month = String(dt.getMonth() + 1).padStart(2, '0'); // JS months start at 0
+        const year = dt.getFullYear();
 
-            // Add active class to clicked tab
-            this.classList.add('active');
+        const hours = String(dt.getHours()).padStart(2, '0');
+        const minutes = String(dt.getMinutes()).padStart(2, '0');
+        const seconds = String(dt.getSeconds()).padStart(2, '0');
 
-            // Remove active class and hide all tab panes
-            document.querySelectorAll('.tab-pane').forEach(pane => {
-                pane.classList.remove('active');
-                pane.classList.add('d-none');
-            });
-
-            // Show and activate the target content pane
-            const target = this.getAttribute('data-tab');
-            const targetPane = document.getElementById('tab-' + target);
-            if (targetPane) {
-                targetPane.classList.remove('d-none');
-                targetPane.classList.add('active');
-            }
-        });
+        el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
     });
 });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.getElementById('searchToggleBtn');
+    const searchBox = document.getElementById('searchContainer');
+    const closeBtn = document.getElementById('closeSearchBtn');
+    const searchInput = document.getElementById('tableSearchInput');
+
+    // Open/close search
+    toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        searchBox.classList.toggle('show');
+        if (searchBox.classList.contains('show')) {
+            searchInput.focus();
+        } else {
+            searchInput.value = '';
+        }
+    });
+
+    // Close via X button
+    closeBtn.addEventListener('click', () => {
+        searchBox.classList.remove('show');
+        searchInput.value = '';
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+            searchBox.classList.remove('show');
+        }
+    });
+
+    // Close on ESC key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            searchBox.classList.remove('show');
+        }
+    });
+});
+</script>
+
+<!-- Fallback Tab Switcher (if Bootstrap JS not active) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tabLinks = document.querySelectorAll('#mainNavbar .nav-link[data-bs-toggle="tab"]');
+    const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+
+    function showPane(targetId) {
+        panes.forEach(p => {
+            if ('#' + p.id === targetId) {
+                p.classList.add('show', 'active');
+            } else {
+                p.classList.remove('show', 'active');
+            }
+        });
+        tabLinks.forEach(l => {
+            if (l.getAttribute('href') === targetId) {
+                l.classList.add('active');
+            } else {
+                l.classList.remove('active');
+            }
+        });
+    }
+
+    tabLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = this.getAttribute('href');
+            showPane(target);
+            history.replaceState(null, '', target);
+        });
+    });
+
+    // Initialize on load to current hash or default to #home
+    const initial = window.location.hash || '#home';
+    showPane(initial);
+});
+</script>
+<!-- 🌟 Header End -->

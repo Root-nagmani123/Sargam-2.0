@@ -14,7 +14,7 @@ class AttendanceController extends Controller
 {
     function index()
     {
-        try {
+        // try {
 
             $sessions = ClassSessionMaster::get();
             $maunalSessions = Timetable::select('class_session')
@@ -28,11 +28,11 @@ class AttendanceController extends Controller
             $courseMasters = CourseMaster::whereIn('pk', $courseMasterPK)->select('course_name', 'pk')->get()->toArray();
 
             return view('admin.attendance.index', compact('courseMasters', 'sessions', 'maunalSessions'));
-        } catch (\Exception $e) {
-            dd($e->getMessage());
-            // Handle the exception
-            return redirect()->route('attendance.index')->with('error', 'An error occurred: ' . $e->getMessage());
-        }
+        // } catch (\Exception $e) {
+        //     dd($e->getMessage());
+        //     // Handle the exception
+        //     return redirect()->route('attendance.index')->with('error', 'An error occurred: ' . $e->getMessage());
+        // }
 
     }
 

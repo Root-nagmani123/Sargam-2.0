@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\{
     HostelBuildingFloorMappingController,
     HostelBuildingFloorRoomMappingController
 };
+use App\Http\Controllers\Dashboard\Calendar1Controller;
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -53,11 +54,19 @@ Route::middleware(['auth'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', function () {
-        return view('admin.dashboard');
+        $year = request('year', now()->year);
+        $month = request('month', now()->month);
+        $events = []; // Add your events logic here if needed
+        return view('admin.dashboard', compact('year', 'month', 'events'));
+
     })->name('admin.dashboard');
+    Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
-//Route::get('/faculty/print-blank-form', [FacultyController::class, 'printBlankForm'])->name('faculty.printBlankForm');
+
+	// By Dhananjay
+//Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
+
 
     // Member Routes
     Route::prefix('member')->name('member.')->controller(MemberController::class)->group(function () {
@@ -84,9 +93,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
-		
-		
-	Route::post('check-unique', 'checkUnique')->name('checkUnique');
+		 Route::post('check-unique', 'checkUnique')->name('checkUnique');
     Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
     Route::get('check-firstname', 'checkFirstName')->name('checkFirstName');
     Route::get('check-fullname', 'checkFullName')->name('checkFullName');
@@ -97,7 +104,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('print-blank', function () {
         return view('admin.faculty.blank-print');
     })->name('printBlank');
-
 
     });
 

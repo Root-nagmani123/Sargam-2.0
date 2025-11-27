@@ -1,24 +1,22 @@
-<!-- Sidebar Start -->
-<div class="tab-content mt-4">
-    <div class="tab-pane active" id="tab-home">
-       @include('admin.layouts.sidebar.home')
+
+<!-- Tab Content Container -->
+    <div class="tab-content" id="mainNavbarContent">
+        <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+           @include('admin.layouts.sidebar.home')
+        </div>
+        <div class="tab-pane fade" id="tab-setup" role="tabpanel" aria-labelledby="setup-tab">
+            @include('admin.layouts.sidebar.setup')
+        </div>
+        <div class="tab-pane fade" id="tab-communications" role="tabpanel" aria-labelledby="communications-tab">
+            @include('admin.layouts.sidebar.communication') 
+        </div>
+        <div class="tab-pane fade" id="tab-academics" role="tabpanel" aria-labelledby="academics-tab">
+            @include('admin.layouts.sidebar.academics')
+        </div>
+        <div class="tab-pane fade" id="tab-material-management" role="tabpanel" aria-labelledby="material-management-tab">
+            @include('admin.layouts.sidebar.material')
+        </div>
     </div>
-    <div class="tab-pane d-none" id="tab-setup">
-        @include('admin.layouts.sidebar.setup')
-    </div>
-    <div class="tab-pane d-none" id="tab-communication">
-        @include('admin.layouts.sidebar.communication')
-    </div>
-    <div class="tab-pane d-none" id="tab-academics">
-        @include('admin.layouts.sidebar.academics')
-    </div>
-    <div class="tab-pane d-none" id="tab-material-management">
-        @include('admin.layouts.sidebar.material')
-    </div>
-    <div class="tab-pane d-none" id="tab-financial">
-        @include('admin.layouts.sidebar.financial')
-    </div>
-</div>
 
 <script>
 const sidebar = document.querySelector('.sidebarmenu .simplebar-content-wrapper');
