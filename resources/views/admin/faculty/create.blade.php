@@ -6,11 +6,19 @@
 
 <div class="container-fluid">
     <x-breadcrum title="Faculty" />
+    <div class="btn-group" role="group">
+    <a href="{{ route('faculty.printBlankForm') }}" target="_blank" class="btn btn-outline-secondary">
+        <i class="material-icons">description</i> Print Blank Form
+    </a>
+    <button type="button" class="btn btn-outline-primary" onclick="printFacultyFormEnhanced()">
+        <i class="material-icons">print</i> Print Current Form
+    </button>
+</div>
     <x-session_message />
     <!-- start Vertical Steps Example -->
     {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
         <div class="card-body"> --}}
-            
+
             <form class="facultyForm">
                 <div class="card">
                     <div class="card-body">
@@ -19,10 +27,10 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    
-                                    <x-select 
-                                        name="facultytype" 
-                                        label="Faculty Type :" 
+
+                                    <x-select
+                                        name="facultytype"
+                                        label="Faculty Type :"
                                         formLabelClass="form-label"
                                         :options="$facultyTypeList"
                                         required="true"
@@ -32,10 +40,10 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <x-input 
-                                        name="firstName" 
-                                        label="First Name :" 
-                                        placeholder="First Name" 
+                                    <x-input
+                                        name="firstName"
+                                        label="First Name :"
+                                        placeholder="First Name"
                                         formLabelClass="form-label"
                                         required="true"
                                         value="{{ $hostelFloorMapping->hostel_floor_master_pk ?? '' }}"
@@ -49,14 +57,14 @@
 
                                     <x-input
                                         name="middlename"
-                                        label="Middle Name :" 
+                                        label="Middle Name :"
                                         placeholder="Middle Name"
                                         formLabelClass="form-label"
                                         required="true"
                                         formInputClass="only-letters"
                                         />
 
-                                    
+
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -64,7 +72,7 @@
 
                                     <x-input
                                         name="lastname"
-                                        label="Last Name :" 
+                                        label="Last Name :"
                                         placeholder="Last Name"
                                         formLabelClass="form-label"
                                         required="true"
@@ -79,7 +87,7 @@
 
                                     <x-input
                                         name="fullname"
-                                        label="Full Name :" 
+                                        label="Full Name :"
                                         placeholder="Full Name"
                                         formLabelClass="form-label"
                                         required="true"
@@ -98,26 +106,26 @@
                                             'other' => 'Other',
                                         ];
                                     @endphp
-                                    <x-select 
-                                        name="gender" 
-                                        label="Gender :" 
-                                        placeholder="Gender" 
-                                        formLabelClass="form-label" 
-                                        :options="$genderList" 
+                                    <x-select
+                                        name="gender"
+                                        label="Gender :"
+                                        placeholder="Gender"
+                                        formLabelClass="form-label"
+                                        :options="$genderList"
                                         required="true"
                                         labelRequired="true"
                                         />
-                                        
+
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <x-input 
-                                        type="text" 
-                                        name="landline" 
-                                        label="Landline Number" 
-                                        placeholder="Landline Number" 
+                                    <x-input
+                                        type="text"
+                                        name="landline"
+                                        label="Landline Number"
+                                        placeholder="Landline Number"
                                         formLabelClass="form-label"
                                         required="true"
                                         labelRequired="true"
@@ -130,11 +138,11 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <x-input 
-                                        type="text" 
-                                        name="mobile" 
-                                        label="Mobile Number :" 
-                                        placeholder="Mobile Number" 
+                                    <x-input
+                                        type="text"
+                                        name="mobile"
+                                        label="Mobile Number :"
+                                        placeholder="Mobile Number"
                                         formLabelClass="form-label"
                                         required="true"
                                         labelRequired="true"
@@ -151,7 +159,7 @@
                                         label="Country :"
                                         placeholder="Country"
                                         formLabelClass="form-label"
-                                        :options="$country" 
+                                        :options="$country"
                                         required="true"
                                         labelRequired="true"
                                         />
@@ -190,7 +198,7 @@
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <x-select 
+                                    <x-select
                                         name="city"
                                         label="City :"
                                         placeholder="City"
@@ -206,7 +214,7 @@
                             <div class="col-md-6 d-none" id="otherCityContainer">
                                 <div class="mb-3">
 
-                                    <x-input 
+                                    <x-input
                                         name="other_city"
                                         label="Other City :"
                                         placeholder="Other City"
@@ -226,7 +234,7 @@
                                     formLabelClass="form-label"
                                     />
                                 </div>
-                                
+
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -237,7 +245,7 @@
                                     formLabelClass="form-label"
                                     />
                                 </div>
-                                
+
                             </div>
                              <div class="col-md-6">
 
@@ -248,7 +256,7 @@
                                     formLabelClass="form-label"
                                     labelRequired="true"
                                     />
-                                
+
                             </div>
                             <div class="col-md-6">
                                 <x-input
@@ -256,12 +264,12 @@
                                     label="Alternate Email :"
                                     placeholder="Alternate Email :"
                                     formLabelClass="form-label"
-                                    
+
                                     />
-                                
+
                             </div>
                             <div class="col-md-6 mt-3">
-                                <x-input 
+                                <x-input
                                     type="file"
                                     name="photo"
                                     label="Photo Upload:"
@@ -279,7 +287,7 @@
 
                             <div class="col-md-6 mt-3">
 
-                                <x-input 
+                                <x-input
                                     type="file"
                                     name="document"
                                     label="Document upload :"
@@ -336,7 +344,7 @@
                                         step="1"
                                         required="true"
                                         /> --}}
-                                        
+
                                     <x-select
                                         name="year_of_passing[]"
                                         label="Year of Passing :"
@@ -360,7 +368,7 @@
                                         required="true"
                                         labelRequired="true"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-3 mt-3">
 
@@ -375,7 +383,7 @@
                                         labelRequired="true"
                                         />
 
-                                    
+
                                 </div>
                                 <div class="col-9">
                                     <label for="Schoolname" class="form-label"></label>
@@ -386,7 +394,7 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                         </div>
                     </div>
                 </div>
@@ -429,7 +437,7 @@
                                         />
                                 </div>
                                 <div class="col-3">
-                                    <x-input 
+                                    <x-input
                                         name="position[]"
                                         label="Position Held :"
                                         placeholder="Position Held"
@@ -437,7 +445,7 @@
                                         required="true"
                                         labelRequired="true"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-3 mt-3">
                                     <x-input
@@ -462,7 +470,7 @@
                                         />
                                 </div>
                                 <div class="col-6">
-                                    
+
                                     <label for="Schoolname" class="form-label"></label>
                                     <div class="mb-3 float-end">
                                         <button onclick="experience_fields();" class="btn btn-success btn-sm" type="button">
@@ -482,7 +490,7 @@
                             <hr>
                             <div class="row">
                                 <div class="col-6">
-                                    <x-input 
+                                    <x-input
                                         name="bankname"
                                         label="Bank Name :"
                                         placeholder="Bank Name"
@@ -490,7 +498,7 @@
                                         required="true"
                                         labelRequired="true"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-6">
 
@@ -504,7 +512,7 @@
                                         labelRequired="true"
                                         formInputClass="only-numbers"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-6 mt-3">
 
@@ -516,10 +524,10 @@
                                         required="true"
                                         labelRequired="true"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-6 mt-3">
-                                    
+
                                     <x-input
                                         type="text"
                                         name="pannumber"
@@ -551,7 +559,7 @@
                                         required="true"
                                         helperSmallText="Please upload your research publications, if any"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-6">
 
@@ -567,7 +575,7 @@
 
                                 </div>
                                 <div class="col-6 mt-3">
-                                    
+
                                     <x-input
                                         type="file"
                                         name="recommendationdetails"
@@ -589,14 +597,14 @@
                                         required="true"
                                         labelRequired="true"
                                         />
-                                    
+
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                
+
+
                 <div class="card">
                     <div class="card-body">
                         <div class="row">
@@ -643,7 +651,7 @@
                         </div>
                     </div>
                 </div>
-                
+
             </form>
         {{-- </div>
     </div> --}}
@@ -655,6 +663,7 @@
 
 @section('scripts')
 <script>
+
 $(document).ready(function () {
 
     // Check Email
@@ -695,5 +704,238 @@ $(document).ready(function () {
         });
     }
 });
+$(document).ready(function () {
+	
+    let $input = $('#firstName');
+    let $suggestionBox = $('#suggestionList');
+	
+	  $('#suggestionList').hide();
+	
+    // =============================
+    // 1) Live Search Full Name
+    // =============================
+    $input.on('keyup', function () {
+        let query = $(this).val().trim();
+
+        if (query.length > 1) {
+            $.ajax({
+                url: "{{ route('faculty.checkFullName') }}",
+                type: "GET",
+                data: { query: query },
+                success: function (response) {
+                    let html = "";
+
+                    if (response.suggestions.length > 0) {
+                        response.suggestions.forEach(function (item) {
+                            html += `<a href="#" class="list-group-item list-group-item-action suggestion-item" 
+                                      data-id="${item.id}" 
+                                      data-fullname="${item.full_name}">
+                                        ${item.full_name}
+                                     </a>`;
+                        });
+                    } else {
+                        html = '<a class="list-group-item disabled">No results found</a>';
+                    }
+
+                    $suggestionBox.html(html).show();
+                }
+            });
+        } else {
+            $suggestionBox.hide();
+        }
+    });
+
+  function fillFacultyForm_working(faculty) {
+
+    // Auto-fill all input fields
+    $('.facultyForm input').each(function () {
+        let fieldName = $(this).attr('name');
+
+        if (faculty[fieldName] !== undefined) {
+            $(this).val(faculty[fieldName]);
+        }
+    });
+
+    // Auto-fill all select fields
+    $('.facultyForm select').each(function () {
+        let fieldName = $(this).attr('name');
+
+        if (faculty[fieldName] !== undefined) {
+            $(this).val(faculty[fieldName]).trigger('change');
+        }
+    });
+
+    // Auto-fill all textarea fields
+    $('.facultyForm textarea').each(function () {
+        let fieldName = $(this).attr('name');
+
+        if (faculty[fieldName] !== undefined) {
+            $(this).val(faculty[fieldName]);
+        }
+		});
+	
+		$('.facultyForm input').each(function () {
+		let fieldName = $(this).attr('name');
+
+		if (faculty[fieldName] !== undefined) {
+			$(this).val(faculty[fieldName]);
+		}
+		});
+		
+		$('.facultyForm input').each(function () {
+		let fieldName = $(this).attr('name');
+		if (faculty[fieldName] !== undefined) {
+        $(this).val(faculty[fieldName]);
+		}
+	});
+
+    
+}
+
+function fillFacultyForm(faculty) {
+
+    // Loop through all keys returned from server
+  
+			//Personal Information
+
+			// Auto-fill name
+			
+            $("input[name='firstName']").val(faculty.first_name ?? "");
+            $("input[name='middlename']").val(faculty.middle_name ?? "");
+            $("input[name='lastname']").val(faculty.last_name ?? "");
+            $("input[name='fullname']").val(
+                faculty.first_name + " " + (faculty.middle_name ?? "") + " " + faculty.last_name
+            );
+
+            // Auto-fill remaining fields
+           $("select[name='facultytype']").val(faculty.faculty_type);
+           $("input[name='landline']").val(faculty.landline_no);
+           $("input[name='mobile']").val(faculty.mobile_no);
+           $("input[name='email']").val(faculty.email_id);
+		   $("input[name='alternativeEmail']").val(faculty.alternate_email_id);
+		   
+            $("select[name='gender']").val(faculty.gender);
+			
+          // Set Country
+ setTimeout(() => {
+            $("select[name='country']").val(faculty.country_master_pk).trigger("change");
+        }, 200);
+
+        // --- STATE ---
+        setTimeout(() => {
+            $("select[name='state']").val(faculty.state_master.state_name).trigger("change");
+        }, 400);
+
+        // --- DISTRICT ---
+        setTimeout(() => {
+            $("select[name='district']").val(faculty.state_district_mapping_pk).trigger("change");
+        }, 600);
+
+        // --- CITY ---
+        setTimeout(() => {
+            $("select[name='city']").val(faculty.city_master_pk).trigger("change");
+        }, 800);
+		
+$("input[name='residence_address']").val(faculty.Residence_address);
+	
+$("input[name='permanent_address']").val(faculty.Permanent_Address);
+	
+	if (faculty.photo_uplode_path) {
+    const photoURL = `/storage/${faculty.photo_uplode_path}`;
+
+    // show inside <img id="photoPreview">
+    $("#photoPreview").attr("src", photoURL);
+	
+    // show "view existing photo" link
+    $(".existing-photo").html(`
+        <a href="${photoURL}" target="_blank" class="text-primary">
+            View Existing Photo
+        </a>
+    `);
+	}
+
+//Qualification Details
+			
+faculty.faculty_qualification_map.forEach(function(q, index) {
+    const row = $(".degree-row").eq(index);
+
+    row.find("input[name='degree[]']").val(q.Degree_name);
+    row.find("input[name='university_institution_name[]']").val(q.University_Institution_Name);
+   row.find("select[name='year_of_passing[]']").val(q.Year_of_passing).trigger('change');
+
+  row.find("input[name='percentage_CGPA[]']").val(q.Percentage_CGPA);
+	
+ if (q.Certifcates_upload_path) {
+        row.find(".existing-certificate").html(`
+            <a href="storage/${q.Certifcates_upload_path}" target="_blank" class="text-primary">
+                View Existing Certificate
+            </a>
+			`);
+		}
+	});
+	
+			
+faculty.faculty_experience_map.forEach(function(exp, index) {
+ const row = $(".experience-row").eq(index);
+
+ row.find("input[name='experience[]']").val(exp.Years_Of_Experience);
+ 
+ row.find("input[name='specialization[]']").val(exp.Specialization);
+ 
+ row.find("input[name='institution[]']").val(exp.pre_Institutions);
+ 
+ row.find("input[name='position[]']").val(exp.Position_hold);
+ 
+ row.find("input[name='duration[]']").val(exp.duration);
+ 
+ row.find("input[name='work[]']").val(exp.Nature_of_Work);
+	
+});
+
+	//Bank Details
+	$("input[name='bankname']").val(faculty.bank_name);
+	$("input[name='accountnumber']").val(faculty.Account_No);
+	$("input[name='ifsccode']").val(faculty.IFSC_Code);
+	$("input[name='pannumber']").val(faculty.PAN_No);
+	
+	if (faculty.joining_date) {
+    let formattedDate = new Date(faculty.joining_date).toISOString().slice(0, 10);
+    $("input[name='joiningdate']").val(formattedDate);
+	}
+
+	faculty.faculty_expertise_map.forEach(item => {
+    $('input[name="expertise[]"][value="' + item.faculty_expertise_pk + '"]').prop("checked", true);
+	});
+
+ 
+ document.querySelector('input[name="current_sector"]:checked').value;
+ document.querySelectorAll('input[name="faculties[]"]:checked');
+	}
+	
+
+    // =========================================
+    // 3) When User Clicks a Suggested Full Name
+    // ========================================= 
+    $(document).on('click', '.suggestion-item', function (e) {
+    e.preventDefault();
+
+    let id = $(this).data('id');
+    let fullname = $(this).data('fullname');
+
+    $('#firstName').val(fullname);
+    $('#suggestionList').hide();
+
+    // GET full faculty details
+    $.ajax({
+        url: "/faculty/details/" + id,
+        type: "GET",
+        success: function (faculty) {
+			fillFacultyForm(faculty);  // <--- AUTO FILL FULL FORM
+			
+        }
+    });
+});
+});
+
 </script>
 @endsection
