@@ -3,8 +3,55 @@
 @section('title', 'Faculty')
 
 @section('content')
+<style>
+input.is-invalid {
+    border-color: #dc3545;
+}
 
-<div class="container-fluid">
+#suggestionList a {
+    cursor: pointer;
+}
+// print functionality
+@media print {
+    body, html {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .container-fluid,
+    .card,
+    .card-body,
+    .card-header {
+        margin: 0 !important;
+        padding-top: 10px !important;
+        page-break-before: avoid !important;
+    }
+
+    .mb-4, .mt-4, .pt-4, .py-4 {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .shadow-sm,
+    .shadow,
+    .card {
+        box-shadow: none !important;
+    }
+
+	 .col-md-6,
+    .col-12.col-md-6 {
+        max-width: 50% !important;
+        flex: 0 0 50% !important;
+    }
+
+    .row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+    }
+}
+// print functionality
+</style>
+<div class="container-fluid" id="printFacultyFormData">
     <x-breadcrum title="Faculty" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
@@ -329,7 +376,7 @@
                     </div>
                     <div class="col-3">
                         <x-input name="university_institution_name[]" label="University/Institution Name :"
-                            placeholder="University/Institution Name" formLabelClass="form-label" 
+                            placeholder="University/Institution Name" formLabelClass="form-label"
                             label />
                     </div>
                     <div class="col-3">
@@ -342,23 +389,23 @@
                                         min="1900"
                                         max="{{ date('Y') }}"
                         step="1"
-                        
+
                         /> --}}
 
                         <x-select name="year_of_passing[]" label="Year of Passing :" placeholder="Year of Passing"
-                            formLabelClass="form-label" :options="$years" 
+                            formLabelClass="form-label" :options="$years"
                             helperSmallText="Select the year of passing" label />
                     </div>
                     <div class="col-3">
                         <x-input type="number" min="0" max="100" name="percentage_CGPA[]" label="Percentage/CGPA"
-                            placeholder="Percentage/CGPA" formLabelClass="form-label" 
+                            placeholder="Percentage/CGPA" formLabelClass="form-label"
                             label />
 
                     </div>
                     <div class="col-3 mt-3">
 
                         <x-input type="file" name="certificate[]" label="Certificates/Documents Upload :"
-                            placeholder="Certificates/Documents Upload" formLabelClass="form-label" 
+                            placeholder="Certificates/Documents Upload" formLabelClass="form-label"
                             helperSmallText="Please upload your certificates/documents, if any" label />
 
 
@@ -389,7 +436,7 @@
                 <div class="col-3">
 
                     <x-input name="specialization[]" label="Area of Specialization :"
-                        placeholder="Area of Specialization" formLabelClass="form-label" 
+                        placeholder="Area of Specialization" formLabelClass="form-label"
                         label />
 
                 </div>
@@ -466,21 +513,21 @@
                     <div class="col-6">
 
                         <x-input type="file" name="researchpublications" label="Research Publications :"
-                            placeholder="Research Publications" formLabelClass="form-label" 
+                            placeholder="Research Publications" formLabelClass="form-label"
                             helperSmallText="Please upload your research publications, if any" />
 
                     </div>
                     <div class="col-6">
 
                         <x-input type="file" name="professionalmemberships" label="Professional Memberships :"
-                            placeholder="Professional Memberships" formLabelClass="form-label" 
+                            placeholder="Professional Memberships" formLabelClass="form-label"
                             helperSmallText="Please upload your professional memberships, if any" />
 
                     </div>
                     <div class="col-6 mt-3">
 
                         <x-input type="file" name="recommendationdetails" label="Reference/Recommendation Details :"
-                            placeholder="Reference/Recommendation Details" formLabelClass="form-label" 
+                            placeholder="Reference/Recommendation Details" formLabelClass="form-label"
                             helperSmallText="Please upload your reference/recommendation details, if any" />
 
                     </div>
@@ -588,5 +635,272 @@ $(document).ready(function() {
         });
     }
 });
+$(document).ready(function () {
+
+    let $input = $('#firstName');
+    let $suggestionBox = $('#suggestionList');
+
+	  $('#suggestionList').hide();
+
+
+
+    // =============================
+    // 1) Live Search Full Name
+    // =============================
+    $input.on('keyup', function () {
+        let query = $(this).val().trim();
+
+        if (query.length > 1) {
+            $.ajax({
+                url: "{{ route('faculty.checkFullName') }}",
+                type: "GET",
+                data: { query: query },
+                success: function (response) {
+                    let html = "";
+
+                    if (response.suggestions.length > 0) {
+                        response.suggestions.forEach(function (item) {
+                            html += `<a href="#" class="list-group-item list-group-item-action suggestion-item"
+                                      data-id="${item.id}"
+                                      data-fullname="${item.full_name}">
+                                        ${item.full_name}
+                                     </a>`;
+                        });
+                    } else {
+                        html = '<a class="list-group-item disabled">No results found</a>';
+                    }
+
+                    $suggestionBox.html(html).show();
+                }
+            });
+        } else {
+            $suggestionBox.hide();
+        }
+    });
+
+  function fillFacultyForm_working(faculty) {
+
+    // Auto-fill all input fields
+    $('.facultyForm input').each(function () {
+        let fieldName = $(this).attr('name');
+
+        if (faculty[fieldName] !== undefined) {
+            $(this).val(faculty[fieldName]);
+        }
+    });
+
+    // Auto-fill all select fields
+    $('.facultyForm select').each(function () {
+        let fieldName = $(this).attr('name');
+
+        if (faculty[fieldName] !== undefined) {
+            $(this).val(faculty[fieldName]).trigger('change');
+        }
+    });
+
+    // Auto-fill all textarea fields
+    $('.facultyForm textarea').each(function () {
+        let fieldName = $(this).attr('name');
+
+        if (faculty[fieldName] !== undefined) {
+            $(this).val(faculty[fieldName]);
+        }
+		});
+
+		$('.facultyForm input').each(function () {
+		let fieldName = $(this).attr('name');
+
+		if (faculty[fieldName] !== undefined) {
+			$(this).val(faculty[fieldName]);
+		}
+		});
+
+		$('.facultyForm input').each(function () {
+		let fieldName = $(this).attr('name');
+		if (faculty[fieldName] !== undefined) {
+        $(this).val(faculty[fieldName]);
+		}
+	});
+
+
+}
+
+function fillFacultyForm(faculty) {
+
+    // Loop through all keys returned from server
+   /* Object.keys(faculty).forEach(function (key) {
+
+        // Select input/select/textarea using ID
+        let field = $('.facultyForm #' + key);
+
+        // If field exists, fill value
+        if (field.length > 0) {
+            field.val(faculty[key]).trigger("change");
+        }
+    });*/
+			//Personal Information
+
+			// Auto-fill name
+
+            $("input[name='firstName']").val(faculty.first_name ?? "");
+            $("input[name='middlename']").val(faculty.middle_name ?? "");
+            $("input[name='lastname']").val(faculty.last_name ?? "");
+            $("input[name='fullname']").val(
+                faculty.first_name + " " + (faculty.middle_name ?? "") + " " + faculty.last_name
+            );
+
+            // Auto-fill remaining fields
+           $("select[name='facultytype']").val(faculty.faculty_type);
+           $("input[name='landline']").val(faculty.landline_no);
+           $("input[name='mobile']").val(faculty.mobile_no);
+           $("input[name='email']").val(faculty.email_id);
+		   $("input[name='alternativeEmail']").val(faculty.alternate_email_id);
+
+            $("select[name='gender']").val(faculty.gender);
+
+          // Set Country
+ setTimeout(() => {
+            $("select[name='country']").val(faculty.country_master_pk).trigger("change");
+        }, 200);
+
+        // --- STATE ---
+        setTimeout(() => {
+            $("select[name='state']").val(faculty.state_master.state_name).trigger("change");
+        }, 400);
+
+        // --- DISTRICT ---
+        setTimeout(() => {
+            $("select[name='district']").val(faculty.state_district_mapping_pk).trigger("change");
+        }, 600);
+
+        // --- CITY ---
+        setTimeout(() => {
+            $("select[name='city']").val(faculty.city_master_pk).trigger("change");
+        }, 800);
+
+$("input[name='residence_address']").val(faculty.Residence_address);
+
+$("input[name='permanent_address']").val(faculty.Permanent_Address);
+
+
+
+
+	if (faculty.photo_uplode_path) {
+    const photoURL = `/storage/${faculty.photo_uplode_path}`;
+
+    // show inside <img id="photoPreview">
+    $("#photoPreview").attr("src", photoURL);
+
+    // show "view existing photo" link
+    $(".existing-photo").html(`
+        <a href="${photoURL}" target="_blank" class="text-primary">
+            View Existing Photo
+        </a>
+    `);
+	}
+
+//Qualification Details
+
+faculty.faculty_qualification_map.forEach(function(q, index) {
+    const row = $(".degree-row").eq(index);
+
+    row.find("input[name='degree[]']").val(q.Degree_name);
+    row.find("input[name='university_institution_name[]']").val(q.University_Institution_Name);
+   row.find("select[name='year_of_passing[]']").val(q.Year_of_passing).trigger('change');
+
+  row.find("input[name='percentage_CGPA[]']").val(q.Percentage_CGPA);
+
+ if (q.Certifcates_upload_path) {
+        row.find(".existing-certificate").html(`
+            <a href="storage/${q.Certifcates_upload_path}" target="_blank" class="text-primary">
+                View Existing Certificate
+            </a>
+			`);
+		}
+	});
+
+
+faculty.faculty_experience_map.forEach(function(exp, index) {
+ const row = $(".experience-row").eq(index);
+
+ row.find("input[name='experience[]']").val(exp.Years_Of_Experience);
+
+ row.find("input[name='specialization[]']").val(exp.Specialization);
+
+ row.find("input[name='institution[]']").val(exp.pre_Institutions);
+
+ row.find("input[name='position[]']").val(exp.Position_hold);
+
+ row.find("input[name='duration[]']").val(exp.duration);
+
+ row.find("input[name='work[]']").val(exp.Nature_of_Work);
+
+});
+
+	//Bank Details
+	$("input[name='bankname']").val(faculty.bank_name);
+	$("input[name='accountnumber']").val(faculty.Account_No);
+	$("input[name='ifsccode']").val(faculty.IFSC_Code);
+	$("input[name='pannumber']").val(faculty.PAN_No);
+
+	if (faculty.joining_date) {
+    let formattedDate = new Date(faculty.joining_date).toISOString().slice(0, 10);
+    $("input[name='joiningdate']").val(formattedDate);
+	}
+
+	faculty.faculty_expertise_map.forEach(item => {
+    $('input[name="expertise[]"][value="' + item.faculty_expertise_pk + '"]').prop("checked", true);
+	});
+
+ //$('input[name="current_sector"][value="' + faculty.faculty_sector //+ '"]').prop("checked", true);
+
+ document.querySelector('input[name="current_sector"]:checked').value;
+ document.querySelectorAll('input[name="faculties[]"]:checked');
+
+
+
+
+
+
+
+
+	}
+
+
+
+
+
+    // =========================================
+    // 3) When User Clicks a Suggested Full Name
+    // =========================================
+    $(document).on('click', '.suggestion-item', function (e) {
+    e.preventDefault();
+
+    let id = $(this).data('id');
+    let fullname = $(this).data('fullname');
+
+    $('#firstName').val(fullname);
+    $('#suggestionList').hide();
+
+    // GET full faculty details
+    $.ajax({
+        url: "/faculty/details/" + id,
+        type: "GET",
+        success: function (faculty) {
+			fillFacultyForm(faculty);  // <--- AUTO FILL FULL FORM
+
+        }
+    });
+});
+
+
+
+
+});
+
+
+
+
 </script>
+
 @endsection
