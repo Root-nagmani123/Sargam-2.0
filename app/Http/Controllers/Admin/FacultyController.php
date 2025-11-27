@@ -28,7 +28,7 @@ class FacultyController extends Controller
         $state              = State::pluck('state_name', 'pk')->toArray();
         $district           = District::pluck('district_name', 'pk')->toArray();
         $city               = City::pluck('city_name', 'pk')->toArray();
-        
+
         $years = [];
         for ($i = date('Y'); $i >= 1950; $i--) {
             $years[$i] = $i;
@@ -40,7 +40,7 @@ class FacultyController extends Controller
     public function store(FacultyRequest $request)
     { //FacultyRequest
         try {
-            
+
             DB::beginTransaction();
 
             # Step : 1
@@ -58,7 +58,7 @@ class FacultyController extends Controller
                 'country_master_pk' => $request->country,
                 'state_master_pk' => $request->state,
                 'state_district_mapping_pk' => $request->district,
-                
+
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
                 'residence_address' => $request->residence_address,
@@ -166,7 +166,7 @@ class FacultyController extends Controller
                             'Specialization' => $request->specialization[$key],
                             'pre_Institutions' => $request->institution[$key],
                             'Position_hold' => $request->position[$key],
-                            'duration' => $request->duration[$key], // 
+                            'duration' => $request->duration[$key], //
                             'Nature_of_Work' => $request->work[$key],
                             'faculty_master_pk' => $faculty->pk
                         ];
@@ -372,7 +372,7 @@ class FacultyController extends Controller
                             'Specialization' => $request->specialization[$key],
                             'pre_Institutions' => $request->institution[$key],
                             'Position_hold' => $request->position[$key],
-                            'duration' => $request->duration[$key], // 
+                            'duration' => $request->duration[$key], //
                             'Nature_of_Work' => $request->work[$key],
                             'faculty_master_pk' => $faculty->pk
                         ];
@@ -452,12 +452,12 @@ class FacultyController extends Controller
             'countryMaster:pk,country_name',
             'districtMaster:pk,district_name',
             'facultyTypeMaster:pk,faculty_type_name',
-            'facultyExpertiseMap.facultyExpertise:pk,expertise_name', 
+            'facultyExpertiseMap.facultyExpertise:pk,expertise_name',
             'facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
-            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk', 
+            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
             'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path'
         ])->find(decrypt($id));
-        
+
         if (!$faculty) {
             return redirect()->route('faculty.index')->with('error', 'Faculty not found');
         }
@@ -468,8 +468,8 @@ class FacultyController extends Controller
     {
         return Excel::download(new \App\Exports\FacultyExport(), 'faculty_list_'.time().'.xlsx');
     }
-	
-	//check existing record implemented by Dhananjay
+
+	//check existing record implemented
 	public function checkUnique(Request $request)
 		{
 			$type = $request->type; // 'email' or 'mobile'
@@ -491,5 +491,67 @@ class FacultyController extends Controller
 				'message' => $exists ? ucfirst($type) . ' already exists.' : ucfirst($type) . ' is available.'
 			]);
 		}
-		
+
+	public function searchFirstName(Request $request)
+		{
+			$query = $request->get('q', '');
+			
+			$names = \App\Models\FacultyMaster::where('first_name', 'like', "%{$query}%")
+				->limit(10)
+				->pluck('first_name');
+
+			return response()->json($names);
+		}
+						
+	public function checkFullName(Request $request)
+			{
+				$query = trim($request->get('query', ''));
+
+				if ($query == '') {
+					return response()->json(['suggestions' => [], 'exists' => false]);
+				}
+
+				$names = \App\Models\FacultyMaster::select('pk','first_name','middle_name','last_name')
+					->where(function($q) use ($query) {
+						$q->where('first_name', 'like', "%{$query}%")
+						  ->orWhere('middle_name', 'like', "%{$query}%")
+						  ->orWhere('last_name', 'like', "%{$query}%");
+					})
+					->limit(10)
+					->get();
+
+				$suggestions = $names->map(function ($item) {
+					return [
+						'id' => $item->pk,
+						'full_name' => trim($item->first_name.' '.$item->middle_name.' '.$item->last_name)
+					];
+				});
+
+				$exists = \App\Models\FacultyMaster::whereRaw(
+					"TRIM(CONCAT(first_name,' ',COALESCE(middle_name,''),' ',last_name)) = ?",
+					[$query]
+				)->first();
+				
+				return response()->json([
+					'suggestions' => $suggestions,
+					'exists' => $exists ? true : false,
+					'id' => $exists->id ?? null
+				]);
+			}
+
+		public function getFacultyDetails($id)
+		{
+			$faculty = FacultyMaster::with([
+			 'cityMaster:pk,city_name',
+            'stateMaster:Pk,state_name',
+            'countryMaster:pk,country_name',
+            'districtMaster:pk,district_name',
+            'facultyTypeMaster:pk,faculty_type_name',
+            'facultyExpertiseMap.facultyExpertise:pk,expertise_name',        'facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
+            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk', 
+            'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path'
+				])->find($id);
+		   return response()->json($faculty);
+		}
+	
 }

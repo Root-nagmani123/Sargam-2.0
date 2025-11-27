@@ -63,9 +63,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
-	
+
 	// By Dhananjay
-Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
+//Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
 
 
     // Member Routes
@@ -93,9 +93,18 @@ Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])-
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
-		Route::get('/faculty/check-unique',  'checkUnique')->name('faculty.checkUnique');
-		//Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
-		
+		 Route::post('check-unique', 'checkUnique')->name('checkUnique');
+    Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
+    Route::get('check-firstname', 'checkFirstName')->name('checkFirstName');
+    Route::get('check-fullname', 'checkFullName')->name('checkFullName');
+    Route::get('details/{id}', 'getFacultyDetails')->name('details');
+    Route::get('download/{id}', 'downloadPDF')->name('download');
+
+    // Static view
+    Route::get('print-blank', function () {
+        return view('admin.faculty.blank-print');
+    })->name('printBlank');
+
     });
 
     // Programme Routes
@@ -225,9 +234,9 @@ Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])-
 
     //feedback route
     Route::prefix('feedback')->name('feedback.')->group(function () {
-       Route::get('/', [CalendarController::class, 'feedbackList'])->name('get.feedbackList');      
+       Route::get('/', [CalendarController::class, 'feedbackList'])->name('get.feedbackList');
       Route::get('/event-feedback/{id}', [CalendarController::class, 'getEventFeedback']);
-       Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');      
+       Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');
         Route::post('/submit-feedback', [CalendarController::class, 'submitFeedback'])->name('submit.feedback');
     });
     // MDO Escrot Exemption Routes

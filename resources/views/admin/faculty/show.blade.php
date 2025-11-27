@@ -2,7 +2,84 @@
 @section('title', 'View Faculty Details')
 
 @section('content')
+<style>
+@media print {
+    /* Hide everything except the print area */
+    body * {
+        visibility: hidden;
+    }
+
+    .print-area, .print-area * {
+        visibility: visible;
+    }
+
+    .print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        background: #fff !important;
+        padding: 20px 40px;
+    }
+
+    /* Keep Bootstrap grid intact */
+    .row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        margin-right: -0.75rem !important;
+        margin-left: -0.75rem !important;
+    }
+
+    .col-md-6, .col-lg-6, .col-sm-6 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+        padding: 0 0.75rem !important;
+        box-sizing: border-box;
+    }
+
+    /* Optional: smaller screen columns */
+    .col-12 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Card appearance */
+    .card {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color: white !important;
+    }
+
+    /* Hide unwanted UI */
+    .btn, .btn-group, .text-end, nav, header, footer {
+        display: none !important;
+    }
+
+    /* Typography tweaks for printing */
+    * {
+        font-size: 13px !important;
+        line-height: 1.4 !important;
+        color: #000 !important;
+    }
+
+    /* Each section starts neatly */
+    .card.shadow-sm.mb-4 {
+        page-break-after: always;
+    }
+}
+</style>
+
+
+
 <div class="container-fluid">
+    <div class="print-area">
     <x-breadcrum title="Faculty Details" />
 
     {{-- PERSONAL INFO --}}
@@ -59,7 +136,6 @@
         </div>
         <div class="card-body">
             @foreach ($faculty->facultyQualificationMap as $facultyQualification)
-            
             <div class="border rounded p-3 mb-3 bg-light">
                 <div class="row g-3">
                     <x-view-item label="Qualification" :value="$facultyQualification->Degree_name" />
@@ -70,7 +146,6 @@
                     @if(!empty($facultyQualification->Certifcates_upload_path))
                     <div class="col-md-6">
                         <a class="btn btn-primary" href="{{ asset('storage/'.$facultyQualification->Certifcates_upload_path) }}" target="_blank">
-                            
                             View Document
                         </a>
                     </div>
@@ -124,22 +199,15 @@
         </div>
         <div class="card-body">
             <div class="row g-3">
-                {{-- <x-view-item label="Research Publications" :value="view_file_link($faculty->Rech_Publi_Upload_path)"
-                        isLink="true" /> --}}
-
                 @if( !empty($faculty->Rech_Publi_Upload_path) )
-                
                 <span class="text-info text-bold">Research Publications</span>
                 <a href="{{ asset('storage/'.$faculty->Rech_Publi_Upload_path) }}" target="_blank" class="rounded-circle"
                     title="View Document">
                     <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
                 </a>
                 @endif
-                {{-- <x-view-item label="Professional Memberships"
-                        :value="view_file_link($faculty->Professional_Memberships_doc_upload_path)" isLink="true" /> --}}
 
                 @if( !empty($faculty->Professional_Memberships_doc_upload_path) )
-                
                 <span class="text-info text-bold">Professional Memberships</span>
                 <a href="{{ asset('storage/'.$faculty->Professional_Memberships_doc_upload_path) }}" target="_blank"
                     class="rounded-circle" title="View Document">
@@ -147,9 +215,6 @@
                 </a>
                 @endif
 
-
-                {{-- <x-view-item label="Recommendation Details"
-                        :value="view_file_link('public/' . $faculty->Reference_Recommendation)" isLink="true" /> --}}
                 @if( !empty($faculty->Reference_Recommendation) )
                 <br>
                 <span class="text-info text-bold">Recommendation Details</span>
@@ -185,6 +250,21 @@
         <a href="{{ route('faculty.index') }}" class="btn btn-secondary">
            Back
         </a>
+         <div class="btn-group" role="group">
+      <button type="button" class="btn btn-outline-primary" onclick="printFacultyDetails()">
+        <i class="material-icons">print</i> Print
+    </button>
+</div>
+    </div>
     </div>
 </div>
 @endsection
+
+<script>
+function printFacultyDetails() {
+    window.print();
+}
+</script>
+
+
+
