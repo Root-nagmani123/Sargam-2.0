@@ -4,6 +4,8 @@
 
 @section('content')
     <div class="container-fluid">
+        <x-breadcrum title="Enroll to New Course" />
+        <x-session_message />
         <div class="row justify-content-center">
             <div class="col-md-12">
                 <div class="card" style="border-left: 4px solid #004a93;">
@@ -84,6 +86,7 @@
                                                 @foreach ($previousCourses as $previousCourse)
                                                     @if ($previousCourse->course)
                                                         <option value="{{ $previousCourse->course->pk }}"
+                                                            data-course-pk="{{ $previousCourse->course->pk }}"
                                                             {{ in_array($previousCourse->pk, old('previous_courses', [])) ? 'selected' : '' }}>
                                                             {{ $previousCourse->course->course_name }}
                                                         </option>
@@ -128,11 +131,6 @@
                                 </div>
                             </div>
 
-                            {{-- <div class="text-end">
-                                <button type="submit" class="btn btn-primary">
-                                    Enroll
-                                </button>
-                            </div> --}}
                             <!-- Student Data Table Section -->
                             <div class="row mt-4">
                                 <div class="col-12">
@@ -148,17 +146,16 @@
                                                 <button type="button" id="filterBtn" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-filter"></i> Filter
                                                 </button>
-
                                             </div>
                                             <div class="text-end">
+                                                <button type="submit" class="btn btn-primary">
+                                                    Enroll
+                                                </button>
                                             </div>
-                                            <button type="submit" class="btn btn-primary">
-                                                Enroll
-                                            </button>
                                         </div>
                                         <div class="card-body">
                                             <div class="table-responsive">
-                                                <table class="table" id="studentTable">
+                                                <table class="table table-bordered table-hover" id="studentTable">
                                                     <thead>
                                                         <tr>
                                                             <th width="50px">
@@ -180,19 +177,11 @@
                                                 <div class="mt-3 d-flex justify-content-center">
                                                     <ul class="pagination" id="paginationContainer"></ul>
                                                 </div>
-
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-
-                            <hr>
-                            {{-- <div class="text-end">
-                                <button type="submit" class="btn btn-primary">
-                                    Enroll
-                                </button>
-                            </div> --}}
                         </form>
                     </div>
                 </div>
@@ -200,7 +189,7 @@
         </div>
     </div>
 
-    <!-- 🔹 NEW: Enrolled Students Modal (no course filter inside modal) -->
+    <!-- Enrolled Students Modal -->
     <div class="modal fade" id="enrolledModal" tabindex="-1" aria-labelledby="enrolledModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
@@ -212,7 +201,6 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- removed course filter select; modal will show students for the course selected in main form -->
                     <div class="row mb-3">
                         <div class="col-md-8">
                             <input type="text" id="enrolledSearch" class="form-control"
@@ -281,14 +269,39 @@
             // initial course (priority: session selected_course > old input > currently selected option)
             let currentCourseFilter = @json(session('selected_course') ?? (old('course_master_pk') ?? null));
 
-            // helper: set modal course name text
+            // Function to filter previous courses based on selected new course
+            function filterPreviousCourses() {
+                const selectedNewCourse = $('#course_master_pk').val();
+                const previousCoursesSelect = $('#previous_courses');
+
+                if (selectedNewCourse) {
+                    previousCoursesSelect.select2('destroy');
+                    previousCoursesSelect.find('option[value="' + selectedNewCourse + '"]').remove();
+                    previousCoursesSelect.select2();
+                    const currentlySelected = previousCoursesSelect.val();
+                    if (currentlySelected && currentlySelected.includes(selectedNewCourse)) {
+                        const newSelected = currentlySelected.filter(val => val !== selectedNewCourse);
+                        previousCoursesSelect.val(newSelected).trigger('change');
+                    }
+                }
+            }
+
+            // Initial filter on page load
+            filterPreviousCourses();
+
+            // Filter when new course selection changes
+            $('#course_master_pk').change(function() {
+                currentCourseFilter = $(this).val() || null;
+                setModalCourseName();
+                filterPreviousCourses();
+            });
+
             function setModalCourseName() {
                 let name = '-';
                 if (currentCourseFilter) {
                     const opt = $('#course_master_pk').find('option[value="' + currentCourseFilter + '"]');
                     name = opt.length ? opt.text() : currentCourseFilter;
                 } else {
-                    // if main select has a value, use it
                     const mainVal = $('#course_master_pk').val();
                     if (mainVal) {
                         const opt = $('#course_master_pk option[value="' + mainVal + '"]');
@@ -303,19 +316,11 @@
 
             setModalCourseName();
 
-            // When main course select changes, update currentCourseFilter and modal label
-            $('#course_master_pk').change(function() {
-                currentCourseFilter = $(this).val() || null;
-                setModalCourseName();
-            });
-
             // -------------------------
             // Enrolled modal events
             // -------------------------
-            // When modal shown, load students for the selected course
             const enrolledModalEl = document.getElementById('enrolledModal');
             enrolledModalEl.addEventListener('show.bs.modal', function() {
-                // If no course selected, show message and return
                 if (!currentCourseFilter) {
                     $('#enrolledTableBody').html(
                         '<tr><td colspan="6" class="text-center text-muted">Please select a course from the form to load enrolled students.</td></tr>'
@@ -329,11 +334,11 @@
                 loadEnrolledStudents();
             });
 
-            // refresh/search/refresh button
             $('#refreshEnrolled').click(function() {
                 currentPage = 1;
                 loadEnrolledStudents();
             });
+
             $('#enrolledSearch').on('keyup', function() {
                 currentSearchTerm = $(this).val();
                 currentPage = 1;
@@ -417,7 +422,7 @@
             </li>`
                 );
 
-                // Page numbers (limiting to first 10 pages to avoid huge lists; adjust as needed)
+                // Page numbers
                 const maxPagesToShow = 10;
                 let startPage = 1,
                     endPage = lastPage;
@@ -453,38 +458,8 @@
                 });
             }
 
-            // Export button: export current course (no in-modal filter)
-            $('#exportEnrolledBtn').click(function() {
-                if (!currentCourseFilter) {
-                    alert('Please select a course to export.');
-                    return;
-                }
-
-                const form = document.createElement('form');
-                form.method = 'GET';
-                form.action = '{{ route('enrollment.exportEnrolled') }}';
-
-                const courseInput = document.createElement('input');
-                courseInput.type = 'hidden';
-                courseInput.name = 'course';
-                courseInput.value = currentCourseFilter;
-                form.appendChild(courseInput);
-
-                // include search filter if you want
-                const searchInput = document.createElement('input');
-                searchInput.type = 'hidden';
-                searchInput.name = 'search';
-                searchInput.value = currentSearchTerm || '';
-                form.appendChild(searchInput);
-
-                document.body.appendChild(form);
-                form.submit();
-                document.body.removeChild(form);
-            });
-
             // -------------------------
-            // Student list (main page) interactions: select all, load filtered students
-            // Cleaned duplicate functions and kept logic
+            // Student list (main page) interactions
             // -------------------------
             function updateSelectedStudents() {
                 var selectedStudents = [];
@@ -590,14 +565,13 @@
             }
 
             // -------------------------
-            // Auto-open modal after successful enrollment (if session('success') and session('selected_course') exist)
+            // Auto-open modal after successful enrollment
             // -------------------------
             @if (session('success') && session('selected_course'))
-                // ensure modal label is up-to-date
                 currentCourseFilter = @json(session('selected_course'));
                 setModalCourseName();
+                filterPreviousCourses();
 
-                // Bootstrap 5-safe show
                 const modalInstance = bootstrap.Modal.getOrCreateInstance(document.getElementById('enrolledModal'));
                 modalInstance.show();
             @endif
