@@ -4,8 +4,6 @@
 
 @section('content')
     <div class="container-fluid">
-        <x-breadcrum title="Registration Page" />
-        <x-session_message />
         <!-- start Vertical Steps Example -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
@@ -79,7 +77,6 @@
 
                     <div class="mt-3">
                         <button class="btn btn-primary float-end" type="submit">
-                            <i class="material-icons menu-icon">send</i>
                             {{ $data ? 'Update' : 'Save Changes' }}
                         </button>
                     </div>

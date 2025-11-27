@@ -4,13 +4,7 @@
 
 @section('content')
     <div class="container-fluid">
-
-        <!-- Header Card -->
-        <x-breadcrum title="User Registration and Exemption Summary" />
-        <x-session_message />
-        <div class="datatables">
-            <!-- start Zero Configuration -->
-            <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" style="border-left: 4px solid #004a93;">
                 <div class="card-body">
                     <!-- Filters and Export -->
                     <form method="GET" action="{{ route('admin.exemption.export') }}">
@@ -76,10 +70,7 @@
 
                     </form>
                     <div class="table-responsive">
-                        <div id="zero_config_wrapper" class="dataTables_wrapper">
-                            <table id="zero_config"
-                                class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                                aria-describedby="zero_config_info">
+                        <table class="table text-nowrap w-100">
                                 <thead>
                                     <tr>
                                         <th>S.No</th>
@@ -147,12 +138,9 @@
                                     @endforelse
                                 </tbody>
                             </table>
-                        </div>
                     </div>
                 </div>
             </div>
-            <!-- end Zero Configuration -->
-        </div>
     </div>
 
 @endsection

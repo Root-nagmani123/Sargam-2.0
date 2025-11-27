@@ -504,7 +504,7 @@ class FrontPageController extends Controller
 
         $headings = ExemptionCategory::with(['creator', 'updater'])
             ->where('is_notice', 0)
-            ->get();
+            ->paginate(10);
 
         $notice = ExemptionCategory::with(['creator', 'updater'])
             ->where('is_notice', true)
