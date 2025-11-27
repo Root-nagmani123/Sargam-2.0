@@ -24,6 +24,9 @@
                                 <a href="{{ route('faculty.excel.export') }}" class="btn btn-primary">
                                     <iconify-icon icon="material-symbols:sim-card-download-rounded" ></iconify-icon> Export Excel
                                 </a>
+								<a href="{{ route('faculty.printBlank') }}" target="_blank" class="btn btn-success">
+									<i class="material-icons">print</i> Print Blank Form
+								</a>
                             </div>
                         </div>
                     </div>
