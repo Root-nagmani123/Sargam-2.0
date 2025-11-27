@@ -3,23 +3,64 @@
 @section('title', 'Faculty')
 
 @section('content')
+<style>
+input.is-invalid {
+    border-color: #dc3545;
+}
 
-<div class="container-fluid">
+#suggestionList a {
+    cursor: pointer;
+}
+// print functionality
+@media print {
+    body, html {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .container-fluid,
+    .card,
+    .card-body,
+    .card-header {
+        margin: 0 !important;
+        padding-top: 10px !important;
+        page-break-before: avoid !important;
+    }
+
+    .mb-4, .mt-4, .pt-4, .py-4 {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .shadow-sm,
+    .shadow,
+    .card {
+        box-shadow: none !important;
+    }
+
+	 .col-md-6,
+    .col-12.col-md-6 {
+        max-width: 50% !important;
+        flex: 0 0 50% !important;
+    }
+
+    .row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+    }
+}
+// print functionality
+</style>
+<div class="container-fluid" id="printFacultyFormData">
     <x-breadcrum title="Faculty" />
-    <div class="btn-group" role="group">
-    <a href="{{ route('faculty.printBlankForm') }}" target="_blank" class="btn btn-outline-secondary">
-        <i class="material-icons">description</i> Print Blank Form
-    </a>
-    <button type="button" class="btn btn-outline-primary" onclick="printFacultyFormEnhanced()">
-        <i class="material-icons">print</i> Print Current Form
-    </button>
-</div>
     <x-session_message />
     <!-- start Vertical Steps Example -->
     {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
         <div class="card-body"> --}}
 
             <form class="facultyForm">
+			  @csrf
+			  <input type="hidden" name="faculty_id" id="faculty_id" value="">
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title">Personal Information</h4>
@@ -38,7 +79,7 @@
                                         />
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <!--<div class="col-md-6">
                                 <div class="mb-3">
                                     <x-input
                                         name="firstName"
@@ -51,7 +92,28 @@
                                         formInputClass="only-letters"
                                         />
                                 </div>
-                            </div>
+                            </div>-->
+
+							<div class="col-md-6">
+							<div class="mb-3">
+								<x-input
+									name="firstName"
+									label="First Name :"
+									placeholder="First Name"
+									formLabelClass="form-label"
+									required="true"
+									labelRequired="true"
+									title="Only letters and spaces are allowed"
+									id="firstName"
+									formInputClass="letters-with-space"
+								/>
+
+								<div id="suggestionList" class="list-group position-absolute" style="z-index: 1000; width:100%; display:none;"></div>
+							</div>
+						</div>
+
+
+
                             <div class="col-md-6">
                                 <div class="mb-3">
 
@@ -247,7 +309,7 @@
                                 </div>
 
                             </div>
-                             <div class="col-md-6">
+                            <div class="col-md-6">
 
                                 <x-input
                                     name="email"
@@ -283,6 +345,7 @@
                                 <div class="mt-2">
                                     <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
                                 </div>
+								 <div class="existing-photo"></div>
                             </div>
 
                             <div class="col-md-6 mt-3">
@@ -307,8 +370,8 @@
                         <div>
                             <h4 class="card-title">Qualification Details</h4>
                             <hr>
-                            <div id="education_fields" class="my-4"></div>
-                            <div class="row" id="education_fields">
+                            <div id="education_fields_wrapper" class="my-4"></div>
+                            <div class="row degree-row" id="education_fields">
                                 <div class="col-3">
 
                                     <x-input
@@ -382,9 +445,8 @@
                                         helperSmallText="Please upload your certificates/documents, if any"
                                         labelRequired="true"
                                         />
-
-
-                                </div>
+                                  </div>
+								  <div class="existing-certificate"></div>
                                 <div class="col-9">
                                     <label for="Schoolname" class="form-label"></label>
                                     <div class="mb-3 float-end">
@@ -402,8 +464,8 @@
                     <div class="card-body">
                         <h4 class="card-title">Experience Details</h4>
                             <hr>
-                            <div id="experience_fields" class="my-4"></div>
-                            <div class="row" id="experience_fields">
+                            <div id="experience_fields_wrapper" class="my-4"></div>
+                            <div class="row experience-row" id="experience_fields">
                                 <div class="col-3">
                                     <x-input
                                         name="experience[]"
@@ -559,6 +621,7 @@
                                         required="true"
                                         helperSmallText="Please upload your research publications, if any"
                                         />
+										<div class="research_publications"></div>
 
                                 </div>
                                 <div class="col-6">
@@ -596,6 +659,7 @@
                                         formLabelClass="form-label"
                                         required="true"
                                         labelRequired="true"
+										value="{{ $value ?? '' }}"
                                         />
 
                                 </div>
@@ -605,28 +669,33 @@
                 </div>
 
 
-                <div class="card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-12">
-                                <label for="sector" class="form-label">Current Sector :</label>
-                                <div class="mb-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input success" type="radio" name="current_sector"
-                                            id="success-radio" value="1">
-                                        <label class="form-check-label" for="success-radio">Government Sector</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input success" type="radio" name="current_sector"
-                                            id="success2-radio" value="2" checked>
-                                        <label class="form-check-label" for="success2-radio">Private Sector</label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12">
+<div class="card">
+     <div class="card-body">
+          <div class="row">
+               <div class="col-12">
+                    <label for="sector" class="form-label">Current Sector :</label>
+                    <div class="mb-3">
+                         <div class="form-check form-check-inline">
+						 <input class="form-check-input success"
+						 type="radio" name="current_sector"
+                         id="success-radio" value="1">
+
+                     <label class="form-check-label"
+					 for="success-radio">Government Sector</label>
+                      </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input success"
+					  type="radio" name="current_sector"
+                       id="success2-radio" value="2" >
+                     <label class="form-check-label" for="success2-radio">Private Sector</label>
+                     </div>
+                       </div>
+                </div>
+
+                 <div class="col-12">
 
                                 <label for="expertise" class="form-label">Area of Expertise :</label>
-                                <div class="mb-3">
+                                <div class="mb-3 expertise-row">
                                     {{-- faculties --}}
                                     <x-checkbox
                                         name="faculties[]"
@@ -639,16 +708,35 @@
                             </div>
                         </div>
                         <hr>
-                        <div class="mb-3">
-                            <button class="btn btn-primary hstack gap-6 float-end" type="button" id="saveFacultyForm">
-                                <i class="material-icons menu-icon">save</i>
-                                Save
-                            </button>
-                            <a href="{{ route('faculty.index') }}" class="btn btn-secondary hstack gap-6 float-end me-2">
-                                <i class="material-icons menu-icon">arrow_back</i>
-                                Back
-                            </a>
-                        </div>
+		<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
+
+			<!--<button onclick="printFacultyForm()" class="btn btn-success d-flex align-items-center gap-2" type="button">
+				<i class="material-icons menu-icon">print</i>
+				Print
+			</button>-->
+
+			<!--<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
+				<i class="material-icons menu-icon">save</i>
+				Save
+			</button>-->
+
+			<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
+			<i class="material-icons menu-icon">save</i>
+			Save
+		</button>
+
+
+
+
+			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-2">
+				<i class="material-icons menu-icon">arrow_back</i>
+				Back
+			</a>
+
+		</div>
+
+
+
                     </div>
                 </div>
 
@@ -664,6 +752,8 @@
 @section('scripts')
 <script>
 
+</script>
+<script>
 $(document).ready(function () {
 
     // Check Email
@@ -705,12 +795,14 @@ $(document).ready(function () {
     }
 });
 $(document).ready(function () {
-	
+
     let $input = $('#firstName');
     let $suggestionBox = $('#suggestionList');
-	
+
 	  $('#suggestionList').hide();
-	
+
+
+
     // =============================
     // 1) Live Search Full Name
     // =============================
@@ -727,8 +819,8 @@ $(document).ready(function () {
 
                     if (response.suggestions.length > 0) {
                         response.suggestions.forEach(function (item) {
-                            html += `<a href="#" class="list-group-item list-group-item-action suggestion-item" 
-                                      data-id="${item.id}" 
+                            html += `<a href="#" class="list-group-item list-group-item-action suggestion-item"
+                                      data-id="${item.id}"
                                       data-fullname="${item.full_name}">
                                         ${item.full_name}
                                      </a>`;
@@ -773,7 +865,7 @@ $(document).ready(function () {
             $(this).val(faculty[fieldName]);
         }
 		});
-	
+
 		$('.facultyForm input').each(function () {
 		let fieldName = $(this).attr('name');
 
@@ -781,7 +873,7 @@ $(document).ready(function () {
 			$(this).val(faculty[fieldName]);
 		}
 		});
-		
+
 		$('.facultyForm input').each(function () {
 		let fieldName = $(this).attr('name');
 		if (faculty[fieldName] !== undefined) {
@@ -789,17 +881,26 @@ $(document).ready(function () {
 		}
 	});
 
-    
+
 }
 
 function fillFacultyForm(faculty) {
 
     // Loop through all keys returned from server
-  
+   /* Object.keys(faculty).forEach(function (key) {
+
+        // Select input/select/textarea using ID
+        let field = $('.facultyForm #' + key);
+
+        // If field exists, fill value
+        if (field.length > 0) {
+            field.val(faculty[key]).trigger("change");
+        }
+    });*/
 			//Personal Information
 
 			// Auto-fill name
-			
+
             $("input[name='firstName']").val(faculty.first_name ?? "");
             $("input[name='middlename']").val(faculty.middle_name ?? "");
             $("input[name='lastname']").val(faculty.last_name ?? "");
@@ -813,9 +914,9 @@ function fillFacultyForm(faculty) {
            $("input[name='mobile']").val(faculty.mobile_no);
            $("input[name='email']").val(faculty.email_id);
 		   $("input[name='alternativeEmail']").val(faculty.alternate_email_id);
-		   
+
             $("select[name='gender']").val(faculty.gender);
-			
+
           // Set Country
  setTimeout(() => {
             $("select[name='country']").val(faculty.country_master_pk).trigger("change");
@@ -835,17 +936,20 @@ function fillFacultyForm(faculty) {
         setTimeout(() => {
             $("select[name='city']").val(faculty.city_master_pk).trigger("change");
         }, 800);
-		
+
 $("input[name='residence_address']").val(faculty.Residence_address);
-	
+
 $("input[name='permanent_address']").val(faculty.Permanent_Address);
-	
+
+
+
+
 	if (faculty.photo_uplode_path) {
     const photoURL = `/storage/${faculty.photo_uplode_path}`;
 
     // show inside <img id="photoPreview">
     $("#photoPreview").attr("src", photoURL);
-	
+
     // show "view existing photo" link
     $(".existing-photo").html(`
         <a href="${photoURL}" target="_blank" class="text-primary">
@@ -855,7 +959,7 @@ $("input[name='permanent_address']").val(faculty.Permanent_Address);
 	}
 
 //Qualification Details
-			
+
 faculty.faculty_qualification_map.forEach(function(q, index) {
     const row = $(".degree-row").eq(index);
 
@@ -864,7 +968,7 @@ faculty.faculty_qualification_map.forEach(function(q, index) {
    row.find("select[name='year_of_passing[]']").val(q.Year_of_passing).trigger('change');
 
   row.find("input[name='percentage_CGPA[]']").val(q.Percentage_CGPA);
-	
+
  if (q.Certifcates_upload_path) {
         row.find(".existing-certificate").html(`
             <a href="storage/${q.Certifcates_upload_path}" target="_blank" class="text-primary">
@@ -873,23 +977,23 @@ faculty.faculty_qualification_map.forEach(function(q, index) {
 			`);
 		}
 	});
-	
-			
+
+
 faculty.faculty_experience_map.forEach(function(exp, index) {
  const row = $(".experience-row").eq(index);
 
  row.find("input[name='experience[]']").val(exp.Years_Of_Experience);
- 
+
  row.find("input[name='specialization[]']").val(exp.Specialization);
- 
+
  row.find("input[name='institution[]']").val(exp.pre_Institutions);
- 
+
  row.find("input[name='position[]']").val(exp.Position_hold);
- 
+
  row.find("input[name='duration[]']").val(exp.duration);
- 
+
  row.find("input[name='work[]']").val(exp.Nature_of_Work);
-	
+
 });
 
 	//Bank Details
@@ -897,7 +1001,7 @@ faculty.faculty_experience_map.forEach(function(exp, index) {
 	$("input[name='accountnumber']").val(faculty.Account_No);
 	$("input[name='ifsccode']").val(faculty.IFSC_Code);
 	$("input[name='pannumber']").val(faculty.PAN_No);
-	
+
 	if (faculty.joining_date) {
     let formattedDate = new Date(faculty.joining_date).toISOString().slice(0, 10);
     $("input[name='joiningdate']").val(formattedDate);
@@ -907,15 +1011,27 @@ faculty.faculty_experience_map.forEach(function(exp, index) {
     $('input[name="expertise[]"][value="' + item.faculty_expertise_pk + '"]').prop("checked", true);
 	});
 
- 
+ //$('input[name="current_sector"][value="' + faculty.faculty_sector //+ '"]').prop("checked", true);
+
  document.querySelector('input[name="current_sector"]:checked').value;
  document.querySelectorAll('input[name="faculties[]"]:checked');
+
+
+
+
+
+
+
+
 	}
-	
+
+
+
+
 
     // =========================================
     // 3) When User Clicks a Suggested Full Name
-    // ========================================= 
+    // =========================================
     $(document).on('click', '.suggestion-item', function (e) {
     e.preventDefault();
 
@@ -931,11 +1047,19 @@ faculty.faculty_experience_map.forEach(function(exp, index) {
         type: "GET",
         success: function (faculty) {
 			fillFacultyForm(faculty);  // <--- AUTO FILL FULL FORM
-			
+
         }
     });
 });
+
+
+
+
 });
 
+
+
+
 </script>
+
 @endsection
