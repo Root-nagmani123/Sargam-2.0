@@ -75,89 +75,88 @@ class EnrollementController extends Controller
     // }
 
     public function store(Request $request)
-{
-    $validated = $request->validate([
-        'course_master_pk' => [
-            'required', 
-            'integer',
-            Rule::exists('course_master', 'pk')->where('active_inactive', 1)
-        ],
-        'selected_students' => 'required|string',
-    ]);
+    {
+        $validated = $request->validate([
+            'course_master_pk' => [
+                'required',
+                'integer',
+                Rule::exists('course_master', 'pk')->where('active_inactive', 1)
+            ],
+            'selected_students' => 'required|string',
+        ]);
 
-    $newCoursePk = $validated['course_master_pk'];
-    $studentIds = array_filter(explode(',', $validated['selected_students']));
-    
-    if (empty($studentIds)) {
-        return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
-    }
+        $newCoursePk = $validated['course_master_pk'];
+        $studentIds = array_filter(explode(',', $validated['selected_students']));
 
-    DB::beginTransaction();
-    try {
-        // Get existing enrollments for these students in this course
-        $existingEnrollments = StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
-            ->where('course_master_pk', $newCoursePk)
-            ->get()
-            ->keyBy('student_master_pk');
-
-        $studentsToInsert = [];
-        $studentsToUpdate = [];
-        $now = now();
-
-        foreach ($studentIds as $studentId) {
-            if (isset($existingEnrollments[$studentId])) {
-                // Student already enrolled - mark for update if inactive
-                if ($existingEnrollments[$studentId]->active_inactive == 0) {
-                    $studentsToUpdate[] = $studentId;
-                }
-            } else {
-                // New enrollment - mark for insertion
-                $studentsToInsert[] = $studentId;
-            }
+        if (empty($studentIds)) {
+            return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
         }
 
-        // Step 1: Deactivate ALL courses for all selected students
-        StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
-            ->update(['active_inactive' => 0]);
-
-        // Step 2: Activate/insert the new course enrollments
-        if (!empty($studentsToUpdate)) {
-            // Reactivate existing enrollments
-            StudentMasterCourseMap::whereIn('student_master_pk', $studentsToUpdate)
+        DB::beginTransaction();
+        try {
+            // Get existing enrollments for these students in this course
+            $existingEnrollments = StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
                 ->where('course_master_pk', $newCoursePk)
-                ->update([
-                    'active_inactive' => 1,
-                    'modified_date' => $now
-                ]);
-        }
+                ->get()
+                ->keyBy('student_master_pk');
 
-        if (!empty($studentsToInsert)) {
-            // Insert new enrollments
-            $insertData = [];
-            foreach ($studentsToInsert as $studentId) {
-                $insertData[] = [
-                    'student_master_pk' => $studentId,
-                    'course_master_pk' => $newCoursePk,
-                    'active_inactive' => 1,
-                    'created_date' => $now,
-                    'modified_date' => $now,
-                ];
+            $studentsToInsert = [];
+            $studentsToUpdate = [];
+            $now = now();
+
+            foreach ($studentIds as $studentId) {
+                if (isset($existingEnrollments[$studentId])) {
+                    // Student already enrolled - mark for update if inactive
+                    if ($existingEnrollments[$studentId]->active_inactive == 0) {
+                        $studentsToUpdate[] = $studentId;
+                    }
+                } else {
+                    // New enrollment - mark for insertion
+                    $studentsToInsert[] = $studentId;
+                }
             }
-            StudentMasterCourseMap::insert($insertData);
-        }
 
-        DB::commit();
-        
-        $totalProcessed = count($studentsToInsert) + count($studentsToUpdate);
-        return redirect()->back()
-            ->with('success', "Enrollment completed! {$totalProcessed} students processed.")
-            ->with('selected_course', $newCoursePk);
-            
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return back()->withErrors(['error' => 'Enrollment failed: ' . $e->getMessage()]);
+            // Step 1: Deactivate ALL courses for all selected students
+            StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
+                ->update(['active_inactive' => 0]);
+
+            // Step 2: Activate/insert the new course enrollments
+            if (!empty($studentsToUpdate)) {
+                // Reactivate existing enrollments
+                StudentMasterCourseMap::whereIn('student_master_pk', $studentsToUpdate)
+                    ->where('course_master_pk', $newCoursePk)
+                    ->update([
+                        'active_inactive' => 1,
+                        'modified_date' => $now
+                    ]);
+            }
+
+            if (!empty($studentsToInsert)) {
+                // Insert new enrollments
+                $insertData = [];
+                foreach ($studentsToInsert as $studentId) {
+                    $insertData[] = [
+                        'student_master_pk' => $studentId,
+                        'course_master_pk' => $newCoursePk,
+                        'active_inactive' => 1,
+                        'created_date' => $now,
+                        'modified_date' => $now,
+                    ];
+                }
+                StudentMasterCourseMap::insert($insertData);
+            }
+
+            DB::commit();
+
+            $totalProcessed = count($studentsToInsert) + count($studentsToUpdate);
+            return redirect()->back()
+                ->with('success', "Enrollment completed! {$totalProcessed} students processed.")
+                ->with('selected_course', $newCoursePk);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Enrollment failed: ' . $e->getMessage()]);
+        }
     }
-}
 
     public function filterStudents(Request $request)
     {
@@ -263,77 +262,130 @@ class EnrollementController extends Controller
     //     ));
     // }
 
-   public function studentCourses(Request $request)
-{
-    $courseId = $request->input('course_id');
-    $status = $request->input('status');
-    $courseStatus = $request->input('course_status', 'active'); // Default to 'active'
+    public function studentCourses(Request $request)
+    {
+        $courseId = $request->input('course_id');
+        $status = $request->input('status');
+        $courseStatus = $request->input('course_status', 'active'); // Default to 'active'
 
-    // Course dropdown with both active and inactive courses
-    $courses = CourseMaster::query()
-        ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
-        ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
-        // 'all' will return all courses without status filter
-        ->orderBy('course_name')
-        ->pluck('course_name', 'pk');
+        // Course dropdown with both active and inactive courses
+        $courses = CourseMaster::query()
+            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
+            ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
+            // 'all' will return all courses without status filter
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
 
-    // Handle AJAX request for course dropdown updates only
-    if ($request->ajax() && $request->has('ajax_courses')) {
-        return response()->json([
-            'success' => true,
-            'courses' => $courses
-        ]);
+        // Handle AJAX request for course dropdown updates only
+        if ($request->ajax() && $request->has('ajax_courses')) {
+            return response()->json([
+                'success' => true,
+                'courses' => $courses
+            ]);
+        }
+
+        // For AJAX requests, return only the table partial
+        if ($request->ajax()) {
+            // Base enrollments query
+            $enrollments = StudentMasterCourseMap::with([
+                'studentMaster.service',
+                'course'
+            ])
+                ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+                ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+                ->orderByDesc('created_date')
+                ->get();
+
+            // Count query
+            $baseQuery = StudentMasterCourseMap::query();
+            if ($courseId) $baseQuery->where('course_master_pk', $courseId);
+            if ($status !== null && $status !== '') $baseQuery->where('active_inactive', $status);
+
+            $filteredCount = $baseQuery->count();
+
+            return response()->json([
+                'success' => true,
+                'html' => view('admin.registration.student_courses_table', compact('enrollments'))->render(),
+                'filteredCount' => $filteredCount
+            ]);
+        }
+
+        // For initial page load - empty data
+        $enrollments = collect();
+        $filteredCount = 0;
+        $totalCount = StudentMasterCourseMap::count();
+
+        return view('admin.registration.student_courselist', compact(
+            'enrollments',
+            'courses',
+            'courseId',
+            'totalCount',
+            'filteredCount',
+            'status',
+            'courseStatus' // Pass course status to view
+        ));
     }
 
-    // For AJAX requests, return only the table partial
-    if ($request->ajax()) {
-        // Base enrollments query
-        $enrollments = StudentMasterCourseMap::with([
-            'studentMaster.service',
-            'course'
-        ])
-            ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
-            ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
-            ->orderByDesc('created_date')
-            ->get();
-
-        // Count query
-        $baseQuery = StudentMasterCourseMap::query();
-        if ($courseId) $baseQuery->where('course_master_pk', $courseId);
-        if ($status !== null && $status !== '') $baseQuery->where('active_inactive', $status);
-
-        $filteredCount = $baseQuery->count();
-
-        return response()->json([
-            'success' => true,
-            'html' => view('admin.registration.student_courses_table', compact('enrollments'))->render(),
-            'filteredCount' => $filteredCount
-        ]);
-    }
-
-    // For initial page load - empty data
-    $enrollments = collect();
-    $filteredCount = 0;
-    $totalCount = StudentMasterCourseMap::count();
-
-    return view('admin.registration.student_courselist', compact(
-        'enrollments',
-        'courses',
-        'courseId',
-        'totalCount',
-        'filteredCount',
-        'status',
-        'courseStatus' // Pass course status to view
-    ));
-}
 
 
 
+    // public function StudenEnroll_export(Request $request)
+    // {
+    //     $courseId = $request->input('course');
+    //     $status = $request->input('status');
+    //     $format = $request->input('format');
+
+    //     // Use the SAME query as your main page for consistency
+    //     $enrollmentsQuery = StudentMasterCourseMap::with([
+    //         'studentMaster.service',
+    //         'course'
+    //     ])
+    //         ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+    //         ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+    //         ->orderByDesc('created_date');
+
+    //     $enrollments = $enrollmentsQuery->get();
+    //     $totalCount = $enrollments->count();
+
+    //     // Get course name if course filter is applied
+    //     $courseName = null;
+    //     if ($courseId) {
+    //         $course = CourseMaster::find($courseId);
+    //         $courseName = $course ? $course->course_name : null;
+    //     }
+
+    //     if ($format === 'xlsx') {
+    //         $export = new StudentEnrollmentExport($courseId, $status);
+    //         return Excel::download($export, 'student_enrollments.xlsx');
+    //     }
+
+    //     if ($format === 'csv') {
+    //         $export = new StudentEnrollmentExport($courseId, $status);
+    //         return Excel::download($export, 'student_enrollments.csv');
+    //     }
+
+    //     if ($format === 'pdf') {
+    //         $pdf = Pdf::loadView('admin.report.studentsenroll_pdf', compact(
+    //             'enrollments',
+    //             'courseName',
+    //             'totalCount',
+    //             'status'
+    //         ));
+
+    //         return $pdf->setPaper('a4', 'landscape')
+    //             ->setOption('enable-smart-shrinking', true)
+    //             ->setOption('viewport-size', '1280x1024')
+    //             ->download('student_enrollments.pdf');
+    //     }
+
+    //     return back()->with('error', 'Invalid export format selected.');
+    // }
 
     public function StudenEnroll_export(Request $request)
     {
         $courseId = $request->input('course');
         $status = $request->input('status');
+        $courseStatus = $request->input('course_status', 'active'); // Add course_status
         $format = $request->input('format');
 
         // Use the SAME query as your main page for consistency
@@ -356,12 +408,12 @@ class EnrollementController extends Controller
         }
 
         if ($format === 'xlsx') {
-            $export = new StudentEnrollmentExport($courseId, $status);
+            $export = new StudentEnrollmentExport($enrollments); // Pass the filtered data
             return Excel::download($export, 'student_enrollments.xlsx');
         }
 
         if ($format === 'csv') {
-            $export = new StudentEnrollmentExport($courseId, $status);
+            $export = new StudentEnrollmentExport($enrollments); // Pass the filtered data
             return Excel::download($export, 'student_enrollments.csv');
         }
 
