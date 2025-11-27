@@ -4,8 +4,6 @@
 
 @section('content')
     <div class="container-fluid">
-        <x-breadcrum title="Course wise OT's List" />
-        <x-session_message />
 
         {{-- Filters + Counts + Export --}}
         <div class="card mb-3 p-3" style="border-left: 4px solid #004a93;">

@@ -5,9 +5,6 @@
 @section('content')
 
 <div class="container-fluid">
- <x-breadcrum title="Add Column" />
-        <x-session_message />
-
     <!-- Start Form Card -->
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
@@ -87,8 +84,7 @@
 
                 <hr>
                 <div class="mb-3">
-                    <button class="btn btn-primary hstack gap-2 float-end" type="submit">
-                        <i class="material-icons menu-icon">add</i> Add Column
+                    <button class="btn btn-primary hstack gap-2 float-end" type="submit">Add Column
                     </button>
                 </div>
             </form>

@@ -12,8 +12,6 @@
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <div class="container-fluid">
         <!-- Page Header -->
-        <x-breadcrum title="Path Page" />
-        {{-- <x-session_message /> --}}
 
         <!-- Form Card -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -151,8 +149,7 @@
                     <hr>
                     <!-- Submit -->
                     <div class="mb-3 gap-2 d-flex justify-content-end">
-                        <button type="submit" class="btn btn-primary d-flex align-items-center px-4 gap-2">
-                            <i class="material-icons menu-icon">send</i> Submit
+                        <button type="submit" class="btn btn-primary d-flex align-items-center px-4 gap-2">Submit
                         </button>
                     </div>
                 </form>
