@@ -65,7 +65,7 @@ Route::middleware(['auth'])->group(function () {
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 	// By Dhananjay
-//Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
+Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
 
 
     // Member Routes
@@ -93,17 +93,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
-		 Route::post('check-unique', 'checkUnique')->name('checkUnique');
-    Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
-    Route::get('check-firstname', 'checkFirstName')->name('checkFirstName');
-    Route::get('check-fullname', 'checkFullName')->name('checkFullName');
-    Route::get('details/{id}', 'getFacultyDetails')->name('details');
-    Route::get('download/{id}', 'downloadPDF')->name('download');
-
-    // Static view
-    Route::get('print-blank', function () {
-        return view('admin.faculty.blank-print');
-    })->name('printBlank');
+		Route::get('/faculty/check-unique',  'checkUnique')->name('faculty.checkUnique');
+		//Route::post('/faculty/check-unique', [FacultyController::class, 'checkUnique'])->name('faculty.checkUnique');
 
     });
 
