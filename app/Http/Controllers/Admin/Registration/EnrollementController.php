@@ -263,16 +263,17 @@ class EnrollementController extends Controller
     //     ));
     // }
 
-    public function studentCourses(Request $request)
+   public function studentCourses(Request $request)
 {
     $courseId = $request->input('course_id');
     $status = $request->input('status');
-    $courseStatus = $request->input('course_status', 'active');
+    $courseStatus = $request->input('course_status', 'active'); // Default to 'active'
 
     // Course dropdown with both active and inactive courses
     $courses = CourseMaster::query()
         ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
         ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
+        // 'all' will return all courses without status filter
         ->orderBy('course_name')
         ->pluck('course_name', 'pk');
 
