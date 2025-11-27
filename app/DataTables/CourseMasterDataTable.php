@@ -29,10 +29,10 @@ class CourseMasterDataTable extends DataTable
             ->addColumn('couse_short_name', fn($row) => $row->couse_short_name)
             ->addColumn('course_year', fn($row) => $row->course_year)
             ->addColumn('start_year', function ($row) {
-                return $row->start_year ? Carbon::parse($row->start_year)->format('Y-m-d') : '';
+                return $row->start_year ? Carbon::parse($row->start_year)->format('d-m-Y') : '';
             })
             ->addColumn('end_date', function ($row) {
-                return $row->end_date ? Carbon::parse($row->end_date)->format('Y-m-d') : '';
+                return $row->end_date ? Carbon::parse($row->end_date)->format('d-m-Y') : '';
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);

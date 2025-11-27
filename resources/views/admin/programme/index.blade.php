@@ -4,56 +4,6 @@
 
 @section('content')
 <style>
-    /* ---- Modern Action Icon Buttons ---- */
-.action-btn {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    border: 1px solid #d8d8d8;
-    background: #ffffff;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.25s ease;
-    cursor: pointer;
-}
-
-.action-btn span.material-icons {
-    font-size: 20px;
-    color: #4a4a4a;
-}
-
-/* ---- EDIT BUTTON ---- */
-.edit-btn:hover {
-    background: #0d6efd;
-    border-color: #0d6efd;
-}
-
-.edit-btn:hover .material-icons {
-    color: #ffffff;
-}
-
-/* ---- DELETE BUTTON ---- */
-.delete-btn:hover {
-    background: #dc3545;
-    border-color: #dc3545;
-}
-
-.delete-btn:hover .material-icons {
-    color: #ffffff;
-}
-
-/* ---- Disabled Delete Button ---- */
-.disabled-btn {
-    opacity: 0.5;
-    cursor: not-allowed !important;
-    background: #f3f3f3;
-}
-
-.disabled-btn .material-icons {
-    color: #999 !important;
-}
-
 .btn-group[role="group"] .btn {
     transition: all 0.3s ease-in-out;
     border-radius: 0;
@@ -95,297 +45,70 @@
     background-color: #f8f9fa;
     border-color: #666;
 }
-/* ===========================
-   CARD LOOK (LIKE ATTACHED)
-   =========================== */
-.custom-table-card {
-    border-left: 4px solid #b72a2a; /* same red as screenshot */
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-
-/* ===========================
-   TABLE HEADER (ROUNDED, RED)
-   =========================== */
-.mdodutytypemaster-table thead th {
-    background-color: #b72a2a !important;
-    color: #fff !important;
-    padding: 14px 12px !important;
-    font-weight: 600 !important;
-    border: none !important;
-    white-space: nowrap;
-}
-
-.mdodutytypemaster-table thead tr:first-child th:first-child {
-    border-top-left-radius: 10px !important;
-}
-.mdodutytypemaster-table thead tr:first-child th:last-child {
-    border-top-right-radius: 10px !important;
-}
-
-/* ===========================
-   ROW STYLING
-   =========================== */
-.mdodutytypemaster-table tbody tr:nth-child(even) {
-    background-color: #f8f9fa !important;
-}
-
-.mdodutytypemaster-table tbody tr:nth-child(odd) {
-    background-color: #ffffff !important;
-}
-
-.mdodutytypemaster-table tbody td {
-    vertical-align: middle !important;
-    padding: 10px 12px !important;
-    border-color: #dee2e6 !important;
-}
-
-/* ===========================
-   ACTION BUTTONS (MATCHING UI)
-   =========================== */
-.action-btn {
-    width: 34px;
-    height: 34px;
-    display: inline-flex;
-    justify-content: center;
-    align-items: center;
-    border-radius: 8px;
-    background: #fff;
-    border: 1px solid #cfd4da;
-    transition: 0.25s;
-    cursor: pointer;
-}
-
-.action-btn:hover {
-    transform: translateY(-2px);
-}
-
-.edit-btn:hover {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-}
-.edit-btn:hover .material-icons {
-    color: #fff;
-}
-
-.delete-btn:hover {
-    background-color: #dc3545;
-    border-color: #dc3545;
-}
-.delete-btn:hover .material-icons {
-    color: #fff;
-}
-
-.action-btn .material-icons {
-    font-size: 20px;
-    color: #444;
-}
-
-.disabled-btn {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-/* ===========================
-   SWITCH (MATCHING STYLE)
-   =========================== */
-.form-check-input {
-    width: 48px !important;
-    height: 20px !important;
-    cursor: pointer;
-}
-
-.form-check-input:checked {
-    background-color: #0d6efd !important;
-    border-color: #0d6efd !important;
-}
-/* Card styling */
-.custom-table-card {
-    border-radius: 12px;
-    background: #fff;
-}
-
-/* Table header styling */
-.modern-table thead th {
-    background-color: #b72a2a !important;
-    color: #fff !important;
-    border: none !important;
-    padding: 14px 12px !important;
-    font-weight: 600;
-}
-
-.modern-table thead tr:first-child th:first-child {
-    border-top-left-radius: 10px;
-}
-.modern-table thead tr:first-child th:last-child {
-    border-top-right-radius: 10px;
-}
-
-/* Row styling */
-.modern-table tbody tr:nth-child(even) {
-    background-color: #f8f9fa !important;
-}
-
-.modern-table tbody td {
-    padding: 12px 14px !important;
-    border-color: #e1e4e8 !important;
-}
-
-/* Filter buttons */
-.btn-group .btn {
-    border-radius: 0 !important;
-}
-
-.btn-group .btn:first-child {
-    border-top-left-radius: 50px !important;
-    border-bottom-left-radius: 50px !important;
-}
-
-.btn-group .btn:last-child {
-    border-top-right-radius: 50px !important;
-    border-bottom-right-radius: 50px !important;
-}
-
-/* Focus outlines for GIGW accessibility */
-.btn:focus, .form-control:focus, .btn-group .btn:focus {
-    outline: 2px solid #004a93 !important;
-    outline-offset: 2px;
-}
-
-/* Table hover */
-.modern-table tbody tr:hover {
-    background-color: #eef3f7 !important;
-}
-
-
 </style>
-<style>
-/* ---------- CARD STYLING ---------- */
-.custom-table-card {
-    border-radius: 18px;
-    border: none !important;
-    overflow: hidden;
-}
-
-.custom-table-card .card-body {
-    padding: 1.75rem;
-}
-
-/* ---------- TABLE HEADER ---------- */
-.modern-table thead th {
-    background: #b22727 !important;
-    color: #ffffff !important;
-    font-weight: 600;
-    padding: 14px 18px !important;
-    border: none !important;
-    font-size: 15px;
-}
-
-.modern-table thead tr:first-child th:first-child {
-    border-top-left-radius: 12px;
-}
-.modern-table thead tr:first-child th:last-child {
-    border-top-right-radius: 12px;
-}
-
-/* ---------- TABLE ROWS ---------- */
-.modern-table tbody tr {
-    background: #ffffff;
-    border-bottom: 1px solid #eee !important;
-    transition: all .2s ease;
-}
-
-.modern-table tbody tr:hover {
-    background: #fafafa !important;
-}
-
-.modern-table td {
-    padding: 14px 18px !important;
-    vertical-align: middle !important;
-    font-size: 15px;
-    color: #333;
-    font-weight: 500;
-}
-
-/* ---------- STATUS TOGGLE CLEAN LOOK ---------- */
-.form-check-input {
-    width: 2.3rem;
-    height: 1.2rem;
-    cursor: pointer;
-}
-
-/* ---------- ACTION BUTTONS ---------- */
-.table-action-btn {
-    background: #f4f4f4;
-    border-radius: 8px;
-    padding: 6px 12px;
-    border: 1px solid #ddd;
-    transition: .2s;
-}
-
-.table-action-btn:hover {
-    background: #e9e9e9;
-    border-color: #ccc;
-}
-</style>
-
 <div class="container-fluid">
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
 
-    <div class="card shadow-sm custom-table-card">
-        <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <h4>Course Master</h4>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex justify-content-end align-items-center gap-2">
 
-            <!-- Title -->
-           <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-semibold text-dark mb-0">Duty Type Master</h4>
+                            <!-- Add Group Mapping -->
+                            <a href="{{route('programme.create')}}"
+                                class="btn btn-primary d-flex align-items-center">
+                                <iconify-icon icon="ep:circle-plus-filled" class="me-1"></iconify-icon>
+                                Add Course
+                            </a>
 
-    <div class="d-flex align-items-center gap-2">
+                            <!-- Search Expand -->
+                            <div class="search-expand d-flex align-items-center">
+                                <a href="javascript:void(0)" id="searchToggle">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">search</i>
+                                </a>
 
-        <!-- Add New Button -->
-        <a href="{{ route('programme.create') }}"
-            class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
-            <i class="material-icons menu-icon material-symbols-rounded"
-               style="font-size: 20px; vertical-align: middle;">add</i>
-            Add New
-        </a>
+                                <input type="text" class="form-control search-input ms-2" id="searchInput"
+                                    placeholder="Search…" aria-label="Search">
+                            </div>
 
-        <!-- Search Box + Icon -->
-        <div class="position-relative">
+                        </div>
+                    </div>
+                </div>
+                <hr>
 
-            <!-- Hidden Search Input -->
-            <form action="{{ route('programme.index') }}" method="GET"
-                  class="search-box d-none" id="searchBox">
-                <input type="text" name="search"
-                       class="form-control"
-                       placeholder="Search..."
-                       style="width: 220px;">
-            </form>
+                <!-- Filter Buttons -->
+                <div class="row mb-3">
+                    <div class="col-12 text-end">
+                        <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
+                            aria-label="Course Status Filter">
+                            <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
+                                aria-pressed="true">
+                                <i class="bi bi-check-circle me-1"></i> Active
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" id="filterArchive"
+                                aria-pressed="false">
+                                <i class="bi bi-archive me-1"></i> Archive
+                            </button>
+                        </div>
+                    </div>
 
-            <!-- Search Icon Button -->
-            <button type="button" class="btn btn-outline-primary"
-                    id="searchToggleBtn"
-                    style="padding: 7px 10px;">
-                <i class="material-icons material-symbols-rounded"
-                   style="font-size: 22px;">search</i>
-            </button>
+                </div>
+                <div class="table-responsive">
 
-        </div>
+                    {!! $dataTable->table(['class' => 'table']) !!}
+                </div>
 
-    </div>
-</div>
-
-
-            <!-- DataTable -->
-            <div class="table-responsive">
-                {!! $dataTable->table(['class' => 'table modern-table align-middle']) !!}
             </div>
-
         </div>
+        <!-- end Zero Configuration -->
     </div>
-
 </div>
-
-
 
 <!-- Course View Modal -->
 <div class="modal fade" id="viewCourseModal" tabindex="-1" aria-labelledby="viewCourseModalLabel" aria-hidden="true">
@@ -416,17 +139,7 @@
 @endsection
 @push('scripts')
 {!! $dataTable->scripts() !!}
-<script>
-    document.getElementById("searchToggleBtn").addEventListener("click", function () {
-    const box = document.getElementById("searchBox");
-    box.classList.toggle("d-none");
 
-    if (!box.classList.contains("d-none")) {
-        box.querySelector("input").focus();
-    }
-});
-
-</script>
 <script>
 $(document).ready(function() {
     var table;
