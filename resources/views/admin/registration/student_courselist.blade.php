@@ -9,15 +9,25 @@
         <div class="card mb-3 p-3" style="border-left: 4px solid #004a93;">
             <div class="row align-items-end g-3">
 
-                <!-- Filters (Course + Status) -->
-                <div class="col-md-5 col-sm-12">
+                <!-- Filters Section -->
+                <div class="col-md-6 col-sm-12">
                     <form id="filterForm" method="GET">
                         <div class="row g-3">
+                            <!-- Course Status Filter -->
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Course Type</label>
+                                <select name="course_status" id="course_status" class="form-select">
+                                    <option value="active" {{ $courseStatus === 'active' ? 'selected' : '' }}>Active Courses</option>
+                                    <option value="inactive" {{ $courseStatus === 'inactive' ? 'selected' : '' }}>Archived Courses</option>
+                                    <option value="all" {{ $courseStatus === 'all' ? 'selected' : '' }}>All Courses</option>
+                                </select>
+                            </div>
+
                             <!-- Course Filter -->
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-bold">Filter by Course</label>
                                 <select name="course_id" id="course_id" class="form-select">
-                                    <option value="">-- All Courses --</option>
+                                    <option value="">-- Select Course --</option>
                                     @foreach ($courses as $id => $name)
                                         <option value="{{ $id }}"
                                             {{ (string) $courseId === (string) $id ? 'selected' : '' }}>
@@ -28,8 +38,8 @@
                             </div>
 
                             <!-- Status Filter -->
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Filter by Status</label>
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Enrollment Status</label>
                                 <select name="status" id="status" class="form-select">
                                     <option value="">-- All Status --</option>
                                     <option value="1" {{ (string) $status === '1' ? 'selected' : '' }}>Active</option>
@@ -48,10 +58,11 @@
                 </div>
 
                 <!-- Export Section -->
-                <div class="col-md-5 col-sm-12">
+                <div class="col-md-4 col-sm-12">
                     <form method="GET" action="{{ route('studentEnroll.report.export') }}" id="exportForm">
                         <input type="hidden" name="course" id="exportCourse" value="{{ $courseId }}">
                         <input type="hidden" name="status" id="exportStatus" value="{{ $status }}">
+                        <input type="hidden" name="course_status" id="exportCourseStatus" value="{{ $courseStatus }}">
                         
                         <div class="row g-3 align-items-end">
                             <div class="col-md-8">
@@ -73,6 +84,21 @@
             </div>
         </div>
 
+        {{-- Info Alert --}}
+        @if($courseStatus === 'inactive')
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <i class="fas fa-archive me-2"></i>
+            <strong>Viewing Archived Courses:</strong> You are currently viewing courses that have been archived. These courses are no longer active but historical data is preserved.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        @elseif($courseStatus === 'all')
+        <div class="alert alert-warning alert-dismissible fade show" role="alert">
+            <i class="fas fa-list-alt me-2"></i>
+            <strong>Viewing All Courses:</strong> You are viewing both active and archived courses. Use the "Course Type" filter to narrow down your selection.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        @endif
+
         {{-- Data Table with Loading State --}}
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body position-relative">
@@ -84,6 +110,7 @@
                     <span class="ms-2">Loading records...</span>
                 </div>
 
+                
                 <div class="table-responsive">
                     <table  class="table table-bordered text-nowrap align-middle">
                         <thead style="background:#af2910; color:#fff;">
@@ -103,7 +130,15 @@
                                 @include('admin.registration.student_courses_table', ['enrollments' => $enrollments])
                             @else
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted">Apply filters to see records</td>
+                                    <td colspan="8" class="text-center text-muted">
+                                        @if($courseStatus === 'active')
+                                            Select a course to see student enrollments
+                                        @elseif($courseStatus === 'inactive')
+                                            Select an archived course to see historical enrollments
+                                        @else
+                                            Apply filters to see records
+                                        @endif
+                                    </td>
                                 </tr>
                             @endif
                         </tbody>
@@ -155,14 +190,54 @@ $(function() {
     // Start with basic table
     dataTable = initializeBasicTable();
 
+    // Function to update course dropdown based on course status
+    function updateCourseDropdown(courseStatus) {
+        $('#loadingOverlay').removeClass('d-none');
+        
+        $.ajax({
+            url: "{{ route('student.courses') }}",
+            type: "GET",
+            data: { 
+                course_status: courseStatus,
+                ajax_courses: true // Flag to indicate we only need courses data
+            },
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(response) {
+                // Update course dropdown
+                const courseSelect = $('#course_id');
+                courseSelect.empty().append('<option value="">-- Select Course --</option>');
+                
+                if (response.courses && Object.keys(response.courses).length > 0) {
+                    $.each(response.courses, function(id, name) {
+                        courseSelect.append(new Option(name, id));
+                    });
+                }
+                
+                // Reset course selection
+                courseSelect.val('');
+                $('#loadingOverlay').addClass('d-none');
+            },
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', error);
+                alert('Error loading courses. Please try again.');
+                $('#loadingOverlay').addClass('d-none');
+            }
+        });
+    }
+
     // AJAX Filter Function
     function applyFilters() {
         const courseId = $('#course_id').val();
         const status = $('#status').val();
+        const courseStatus = $('#course_status').val();
         
         // Don't make AJAX call if no filters are selected
         if (!courseId && (status === '' || status === null)) {
-            $('#tableBody').html('<tr><td colspan="8" class="text-center text-muted">Apply filters to see records</td></tr>');
+            $('#tableBody').html('<tr><td colspan="8" class="text-center text-muted">' + 
+                (courseStatus === 'active' ? 'Select a course to see student enrollments' : 
+                 courseStatus === 'inactive' ? 'Select an archived course to see historical enrollments' : 
+                 'Apply filters to see records') + 
+                '</td></tr>');
             dataTable = initializeBasicTable();
             $('#filteredCount').text('0');
             return;
@@ -171,11 +246,16 @@ $(function() {
         $('#loadingOverlay').removeClass('d-none');
         $('#exportCourse').val(courseId);
         $('#exportStatus').val(status);
+        $('#exportCourseStatus').val(courseStatus);
         
         $.ajax({
             url: "{{ route('student.courses') }}",
             type: "GET",
-            data: { course_id: courseId, status: status },
+            data: { 
+                course_id: courseId, 
+                status: status,
+                course_status: courseStatus
+            },
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             success: function(response) {
                 $('#tableBody').html(response.html);
@@ -198,7 +278,17 @@ $(function() {
         });
     }
 
+    // Event handlers
+    $('#course_status').change(function() {
+        const courseStatus = $(this).val();
+        updateCourseDropdown(courseStatus);
+        applyFilters(); // Apply filters after updating courses
+    });
+
     $('#course_id, #status').change(applyFilters);
+
+    // Initialize on page load
+    updateCourseDropdown($('#course_status').val());
 });
 </script>
 @endsection
