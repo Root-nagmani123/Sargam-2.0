@@ -26,9 +26,22 @@ input.is-invalid {
         box-shadow: none !important;
         page-break-inside: avoid;
     }
+     input, select, textarea {
+        border: 1px solid #000 !important;
+        padding: 4px !important;
+        border-radius: 4px !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* If using Bootstrap form-control */
+    .form-control {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
 }
 
-	
+
 .photo-box {
     width: 200px;            /* set your size */
     height: 200px;           /* same as width → perfect square */
@@ -59,9 +72,7 @@ input.is-invalid {
     border-bottom: 1px solid #000 !important;
     box-shadow: none !important;
 }
-.btn, .no-print, nav, header, footer, .navbar, .sidebar {
-    display: none !important;
-}
+
 // print functionality
 </style>
 <div class="container-fluid">
@@ -70,7 +81,7 @@ input.is-invalid {
     <!-- start Vertical Steps Example -->
     {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
         <div class="card-body"> --}}
-            
+
             <form id="printFacultyBlankForm" class="printFacultyBlankForm">
                 <div class="card">
                     <div class="card-body">
@@ -79,9 +90,9 @@ input.is-invalid {
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-								<x-input 
-									name="facultytype" 
-									label="Faculty Type :" 
+								<x-input
+									name="facultytype"
+									label="Faculty Type :"
 									placeholder=""
 									formLabelClass="form-label"
 									required="true"
@@ -91,12 +102,12 @@ input.is-invalid {
 								/>
                                 </div>
                             </div>
-                            						
+
 							<div class="col-md-6">
 							<div class="mb-3">
-								<x-input 
-									name="firstName" 
-									label="First Name :" 
+								<x-input
+									name="firstName"
+									label="First Name :"
 									placeholder=""
 									formLabelClass="form-label"
 									required="true"
@@ -114,14 +125,14 @@ input.is-invalid {
 
                                     <x-input
                                         name="middlename"
-                                        label="Middle Name :" 
+                                        label="Middle Name :"
                                         placeholder=""
                                         formLabelClass="form-label"
                                         required="true"
                                         formInputClass="only-letters"
                                         />
 
-                                    
+
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -129,7 +140,7 @@ input.is-invalid {
 
                              <x-input
                                         name="lastname"
-                                        label="Last Name :" 
+                                        label="Last Name :"
                                         placeholder=""
                                         formLabelClass="form-label"
                                         required="true"
@@ -143,7 +154,7 @@ input.is-invalid {
 								<div class="mb-3">
 									<x-input
 										name="fullname"
-										label="Full Name :" 
+										label="Full Name :"
 										formLabelClass="form-label"
 										required="true"
 									/>
@@ -164,11 +175,11 @@ input.is-invalid {
 
 						@foreach ($genderList as $value => $label)
 							<div class="form-check form-check-inline">
-								<input 
-									class="form-check-input" 
-									type="checkbox" 
-									name="gender[]" 
-									id="gender_{{ $value }}" 
+								<input
+									class="form-check-input"
+									type="checkbox"
+									name="gender[]"
+									id="gender_{{ $value }}"
 									value="{{ $value }}"
 									{{ (is_array(old('gender')) && in_array($value, old('gender'))) ? 'checked' : '' }}
 								>
@@ -183,36 +194,36 @@ input.is-invalid {
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <x-input 
-                                        type="text" 
-                                        name="landline" 
-                                        label="Landline Number" 
-                                        placeholder="" 
+                                    <x-input
+                                        type="text"
+                                        name="landline"
+                                        label="Landline Number"
+                                        placeholder=""
                                         formLabelClass="form-label"
-                                                                             
+
                                         />
 
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <x-input 
-                                        type="text" 
-                                        name="mobile" 
-                                        label="Mobile Number :" 
-                                        placeholder="" 
+                                    <x-input
+                                        type="text"
+                                        name="mobile"
+                                        label="Mobile Number :"
+                                        placeholder=""
 										labelRequired="true"
                                         formLabelClass="form-label"
-                                      
+
                                         />
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    							
+
 										 <x-input
                                         name="country"
-                                        label="Country :" 
+                                        label="Country :"
                                         placeholder=""
                                         formLabelClass="form-label"
                                         labelRequired="true"
@@ -245,7 +256,7 @@ input.is-invalid {
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <x-input 
+                                    <x-input
                                         name="city"
                                         label="City :"
                                         placeholder=""
@@ -256,7 +267,7 @@ input.is-invalid {
 
                             <div class="col-md-6 d-none" id="otherCityContainer">
                                 <div class="mb-3">
-                                    <x-input 
+                                    <x-input
                                         name="other_city"
                                         label="Other City :"
                                         placeholder="Other City"
@@ -275,7 +286,7 @@ input.is-invalid {
                                     formLabelClass="form-label"
                                     />
                                 </div>
-                                
+
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -286,7 +297,7 @@ input.is-invalid {
                                     formLabelClass="form-label"
                                     />
                                 </div>
-                                
+
                             </div>
                             <div class="col-md-6">
 
@@ -297,7 +308,7 @@ input.is-invalid {
                                     formLabelClass="form-label"
                                     labelRequired="true"
                                     />
-                                
+
                             </div>
                             <div class="col-md-6">
                                 <x-input
@@ -306,7 +317,7 @@ input.is-invalid {
                                     placeholder=""
                                     formLabelClass="form-label"
                                     />
-                                
+
                             </div>
                             <div class="col-md-6 mt-3">
                                <div class="photo-box">
@@ -321,7 +332,7 @@ input.is-invalid {
 
                             <div class="col-md-6 mt-3">
 
-                                <x-input 
+                                <x-input
                                     type="text"
                                     name="document"
                                     label="Documents :"
@@ -342,7 +353,7 @@ input.is-invalid {
                             <h4 class="card-title">Qualification Details</h4>
                             <hr>
                             <div id="education_fields" class="my-4"></div>
-							
+
 							<div class="row fw-bold mb-2">
 								<div class="col">Degree</div>
 								<div class="col">University/Institution Name</div>
@@ -439,10 +450,10 @@ input.is-invalid {
     </div>
 </div>
 
-		
 
-							
-                            
+
+
+
                         </div>
                     </div>
                 </div>
@@ -616,7 +627,7 @@ input.is-invalid {
                             <hr>
                             <div class="row">
                                 <div class="col-6">
-                                    <x-input 
+                                    <x-input
                                         name="bankname"
                                         label="Bank Name :"
                                         placeholder=""
@@ -624,7 +635,7 @@ input.is-invalid {
                                         required="true"
                                         labelRequired="true"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-6">
 
@@ -638,7 +649,7 @@ input.is-invalid {
                                         labelRequired="true"
                                         formInputClass="only-numbers"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-6 mt-3">
 
@@ -650,10 +661,10 @@ input.is-invalid {
                                         required="true"
                                         labelRequired="true"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-6 mt-3">
-                                    
+
                                     <x-input
                                         type="text"
                                         name="pannumber"
@@ -677,7 +688,7 @@ input.is-invalid {
                                 <div class="col-6">
 
                                     <x-input
-                                       
+
                                         name="researchpublications"
                                         label="Research Publications :"
                                         placeholder=""
@@ -685,12 +696,12 @@ input.is-invalid {
                                         required="true"
                                         helperSmallText="Please fill your research publications, if any"
                                         />
-                                    
+
                                 </div>
                                 <div class="col-6">
 
                                     <x-input
-                                        
+
                                         name="professionalmemberships"
                                         label="Professional Memberships :"
                                         placeholder=""
@@ -701,9 +712,9 @@ input.is-invalid {
 
                                 </div>
                                 <div class="col-6 mt-3">
-                                    
+
                                     <x-input
-                                        
+
                                         name="recommendationdetails"
                                         label="Reference/Recommendation Details :"
                                         placeholder=""
@@ -715,7 +726,7 @@ input.is-invalid {
                                 </div>
                                 <div class="col-6 mt-3">
                                     <x-input
-                                       
+
                                         name="joiningdate"
                                         label="Joining Date :"
                                         placeholder=""
@@ -723,14 +734,14 @@ input.is-invalid {
                                         required="true"
                                         labelRequired="true"
                                         />
-                                    
+
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                
+
+
                 <div class="card">
                     <div class="card-body">
                         <div class="row">
@@ -738,13 +749,13 @@ input.is-invalid {
                                 <label for="sector" class="form-label">Current Sector :</label>
                                 <div class="mb-3">
 					<div class="form-check form-check-inline">
-							<input class="form-check-input success" type="checkbox" name="current_sector[]" 
+							<input class="form-check-input success" type="checkbox" name="current_sector[]"
 								   id="success-checkbox" value="1">
 							<label class="form-check-label" for="success-checkbox">Government Sector</label>
 						</div>
 
 						<div class="form-check form-check-inline">
-							<input class="form-check-input success" type="checkbox" name="current_sector[]" 
+							<input class="form-check-input success" type="checkbox" name="current_sector[]"
 								   id="success2-checkbox" value="2">
 							<label class="form-check-label" for="success2-checkbox">Private Sector</label>
 						</div>
@@ -762,7 +773,7 @@ input.is-invalid {
                                         placeholder=""
                                         formLabelClass="form-label"
                                         required="true"
-                                       
+
                                         />
                                 </div>
                             </div>
@@ -770,12 +781,13 @@ input.is-invalid {
                         <hr>
 		<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
 
-		<button onclick="printFacultyBlankForm()" class="btn btn-success d-flex align-items-center gap-2" type="button"><i class="material-icons menu-icon">print</i>
+		<button onclick="printFacultyBlankForm()" class="btn btn-success d-flex align-items-center gap-2" type="button">
+            <!--<i class="material-icons menu-icon">print</i>-->
 				Print
 			</button>
 
 			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-2">
-				<i class="material-icons menu-icon">arrow_back</i>
+				<!--<i class="material-icons menu-icon">arrow_back</i>-->
 				Back
 			</a>
 
@@ -785,7 +797,7 @@ input.is-invalid {
 
                     </div>
                 </div>
-                
+
             </form>
         {{-- </div>
     </div> --}}

@@ -39,7 +39,7 @@
                                     Export Excel
                                 </a>
                                 <a href="{{ route('faculty.printBlank') }}" target="_blank" class="btn btn-success">
-									<i class="material-icons">print</i> Print Blank Form
+									<!--<i class="material-icons">print</i>--> Print Blank Form
 								</a>
 
                                 <!-- Search Expand -->
