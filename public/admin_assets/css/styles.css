@@ -20411,6 +20411,8 @@ progress {
     margin-bottom: 1rem;
     vertical-align: top;
     border-color: var(--bs-table-border-color);
+    border-radius: var(--bs-table-border-radius);
+    overflow: hidden;
 }
 
 .table> :not(caption)>*>* {
@@ -20429,6 +20431,7 @@ progress {
 
 .table>thead {
     vertical-align: bottom;
+    background-color: #af2910;
 }
 
 .table-group-divider {
@@ -39155,7 +39158,7 @@ pre.code-view code.hljs {
     transition: left 0.4s ease-in-out;
     left: 120px;
     display: none;
-    padding: 0 20px 24px 20px;
+    padding: 20px 0px 24px 20px;
     z-index: 98;
     border-radius: 0 20px 20px 0;
 }

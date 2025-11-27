@@ -4,9 +4,6 @@
 
 @section('content')
 <div class="container-fluid">
-
-    <x-breadcrum title="Attendance" />
-    <x-session_message />
     <table id="attendanceTable" class="table table-bordered">
         <thead>
             <tr>
