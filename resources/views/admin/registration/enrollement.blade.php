@@ -128,6 +128,11 @@
                                 </div>
                             </div>
 
+                            {{-- <div class="text-end">
+                                <button type="submit" class="btn btn-primary">
+                                    Enroll
+                                </button>
+                            </div> --}}
                             <!-- Student Data Table Section -->
                             <div class="row mt-4">
                                 <div class="col-12">
@@ -145,17 +150,20 @@
                                                 </button>
 
                                             </div>
+                                            <div class="text-end">
+                                            </div>
+                                            <button type="submit" class="btn btn-primary">
+                                                Enroll
+                                            </button>
                                         </div>
                                         <div class="card-body">
                                             <div class="table-responsive">
-                                                <table class="table table-bordered table-hover" id="studentTable">
+                                                <table class="table" id="studentTable">
                                                     <thead>
                                                         <tr>
                                                             <th width="50px">
                                                                 <input type="checkbox" id="selectAll" checked>
                                                             </th>
-                                                            <th>Student PK</th>
-                                                            <th>Course PK</th>
                                                             <th>Course Name</th>
                                                             <th>Student Name</th>
                                                             <th>OT Code</th>
@@ -180,11 +188,11 @@
                             </div>
 
                             <hr>
-                            <div class="text-end">
+                            {{-- <div class="text-end">
                                 <button type="submit" class="btn btn-primary">
                                     Enroll
                                 </button>
-                            </div>
+                            </div> --}}
                         </form>
                     </div>
                 </div>
@@ -311,7 +319,7 @@
                 if (!currentCourseFilter) {
                     $('#enrolledTableBody').html(
                         '<tr><td colspan="6" class="text-center text-muted">Please select a course from the form to load enrolled students.</td></tr>'
-                        );
+                    );
                     $('#enrolledPaginationInfo').text('');
                     $('#enrolledPagination').empty();
                     return;
@@ -355,13 +363,13 @@
                         } else {
                             $('#enrolledTableBody').html(
                                 '<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>'
-                                );
+                            );
                         }
                     },
                     error: function(xhr) {
                         $('#enrolledTableBody').html(
                             '<tr><td colspan="6" class="text-center text-danger">Error loading enrolled students</td></tr>'
-                            );
+                        );
                         console.error('Error:', xhr.responseText);
                     }
                 });
@@ -374,7 +382,7 @@
                 if (!students || students.length === 0) {
                     tableBody.html(
                         '<tr><td colspan="6" class="text-center text-muted">No enrolled students found</td></tr>'
-                        );
+                    );
                     return;
                 }
 
@@ -545,7 +553,7 @@
                     error: function(xhr) {
                         $('#studentTable tbody').html(
                             '<tr><td colspan="7" class="text-center">Error loading students</td></tr>'
-                            );
+                        );
                         console.error('Error:', xhr.responseText);
                     }
                 });
@@ -558,7 +566,7 @@
                 if (!students || students.length === 0) {
                     tableBody.html(
                         '<tr id="noDataRow"><td colspan="7" class="text-center">No students found for the selected filters</td></tr>'
-                        );
+                    );
                     $('#studentCount').text(0);
                     return;
                 }
@@ -567,8 +575,6 @@
                     var row = '<tr>' +
                         '<td><input type="checkbox" name="students[]" value="' + student.student_pk +
                         '" class="student-checkbox" checked></td>' +
-                        '<td>' + student.student_pk + '</td>' +
-                        '<td>' + student.course_pk + '</td>' +
                         '<td>' + student.course_name + '</td>' +
                         '<td>' + student.student_name + '</td>' +
                         '<td>' + student.ot_code + '</td>' +
