@@ -63,18 +63,27 @@
                                     <a href="{{ route('subject.edit', $subject->pk) }}"><i
                                             class="material-icons material-symbols-rounded"
                                             style="font-size: 22px;">edit</i></a>
-                                    <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
-                                        class="m-0 delete-form" data-status="{{ $subject->active_inactive }}">
-                                        @csrf
-                                        @method('DELETE')
-                                        <a href="javascript:void(0)" onclick="event.preventDefault();
-                                                if(confirm('Are you sure you want to delete this subject?')) {
-                                                    this.closest('form').submit();
-                                                }" {{ $subject->active_inactive == 1 ? 'disabled' : '' }}>
-                                            <i class="material-icons material-symbols-rounded"
-                                                style="font-size: 22px;">delete</i>
-                                        </a>
-                                    </form>
+                                    <div class="delete-icon-container" data-item-id="{{ $subject->pk }}" data-delete-url="{{ route('subject.destroy', $subject->pk) }}">
+                                        @if($subject->active_inactive == 1)
+                                            <span class="delete-icon-disabled" title="Cannot delete active subject">
+                                                <i class="material-icons material-symbols-rounded"
+                                                    style="font-size: 22px; color: #ccc; cursor: not-allowed;">delete</i>
+                                            </span>
+                                        @else
+                                            <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
+                                                class="m-0 delete-form" data-status="{{ $subject->active_inactive }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <a href="javascript:void(0)" onclick="event.preventDefault();
+                                                        if(confirm('Are you sure you want to delete this subject?')) {
+                                                            this.closest('form').submit();
+                                                        }">
+                                                    <i class="material-icons material-symbols-rounded"
+                                                        style="font-size: 22px;">delete</i>
+                                                </a>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </div>
                             </td>
                             <td>
@@ -116,5 +125,6 @@ document.getElementById("searchToggleBtn").addEventListener("click", function() 
         box.querySelector("input").focus();
     }
 });
+
 </script>
 @endsection
