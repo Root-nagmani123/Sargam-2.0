@@ -43,25 +43,35 @@
                                     <td>{{ $cat->exemp_category_name }}</td>
                                     <td>{{ $cat->exemp_cat_short_name }}</td>
                                     <td>
-                                        <a href="{{ route('master.exemption.category.master.edit', 
-                                                    ['id' => encrypt(value: $cat->pk)]) }}"><i
-                                                class="material-icons menu-icon material-symbols-rounded"
-                                                style="font-size: 24px;">edit</i></a>
-                                        <form
-                                            title="{{ $cat->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                            action="{{ route('master.exemption.category.master.delete', 
-                                                    ['id' => encrypt($cat->pk)]) }}" method="POST" class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <a href="javascript:void(0)" onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }" {{ $cat->active_inactive == 1 ? 'disabled' : '' }}>
-                                                <i
-                                                class="material-icons menu-icon material-symbols-rounded"
-                                                style="font-size: 24px;">delete</i>
-                                            </a>
-                                        </form>
+                                        <div class="d-flex justify-content-start align-items-start gap-2">
+                                            <a href="{{ route('master.exemption.category.master.edit', 
+                                                        ['id' => encrypt(value: $cat->pk)]) }}"><i
+                                                    class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">edit</i></a>
+                                            <div class="delete-icon-container" data-item-id="{{ $cat->pk }}" data-delete-url="{{ route('master.exemption.category.master.delete', ['id' => encrypt($cat->pk)]) }}">
+                                                @if($cat->active_inactive == 1)
+                                                    <span class="delete-icon-disabled" title="Cannot delete active record">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
+                                                    </span>
+                                                @else
+                                                    <form
+                                                        title="Delete"
+                                                        action="{{ route('master.exemption.category.master.delete', 
+                                                                ['id' => encrypt($cat->pk)]) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <a href="javascript:void(0)" onclick="event.preventDefault(); 
+                                                                if(confirm('Are you sure you want to delete this record?')) {
+                                                                    this.closest('form').submit();
+                                                                }">
+                                                            <i class="material-icons menu-icon material-symbols-rounded"
+                                                                style="font-size: 24px;">delete</i>
+                                                        </a>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="form-check form-switch d-inline-block">

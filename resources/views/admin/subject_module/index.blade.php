@@ -48,20 +48,28 @@
                                                 <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">edit</i>
                                             </a>
-                                            <form action="{{ route('subject-module.destroy', $module->pk) }}"
-                                                method="POST" class="m-0 delete-form"
-                                                data-status="{{ $module->active_inactive }}">
-                                                @csrf
-                                                @method('DELETE')
-                                                <a href="javascript:void(0)" onclick="event.preventDefault();
-                                                if(confirm('Are you sure you want to delete this Subject modules?')) {
-                                                    this.closest('form').submit();
-                                                }" {{ $module->active_inactive == 1 ? 'disabled' : '' }}>
-                                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">delete</i>
-                                                </a>
-                                            </form>
-
+                                            <div class="delete-icon-container" data-item-id="{{ $module->pk }}" data-delete-url="{{ route('subject-module.destroy', $module->pk) }}">
+                                                @if($module->active_inactive == 1)
+                                                    <span class="delete-icon-disabled" title="Cannot delete active Subject module">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
+                                                    </span>
+                                                @else
+                                                    <form action="{{ route('subject-module.destroy', $module->pk) }}"
+                                                        method="POST" class="m-0 delete-form"
+                                                        data-status="{{ $module->active_inactive }}">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <a href="javascript:void(0)" onclick="event.preventDefault();
+                                                        if(confirm('Are you sure you want to delete this Subject modules?')) {
+                                                            this.closest('form').submit();
+                                                        }">
+                                                            <i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">delete</i>
+                                                        </a>
+                                                    </form>
+                                                @endif
+                                            </div>
                                         </div>
                                     </td>
                                     <td class="text-center">
