@@ -11,13 +11,13 @@ class EmployeeRoleMapping extends Model
     protected $primaryKey = 'pk';
     protected $guarded = [];
     public $timestamps = false;
-    // public function employee()
-    // {
-    //     return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk');
-    // }
+    public function employee()
+    {
+        return $this->belongsTo(EmployeeMaster::class, 'user_credentials_pk', 'pk');
+    }
 
-    // public function role()
-    // {
-    //     return $this->belongsTo(Role::class, 'role_id', 'id');
-    // }
+    public function role()
+    {
+        return $this->belongsTo(UserRoleMaster::class, 'user_role_master_pk', 'pk');
+    }
 }
