@@ -11,7 +11,7 @@
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Exemption Medical Speciality Master</h4>
+                            <h4>Student Medical Exemption</h4>
                         </div>
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-center gap-2">
