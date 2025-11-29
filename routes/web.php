@@ -344,9 +344,9 @@ Route::prefix('admin/course-memo-decision')
 
 
 // //fc front page route
-// Route::get('/fc-front', function () {
-//     return view('fc.front_page');
-// })->name('fc.front');
+Route::get('/fc-front', function () {
+    return view('fc.front_page');
+})->name('fc.front');
 
 Route::get('/admin/memo-conversation', function () {
     return view('admin.courseAttendanceNoticeMap.memo_conversation'); // or any other view you want to show
@@ -356,3 +356,72 @@ Route::get('/admin/memo-conversation', function () {
 Route::get('/admin/memo-notice', function () {
     return view('admin.courseAttendanceNoticeMap.memo_notice'); // or any other view you want to show
 })->name('admin.courseAttendanceNoticeMap.memo_notice');
+
+
+// setup route
+
+use App\Http\Controllers\Admin\Setup\EmployeeTypeController;
+use App\Http\Controllers\Admin\Setup\EmployeeGroupController;
+use App\Http\Controllers\Admin\Setup\DepartmentMasterSetupController;
+use App\Http\Controllers\Admin\Setup\DesignationMasterSetupController;
+use App\Http\Controllers\Admin\Setup\CasteCategoryController;
+
+// Setup -> Employee Type (moved to controller with modal CRUD)
+Route::middleware(['auth'])->group(function(){
+    Route::prefix('admin/setup/employee-type')->name('admin.setup.employee_type.')->controller(EmployeeTypeController::class)->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+    Route::prefix('admin/setup/employee-group')->name('admin.setup.employee_group.')->controller(EmployeeGroupController::class)->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+    Route::prefix('admin/setup/department-master')->name('admin.setup.department_master.')->controller(DepartmentMasterSetupController::class)->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+    Route::prefix('admin/setup/designation-master')->name('admin.setup.designation_master.')->controller(DesignationMasterSetupController::class)->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+    Route::prefix('admin/setup/caste-category')->name('admin.setup.caste_category.')->controller(CasteCategoryController::class)->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+    Route::prefix('admin/setup/caste-category')->name('admin.setup.caste_category.')->controller(CasteCategoryController::class)->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+    Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function(){
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+});
