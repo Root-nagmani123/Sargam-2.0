@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Adldap\Laravel\Facades\Adldap;
+use Illuminate\Support\Facades\Session;
+
 
 class LoginController extends Controller
 {
@@ -67,6 +69,7 @@ class LoginController extends Controller
 
     public function authenticate(Request $request)
 {
+   
     $this->validateLogin($request);
 
     $username = $request->input('username');
@@ -80,7 +83,12 @@ class LoginController extends Controller
             $user = User::where('user_name', $username)->first();
 
             if( $user ) {
+              $roles = $user->roles()->pluck('user_role_display_name')->toArray();
+         
             Auth::login($user);
+           
+            Session::put('user_roles', $roles);
+
             logger('Redirecting to: ' . url()->previous());
             return redirect()->intended(default: $this->redirectTo);
         }
@@ -89,7 +97,12 @@ class LoginController extends Controller
             if (Adldap::auth()->attempt($username, $password)) {
                 $user = User::where('user_name', $username)->first();
                 if ($user) {
+
                     Auth::login($user);
+                    $roles = $user->roles()->pluck('user_role_display_name')->toArray();
+               
+                    Session::put('user_roles', $roles);
+
                     return redirect()->intended($this->redirectTo);
                 }
             }

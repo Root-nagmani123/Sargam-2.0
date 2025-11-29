@@ -86,8 +86,14 @@ class User extends Authenticatable
         return $this->hasMany(ActionLog::class, 'action_by');
     }
 
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class);
-    }
+  public function roles()
+{
+    return $this->belongsToMany(
+        UserRoleMaster::class,
+        'employee_role_mapping',     // pivot table
+        'user_credentials_pk',       // user key
+        'user_role_master_pk'        // role key
+    );
+}
+
 }
