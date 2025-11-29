@@ -46,23 +46,46 @@ class GroupMappingDataTable extends DataTable
             })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
-                $csrf = csrf_token();
                 $editUrl = route('group.mapping.edit', ['id' => $id]);
                 $deleteUrl = route('group.mapping.delete', ['id' => $id]);
-                $html = <<<HTML
-    <a href="{$editUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Mapping">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">edit</i>
-    </a>
-    <form action="{$deleteUrl}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this record?')">
-        <input type="hidden" name="_token" value="{$csrf}">
-        <input type="hidden" name="_method" value="DELETE">
-        <a href="javascript:void(0)" onclick="event.preventDefault(); this.closest('form').submit();" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Mapping">
-            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
-        </a>
-    </form>
-    HTML;
-                return $html;
+                $isActive = $row->active_inactive == 1;
                 
+                $html = <<<HTML
+    <div class="d-flex justify-content-center align-items-center gap-2">
+        <a href="{$editUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Mapping">
+            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">edit</i>
+        </a>
+        <div class="delete-icon-container" data-item-id="{$row->pk}" data-delete-url="{$deleteUrl}">
+HTML;
+                
+                if ($isActive) {
+                    $html .= <<<HTML
+            <span class="delete-icon-disabled" title="Cannot delete active group name">
+                <i class="material-icons menu-icon material-symbols-rounded"
+                    style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
+            </span>
+HTML;
+                } else {
+                    $csrf = csrf_token();
+                    $html .= <<<HTML
+            <form action="{$deleteUrl}" method="POST" class="m-0 delete-form" data-status="0">
+                <input type="hidden" name="_token" value="{$csrf}">
+                <input type="hidden" name="_method" value="DELETE">
+                <a href="javascript:void(0)" onclick="event.preventDefault();
+                    if(confirm('Are you sure you want to delete this group name mapping?')) {
+                        this.closest('form').submit();
+                    }" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Mapping">
+                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
+                </a>
+            </form>
+HTML;
+                }
+                
+                $html .= <<<HTML
+        </div>
+    </div>
+HTML;
+                return $html;
             })
 
             ->addColumn('status', function ($row) {

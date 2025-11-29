@@ -2,7 +2,7 @@
 
 namespace App\DataTables;
 
-use App\Models\{StudentCourseGroupMap, GroupTypeMasterCourseMasterMap, MDOEscotDutyMap, CourseStudentAttendance};
+use App\Models\{StudentCourseGroupMap, GroupTypeMasterCourseMasterMap, MDOEscotDutyMap, CourseStudentAttendance, StudentMedicalExemption};
 use App\Models\Timetable;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Yajra\DataTables\EloquentDataTable;
@@ -95,34 +95,54 @@ class StudentAttendanceListDataTable extends DataTable
 
         $checked = ($courseStudent && $courseStudent->status == $value) ? 'checked' : '';
             
-        if (!$courseStudent && !$checked ) { // && $value === 4
-
-            match ($value) {
-                4 => $dutyType = MDOEscotDutyMap::getMdoDutyTypes()['mdo'],
-                5 => $dutyType = MDOEscotDutyMap::getMdoDutyTypes()['escort'],
-                7 => $dutyType = MDOEscotDutyMap::getMdoDutyTypes()['other'],
-                default => $dutyType = 0,
-            };
-
+        if (!$courseStudent && !$checked) {
             $timetable = Timetable::select('START_DATE')->where('pk', $this->timetable_pk)->first();
             
             if(!empty($timetable)) {
-                
-                $mdoEscot = MDOEscotDutyMap::where([
-                    ['course_master_pk', '=', $this->course_pk],
-                    ['mdo_duty_type_master_pk', '=', $dutyType],
-                    ['selected_student_list', '=', $studentId]
-                ])
-                ->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
+                // Handle Medical Exemption (value 6) - stored in StudentMedicalExemption table
+                if ($value == 6) {
+                    $medicalExemption = StudentMedicalExemption::where([
+                        ['course_master_pk', '=', $this->course_pk],
+                        ['student_master_pk', '=', $studentId],
+                        ['active_inactive', '=', 1]
+                    ])
+                    ->where(function($query) use ($timetable) {
+                        $query->where(function($q) use ($timetable) {
+                            // Check if date falls within the exemption period
+                            $q->where('from_date', '<=', $timetable->START_DATE)
+                              ->where(function($subQ) use ($timetable) {
+                                  $subQ->whereNull('to_date')
+                                       ->orWhere('to_date', '>=', $timetable->START_DATE);
+                              });
+                        });
+                    })->first();
 
-                if ($mdoEscot) {
-                    $courseStudentMDO = CourseStudentAttendance::where([
-                        ['Student_master_pk', '=', $studentId],
-                        ['Course_master_pk', '=', $this->course_pk],
-                        ['group_type_master_course_master_map_pk', '=', $this->group_pk],
-                        ['timetable_pk', '=', $this->timetable_pk]
-                    ])->first();
-                    $checked = 'checked';
+                    if ($medicalExemption) {
+                        $checked = 'checked';
+                    }
+                } else {
+                    // Handle MDO, Escort, and Other exemptions (values 4, 5, 7) - stored in MDOEscotDutyMap
+                    $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+                    
+                    match ($value) {
+                        4 => $dutyType = $mdoDutyTypes['mdo'] ?? null,
+                        5 => $dutyType = $mdoDutyTypes['escort'] ?? null,
+                        7 => $dutyType = $mdoDutyTypes['other'] ?? null,
+                        default => $dutyType = null,
+                    };
+
+                    if ($dutyType !== null && $dutyType > 0) {
+                        $mdoEscot = MDOEscotDutyMap::where([
+                            ['course_master_pk', '=', $this->course_pk],
+                            ['mdo_duty_type_master_pk', '=', $dutyType],
+                            ['selected_student_list', '=', $studentId]
+                        ])
+                        ->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
+
+                        if ($mdoEscot) {
+                            $checked = 'checked';
+                        }
+                    }
                 }
             }
         }
@@ -145,6 +165,22 @@ class StudentAttendanceListDataTable extends DataTable
 
         $html = "<input type='hidden' name='student[{$studentId}]' value='0'>";
 
+        // Determine default checked value
+        $defaultCheckedValue = null;
+        
+        // If there's an existing attendance record, use its status
+        if ($courseStudent) {
+            $defaultCheckedValue = $courseStudent->status;
+        } else {
+            // Check if student has any exemptions or duties
+            $hasExemptionOrDuty = $this->hasExemptionOrDuty($studentId);
+            
+            // If no exemptions or duties, default to Present (1)
+            if (!$hasExemptionOrDuty) {
+                $defaultCheckedValue = 1; // Present
+            }
+        }
+
         foreach ($options as $value => $label) {
             $labelClass = match ($value) {
                 1 => 'text-success',
@@ -153,7 +189,7 @@ class StudentAttendanceListDataTable extends DataTable
                 default => 'text-dark',
             };
 
-            $checked = ($courseStudent && $courseStudent->status == $value) ? 'checked' : '';
+            $checked = ($defaultCheckedValue !== null && $defaultCheckedValue == $value) ? 'checked' : '';
 
             $html .= "<div class='form-check form-check-inline'>
                         <input class='form-check-input' type='radio' name='student[{$studentId}]' value='{$value}' {$checked} id='student[{$studentId}][{$value}]'>
@@ -162,6 +198,83 @@ class StudentAttendanceListDataTable extends DataTable
         }
 
         return $html;
+    }
+
+    /**
+     * Check if student has MDO duty, Escort duty, Medical Exemption, or Other Exemption
+     */
+    protected function hasExemptionOrDuty(int $studentId): bool
+    {
+        $timetable = Timetable::select('START_DATE')->where('pk', $this->timetable_pk)->first();
+        
+        if (empty($timetable)) {
+            return false;
+        }
+
+        $timetableDate = $timetable->START_DATE;
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+
+        // Check for MDO duty (value 4)
+        if (!empty($mdoDutyTypes['mdo'])) {
+            $mdoDuty = MDOEscotDutyMap::where([
+                ['course_master_pk', '=', $this->course_pk],
+                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
+                ['selected_student_list', '=', $studentId]
+            ])->whereDate('mdo_date', '=', $timetableDate)->exists();
+
+            if ($mdoDuty) {
+                return true;
+            }
+        }
+
+        // Check for Escort duty (value 5)
+        if (!empty($mdoDutyTypes['escort'])) {
+            $escortDuty = MDOEscotDutyMap::where([
+                ['course_master_pk', '=', $this->course_pk],
+                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
+                ['selected_student_list', '=', $studentId]
+            ])->whereDate('mdo_date', '=', $timetableDate)->exists();
+
+            if ($escortDuty) {
+                return true;
+            }
+        }
+
+        // Check for Other Exemption (value 7)
+        if (!empty($mdoDutyTypes['other'])) {
+            $otherExemption = MDOEscotDutyMap::where([
+                ['course_master_pk', '=', $this->course_pk],
+                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
+                ['selected_student_list', '=', $studentId]
+            ])->whereDate('mdo_date', '=', $timetableDate)->exists();
+
+            if ($otherExemption) {
+                return true;
+            }
+        }
+
+        // Check for Medical Exemption (value 6)
+        $medicalExemption = StudentMedicalExemption::where([
+            ['course_master_pk', '=', $this->course_pk],
+            ['student_master_pk', '=', $studentId],
+            ['active_inactive', '=', 1]
+        ])
+        ->where(function($query) use ($timetableDate) {
+            $query->where(function($q) use ($timetableDate) {
+                // Check if date falls within the exemption period
+                $q->where('from_date', '<=', $timetableDate)
+                  ->where(function($subQ) use ($timetableDate) {
+                      $subQ->whereNull('to_date')
+                           ->orWhere('to_date', '>=', $timetableDate);
+                  });
+            });
+        })->exists();
+
+        if ($medicalExemption) {
+            return true;
+        }
+
+        return false;
     }
 
     protected function filename(): string
