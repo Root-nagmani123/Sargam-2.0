@@ -14,38 +14,30 @@
             <h6 class="card-subtitle mb-3"></h6>
             <hr>
                 
-                <form method="POST" action="{{ route('admin.roles.update', $role->id) }}">
-                    @csrf
-                    @method('PUT')
+              <form action="{{ route('admin.roles.update', encrypt($role->pk)) }}" method="POST">
+    @csrf
+    @method('PUT')
                 
                     <div class="row">
                         <div class="col-md-12">
                             <div class="mb-3">
                                 <label class="form-label" for="title">Name :</label>
-                                <input type="text" class="form-control" id="title" placeholder="" name="name" value="{{ $role->name }}">
+                                <input type="text" class="form-control" id="title" placeholder="" name="name" value="{{ $role->user_role_name }}">
                             </div>
                         </div>
                         @error('name')
                             <p class="text-danger">{{ $message }}</p>
                         @enderror
-                        <div class="col-md-12">
+                         <div class="col-md-12">
                             <div class="mb-3">
-                                <label class="form-label" for="caste">Permission :</label>
-                                <br/>
-                                @foreach($all_permissions as $value)
-
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" value="{{$value->id}}" id="flexCheckDefault_{{$value->id}}" {{ in_array($value->id, $rolePermissions) ? 'checked' : ''}} name="permission[{{$value->id}}]" >
-                                        <label class="form-check-label" for="flexCheckDefault_{{$value->id}}">
-                                            {{ $value->name }}
-                                        </label>
-                                    </div>  
-                                @endforeach
+                                <label class="form-label" for="title">Display Name :</label>
+                                <input type="text" class="form-control" id="title" placeholder="" name="display_name" value="{{ $role->user_role_display_name }}">
                             </div>
                         </div>
-                        @error('permission')
+                        @error('display_name')
                             <p class="text-danger">{{ $message }}</p>
                         @enderror
+                        
                     </div>
 <hr>
                     <button class="btn btn-primary hstack gap-6 float-end" type="submit">

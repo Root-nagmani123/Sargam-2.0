@@ -245,11 +245,11 @@
                                         <span
                                             class="hide-menu">Roles</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
+                                {{-- <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.permissions.index') }}">
                                         <span
                                             class="hide-menu">Permissions</span>
-                                    </a></li>
+                                    </a></li> --}}
                             </ul>
                              {{-- USER Feedback --}}
                             <li class="sidebar-item">

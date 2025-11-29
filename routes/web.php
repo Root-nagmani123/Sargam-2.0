@@ -47,9 +47,23 @@ Route::post('/login', [LoginController::class, 'authenticate'])->name('post_logi
 Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
-        Route::resource('roles', RoleController::class);
-        Route::resource('permissions', PermissionController::class);
+          Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
+        ->name('users.getRoles'); 
+       Route::get('roles', [RoleController::class, 'index'])->name('roles.index');
+Route::get('roles/create', [RoleController::class, 'create'])->name('roles.create');
+Route::post('roles', [RoleController::class, 'store'])->name('roles.store');
+Route::get('roles/{id}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+Route::put('roles/{id}', [RoleController::class, 'update'])->name('roles.update');
+Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
+
+        // Route::resource('permissions', PermissionController::class);
         Route::resource('users', UserController::class);
+Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
+Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
+    ->name('users.assignRoleSave');
+  
+
+
     });
 
     // Dashboard
