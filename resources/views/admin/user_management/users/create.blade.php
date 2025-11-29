@@ -84,10 +84,10 @@
                                     <div class="mb-2">
                                         <div class="form-check">
                                             <input class="form-check-input" type="checkbox" name="roles[]"
-                                                value="{{ $role->name }}" id="role{{ $role->id }}"
-                                                {{ in_array($role->name, old('roles', [])) ? 'checked' : '' }} />
-                                            <label class="form-check-label" for="role{{ $role->id }}">
-                                                {{ $role->name }}
+                                                value="{{ $role->user_role_display_name }}" id="role{{ $role->pk }}"
+                                                {{ in_array($role->user_role_display_name, old('roles', [])) ? 'checked' : '' }} />
+                                            <label class="form-check-label" for="role{{ $role->pk }}">
+                                                {{ $role->user_role_display_name }}
                                             </label>
                                         </div>
                                     </div>

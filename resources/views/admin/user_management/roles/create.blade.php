@@ -20,7 +20,7 @@
                 <div class="row">
                     <div class="col-md-12">
                         <div class="mb-3">
-                            <label class="form-label" for="title">Name :</label>
+                            <label class="form-label" for="title">USER ROLE NAME :</label>
                             <input type="text" class="form-control" id="title" placeholder="" name="name"
                                 value="{{ old('name') }}">
                         </div>
@@ -28,8 +28,18 @@
                     @error('name')
                     <p class="text-danger">{{ $message }}</p>
                     @enderror
+                     <div class="col-md-12">
+                        <div class="mb-3">
+                            <label class="form-label" for="title">USER_ROLE_DISPLAY_NAME :</label>
+                            <input type="text" class="form-control" id="title" placeholder="" name="display_name"
+                                value="{{ old('display_name') }}">
+                        </div>
+                    </div>
+                    @error('display_name')
+                    <p class="text-danger">{{ $message }}</p>
+                    @enderror
 
-                    <div class="col-md-12">
+                    {{-- <div class="col-md-12">
                         <div class="mb-3">
                             <label class="form-label" for="caste">Permission :</label> <br />
                             @foreach($all_permissions as $value)
@@ -42,7 +52,7 @@
                             </div>
                             @endforeach
                         </div>
-                    </div>
+                    </div> --}}
                     @error('permission')
                     <p class="text-danger">{{ $message }}</p>
                     @enderror
