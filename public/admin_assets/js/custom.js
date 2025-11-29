@@ -1299,32 +1299,41 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 success: function (response) {
                     if (response.status) {
-                        if (response.students.length === 0) {
-                            alert('No students found for the selected courses.');
-                            return;
-                        }
-
-                        const currentSelected = $('#select_memo_student').val();
+                        const currentSelected = $('#select_memo_student').val() || [];
                         $('#select_memo_student').empty();
 
-                        // Append new options
-                        response.students.forEach(student => {
-                            $('#select_memo_student').append(
-                                $('<option>', {
-                                    value: student.pk,
-                                    text: student.display_name
-                                })
-                            );
-                        });
-               dualListbox.refresh();
-                        // Destroy the old dual listbox wrapper (if needed)
-                        $('.dual-listbox').remove(); // depends on your plugin structure
+                        // Append new options (even if empty array)
+                        if (response.students && response.students.length > 0) {
+                            response.students.forEach(student => {
+                                const isSelected = currentSelected.includes(student.pk.toString());
+                                $('#select_memo_student').append(
+                                    $('<option>', {
+                                        value: student.pk,
+                                        text: student.display_name,
+                                        selected: isSelected
+                                    })
+                                );
+                            });
+                        } else {
+                            // Show message if no defaulters found, but don't prevent UI update
+                            console.log('No defaulter students found for this topic.');
+                        }
+
+                        // Destroy the old dual listbox wrapper
+                        if (typeof dualListbox !== 'undefined' && dualListbox) {
+                            try {
+                                dualListbox.destroy();
+                            } catch(e) {
+                                console.log('Error destroying dual listbox:', e);
+                            }
+                        }
+                        $('.dual-listbox').remove();
 
                         // Reinitialize the DualListbox
                         dualListbox = new DualListbox("#select_memo_student", {
                             addEvent: function (value) { },
                             removeEvent: function (value) { },
-                            availableTitle: "Available Students",
+                            availableTitle: "Defaulter Students",
                             selectedTitle: "Selected Students",
                             addButtonText: "Move Right",
                             removeButtonText: "Move Left",
@@ -1334,11 +1343,13 @@ document.addEventListener('DOMContentLoaded', function () {
                         });
 
                     } else {
-                        alert(response.message);
+                        alert(response.message || 'Error fetching student list.');
                     }
                 },
-                error: function () {
-                    alert('Error fetching student list');
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', error);
+                    console.error('Response:', xhr.responseText);
+                    alert('Error fetching defaulter students. Please check the console for details.');
                 }
             });
         }
