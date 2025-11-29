@@ -66,14 +66,18 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
 
     });
 
-    // Dashboard
-    Route::get('/dashboard', function () {
-        $year = request('year', now()->year);
-        $month = request('month', now()->month);
-        $events = []; // Add your events logic here if needed
-        return view('admin.dashboard', compact('year', 'month', 'events'));
+    // // Dashboard
+    // Route::get('/dashboard', function () {
+    //     $year = request('year', now()->year);
+    //     $month = request('month', now()->month);
+    //     $events = []; // Add your events logic here if needed
+    //     return view('admin.dashboard', compact('year', 'month', 'events'));
 
-    })->name('admin.dashboard');
+    // })->name('admin.dashboard');
+
+           Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
+
+
     Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
 
     // Route::get('/home', [HomeController::class, 'index'])->name('home');
