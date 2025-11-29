@@ -2,6 +2,17 @@
 
 @section('title', 'Member - Sargam | Lal Bahadur')
 @section('content')
+<style>
+    .roles-cell {
+    max-height: 100px;       /* Limit the height */
+    overflow-y: auto;       /* Vertical scroll if content exceeds */
+    white-space: normal;    /* Allow wrapping */
+    word-wrap: break-word;  /* Break long words if necessary */
+    padding: 2px;
+    display: block;
+}
+
+</style>
 <div class="container-fluid">
 
     <div class="datatables">
@@ -13,9 +24,9 @@
                             <h4>Users</h4>
                         </div>
                         <div class="col-6">
-                            <div class="float-end gap-2">
+                            <!-- <div class="float-end gap-2">
                                 <a href="{{ route('admin.users.create') }}" class="btn btn-primary">+ Add Users</a>
-                            </div>
+                            </div> -->
                         </div>
                     </div>
                     <hr>
