@@ -28,6 +28,11 @@
             deleteRoute: 'master.exemption.category.master.delete',
             itemName: 'record',
             useEncryptedId: true // Some routes use encrypted IDs
+        },
+        'group_type_master_course_master_map': {
+            deleteRoute: 'group.mapping.delete',
+            itemName: 'group name mapping',
+            useEncryptedId: true // Uses encrypted IDs
         }
     };
 

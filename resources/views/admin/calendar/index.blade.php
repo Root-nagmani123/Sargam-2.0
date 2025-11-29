@@ -606,7 +606,7 @@ textarea:focus {
                                     <select name="shift" id="shift" class="form-control">
                                         <option value="">Select Shift</option>
                                         @foreach($classSessionMaster as $shift)
-                                        <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }}</option>
+                                        <option value="{{ $shift->shift_time }}">{{ $shift->shift_name }} ({{ $shift->shift_time }})</option>
                                         @endforeach
                                     </select>
                                 </div>

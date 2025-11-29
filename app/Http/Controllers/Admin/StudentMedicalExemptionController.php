@@ -16,7 +16,9 @@ class StudentMedicalExemptionController extends Controller
 {
     public function index()
     {
-       $records = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course'])->paginate(10);
+       $records = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course'])
+           ->orderBy('pk', 'desc')
+           ->paginate(10);
     
         return view('admin.student_medical_exemption.index', compact('records'));
     }

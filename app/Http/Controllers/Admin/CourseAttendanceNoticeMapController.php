@@ -359,33 +359,50 @@ public function getStudentAttendanceBytopic(Request $request)
             ]);
         }
 
-        $attendance = DB::table('course_student_attendance as a')
-            ->leftJoin('student_master as s', 'a.Student_master_pk', '=', 's.pk')
-            ->where('a.timetable_pk', $topicId)
-            ->whereIn('a.status', ['2', '3'])
+        // Cast topicId to integer to ensure proper comparison
+        $topicId = (int) $topicId;
 
+        // Query to get students with Late (2) or Absent (3) status
+        // Handle both integer and string status values
+        $attendance = DB::table('course_student_attendance as a')
+            ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
+            ->where('a.timetable_pk', $topicId)
+            ->where(function($query) {
+                // Check for status 2 (Late) or 3 (Absent) as both integer and string
+                $query->where('a.status', 2)
+                      ->orWhere('a.status', 3)
+                      ->orWhere('a.status', '2')
+                      ->orWhere('a.status', '3');
+            })
+            ->whereNotNull('s.pk')
+            ->whereNotNull('s.display_name')
+            ->where('s.display_name', '!=', '')
             ->select(
                 'a.pk as studnet_pk',
                 's.pk as pk',
-                's.display_name as display_name'
+                's.display_name as display_name',
+                'a.status as attendance_status'
             )
+            ->distinct()
             ->get();
-            // print_r($attendance);die;
 
+        // If no students found, return empty array instead of error
+        // This allows the UI to handle empty state gracefully
         if ($attendance->isEmpty()) {
             return response()->json([
-                'status' => false,
-                'message' => 'No students found for this topic.'
+                'status' => true,
+                'message' => 'No defaulter students found for this topic.',
+                'students' => []
             ]);
         }
 
         // Format the attendance data
         $students = $attendance->map(function ($student) {
             return [
-                'pk' => $student->pk,
+                'pk' => (int) $student->pk,
                 'display_name' => $student->display_name
             ];
-        });
+        })->values(); // Reset array keys
 
         return response()->json([
             'status' => true,
@@ -394,6 +411,9 @@ public function getStudentAttendanceBytopic(Request $request)
         ]);
 
     } catch (\Exception $e) {
+        \Log::error('Error in getStudentAttendanceBytopic: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
+        
         return response()->json([
             'status' => false,
             'message' => 'Error occurred while fetching student list.',
