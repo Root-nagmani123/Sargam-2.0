@@ -21,12 +21,12 @@
                                         style="width:30px;">
                                 </div>
                                 <div class="col-9">
-                                    <h6 class="text-muted mb-1">Total Students</h6>
+                                    <h6 class="text-muted mb-1">Total Active Courses</h6>
                                     <div class="d-flex align-items-center gap-2">
 
-                                        <h3 class="m-0 fw-bold">1,247</h3>
+                                        <h3 class="m-0 fw-bold">{{ $totalActiveCourses }}</h3>
                                     </div>
-                                    <p class="text-primary small mt-2 fw-semibold">+12% from last month</p>
+                                    <!-- <p class="text-primary small mt-2 fw-semibold">+12% from last month</p> -->
                                 </div>
                             </div>
 
@@ -44,11 +44,11 @@
                                         style="width:30px;">
                                 </div>
                                 <div class="col-9">
-                                    <h6 class="text-muted mb-1">Active Teachers</h6>
+                                    <h6 class="text-muted mb-1">Upcoming Courses</h6>
                                     <div class="d-flex align-items-center gap-2">
-                                        <h3 class="m-0 fw-bold">89</h3>
+                                        <h3 class="m-0 fw-bold">{{ $upcomingCourses }}</h3>
                                     </div>
-                                    <p class="text-success small mt-2 fw-semibold">+3% from last month</p>
+                                    <!-- <p class="text-success small mt-2 fw-semibold">+3% from last month</p> -->
                                 </div>
                             </div>
 
@@ -62,15 +62,15 @@
                                 <div class="col-3 d-flex align-items-center justify-content-center">
                                     <!-- <i class="material-icons menu-icon material-symbols-rounded text-warning"
                                                     style="font-size: 30px;">school</i> -->
-                                    <img src="{{ asset('images/classes.svg') }}" alt="Total Classes"
+                                    <img src="{{ asset('images/classes.svg') }}" alt="Total Guest faculty"
                                         style="width:30px;">
                                 </div>
                                 <div class="col-9">
-                                    <h6 class="text-muted mb-1">Total Classes</h6>
+                                    <h6 class="text-muted mb-1">Total Guest faculty</h6>
                                     <div class="d-flex align-items-center gap-2">
-                                        <h3 class="m-0 fw-bold">45</h3>
+                                        <h3 class="m-0 fw-bold">{{ $total_guest_faculty }}</h3>
                                     </div>
-                                    <p class="text-warning small mt-2 fw-semibold">+2 new classes</p>
+                                    <!-- <p class="text-warning small mt-2 fw-semibold">+2 new classes</p> -->
                                 </div>
                             </div>
 
@@ -84,15 +84,15 @@
                                 <div class="col-3 d-flex align-items-center justify-content-center">
                                     <!-- <i class="material-icons menu-icon material-symbols-rounded text-purple"
                                         style="font-size: 30px;">groups_2</i> -->
-                                    <img src="{{ asset('images/attendance.svg') }}" alt="Attendance Rate"
+                                    <img src="{{ asset('images/attendance.svg') }}" alt="Total Inhouse faculty"
                                         style="width:30px;">
                                 </div>
                                 <div class="col-9">
-                                    <h6 class="text-muted mb-1">Attendance Rate</h6>
+                                    <h6 class="text-muted mb-1">Total Inhouse Faculty</h6>
                                     <div class="d-flex align-items-center gap-2">
-                                        <h3 class="m-0 fw-bold">94.5%</h3>
+                                        <h3 class="m-0 fw-bold">{{ $total_internal_faculty }}</h3>
                                     </div>
-                                    <p class="text-primary small mt-2 fw-semibold">+2.1% improvement</p>
+                                    <!-- <p class="text-primary small mt-2 fw-semibold">+2.1% improvement</p> -->
                                 </div>
                             </div>
                         </div>
@@ -146,29 +146,42 @@
                 <div class="row g-4">
 
                     <!-- Example Card (Repeat in Loop) -->
+                     @if($emp_dob_data->isEmpty())
+                    <p class="text-center">No Birthdays Today</p>
+                    @else
+                    @php
+                    $colors = ['#E4F2E9', '#FFF7DF', '#E8E8E9', '#ECEAF5', '#F5DCE0', '#D3E1EF'];
+                    @endphp
+                    @foreach($emp_dob_data as $employee)
                     <div class="col-12 col-md-6 col-lg-4">
-                        <div class="card shadow-sm border-0 h-100" style="background:#E4F2E9; border-radius:20px;">
+                        <div class="card shadow-sm border-0 h-100" style="background:{{ $colors[$loop->index % count($colors)] }}; border-radius:20px;">
                             <div class="card-body d-flex align-items-start gap-3 p-4">
 
                                 <!-- Profile Image -->
-                                <img src="{{ asset('admin_assets/images/profile/user-1.jpg') }}" alt="Profile photo of Dalip Bisht"
-                                    class="rounded-circle" style="width:60px; height:60px; object-fit:cover;">
+                               @php
+                                        $photo = $employee->profile_picture ?? ''
+                                            ? asset('storage/' . $employee->profile_picture)
+                                            : asset('admin_assets/images/profile/user-1.jpg');
+                                    @endphp
 
+                                    <img src="{{ $photo }}" class="rounded-circle" style="width:60px; height:60px; object-fit:cover;" alt="Profile photo of {{ $employee->first_name ?? '' }} {{ $employee->last_name ?? '' }} ">
+    
                                 <!-- Details -->
                                 <div>
-                                    <h5 class="fw-bold mb-1">Dalip Bisht</h5>
-                                    <p class="text-muted small mb-2">Field or Office Assistant</p>
+                                    <h5 class="fw-bold mb-1">{{ $employee->first_name ?? '' }} {{ $employee->last_name ?? '' }}</h5>
+                                    <p class="text-muted small mb-2">{{ $employee->designation_name ?? '' }}</p>
                                     <p class="mb-0 small">
-                                        dalip.bisht12@gmail.com <br>
-                                        7451992666
+                                       {{ $employee->email ?? '' }} <br>
+                                        {{ $employee->mobile ?? '' }}
                                     </p>
                                 </div>
                             </div>
                         </div>
                     </div>
-
+                    @endforeach
+                    @endif
                     <!-- EXTRA SAMPLE CARDS — Change BG color to match your design -->
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <!-- <div class="col-12 col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100" style="background:#FFF7DF; border-radius:20px;">
                             <div class="card-body d-flex align-items-start gap-3 p-4">
                                 <img src="{{ asset('admin_assets/images/profile/user-2.jpg') }}" class="rounded-circle"
@@ -195,8 +208,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Additional Row -->
                     <div class="col-12 col-md-6 col-lg-4">
                         <div class="card shadow-sm border-0 h-100" style="background:#ECEAF5; border-radius:20px;">
                             <div class="card-body d-flex align-items-start gap-3 p-4">
@@ -237,7 +248,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div> -->
 
                 </div>
             </div>

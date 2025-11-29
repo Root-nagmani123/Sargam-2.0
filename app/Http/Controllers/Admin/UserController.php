@@ -8,7 +8,12 @@ use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
 use App\Models\User;
 use App\Models\UserRoleMaster;
+use App\Models\EmployeeMaster;
 use App\Models\EmployeeRoleMapping;
+use App\Models\CourseMaster;
+use App\Models\FacultyMaster;
+
+
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -23,6 +28,28 @@ class UserController extends Controller
      *
      * @return \Illuminate\View\View
      */
+    public function dashboard()
+    {
+         $year = request('year', now()->year);
+        $month = request('month', now()->month);
+        $events = []; // Add your events logic here if needed
+
+      $emp_dob_data = EmployeeMaster::where('status', 1)->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
+        ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+        ->select('employee_master.first_name','employee_master.email','employee_master.mobile','employee_master.profile_picture', 'employee_master.last_name', 'designation_master.designation_name', 'employee_master.dob')
+      ->get();
+
+      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('end_date', '>=', now())->count();
+      $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
+
+
+      
+       $total_guest_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count();    
+       $total_internal_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count();    
+//   print_r($emp_data);exit;
+        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty'));
+    }
+
     public function index(UserCredentialsDataTable $request)
     {
         return $request->render('admin.user_management.users.index');
