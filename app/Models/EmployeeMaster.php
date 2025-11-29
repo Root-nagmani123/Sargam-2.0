@@ -75,7 +75,7 @@ class EmployeeMaster extends Model
                 ->get()
                 ->each(function ($role) use (&$assignedRoles) {
                     $assignedRoles[] = [
-                        'role_name' => $role->USER_ROLE_NAME,
+                        'role_name' => $role->user_role_name,
 
                 ];
             });

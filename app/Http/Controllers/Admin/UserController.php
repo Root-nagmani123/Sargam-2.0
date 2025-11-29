@@ -7,6 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\User\StoreUserRequest;
 use App\Http\Requests\Admin\User\UpdateUserRequest;
 use App\Models\User;
+use App\Models\UserRoleMaster;
+use App\Models\EmployeeRoleMapping;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -32,7 +35,7 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::all();
+       $roles = UserRoleMaster::orderBy('pk', 'DESC')->get();
         return view('admin.user_management.users.create', compact('roles'));
     }
 
@@ -54,8 +57,17 @@ class UserController extends Controller
             ]);
             
             if ($request->has('roles')) {
-                $user->assignRole($request->roles);
+                // $user->assignRole($request->roles);
+                foreach ($request->roles as $roleId) {
+                    EmployeeRoleMapping::create([
+                    'user_credentials_pk' => $user->id,
+                    'user_role_master_pk' => $roleId,
+                    'active_inactive' => 1,
+                    'created_date' => now(),
+                    'updated_date' => now(),
+                ]);
             }
+        }
             
             DB::commit();
             
@@ -116,9 +128,21 @@ class UserController extends Controller
             
             $user->update($userData);
             
-            if ($request->has('roles')) {
-                $user->syncRoles($request->roles);
+             if ($request->has('roles')) {
+            // Remove old roles
+           EmployeeRoleMapping::where('user_credentials_pk', $user->id)->delete();
+
+            // Assign new roles
+            foreach ($request->roles as $roleId) {
+                EmployeeRoleMapping::create([
+                    'user_credentials_pk' => $user->id,
+                    'user_role_master_pk' => $roleId,
+                    'active_inactive' => 1,
+                    'created_date' => now(),
+                    'updated_date' => now(),
+                ]);
             }
+        }
             
             DB::commit();
             
@@ -166,5 +190,71 @@ class UserController extends Controller
 
     return response()->json(['message' => 'Status updated successfully']);
 }
+public function assignRole($id)
+{
+    $decryptedId = decrypt($id);
+    $user = User::findOrFail($decryptedId);
+
+    $userRoles = \DB::table('employee_role_mapping')
+        ->where('user_credentials_pk', $decryptedId)
+        ->pluck('user_role_master_pk')
+        ->toArray();
+
+    return view('admin.user_management.users.assign_role',
+        compact('user', 'userRoles'));
+}
+public function getAllRoles()
+{
+    $roles = UserRoleMaster::select('pk', 'user_role_name', 'user_role_display_name')
+        ->orderBy('pk', 'DESC')
+        ->get();
+
+    return response()->json($roles);
+}
+
+
+
+public function assignRoleSave(Request $request)
+{
+    $request->validate([
+        'user_id' => 'required|integer',
+        'roles'   => 'nullable|array',
+    ]);
+
+    $userId = $request->user_id;
+
+    \DB::beginTransaction();
+
+    try {
+
+        // Remove old roles
+        \DB::table('employee_role_mapping')
+            ->where('user_credentials_pk', $userId)
+            ->delete();
+
+        // Insert new roles
+        if (!empty($request->roles)) {
+            foreach ($request->roles as $roleId) {
+                \DB::table('employee_role_mapping')->insert([
+                    'user_credentials_pk'  => $userId,
+                    'user_role_master_pk'  => $roleId,
+                    'active_inactive'      => 1,
+                    'created_date'         => now(),
+                    'updated_date'        => now(),
+                ]);
+            }
+        }
+
+        \DB::commit();
+
+        return redirect()->route('admin.users.index')
+                         ->with('success', 'Roles assigned successfully.');
+
+    } catch (\Exception $e) {
+        \DB::rollBack();
+        return back()->with('error', 'Error: '.$e->getMessage());
+    }
+}
+
 
 } 
