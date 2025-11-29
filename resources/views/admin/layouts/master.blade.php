@@ -331,34 +331,22 @@
 
                     <!-- Setup Tab -->
                     <div class="tab-pane fade" id="tab-setup" role="tabpanel">
-                        <div class="container-fluid p-4">
-                            <h3>Setup Section</h3>
-                            <p>Configuration and setup content will appear here.</p>
-                        </div>
+                        @yield('content')
                     </div>
 
                     <!-- Communications Tab -->
                     <div class="tab-pane fade" id="tab-communications" role="tabpanel">
-                        <div class="container-fluid p-4">
-                            <h3>Communications</h3>
-                            <p>Communication tools and settings will appear here.</p>
-                        </div>
+                        @yield('communications_content')
                     </div>
 
                     <!-- Academics Tab -->
                     <div class="tab-pane fade" id="tab-academics" role="tabpanel">
-                        <div class="container-fluid p-4">
-                            <h3>Academics</h3>
-                            <p>Academic content and management will appear here.</p>
-                        </div>
+                        @yield('academics_content')
                     </div>
 
                     <!-- Material Management Tab -->
                     <div class="tab-pane fade" id="tab-material-management" role="tabpanel">
-                        <div class="container-fluid p-4">
-                            <h3>Material Management</h3>
-                            <p>Material inventory and management will appear here.</p>
-                        </div>
+                        @yield('material_management_content')
                     </div>
                 </div>
             </div>

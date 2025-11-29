@@ -5,8 +5,6 @@
 @section('content')
 
 <div class="container-fluid">
-    <x-breadcrum title="MDO Duty Type" />
-    <x-session_message />
     <!-- start Vertical Steps Example -->
     <div class="card">
         <div class="card-body">

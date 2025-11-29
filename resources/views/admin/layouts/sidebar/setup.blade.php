@@ -8,7 +8,7 @@
                  <div class="mini-nav">
                      <div class="brand-logo d-flex align-items-center justify-content-center">
                          <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)">
-                             <iconify-icon icon="solar:hamburger-menu-line-duotone" class="fs-7"></iconify-icon>
+                            <img src="{{asset('images/hamburger.svg')}}" alt="" style="width:32px;">
                          </a>
                      </div>
                      <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init">
@@ -32,88 +32,6 @@
                                                  </a>
                                                  <span
                                                      class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">Academic</span>
-                                             </li>
-
-                                             <li class="mini-nav-item {{ request()->is('admin/*') ? 'selected' : '' }}"
-                                                 id="mini-5">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="General Setup">
-                                                     <iconify-icon icon="solar:notes-line-duotone" class="fs-7">
-                                                     </iconify-icon>
-                                                 </a>
-                                                 <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">General
-                                                     Setup</span>
-                                             </li>
-
-                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                 id="mini-6">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="Mappings">
-                                                     <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
-                                                     </iconify-icon>
-                                                 </a>
-                                                 <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">Mappings</span>
-                                             </li>
-                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                 id="mini-7">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="Setup Activities">
-                                                     <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
-                                                     </iconify-icon>
-                                                 </a>
-                                                 <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">Setup
-                                                     Activities</span>
-                                             </li>
-                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                 id="mini-8">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="Role Management">
-                                                     <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
-                                                     </iconify-icon>
-                                                 </a>
-                                                 <span class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">Role
-                                                     Management</span>
-                                             </li>
-                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                 id="mini-9">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="Infrastructure and Facilities">
-                                                     <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
-                                                     </iconify-icon>
-                                                 </a>
-                                                 <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">Infrastructure
-                                                     and Facilities</span>
-                                             </li>
-                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                 id="mini-10">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="Reports">
-                                                     <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
-                                                     </iconify-icon>
-                                                 </a>
-                                                 <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">Reports</span>
-                                             </li>
-                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                 id="mini-11">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="OT Reports">
-                                                     <iconify-icon icon="solar:cloud-file-line-duotone" class="fs-7">
-                                                     </iconify-icon>
-                                                 </a>
-                                                 <span class="mini-nav-title fs-3 fw-bold text-center d-block mb-2">OT
-                                                     Reports</span>
                                              </li>
 
                                          </div>
@@ -144,42 +62,6 @@
                      <!-- Academic -->
                      <!-- ---------------------------------- -->
                      <x-menu.setup_academic />
-
-                     <!-- ---------------------------------- -->
-                     <!-- General Setup -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.setup_general />
-                      <!-- ---------------------------------- -->
-                     <!-- Mappings -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.setup_mappings />
-
-                      <!-- ---------------------------------- -->
-                     <!-- Setup Activities -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.setup_activities />
-
-                     <!-- ---------------------------------- -->
-                     <!-- Role Management -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.setup_management />
-
-
-                     <!-- ---------------------------------- -->
-                     <!-- Infrastructure and Facilities -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.setup_infrastructure />
-
-
-                     <!-- ---------------------------------- -->
-                     <!-- Reports -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.setup_reports />
-
-                      <!-- ---------------------------------- -->
-                     <!-- OT Reports -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.setup_ot_reports />
 
                  </div>
              </div>

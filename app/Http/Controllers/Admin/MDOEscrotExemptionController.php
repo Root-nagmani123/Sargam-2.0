@@ -6,14 +6,19 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\{MDODutyTypeMaster, StudentMaster, CourseMaster, MDOEscotDutyMap};
-use App\DataTables\MDOEscrotExemptionDataTable;
 use App\Http\Requests\MDOEscrotExemptionRequest;
 
 class MDOEscrotExemptionController extends Controller
 {
-    public function index(MDOEscrotExemptionDataTable $dataTable)
+    public function index()
     {
-        return $dataTable->render('admin.mdo_escrot_exemption.index');
+        $exemptions = MDOEscotDutyMap::with([
+            'courseMaster' => fn($q) => $q->select('pk', 'course_name'),
+            'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
+            'studentMaster' => fn($q) => $q->select('pk', 'display_name')
+        ])->orderBy('pk', 'desc')->paginate(10);
+
+        return view('admin.mdo_escrot_exemption.index', compact('exemptions'));
     }
 
     public function create()
@@ -21,8 +26,9 @@ class MDOEscrotExemptionController extends Controller
         try {
             $courseMaster = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
             $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
+            $students = []; // Initialize empty array, will be populated via AJAX
 
-            return view('admin.mdo_escrot_exemption.create', compact('MDODutyTypeMaster', 'courseMaster'));
+            return view('admin.mdo_escrot_exemption.create', compact('MDODutyTypeMaster', 'courseMaster', 'students'));
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => 'Error occurred while fetching MDO Duty Type Master.']);
         }
@@ -95,6 +101,7 @@ class MDOEscrotExemptionController extends Controller
                     }
                     $students['pk'] = $student['student_master_pk'];
                     $students['display_name'] = $studentMaster ? $studentMaster->display_name : null;
+                    $students['ot_code'] = $studentMaster ? $studentMaster->ot_code : null;
                     return $students;
                 });
                 // dd($students->toArray());
