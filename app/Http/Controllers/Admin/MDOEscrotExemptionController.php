@@ -15,7 +15,7 @@ class MDOEscrotExemptionController extends Controller
         $exemptions = MDOEscotDutyMap::with([
             'courseMaster' => fn($q) => $q->select('pk', 'course_name'),
             'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
-            'studentMaster' => fn($q) => $q->select('pk', 'display_name')
+            'studentMaster' => fn($q) => $q->select('pk', 'display_name', 'generated_OT_code')
         ])->orderBy('pk', 'desc')->paginate(10);
 
         return view('admin.mdo_escrot_exemption.index', compact('exemptions'));
