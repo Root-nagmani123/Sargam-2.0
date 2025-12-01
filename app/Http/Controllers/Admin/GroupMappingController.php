@@ -199,6 +199,10 @@ class GroupMappingController extends Controller
             // 2. Course enrollment (via StudentMasterCourseMap - students must be enrolled in the course)
             $students = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
+                // ->where('active_inactive', 1)
+
+
+
                 // ->whereHas('studentsMaster', function($query) use ($courseId) {
                 //     $query->whereExists(function($subQuery) use ($courseId) {
                 //         $subQuery->select(DB::raw(1))
@@ -329,6 +333,7 @@ class GroupMappingController extends Controller
             // Lookup: StudentMaster by OT code (case-insensitive)
             $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
                 ->select('pk')->first();
+                
 
             if (!$studentMaster) {
                 return response()->json([
@@ -340,6 +345,7 @@ class GroupMappingController extends Controller
             // Lookup: GroupTypeMasterCourseMasterMap by group name (case-insensitive)
             $groupMap = GroupTypeMasterCourseMasterMap::whereRaw('LOWER(group_name) = ?', [strtolower($data['group_name'])])
                 ->first();
+            // print_r($groupMap);die;
 
             if (!$groupMap) {
                 return response()->json([

@@ -5,7 +5,7 @@ namespace App\Imports\GroupMapping;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\{ToCollection, WithHeadingRow, WithStartRow};
-use App\Models\{StudentMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap};
+use App\Models\{StudentMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap,StudentMasterCourseMap};
 
 class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
 {
@@ -45,8 +45,19 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
             }
 
             // Lookup: StudentMaster
+            // $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
+            //     ->select('pk')->first();
             $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
-                ->select('pk')->first();
+                ->select('pk')->get();
+                // print_r($studentMaster);die;
+                foreach ($studentMaster as $student) {
+                    $course_active_check_student = StudentMasterCourseMap::where('student_master_pk', $student['pk'])->where('active_inactive', 1)->exists();
+                    if ($course_active_check_student) {
+                        $studentMaster->pk = $student['pk'];
+                    }
+                }
+                // print_r($studentMaster);die;
+
 
             if (!$studentMaster) {
                 $this->addFailure($rowNumber, ["Student not found for OT code: {$data['otcode']}"]);
