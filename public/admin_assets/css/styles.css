@@ -38942,7 +38942,7 @@ fieldset:disabled .btn {
 
 .body-wrapper {
     margin-top: 72px;
-    margin-left: calc(350px / 2);
+    margin-left: calc(380px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
     border-radius: 20px;
@@ -39076,6 +39076,8 @@ pre.code-view code.hljs {
     background: #ECEDF8;
     width: 230px;
     margin-top: 71.5px;
+    padding:5px;
+    border-radius: 0px 15px 0px 0px;
 }
 
 .side-mini-panel .mini-nav ul.mini-nav-ul {
@@ -39087,7 +39089,7 @@ pre.code-view code.hljs {
     width: 100%;
     font-size: 18px;
     text-align: center;
-    color: var(--bs-body-color);
+    color: #000;
     position: relative;
     background: #ECEDF8;
     z-index: 99;
@@ -39101,37 +39103,26 @@ pre.code-view code.hljs {
 .side-mini-panel .mini-nav .mini-nav-item>a .material-icons {
     z-index: 2;
     position: relative;
-    color: #004a93;
 }
 
 .side-mini-panel .mini-nav .mini-nav-item>a:hover .material-icons {
-    color: var(--bs-primary);
+    color: var(--bs-dark);
 }
 
-.side-mini-panel .mini-nav .mini-nav-item>a:hover:before {
-    content: "";
-    background: var(--bs-primary-bg-subtle);
-    width: 48px;
-    height: 48px;
-    display: block;
-    position: absolute;
-    left: 0;
-    right: 0;
-    margin: 0 auto;
-    top: 0;
-    border-radius: 12px;
-    z-index: 1;
+.side-mini-panel .mini-nav .mini-nav-item.selected>a .material-icons {
+    color: #004a93;
 }
-
-.side-mini-panel .mini-nav .mini-nav-item.selected>a iconify-icon {
-    color: #af2910;
+.side-mini-panel .mini-nav .mini-nav-item.selected>a .mini-nav-title {
+    font-size: 18px;
+    font-weight: 900;
+    color: #004a93 !important;
 }
 
 .side-mini-panel .mini-nav .mini-nav-item.selected>a:before {
     content: "";
     background: transparent;
-    width: 80px;
-    height: 80px;
+    width: 230px;
+    height: 50px;
     display: block;
     position: absolute;
     left: 0;
@@ -39140,14 +39131,14 @@ pre.code-view code.hljs {
     top: 0;
     border-radius: 12px;
     z-index: 1;
-    border-bottom: 1px solid #af2910;
+    color:#004a93;
 }
 
 .side-mini-panel .mini-nav .mini-nav-item.selected>span:before {
     content: "";
     font-size: 14px;
     font-weight: 500;
-    color: #004384;
+    color: #004a93;
 }
 
 .side-mini-panel .sidebarmenu .sidebar-nav {
@@ -39225,19 +39216,20 @@ pre.code-view code.hljs {
 }
 
 .sidebar-nav ul .sidebar-item .sidebar-link:hover {
-    color: var(--bs-primary);
+    color: var(--bs-white);
     display: flex;
     font-size: 15px;
     white-space: normal;
     align-items: center;
     position: relative;
     padding: 11px 16px;
-    border-radius: 12px;
+    border-radius: 30px;
     gap: 10px;
     text-decoration: none;
     font-weight: 600;
     margin-bottom: 4px;
-    background-color: var(--bs-primary-bg-subtle);
+    background-color: #4077ad;
+    width: 240px;
 }
 
 .sidebar-nav ul .sidebar-item .sidebar-link:hover iconify-icon {

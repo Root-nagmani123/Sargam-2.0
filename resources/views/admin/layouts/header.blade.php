@@ -86,6 +86,7 @@
 </style>
 
 <header class="topbar">
+    
     <div class="with-vertical">
         <nav class="navbar navbar-expand-lg p-0">
             <ul class="navbar-nav">
@@ -285,6 +286,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 l.classList.remove('active');
             }
         });
+        // Save the active tab to localStorage
+        localStorage.setItem('activeMainTab', targetId);
     }
 
     tabLinks.forEach(link => {
@@ -296,8 +299,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Initialize on load to current hash or default to #home
-    const initial = window.location.hash || '#home';
+    // Check localStorage for saved tab, then check hash, then default to #home
+    const savedTab = localStorage.getItem('activeMainTab');
+    const initial = savedTab || window.location.hash || '#home';
     showPane(initial);
 });
 </script>
