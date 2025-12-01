@@ -199,15 +199,15 @@ class GroupMappingController extends Controller
             // 2. Course enrollment (via StudentMasterCourseMap - students must be enrolled in the course)
             $students = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
-                ->whereHas('studentsMaster', function($query) use ($courseId) {
-                    $query->whereExists(function($subQuery) use ($courseId) {
-                        $subQuery->select(DB::raw(1))
-                                 ->from('student_master_course__map')
-                                 ->whereColumn('student_master_course__map.student_master_pk', 'student_master.pk')
-                                 ->where('student_master_course__map.course_master_pk', $courseId)
-                                 ->where('student_master_course__map.active_inactive', 1);
-                    });
-                })
+                // ->whereHas('studentsMaster', function($query) use ($courseId) {
+                //     $query->whereExists(function($subQuery) use ($courseId) {
+                //         $subQuery->select(DB::raw(1))
+                //                  ->from('student_master_course__map')
+                //                  ->whereColumn('student_master_course__map.student_master_pk', 'student_master.pk')
+                //                  ->where('student_master_course__map.course_master_pk', $courseId)
+                //                  ->where('student_master_course__map.active_inactive', 1);
+                //     });
+                // })
                 ->paginate(10, ['*'], 'page', $request->page);
             
             // Render the HTML partial

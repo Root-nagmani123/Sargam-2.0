@@ -9,7 +9,9 @@ use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
+use App\Exports\StudentMedicalExemptionExport;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 class StudentMedicalExemptionController extends Controller
@@ -194,5 +196,19 @@ public function update(Request $request, $id)
        
        return response()->json(['students' => $students]);
 
+    }
+
+    public function export(Request $request)
+    {
+        $filter = $request->get('filter', 'active');
+        $courseFilter = $request->get('course_filter');
+        $dateFilter = $request->get('date_filter');
+        
+        $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+        
+        return Excel::download(
+            new StudentMedicalExemptionExport($filter, $courseFilter, $dateFilter),
+            $fileName
+        );
     }
 }
