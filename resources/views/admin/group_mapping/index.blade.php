@@ -188,9 +188,6 @@
                                 <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
                                     <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                                 </button>
-                                <button type="button" class="btn btn-outline-primary mt-4" id="reloadPage">
-                                    <i class="bi bi-arrow-repeat me-1"></i> Reset
-                                </button>
                             </div>
                         </div>
                         
@@ -222,14 +219,21 @@
                                             
                                             <div class="mb-3">
                                                 <label for="studentGroupType" class="form-label">Group Type <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="studentGroupType" name="group_type" 
-                                                    placeholder="Enter group type" required maxlength="255">
+                                                <select class="form-select" id="studentGroupType" name="group_type" required>
+                                                    <option value="">Select Group Type</option>
+                                                    @foreach($groupTypes ?? [] as $pk => $name)
+                                                        <option value="{{ $name }}" data-type-id="{{ $pk }}">{{ $name }}</option>
+                                                    @endforeach
+                                                </select>
+                                                <small class="text-muted">Select a group type to filter available group names</small>
                                             </div>
                                             
                                             <div class="mb-3">
                                                 <label for="studentGroupName" class="form-label">Group Name <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" id="studentGroupName" name="group_name" 
-                                                    placeholder="Enter group name" required maxlength="255">
+                                                <select class="form-select" id="studentGroupName" name="group_name" required disabled>
+                                                    <option value="">Select Group Name</option>
+                                                </select>
+                                                <small class="text-muted" id="groupNameHelp">Please select a group type first</small>
                                             </div>
                                         </div>
                                         <div class="modal-footer">
@@ -318,6 +322,33 @@
 
             <!-- Body -->
             <div class="modal-body pt-0">
+                
+                <!-- Search Section -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="bi bi-search"></i>
+                        </span>
+                        <input 
+                            type="text" 
+                            class="form-control border-start-0" 
+                            id="studentSearchInput" 
+                            placeholder="Search students by name, email, or contact number..."
+                            autocomplete="off"
+                        >
+                        <button 
+                            class="btn btn-outline-secondary border-start-0" 
+                            type="button" 
+                            id="clearStudentSearch"
+                            style="display: none;"
+                        >
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted d-block mt-1">
+                        <span id="studentSearchResultsCount"></span>
+                    </small>
+                </div>
 
                 <!-- Student Info Dynamic Section -->
                 <div id="studentDetailsContent" class="p-3 rounded-3 bg-light-subtle border">
@@ -485,10 +516,6 @@ $(document).ready(function() {
                     table.ajax.reload();
                 });
 
-                $('#reloadPage').on('click', function () {
-                    window.location.reload();
-                });
-
         function setActiveButton(activeBtn) {
             $('#filterGroupActive')
                 .removeClass('btn-success active text-white')
@@ -525,6 +552,70 @@ $(document).ready(function() {
 
                 // Don't set initial active button - start with all buttons inactive
             }, 150);
+
+            // Handle Group Type change - Load Group Names
+            $('#studentGroupType').on('change', function() {
+                const groupTypeSelect = $(this);
+                const groupNameSelect = $('#studentGroupName');
+                const groupNameHelp = $('#groupNameHelp');
+                const selectedOption = groupTypeSelect.find('option:selected');
+                const groupTypeId = selectedOption.data('type-id');
+                const groupTypeName = selectedOption.val();
+
+                // Reset group name dropdown
+                groupNameSelect.html('<option value="">Loading...</option>').prop('disabled', true);
+
+                if (!groupTypeId || !groupTypeName) {
+                    groupNameSelect.html('<option value="">Select Group Name</option>').prop('disabled', true);
+                    groupNameHelp.text('Please select a group type first').removeClass('text-success').addClass('text-muted');
+                    return;
+                }
+
+                // Fetch group names for selected group type
+                $.ajax({
+                    url: routes.groupMappingGetGroupNamesByType,
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        group_type_id: groupTypeId
+                    },
+                    success: function(response) {
+                        if (response.status === 'success' && response.group_names && response.group_names.length > 0) {
+                            groupNameSelect.html('<option value="">Select Group Name</option>');
+                            
+                            // Populate group names
+                            response.group_names.forEach(function(groupName) {
+                                groupNameSelect.append($('<option>', {
+                                    value: groupName,
+                                    text: groupName
+                                }));
+                            });
+                            
+                            groupNameSelect.prop('disabled', false);
+                            groupNameHelp.text(`${response.group_names.length} group name(s) available`).removeClass('text-muted').addClass('text-success');
+                        } else {
+                            groupNameSelect.html('<option value="">No group names found</option>').prop('disabled', true);
+                            groupNameHelp.text('No group names available for this group type').removeClass('text-success').addClass('text-danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'Error loading group names.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        groupNameSelect.html('<option value="">Error loading</option>').prop('disabled', true);
+                        groupNameHelp.text(errorMessage).removeClass('text-success').addClass('text-danger');
+                    }
+                });
+            });
+
+            // Reset form when modal is closed
+            $('#addStudentModal').on('hidden.bs.modal', function() {
+                $('#addStudentForm')[0].reset();
+                $('#addStudentAlert').addClass('d-none');
+                $('#studentGroupName').html('<option value="">Select Group Name</option>').prop('disabled', true);
+                $('#groupNameHelp').text('Please select a group type first').removeClass('text-success text-danger').addClass('text-muted');
+            });
 
             // Handle Add Student Form Submission
             $('#addStudentForm').on('submit', function(e) {
