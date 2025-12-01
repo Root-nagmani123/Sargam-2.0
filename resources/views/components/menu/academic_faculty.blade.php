@@ -1,4 +1,4 @@
-<nav class="sidebar-nav simplebar-scrollable-y" id="menu-right-setup-mini-4" data-simplebar="init">
+<nav class="sidebar-nav simplebar-scrollable-y" id="menu-right-setup-mini-8" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
             <div class="simplebar-height-auto-observer"></div>
@@ -43,7 +43,7 @@
                                         <!-- Section Title with Proper Semantic Markup -->
                                         <h2 class="section-title text-white m-0"
                                             style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
-                                            Trainings
+                                            Faculty
                                         </h2>
                                     </div>
                                 </div>
