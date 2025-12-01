@@ -49,7 +49,11 @@
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
                             {{-- EMPLOYEE --}}
-                            <li class="sidebar-item">
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#employeeCollapse" role="button"
                                     aria-expanded="false" aria-controls="employeeCollapse"
@@ -93,7 +97,11 @@
                             {{-- FACULTY --}}
                           
                             @if(hasRole('GUEST FACULTY'))
-                            <li class="sidebar-item">
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#facultyCollapse" role="button"
                                     aria-expanded="false" aria-controls="facultyCollapse"
@@ -121,7 +129,11 @@
                             @endif
 
                             {{-- USER MANAGEMENT --}}
-                            <li class="sidebar-item">
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#userManagementCollapse" role="button"
                                     aria-expanded="false" aria-controls="userManagementCollapse"

@@ -20,7 +20,7 @@
     font-size: 16px !important;
     line-height: 24px;
     font-weight: 500 !important;
-    padding: 25px !important;
+    padding: 20px !important;
     border-radius: 26px !important;
     Width: 100% !important;
     Height: 40px !important;
