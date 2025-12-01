@@ -45,9 +45,6 @@ input:checked + .slider:before {
 </style>
 <div class="container-fluid">
 
-    <x-breadcrum title="Roles" />
-    <x-session_message />
-
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card">
@@ -65,7 +62,7 @@ input:checked + .slider:before {
                     </div>
 
                     <hr>
-                    {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}
+                    {{ $dataTable->table(['class' => 'table']) }}
                 </div>
             </div>
         </div>

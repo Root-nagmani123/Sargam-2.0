@@ -1,4 +1,4 @@
-<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-mini-6" data-simplebar="init">
+<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-mini-7" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
             <div class="simplebar-height-auto-observer"></div>
@@ -9,32 +9,8 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 0px 20px 24px;">
                         <ul class="sidebar-menu" id="sidebarnav">
-                            <!-- ---------------------------------- -->
-                            <!-- Home -->
-                            <!-- ---------------------------------- -->
-                            <li class="nav-small-cap">
-                                <span class="hide-menu">Mappings</span>
-                            </li>
-                            <!-- ---------------------------------- -->
-                            <!-- Academic -->
-                            <!-- ---------------------------------- -->
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Programme - Module - Institute</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">University - Programme</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Programme - Batch</span>
-                                </a>
+                              <li class="nav-small-cap">
+                                <span class="hide-menu fw-bold text-white">Master</span>
                             </li>
                         </ul>
                     </div>

@@ -38942,7 +38942,7 @@ fieldset:disabled .btn {
 
 .body-wrapper {
     margin-top: 72px;
-    margin-left: calc(130px / 2);
+    margin-left: calc(350px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
     border-radius: 20px;
@@ -39074,7 +39074,7 @@ pre.code-view code.hljs {
     z-index: 99;
     position: relative;
     background: #ECEDF8;
-    width: 120px;
+    width: 230px;
     margin-top: 71.5px;
 }
 
@@ -39093,8 +39093,9 @@ pre.code-view code.hljs {
     z-index: 99;
     height: 48px;
     margin-bottom: 8px;
-    align-items: center;
-    justify-content: center;
+    align-items: start;
+    justify-content: start;
+    padding-left: 12px;
 }
 
 .side-mini-panel .mini-nav .mini-nav-item>a .material-icons {
@@ -39156,7 +39157,7 @@ pre.code-view code.hljs {
     top: 72px;
     width: 250px;
     transition: left 0.4s ease-in-out;
-    left: 120px;
+    left: 230px;
     display: none;
     padding: 20px 0px 24px 20px;
     z-index: 98;
