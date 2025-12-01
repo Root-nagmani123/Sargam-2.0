@@ -108,8 +108,7 @@
                                                     formLabelClass="form-label" 
                                                     formSelectClass="select2"
                                                     :options="$roleOptions" 
-                                                    value="{{ $assistant_coordinator_roles[$index] ?? '' }}"
-                                                    required="true" />
+                                                    value="{{ $assistant_coordinator_roles[$index] ?? '' }}" />
                                             </div>
                                             <div class="col-md-1 d-flex align-items-end">
                                                 <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
@@ -136,8 +135,7 @@
                                                 placeholder="Select Role" 
                                                 formLabelClass="form-label" 
                                                 formSelectClass="select2"
-                                                :options="$roleOptions" 
-                                                required="true" />
+                                                :options="$roleOptions" />
                                         </div>
                                         <div class="col-md-1 d-flex align-items-end">
                                             <button type="button" class="btn btn-outline-danger btn-sm remove-coordinator" style="margin-bottom: 0;">
