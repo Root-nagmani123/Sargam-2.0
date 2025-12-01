@@ -58,9 +58,9 @@ class RoleDataTable extends DataTable
                     <form class="delete-role-form"
       action="'.$deleteUrl.'" method="POST" style="display:inline">
     '.csrf_field().method_field("DELETE").'
-    <button type="submit" class="btn btn-sm btn-danger">
+    <a href="javascript:void(0)" class="text-danger delete-role-link">
         <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
-    </button>
+    </a>
 </form>
 
                 ';

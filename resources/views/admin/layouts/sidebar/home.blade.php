@@ -6,7 +6,7 @@
          <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column;">
              <div style="flex: 1 1 auto; display: flex; flex-direction: column;">
                  <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column;">
-                     <div class="brand-logo d-flex align-items-center justify-content-center">
+                     <div class="brand-logo d-flex align-items-start justify-content-start py-2 px-2">
                          <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)">
                              <img src="{{asset('images/hamburger.svg')}}" alt="" style="width:32px;">
                          </a>
@@ -23,38 +23,62 @@
                                          <div class="simplebar-content" style="padding: 0px;">
                                              <li class="mini-nav-item {{ request()->routeIs('dashboard') ? 'selected' : '' }}"
                                                  id="mini-1">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="General">
-                                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                                         style="font-size: 32px;">apps</i>
+                                                 <a href="javascript:void(0)"
+                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                     data-bs-placement="right" data-bs-title="General">
+
+                                                     <div class="d-flex align-items-center gap-2">
+                                                         <i class="material-icons menu-icon material-symbols-rounded"
+                                                             style="font-size: 32px;">apps</i>
+                                                         <span
+                                                             class="mini-nav-title fs-4 fw-medium text-dark">General</span>
+                                                     </div>
+
+                                                     <i class="material-icons material-symbols-rounded"
+                                                         style="font-size: 20px;">chevron_right</i>
                                                  </a>
-                                                 <span
-                                                     class="mini-nav-title fs-3 fw-medium text-center d-block mb-2 text-dark">General</span>
                                              </li>
+
                                              <li class="mini-nav-item {{ request()->is('admin/*') ? 'selected' : '' }}"
                                                  id="mini-2">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="Master">
-                                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                                         style="font-size: 32px;">menu_open</i>
+                                                 <a href="javascript:void(0)"
+                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                     data-bs-placement="right" data-bs-title="Master">
+
+                                                     <div class="d-flex align-items-center gap-2">
+                                                         <i class="material-icons menu-icon material-symbols-rounded"
+                                                             style="font-size: 32px;">menu_open</i>
+                                                         <span
+                                                             class="mini-nav-title fs-4 fw-bold text-dark">Master</span>
+                                                     </div>
+
+                                                     <i class="material-icons material-symbols-rounded"
+                                                         style="font-size: 20px;">chevron_right</i>
                                                  </a>
-                                                 <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2 text-dark">Master</span>
                                              </li>
+
                                              <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
                                                  id="mini-3">
-                                                 <a href="javascript:void(0)" data-bs-toggle="tooltip"
-                                                     data-bs-custom-class="custom-tooltip" data-bs-placement="right"
-                                                     data-bs-title="FC Forms">
-                                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                                         style="font-size: 32px;">note_add</i>
+                                                 <a href="javascript:void(0)"
+                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                     data-bs-placement="right" data-bs-title="FC Forms">
+
+                                                     <div class="d-flex align-items-center gap-2">
+                                                         <i class="material-icons menu-icon material-symbols-rounded"
+                                                             style="font-size: 32px;">note_add</i>
+                                                         <span
+                                                             class="mini-nav-title fs-4 fw-bold text-dark text-wrap">FC
+                                                             Registration</span>
+                                                     </div>
+
+                                                     <i class="material-icons material-symbols-rounded"
+                                                         style="font-size: 20px;">chevron_right</i>
                                                  </a>
-                                                 <span
-                                                     class="mini-nav-title fs-3 fw-bold text-center d-block mb-2 text-dark text-wrap">FC
-                                                     Registration</span>
                                              </li>
+
                                          </div>
                                      </div>
                                  </div>

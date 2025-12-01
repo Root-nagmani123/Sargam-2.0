@@ -7,167 +7,57 @@
             <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 0px 20px 24px;">
+                    <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
                         <ul class="sidebar-menu" id="sidebarnav">
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             <li class="nav-small-cap">
-                                <span class="hide-menu">General Setup</span>
+                                <span class="hide-menu fw-bold text-white">Time Table</span>
                             </li>
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Add Institute</span>
+                         <li class="sidebar-item">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#calendarCollapse" role="button" aria-expanded="false"
+                                    aria-controls="calendarCollapse"
+                                    >
+                                    <span class="hide-menu fw-bold">Calendar Creation</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>
+                            <ul class="collapse list-unstyled ps-3" id="calendarCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
+                                        <span
+                                            class="hide-menu">Attendance</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('memo.notice.management.index') }}">
+                                        <span
+                                            class="hide-menu">Send Memo / Notice</span>
+                                    </a></li>
+                            </ul>
                             <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Institute Details</span>
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#subjectCollapse" role="button" aria-expanded="false"
+                                    aria-controls="subjectCollapse"
+                                    >
+                                    <span class="hide-menu fw-bold">Subject & Module Master</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define Sections</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Designation</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Employee Type</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define Holidays</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Employee ID Configuration</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Add Institute</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Bilk Student (New Admission)</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Name Display Configuration</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Print ICard (Bulk)</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Bulk Enrollment Number Updates</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Employee ID Configuration</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Group Master</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Relevant Documents Master</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define Memo Type</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Generate Memo</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Service Book Master</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Restricted Holidays</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Memo Management</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">View student Memo</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">View Generated Memo</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Decision Master</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Leave Memo No Configuration</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item">
-                                <a class="sidebar-link" href="#" aria-expanded="false">
-                                    <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Employee Priority</span>
-                                </a>
-                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="subjectCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
+                                        <span
+                                            class="hide-menu">Subject Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('subject-module.index') }}">
+                                        <span
+                                            class="hide-menu">Subject Module Master</span>
+                                    </a></li>
+                            </ul>
 
                         </ul>
                     </div>

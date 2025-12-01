@@ -106,10 +106,6 @@
                     <span
                         class="hide-menu">Calendar</span>
                 </a></li>
-            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
-                    <span
-                        class="hide-menu">Attendance</span>
-                </a></li>
         </div>
 
     </ul>
