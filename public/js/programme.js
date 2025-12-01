@@ -101,6 +101,92 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initial sync
     updateAssistantOptions();
+
+    // Date validation: End date must be greater than start date
+    const startDateInput = document.querySelector('input[name="startdate"]');
+    const endDateInput = document.querySelector('input[name="enddate"]');
+    const form = document.querySelector('form[action*="programme.store"]');
+
+    function updateEndDateMin() {
+        if (startDateInput && endDateInput) {
+            const startDateValue = startDateInput.value;
+            if (startDateValue) {
+                // Set min attribute to start date + 1 day
+                const startDate = new Date(startDateValue);
+                startDate.setDate(startDate.getDate() + 1);
+                const minDate = startDate.toISOString().split('T')[0];
+                endDateInput.setAttribute('min', minDate);
+                
+                // If end date is already set and is before or equal to start date, clear it
+                if (endDateInput.value && endDateInput.value <= startDateValue) {
+                    endDateInput.value = '';
+                    endDateInput.setCustomValidity('The end date must be greater than the start date.');
+                } else {
+                    endDateInput.setCustomValidity('');
+                }
+            } else {
+                endDateInput.removeAttribute('min');
+            }
+        }
+    }
+
+    function validateDates() {
+        if (startDateInput && endDateInput && startDateInput.value && endDateInput.value) {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+            
+            if (endDate <= startDate) {
+                endDateInput.setCustomValidity('The end date must be greater than the start date.');
+                return false;
+            } else {
+                endDateInput.setCustomValidity('');
+                return true;
+            }
+        }
+        return true;
+    }
+
+    // Update end date min when start date changes
+    if (startDateInput) {
+        startDateInput.addEventListener('change', function() {
+            updateEndDateMin();
+            validateDates();
+        });
+        
+        // Also trigger on input for real-time feedback
+        startDateInput.addEventListener('input', function() {
+            updateEndDateMin();
+        });
+    }
+
+    // Validate when end date changes
+    if (endDateInput) {
+        endDateInput.addEventListener('change', function() {
+            validateDates();
+        });
+        
+        endDateInput.addEventListener('input', function() {
+            validateDates();
+        });
+    }
+
+    // Validate on form submission
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!validateDates()) {
+                e.preventDefault();
+                endDateInput.focus();
+                // Show error message
+                if (!endDateInput.reportValidity) {
+                    alert('The end date must be greater than the start date.');
+                }
+                return false;
+            }
+        });
+    }
+
+    // Initialize on page load
+    updateEndDateMin();
 });
 
 
