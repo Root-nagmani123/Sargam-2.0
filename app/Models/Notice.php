@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Notice extends Model
+{
+    use HasFactory;
+
+    protected $table = "notices";
+
+    protected $fillable = [
+        'notice_title',
+        'description',
+        'notice_type',
+        'display_date',
+        'expiry_date',
+        'document',
+        'target_audience',
+        'created_by',
+        'active_inactive',
+        'course_id'
+    ];
+    protected $primaryKey = 'pk';
+
+    // Relationship with User table
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\UserCredential::class, 'created_by', 'pk');
+    }
+}

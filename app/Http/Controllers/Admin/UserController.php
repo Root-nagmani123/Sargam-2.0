@@ -283,5 +283,26 @@ public function assignRoleSave(Request $request)
     }
 }
 
+public function uploadPdf(Request $request)
+    {
+        if ($request->hasFile('file')) {
 
-} 
+            $file = $request->file('file');
+
+            // Allow only PDF
+            if ($file->getClientOriginalExtension() != 'pdf') {
+                return response()->json(['error' => 'Only PDF files allowed'], 422);
+            }
+
+            $path = $file->store('summernote/pdf', 'public');
+
+            return response()->json([
+                'location' => asset('storage/' . $path)
+            ]);
+        }
+
+        return response()->json(['error' => 'No file uploaded'], 400);
+    }
+}
+
+
