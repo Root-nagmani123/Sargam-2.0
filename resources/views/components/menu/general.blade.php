@@ -136,7 +136,7 @@
                                             class="hide-menu">Memo Course Mapping</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.courseAttendanceNoticeMap.memo_notice') }}">
+                                        href="{{ route('admin.memo-notice.index') }}">
                                         <span
                                             class="hide-menu">Memo / Notice Creation (Admin)</span>
                                     </a></li>

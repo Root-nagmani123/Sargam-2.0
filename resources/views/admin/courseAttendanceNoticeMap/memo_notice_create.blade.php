@@ -10,9 +10,23 @@
         <div class="card-body">
             <h4 class="card-title mb-3">Create Memo / Notice</h4>
             <hr>
-            <form action="" method="POST">
+            <form action="{{ route('admin.memo-notice.store') }}" method="POST">
                 @csrf
                 <div class="row">
+                      <div class="col-6">
+                        <label for="course_id" class="form-label">Select Course (Optional)</label>
+                        <div class="mb-3">
+                            <select name="course_id" class="form-select">
+                        <option value="">All Courses</option>
+                        @foreach($courses as $course)
+                            <option value="{{ $course->pk }}" {{ request('course_id') == $course->pk ? 'selected' : '' }}>
+                                {{ $course->course_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                            <small class="text-muted">Select an active course if this memo/notice is course-specific</small>
+                        </div>
+                    </div>
                     <div class="col-6">
                         <label for="director" class="form-label">Director's Name</label>
                         <div class="mb-3">
