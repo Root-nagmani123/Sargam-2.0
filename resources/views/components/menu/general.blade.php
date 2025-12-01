@@ -71,6 +71,23 @@
                                     </a></li>
                             </ul>
 
+                            {{-- COURSE --}}
+                            <li class="sidebar-item">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#courseCollapse" role="button" aria-expanded="false"
+                                    aria-controls="courseCollapse"
+                                    >
+                                    <span class="hide-menu fw-bold">Course</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="courseCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('programme.index') }}">
+                                        <span
+                                            class="hide-menu">Notices</span>
+                                    </a></li>
+                            </ul>
+
                             {{-- MEMO --}}
                             <li class="sidebar-item">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
