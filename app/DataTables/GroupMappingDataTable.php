@@ -34,7 +34,7 @@ class GroupMappingDataTable extends DataTable
                         $exportUrl = route('group.mapping.export.student.list', $id);
                         $html = <<<HTML
     <a href="javascript:void(0)" class="view-student" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">person</i>
+        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">visibility</i>
     </a>
     <a href="{$exportUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List">
         <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">download</i>
@@ -140,9 +140,9 @@ HTML;
         // Check if any filter is explicitly set
         $hasAnyFilter = !empty($statusFilter) || !empty($courseFilter) || !empty($groupTypeFilter);
         
-        // If no filters are applied, return empty query
+        // If no filters are applied, show active courses by default
         if (!$hasAnyFilter) {
-            return $model->newQuery()->where('pk', '=', -1); // This will always return empty results
+            $statusFilter = 'active'; // Set default to active
         }
 
         $query = $model->newQuery()
