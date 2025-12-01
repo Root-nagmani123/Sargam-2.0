@@ -194,32 +194,44 @@
                             @endif
                         </div>
                         
+                        <!-- Reset Button -->
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold d-block">&nbsp;</label>
+                            <a href="{{ route('student.medical.exemption.index', ['filter' => 'active']) }}"
+                                class="btn btn-outline-danger w-100 fw-semibold"
+                                title="Reset all filters">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                            </a>
+                        </div>
+                        
                         <!-- Active/Archive Buttons -->
-                        <div class="col-md-6 text-end">
-                            <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
-                                aria-label="Course Status Filter">
-                                @php
-                                    $activeParams = ['filter' => 'active'];
-                                    $archiveParams = ['filter' => 'archive'];
-                                    if ($courseFilter) {
-                                        $activeParams['course_filter'] = $courseFilter;
-                                        $archiveParams['course_filter'] = $courseFilter;
-                                    }
-                                    if ($dateFilter) {
-                                        $activeParams['date_filter'] = $dateFilter;
-                                        $archiveParams['date_filter'] = $dateFilter;
-                                    }
-                                @endphp
-                                <a href="{{ route('student.medical.exemption.index', $activeParams) }}"
-                                    class="btn {{ $filter === 'active' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
-                                    id="filterActive" aria-pressed="{{ $filter === 'active' ? 'true' : 'false' }}">
-                                    <i class="bi bi-check-circle me-1"></i> Active
-                                </a>
-                                <a href="{{ route('student.medical.exemption.index', $archiveParams) }}"
-                                    class="btn {{ $filter === 'archive' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
-                                    id="filterArchive" aria-pressed="{{ $filter === 'archive' ? 'true' : 'false' }}">
-                                    <i class="bi bi-archive me-1"></i> Archive
-                                </a>
+                        <div class="col-md-4 text-end">
+                            <div class="d-flex align-items-center justify-content-end gap-2">
+                                <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
+                                    aria-label="Course Status Filter">
+                                    @php
+                                        $activeParams = ['filter' => 'active'];
+                                        $archiveParams = ['filter' => 'archive'];
+                                        if ($courseFilter) {
+                                            $activeParams['course_filter'] = $courseFilter;
+                                            $archiveParams['course_filter'] = $courseFilter;
+                                        }
+                                        if ($dateFilter) {
+                                            $activeParams['date_filter'] = $dateFilter;
+                                            $archiveParams['date_filter'] = $dateFilter;
+                                        }
+                                    @endphp
+                                    <a href="{{ route('student.medical.exemption.index', $activeParams) }}"
+                                        class="btn {{ $filter === 'active' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
+                                        id="filterActive" aria-pressed="{{ $filter === 'active' ? 'true' : 'false' }}">
+                                        <i class="bi bi-check-circle me-1"></i> Active
+                                    </a>
+                                    <a href="{{ route('student.medical.exemption.index', $archiveParams) }}"
+                                        class="btn {{ $filter === 'archive' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
+                                        id="filterArchive" aria-pressed="{{ $filter === 'archive' ? 'true' : 'false' }}">
+                                        <i class="bi bi-archive me-1"></i> Archive
+                                    </a>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -287,12 +299,33 @@
                                     </td>
                                 </tr>
                                 @empty
-
+                                <tr>
+                                    <td colspan="10" class="text-center py-5">
+                                        <div class="d-flex flex-column align-items-center justify-content-center">
+                                            <i class="material-icons menu-icon material-symbols-rounded" 
+                                               style="font-size: 64px; color: #ccc; margin-bottom: 16px;">
+                                                search_off
+                                            </i>
+                                            <h5 class="text-muted mb-2">No Record Found</h5>
+                                            @if($filter || $courseFilter || $dateFilter)
+                                                <p class="text-muted small mb-0">
+                                                    No records match the applied filters. 
+                                                    <a href="{{ route('student.medical.exemption.index') }}" class="text-primary">
+                                                        Clear filters
+                                                    </a> to see all records.
+                                                </p>
+                                            @else
+                                                <p class="text-muted small mb-0">No medical exemption records available.</p>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
                                 @endforelse
                             </tbody>
                         </table>
 
                         <!-- Pagination -->
+                        @if($records->total() > 0)
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <div>
                                 Showing {{ $records->firstItem() ?? 0 }} to {{ $records->lastItem() ?? 0 }} of
@@ -306,6 +339,7 @@
                                 ])->links('pagination::bootstrap-5') }}
                             </div>
                         </div>
+                        @endif
                     </div>
                 </div>
 

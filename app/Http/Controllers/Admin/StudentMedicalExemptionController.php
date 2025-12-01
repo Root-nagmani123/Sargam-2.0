@@ -120,8 +120,13 @@ class StudentMedicalExemptionController extends Controller
         'opd_category' => 'nullable|string|max:50',
         'exemption_medical_speciality_pk' => 'required|numeric',
         'Description' => 'nullable|string',
-        'active_inactive' => 'required|boolean',
+        'active_inactive' => 'nullable|boolean',
     ]);
+
+    // Set default status to Active (1) if not provided
+    if (!isset($validated['active_inactive'])) {
+        $validated['active_inactive'] = 1;
+    }
 
     // Handle file upload if exists
     if ($request->hasFile('Doc_upload')) {

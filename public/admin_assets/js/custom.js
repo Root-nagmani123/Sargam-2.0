@@ -845,7 +845,7 @@ function clearEditStudentAlert() {
     $('#editStudentAlert').addClass('d-none').removeClass('alert-success alert-danger alert-warning alert-info').text('');
 }
 
-function reloadStudentDetails(pageUrl = null) {
+function reloadStudentDetails(pageUrl = null, searchQuery = null) {
     const groupMappingID = $('#groupMappingEncryptedId').val() || window.currentGroupMappingId;
     const token = $('meta[name="csrf-token"]').attr('content');
 
@@ -853,13 +853,34 @@ function reloadStudentDetails(pageUrl = null) {
         return;
     }
 
+    // Get search query from input if not provided
+    if (searchQuery === null) {
+        searchQuery = $('#studentSearchInput').val() || '';
+    }
+
+    // Prepare data object
+    const requestData = {
+        _token: token,
+        groupMappingID: groupMappingID
+    };
+
+    // Add search query if provided
+    if (searchQuery && searchQuery.trim()) {
+        requestData.search = searchQuery.trim();
+    }
+
+    // Extract page number from URL if pageUrl is provided
+    let page = 1;
+    if (pageUrl) {
+        const urlParams = new URLSearchParams(pageUrl.split('?')[1]);
+        page = urlParams.get('page') || 1;
+        requestData.page = page;
+    }
+
     $.ajax({
-        url: pageUrl || routes.groupMappingStudentList,
+        url: routes.groupMappingStudentList,
         type: 'POST',
-        data: {
-            _token: token,
-            groupMappingID: groupMappingID
-        },
+        data: requestData,
         success: function (response) {
             if (!response || !response.html) {
                 return;
@@ -871,6 +892,9 @@ function reloadStudentDetails(pageUrl = null) {
             }
             initializeStudentListSelection();
             initStudentActionTooltips();
+            
+            // Update search results count
+            updateSearchResultsCount();
         },
         error: function () {
             alert('Error refreshing student details.');
@@ -911,6 +935,11 @@ $(document).on('click', '.view-student', function (e) {
     window.currentGroupMappingId = groupMappingID;
     resetBulkMessageForm();
     updateSelectedOtCount();
+    
+    // Clear search when opening modal
+    $('#studentSearchInput').val('');
+    $('#clearStudentSearch').hide();
+    $('#studentSearchResultsCount').text('');
 
     $.ajax({
         url: routes.groupMappingStudentList,
@@ -927,7 +956,13 @@ $(document).on('click', '.view-student', function (e) {
             }
             initializeStudentListSelection();
             initStudentActionTooltips();
+            updateSearchResultsCount();
             $('#studentDetailsModal').modal('show');
+            
+            // Focus search input after modal is shown (one-time event)
+            $('#studentDetailsModal').one('shown.bs.modal', function () {
+                $('#studentSearchInput').focus();
+            });
         },
         error: function () {
             alert('Error fetching student details');
@@ -935,6 +970,25 @@ $(document).on('click', '.view-student', function (e) {
     });
 });
 
+
+function updateSearchResultsCount() {
+    const searchValue = $('#studentSearchInput').val().trim();
+    const countElement = $('#studentSearchResultsCount');
+    
+    if (searchValue) {
+        // Try to get count from the table
+        const rowCount = $('.student-table-wrapper tbody tr').length;
+        const hasNoResults = $('.student-table-wrapper tbody tr').first().find('td').text().includes('No students found');
+        
+        if (hasNoResults) {
+            countElement.text('No results found').removeClass('text-success').addClass('text-danger');
+        } else {
+            countElement.text(`${rowCount} result(s) found`).removeClass('text-danger').addClass('text-success');
+        }
+    } else {
+        countElement.text('');
+    }
+}
 
 $(document).on('click', '.student-list-pagination .pagination a', function (e) {
     e.preventDefault();
@@ -1073,6 +1127,51 @@ $('#studentDetailsModal').on('hidden.bs.modal', function () {
     window.currentGroupMappingId = null;
     resetBulkMessageForm();
     updateSelectedOtCount();
+    // Clear search when modal is closed
+    $('#studentSearchInput').val('');
+    $('#clearStudentSearch').hide();
+    $('#studentSearchResultsCount').text('');
+});
+
+// Student search functionality with debouncing
+let studentSearchTimeout;
+$(document).on('input', '#studentSearchInput', function () {
+    const searchValue = $(this).val().trim();
+    const clearBtn = $('#clearStudentSearch');
+    
+    // Show/hide clear button
+    if (searchValue.length > 0) {
+        clearBtn.show();
+    } else {
+        clearBtn.hide();
+    }
+    
+    // Clear previous timeout
+    clearTimeout(studentSearchTimeout);
+    
+    // Set new timeout for debouncing (500ms delay)
+    studentSearchTimeout = setTimeout(function () {
+        if (window.currentGroupMappingId) {
+            reloadStudentDetails(null, searchValue);
+        }
+    }, 500);
+});
+
+// Clear search button
+$(document).on('click', '#clearStudentSearch', function () {
+    $('#studentSearchInput').val('').trigger('input');
+});
+
+// Handle Enter key in search input
+$(document).on('keypress', '#studentSearchInput', function (e) {
+    if (e.which === 13) {
+        e.preventDefault();
+        clearTimeout(studentSearchTimeout);
+        const searchValue = $(this).val().trim();
+        if (window.currentGroupMappingId) {
+            reloadStudentDetails(null, searchValue);
+        }
+    }
 });
 
 function initStudentActionTooltips() {
