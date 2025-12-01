@@ -312,25 +312,10 @@
 
 <body>
     <!-- Preloader -->
-<!-- MAIN PAGE LOADER -->
-<div class="preloader d-flex align-items-center justify-content-center" role="status" aria-label="Page loading">
-    <div class="loader-container text-center">
-        <img src="{{ asset('admin_assets/images/logos/favicon.ico') }}" alt="Loading icon" class="loader-icon mb-3">
-
-        <div class="spinner-border text-primary loader-spinner" role="status" aria-hidden="true"></div>
-
-        <p class="loader-text mt-3">Please wait…</p>
+    <div class="preloader">
+        <img src="{{ asset('admin_assets/images/logos/favicon.ico') }}" alt="loader" class="lds-ripple img-fluid">
     </div>
-</div>
-
-<!-- AJAX LOADER -->
-<div class="loading d-none" id="ajaxLoader" role="status" aria-live="polite">
-    <div class="ajax-loader-inner">
-        <div class="spinner-border text-primary" role="status"></div>
-        <span class="ms-2">Processing…</span>
-    </div>
-</div>
-
+    <div class="loading d-none" id="ajaxLoader">Loading&#8230;</div>
     <div id="main-wrapper">
         @include('admin.layouts.sidebar')
         <div class="page-wrapper">
