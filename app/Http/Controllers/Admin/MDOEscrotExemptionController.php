@@ -96,12 +96,13 @@ class MDOEscrotExemptionController extends Controller
                 $students = [];
                 $students = $course->studentMasterCourseMap->map(function ($student) {
                     $studentMaster = StudentMaster::where('pk', $student['student_master_pk'])->first();
+                    // print_r($studentMaster); exit;
                     if( !$studentMaster ) {
                         return null; 
                     }
                     $students['pk'] = $student['student_master_pk'];
                     $students['display_name'] = $studentMaster ? $studentMaster->display_name : null;
-                    $students['ot_code'] = $studentMaster ? $studentMaster->ot_code : null;
+                    $students['ot_code'] = $studentMaster ? $studentMaster->generated_OT_code : null;
                     return $students;
                 });
                 // dd($students->toArray());
