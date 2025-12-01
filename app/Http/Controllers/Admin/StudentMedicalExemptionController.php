@@ -14,18 +14,89 @@ use Illuminate\Support\Facades\DB;
 
 class StudentMedicalExemptionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-       $records = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course'])
-           ->orderBy('pk', 'desc')
-           ->paginate(10);
+       $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course']);
+       
+       // Filter by course status (Active/Archive)
+       $filter = $request->get('filter', 'active'); // Default to 'active'
+       $currentDate = now()->format('Y-m-d');
+       
+       if ($filter === 'active') {
+           // Active Courses: end_date > current date
+           $query->whereHas('course', function($q) use ($currentDate) {
+               $q->where('end_date', '>', $currentDate);
+           });
+       } elseif ($filter === 'archive') {
+           // Archive Courses: end_date < current date
+           $query->whereHas('course', function($q) use ($currentDate) {
+               $q->where('end_date', '<', $currentDate);
+           });
+       }
+       
+       // Filter by specific course if selected
+       $courseFilter = $request->get('course_filter');
+       if ($courseFilter) {
+           $query->where('course_master_pk', $courseFilter);
+       }
+       
+       // Filter by today's date if date_filter is 'today'
+       $dateFilter = $request->get('date_filter');
+       if ($dateFilter === 'today') {
+           // Show records where today's date falls within the exemption period
+           // from_date <= today AND (to_date >= today OR to_date IS NULL)
+           $query->where('from_date', '<=', $currentDate)
+                 ->where(function($q) use ($currentDate) {
+                     $q->where('to_date', '>=', $currentDate)
+                       ->orWhereNull('to_date');
+                 });
+       }
+       
+       $records = $query->orderBy('pk', 'desc')->paginate(10);
+       
+       // Calculate total exemption count for today
+       $todayCountQuery = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course']);
+       
+       // Apply same filters as main query for accurate count
+       if ($filter === 'active') {
+           $todayCountQuery->whereHas('course', function($q) use ($currentDate) {
+               $q->where('end_date', '>', $currentDate);
+           });
+       } elseif ($filter === 'archive') {
+           $todayCountQuery->whereHas('course', function($q) use ($currentDate) {
+               $q->where('end_date', '<', $currentDate);
+           });
+       }
+       
+       if ($courseFilter) {
+           $todayCountQuery->where('course_master_pk', $courseFilter);
+       }
+       
+       // Count exemptions valid for today
+       $todayTotalCount = $todayCountQuery->where('from_date', '<=', $currentDate)
+           ->where(function($q) use ($currentDate) {
+               $q->where('to_date', '>=', $currentDate)
+                 ->orWhereNull('to_date');
+           })
+           ->count();
+       
+       // Get courses filtered by Active/Archive status for dropdown
+       $coursesQuery = CourseMaster::where('active_inactive', '1');
+       if ($filter === 'active') {
+           $coursesQuery->where('end_date', '>', $currentDate);
+       } elseif ($filter === 'archive') {
+           $coursesQuery->where('end_date', '<', $currentDate);
+       }
+       $courses = $coursesQuery->orderBy('course_name', 'asc')->get();
     
-        return view('admin.student_medical_exemption.index', compact('records'));
+        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'dateFilter', 'todayTotalCount'));
     }
 
    public function create()
 {
-    $courses = CourseMaster::where('active_inactive', '1')->get();
+    $courses = CourseMaster::where('active_inactive', '1')
+        ->where('end_date', '>', now())
+        ->get();
   
     $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
     $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
