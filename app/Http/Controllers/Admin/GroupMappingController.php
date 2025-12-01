@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, VenueMaster};
+use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, VenueMaster,FacultyMaster, StudentMaster};
 use App\Exports\GroupMappingExport;
 use App\DataTables\GroupMappingDataTable;
 use Carbon\Carbon;
