@@ -194,6 +194,8 @@
                             </ul>
 
                             {{-- FACULTY --}}
+                          
+                            @if(hasRole('GUEST FACULTY'))
                             <li class="sidebar-item">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#facultyCollapse" role="button"
@@ -223,6 +225,7 @@
                                             class="hide-menu">Faculty Topic Mapping</span>
                                     </a></li>-->
                             </ul>
+                            @endif
 
                             {{-- USER MANAGEMENT --}}
                             <li class="sidebar-item">
