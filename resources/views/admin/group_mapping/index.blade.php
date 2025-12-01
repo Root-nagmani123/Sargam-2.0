@@ -153,8 +153,8 @@
                             <div class="col-12 text-end">
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                     aria-label="Group Mapping Status Filter">
-                                    <button type="button" class="btn btn-success px-4 fw-semibold active"
-                                        id="filterGroupActive" aria-pressed="true">
+                                    <button type="button" class="btn btn-outline-success px-4 fw-semibold"
+                                        id="filterGroupActive" aria-pressed="false">
                                         <i class="bi bi-check-circle me-1"></i> Active
                                     </button>
                                     <button type="button"
@@ -435,13 +435,24 @@
     {!! $dataTable->scripts() !!}
     <script>
         $(document).on('preXhr.dt', '#group-mapping-table', function (e, settings, data) {
-            data.status_filter = window.groupMappingCurrentFilter || 'active';
-            data.course_filter = $('#courseFilter').val();
-            data.group_type_filter = $('#groupTypeFilter').val();
+            // Only send filters if they are explicitly set
+            if (window.groupMappingCurrentFilter) {
+                data.status_filter = window.groupMappingCurrentFilter;
+            }
+            var courseFilter = $('#courseFilter').val();
+            var groupTypeFilter = $('#groupTypeFilter').val();
+            
+            if (courseFilter) {
+                data.course_filter = courseFilter;
+            }
+            if (groupTypeFilter) {
+                data.group_type_filter = groupTypeFilter;
+            }
         });
 
 $(document).ready(function() {
-    window.groupMappingCurrentFilter = 'active';
+    // Don't set default filter - start with blank
+    window.groupMappingCurrentFilter = null;
 
     setTimeout(function() {
         var table = $('#group-mapping-table').DataTable();
@@ -459,12 +470,18 @@ $(document).ready(function() {
                 });
 
                 $('#courseFilter, #groupTypeFilter').on('change', function () {
-                    table.ajax.reload();
+                    // If status filter is not set, don't reload
+                    // Only reload if at least one filter is set
+                    if (window.groupMappingCurrentFilter || $('#courseFilter').val() || $('#groupTypeFilter').val()) {
+                        table.ajax.reload();
+                    }
                 });
 
                 $('#resetFilters').on('click', function () {
                     $('#courseFilter').val('');
                     $('#groupTypeFilter').val('');
+                    window.groupMappingCurrentFilter = null;
+                    resetFilterButtons();
                     table.ajax.reload();
                 });
 
@@ -494,8 +511,19 @@ $(document).ready(function() {
             }
         }
 
-                // Ensure initial styling reflects default filter
-                setActiveButton($('#filterGroupActive'));
+        function resetFilterButtons() {
+            $('#filterGroupActive')
+                .removeClass('btn-success active text-white')
+                .addClass('btn-outline-success')
+                .attr('aria-pressed', 'false');
+
+            $('#filterGroupArchive')
+                .removeClass('btn-secondary active text-white')
+                .addClass('btn-outline-secondary')
+                .attr('aria-pressed', 'false');
+        }
+
+                // Don't set initial active button - start with all buttons inactive
             }, 150);
 
             // Handle Add Student Form Submission
