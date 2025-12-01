@@ -482,11 +482,14 @@
         });
 
 $(document).ready(function() {
-    // Don't set default filter - start with blank
-    window.groupMappingCurrentFilter = null;
+    // Set default filter to active courses
+    window.groupMappingCurrentFilter = 'active';
 
     setTimeout(function() {
         var table = $('#group-mapping-table').DataTable();
+
+        // Set Active button as active by default
+        setActiveButton($('#filterGroupActive'));
 
         $('#filterGroupActive').on('click', function() {
             setActiveButton($(this));
@@ -501,18 +504,15 @@ $(document).ready(function() {
                 });
 
                 $('#courseFilter, #groupTypeFilter').on('change', function () {
-                    // If status filter is not set, don't reload
-                    // Only reload if at least one filter is set
-                    if (window.groupMappingCurrentFilter || $('#courseFilter').val() || $('#groupTypeFilter').val()) {
-                        table.ajax.reload();
-                    }
+                    // Reload table when filters change
+                    table.ajax.reload();
                 });
 
                 $('#resetFilters').on('click', function () {
                     $('#courseFilter').val('');
                     $('#groupTypeFilter').val('');
-                    window.groupMappingCurrentFilter = null;
-                    resetFilterButtons();
+                    window.groupMappingCurrentFilter = 'active'; // Reset to active by default
+                    setActiveButton($('#filterGroupActive'));
                     table.ajax.reload();
                 });
 
@@ -550,7 +550,6 @@ $(document).ready(function() {
                 .attr('aria-pressed', 'false');
         }
 
-                // Don't set initial active button - start with all buttons inactive
             }, 150);
 
             // Handle Group Type change - Load Group Names
