@@ -24,7 +24,8 @@ use App\Http\Controllers\Admin\{
     CourseMemoDecisionMappController,
     CourseAttendanceNoticeMapController,
     HostelBuildingFloorMappingController,
-    HostelBuildingFloorRoomMappingController
+    HostelBuildingFloorRoomMappingController,
+    NoticeController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 
@@ -111,7 +112,7 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
-		 Route::post('check-unique', 'checkUnique')->name('checkUnique');
+		Route::post('check-unique', 'checkUnique')->name('checkUnique');
     Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
     Route::get('check-firstname', 'checkFirstName')->name('checkFirstName');
     Route::get('check-fullname', 'checkFullName')->name('checkFullName');
@@ -182,6 +183,18 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
         Route::get('/edit', function () {
             return view('admin.curriculum.edit');
         })->name('edit');
+    });
+
+    Route::prefix('admin')->name('admin.')->group(function () {
+ 
+Route::resource('notice', NoticeController::class)
+     ->except(['show'])
+     ->parameters(['notice' => 'encId']);
+
+Route::get('/notice/get-courses', [NoticeController::class, 'getCourses'])
+     ->name('notice.getCourses');
+Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('summernote.upload');
+
     });
 
     // mapping routes
