@@ -73,7 +73,7 @@
                 </div>
                  <div class="mb-3 d-none" id="courseBox">
                     <label>Select Course</label>
-                    <select name="course_id" id="courseSelect" class="form-control">
+                    <select name="course_master_pk" id="courseSelect" class="form-control">
                         <option value="">Select Course</option>
                     </select>
                 </div>

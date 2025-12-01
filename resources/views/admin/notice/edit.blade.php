@@ -82,7 +82,7 @@
                 {{-- COURSE BOX --}}
                 <div class="mb-3 {{ $notice->target_audience == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
                     <label>Select Course</label>
-                    <select name="course_id" id="courseSelect" class="form-control">
+                    <select name="course_master_pk" id="courseSelect" class="form-control">
                         <option value="">Select Course</option>
                     </select>
                 </div>
@@ -168,7 +168,7 @@ $(document).ready(function() {
         }
     });
 
-    let selectedCourse = "{{ $notice->course_id }}"; // Saved course in DB
+    let selectedCourse = "{{ $notice->course_master_pk }}"; // Saved course in DB
 
     function loadCourses(preselect = null) {
       
