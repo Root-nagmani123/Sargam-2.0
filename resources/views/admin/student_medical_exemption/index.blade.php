@@ -129,6 +129,16 @@
                                         style="font-size: 24px;">print</i>
                                     Print
                                 </button>
+                                <!-- Export Button -->
+                                <a href="{{ route('student.medical.exemption.export', [
+                                    'filter' => $filter,
+                                    'course_filter' => $courseFilter ?? '',
+                                    'date_filter' => $dateFilter ?? ''
+                                ]) }}" class="btn btn-success d-flex align-items-center">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">download</i>
+                                    Export Excel
+                                </a>
                                 <!-- Add Group Mapping -->
                                 <a href="{{route('student.medical.exemption.create')}}"
                                     class="btn btn-primary d-flex align-items-center">
