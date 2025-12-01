@@ -11,11 +11,7 @@
                         <ul class="sidebar-menu" id="sidebarnav">
 
                             {{-- GENERAL --}}
-                            <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                            <li class="sidebar-item">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#generalCollapse" role="button"
                                     aria-expanded="false" aria-controls="generalCollapse"
@@ -36,19 +32,10 @@
                                         <span class="hide-menu">Dashboard</span>
                                     </a>
                                 </li>
-                               <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.notice.index') }}">
-                                        <span
-                                            class="hide-menu">Notices</span>
-                                    </a></li>
                             </ul>
 
                             {{-- COURSE --}}
-                            <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                            <li class="sidebar-item">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#courseCollapse" role="button" aria-expanded="false"
                                     aria-controls="courseCollapse"
@@ -72,14 +59,19 @@
                                         <span
                                             class="hide-menu">Course Group Mapping</span>
                                     </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
+                                        <iconify-icon icon="solar:speaker-minimalistic-line-duotone"></iconify-icon>
+                                        <span class="hide-menu">Subject Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('subject-module.index') }}">
+                                        <iconify-icon icon="solar:widget-4-line-duotone"></iconify-icon><span
+                                            class="hide-menu">Subject Module Master</span>
+                                    </a></li>
                             </ul>
 
                             {{-- EXEMPTION --}}
-                            <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                            <li class="sidebar-item">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#exemptionCollapse" role="button"
                                     aria-expanded="false" aria-controls="exemptionCollapse"
@@ -117,11 +109,7 @@
                             </ul>
 
                             {{-- MEMO --}}
-                            <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                            <li class="sidebar-item">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#memoCollapse" role="button" aria-expanded="false"
                                     aria-controls="memoCollapse"
@@ -142,6 +130,11 @@
                                             class="hide-menu">Memo Conclusion Master</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('memo.notice.management.index') }}">
+                                        <span
+                                            class="hide-menu">Memo Notice Management</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('memo.notice.management.user') }}">
                                         <span
                                             class="hide-menu">Memo Notice Chat (User)</span>
@@ -156,6 +149,130 @@
                                         <span
                                             class="hide-menu">Memo / Notice Creation (Admin)</span>
                                     </a></li>
+                            </ul>
+
+                            {{-- EMPLOYEE --}}
+                            <li class="sidebar-item">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#employeeCollapse" role="button"
+                                    aria-expanded="false" aria-controls="employeeCollapse"
+                                    >
+                                    <span class="hide-menu fw-bold">Employee</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="employeeCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.employee.type.index') }}">
+                                        <span
+                                            class="hide-menu">Employee Type</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.employee.group.index') }}">
+                                        <span
+                                            class="hide-menu">Employee Group</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.department.master.index') }}">
+                                        <span
+                                            class="hide-menu">Department Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.designation.index') }}">
+                                        <span
+                                            class="hide-menu">Designation Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.caste.category.index') }}">
+                                        <span
+                                            class="hide-menu">Caste Category</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('member.index') }}">
+                                        <span
+                                            class="hide-menu">Member</span>
+                                    </a></li>
+                            </ul>
+
+                            {{-- FACULTY --}}
+                            <li class="sidebar-item">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#facultyCollapse" role="button"
+                                    aria-expanded="false" aria-controls="facultyCollapse"
+                                    >
+                                    <span class="hide-menu fw-bold">Faculty</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.faculty.expertise.index') }}">
+                                        <span
+                                            class="hide-menu">Faculty Expertise</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.faculty.type.master.index') }}">
+                                        <span
+                                            class="hide-menu">Faculty Type</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.index') }}">
+                                        <span
+                                            class="hide-menu">Faculty</span>
+                                    </a></li>
+                                <!--<li class="sidebar-item"><a class="sidebar-link" href="{{ route('mapping.index') }}">
+                                        <iconify-icon icon="solar:map-arrow-up-bold-duotone"></iconify-icon><span
+                                            class="hide-menu">Faculty Topic Mapping</span>
+                                    </a></li>-->
+                            </ul>
+
+                            {{-- USER MANAGEMENT --}}
+                            <li class="sidebar-item">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#userManagementCollapse" role="button"
+                                    aria-expanded="false" aria-controls="userManagementCollapse"
+                                    >
+                                    <span class="hide-menu fw-bold">User Management</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="userManagementCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.users.index') }}">
+                                        <span
+                                            class="hide-menu">Users</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.roles.index') }}">
+                                        <span
+                                            class="hide-menu">Roles</span>
+                                    </a></li>
+                                {{-- <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.permissions.index') }}">
+                                        <span
+                                            class="hide-menu">Permissions</span>
+                                    </a></li> --}}
+                            </ul>
+                             {{-- USER Feedback --}}
+                            <li class="sidebar-item">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#userFeedbackCollapse" role="button"
+                                    aria-expanded="false" aria-controls="userFeedbackCollapse"
+                                    >
+                                    <span class="hide-menu fw-bold">User Feedback</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="userFeedbackCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.feedbackList') }}">
+                                        <span
+                                            class="hide-menu">Feedback</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.studentFeedback') }}">
+                                        <span
+                                            class="hide-menu">Student Feedback</span>
+                                    </a></li>
+
                             </ul>
 
                         </ul>

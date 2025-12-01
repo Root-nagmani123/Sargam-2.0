@@ -135,13 +135,13 @@
 
                 <!-- Setup -->
                 <li class="nav-item" role="none">
-                    <a href="#tab-setup" 
+                    <a href="#" 
                        class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
                        data-bs-toggle="tab" 
                        role="tab"
                        aria-selected="false"
                        aria-controls="setup-panel"
-                       id="setup-tab">
+                       id="">
                         <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">settings</i>
                         <span>Setup</span>
                     </a>
