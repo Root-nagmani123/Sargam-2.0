@@ -243,12 +243,20 @@
                     <div class="col-md-6">
                         <div class="mb-3">
 
-                            <x-select name="mdo_duty_type_master_pk" label="Duty Type :" formLabelClass="form-label"
+                            <x-select name="mdo_duty_type_master_pk" id="mdo_duty_type_master_pk" label="Duty Type :" formLabelClass="form-label"
                                 formSelectClass="select2 "
                                 value="{{ old('mdo_duty_type_master_pk', $mdoDutyType->mdo_duty_type_master_pk ?? '') }}"
                                 :options="$MDODutyTypeMaster" labelRequired="true" />
                         </div>
 
+                    </div>
+                    <div class="col-md-6" id="faculty_field_container" style="display: none;">
+                        <div class="mb-3">
+                            <x-select name="faculty_master_pk" id="faculty_master_pk" label="Faculty :" formLabelClass="form-label"
+                                formSelectClass="select2"
+                                value="{{ old('faculty_master_pk', '') }}"
+                                :options="$facultyMaster" labelRequired="true" />
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <div class="mb-3">
@@ -545,6 +553,42 @@ function createStudentRow(student) {
 }
 
 $(document).ready(function() {
+    // Function to toggle faculty field based on duty type
+    function toggleFacultyField() {
+        const dutyTypeSelect = $('#mdo_duty_type_master_pk');
+        const facultyContainer = $('#faculty_field_container');
+        const selectedDutyType = dutyTypeSelect.val();
+        
+        // Get all duty type options to find Escort
+        let escortDutyTypeId = null;
+        dutyTypeSelect.find('option').each(function() {
+            const optionText = $(this).text().toLowerCase().trim();
+            if (optionText === 'escort') {
+                escortDutyTypeId = $(this).val();
+            }
+        });
+        
+        // Show faculty field if Escort is selected
+        if (selectedDutyType && selectedDutyType == escortDutyTypeId) {
+            facultyContainer.show();
+            $('#faculty_master_pk').attr('required', true);
+        } else {
+            facultyContainer.hide();
+            $('#faculty_master_pk').val('').trigger('change');
+            $('#faculty_master_pk').removeAttr('required');
+        }
+    }
+    
+    // Initialize after select2 is ready
+    setTimeout(function() {
+        toggleFacultyField();
+    }, 100);
+    
+    // Toggle when duty type changes
+    $('#mdo_duty_type_master_pk').on('change', function() {
+        toggleFacultyField();
+    });
+    
     $('#mdo_date').on('change', function() {
         const courses = $('.course-selected').val();
         const selectedDate = $('#mdo_date').val();
