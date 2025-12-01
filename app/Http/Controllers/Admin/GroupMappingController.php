@@ -29,7 +29,13 @@ class GroupMappingController extends Controller
 
     public function index(GroupMappingDataTable $dataTable)
     {
-        $courses = CourseMaster::orderBy('course_name')
+        $currentDate = Carbon::now()->format('Y-m-d');
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($query) use ($currentDate) {
+                $query->whereNull('end_date')
+                    ->orWhereDate('end_date', '>=', $currentDate);
+            })
+            ->orderBy('course_name')
             ->pluck('course_name', 'pk')
             ->toArray();
 
@@ -194,25 +200,25 @@ class GroupMappingController extends Controller
             // Get the course ID from the group mapping
             $courseId = $groupMapping->course_name;
             
+            // Get search query
+            $searchQuery = $request->input('search', '');
+            
             // Filter students by:
             // 1. Group mapping (group_type_master_course_master_map_pk)
             // 2. Course enrollment (via StudentMasterCourseMap - students must be enrolled in the course)
-            $students = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
-                ->where('group_type_master_course_master_map_pk', $groupMapping->pk)
-                // ->where('active_inactive', 1)
-
-
-
-                // ->whereHas('studentsMaster', function($query) use ($courseId) {
-                //     $query->whereExists(function($subQuery) use ($courseId) {
-                //         $subQuery->select(DB::raw(1))
-                //                  ->from('student_master_course__map')
-                //                  ->whereColumn('student_master_course__map.student_master_pk', 'student_master.pk')
-                //                  ->where('student_master_course__map.course_master_pk', $courseId)
-                //                  ->where('student_master_course__map.active_inactive', 1);
-                //     });
-                // })
-                ->paginate(10, ['*'], 'page', $request->page);
+            $query = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
+                ->where('group_type_master_course_master_map_pk', $groupMapping->pk);
+            
+            // Apply search filter if search query is provided
+            if (!empty($searchQuery)) {
+                $query->whereHas('studentsMaster', function($q) use ($searchQuery) {
+                    $q->where('display_name', 'like', '%' . $searchQuery . '%')
+                      ->orWhere('email', 'like', '%' . $searchQuery . '%')
+                      ->orWhere('contact_no', 'like', '%' . $searchQuery . '%');
+                });
+            }
+            
+            $students = $query->paginate(10, ['*'], 'page', $request->page);
             
             // Render the HTML partial
             $groupMappingPk = $groupMapping->pk;
@@ -223,6 +229,7 @@ class GroupMappingController extends Controller
                 'groupName' => $groupMapping->group_name,
                 'facilityName' => optional($groupMapping->facility)->venue_name,
                 'courseName' => $courseName,
+                'searchQuery' => $searchQuery,
             ])->render();
 
             return response()->json([
@@ -306,6 +313,46 @@ class GroupMappingController extends Controller
                 'status' => 'error',
                 'message' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Get group names based on selected group type.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getGroupNamesByType(Request $request)
+    {
+        try {
+            $request->validate([
+                'group_type_id' => 'required|integer|exists:course_group_type_master,pk',
+            ]);
+
+            $groupTypeId = $request->group_type_id;
+            
+            // Get group type name
+            $groupType = CourseGroupTypeMaster::findOrFail($groupTypeId);
+            
+            // Get all group names for this group type
+            $groupNames = GroupTypeMasterCourseMasterMap::where('type_name', $groupTypeId)
+                ->where('active_inactive', 1)
+                ->orderBy('group_name')
+                ->pluck('group_name')
+                ->unique()
+                ->values()
+                ->toArray();
+
+            return response()->json([
+                'status' => 'success',
+                'group_type_name' => $groupType->type_name,
+                'group_names' => $groupNames,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
         }
     }
 
