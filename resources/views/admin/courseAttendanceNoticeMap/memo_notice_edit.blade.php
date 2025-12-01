@@ -1,22 +1,37 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Memo / Notice - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Edit Memo / Notice - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Notice /Memo Admin Management" />
+    <x-breadcrum title="Edit Memo / Notice" />
     <x-session_message />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
-            <h4 class="card-title mb-3">Create Memo / Notice</h4>
+            <h4 class="card-title mb-3">Edit Memo / Notice</h4>
             <hr>
-            <form action="" method="POST">
+            <form action="{{ route('admin.memo-notice.update', $template->id) }}" method="POST">
                 @csrf
                 <div class="row">
+                      <div class="col-6">
+                        <label for="course_id" class="form-label">Select Course (Optional)</label>
+                        <div class="mb-3">
+                            <select name="course_id" class="form-select">
+                        <option value="">All Courses</option>
+                        @foreach($courses as $course)
+                            <option value="{{ $course->pk }}" {{ old('course_id', $template->course_id) == $course->pk ? 'selected' : '' }}>
+                                {{ $course->course_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                            <small class="text-muted">Select an active course if this memo/notice is course-specific</small>
+                        </div>
+                    </div>
                     <div class="col-6">
                         <label for="director" class="form-label">Director's Name</label>
                         <div class="mb-3">
                             <input type="text" class="form-control" id="director" name="director"
+                                value="{{ old('director', $template->director_name) }}"
                                 placeholder="Enter Director's Name" required>
                         </div>
                     </div>
@@ -24,18 +39,21 @@
                         <label for="designation" class="form-label">Director's Designation</label>
                        <div class="mb-3">
                          <input type="text" class="form-control" id="designation" name="designation"
+                            value="{{ old('designation', $template->director_designation) }}"
                             placeholder="Enter designation" required>
                        </div>
                     </div>
+                    
+                    
                     <div class="col-12">
                         <label for="content" class="form-label">Memo / Notice Content</label>
-                        <textarea name="content" class="form-control" id="content" rows="3"></textarea>
+                        <textarea name="content" class="form-control" id="content" rows="3">{{ old('content', $template->content) }}</textarea>
                     </div>
                 </div>
                 <hr>
                 <div class="text-end">
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                    <a href="" class="btn btn-secondary">Back</a>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                    <a href="{{ route('admin.memo-notice.index') }}" class="btn btn-secondary">Back</a>
                 </div>
             </form>
         </div>
@@ -51,7 +69,7 @@
 <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
 <script>
 $(document).ready(function() {
-    // Initialize Summernote
+    // Initialize Summernote with existing content
     $('#content').summernote({
         tabsize: 2,
         height: 300,

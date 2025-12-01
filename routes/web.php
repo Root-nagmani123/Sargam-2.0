@@ -28,6 +28,7 @@ use App\Http\Controllers\Admin\{
     NoticeController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
+use App\Http\Controllers\Admin\MemoNoticeController;
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -385,9 +386,23 @@ Route::get('/admin/memo-conversation', function () {
 })->name('admin.courseAttendanceNoticeMap.memo_conversation');
 
 //route for admin notice/ memo conversation
-Route::get('/admin/memo-notice', function () {
-    return view('admin.courseAttendanceNoticeMap.memo_notice'); // or any other view you want to show
-})->name('admin.courseAttendanceNoticeMap.memo_notice');
+// Route::get('/admin/memo-notice', function () {
+//     return view('admin.courseAttendanceNoticeMap.memo_notice'); // or any other view you want to show
+// })->name('admin.courseAttendanceNoticeMap.memo_notice');
+
+// routes/web.php (admin section)
+
+Route::prefix('admin')->group(function () {
+    Route::get('/memo-notice', [MemoNoticeController::class, 'index'])->name('admin.memo-notice.index');
+    Route::get('/memo-notice/create', [MemoNoticeController::class, 'create'])->name('admin.memo-notice.create');
+    Route::post('/memo-notice', [MemoNoticeController::class, 'store'])->name('admin.memo-notice.store');
+    Route::get('/memo-notice/preview', [MemoNoticeController::class, 'preview'])->name('admin.memo-notice.preview');
+    Route::get('/memo-notice/{id}/edit', [MemoNoticeController::class, 'edit'])->name('admin.memo-notice.edit');
+    Route::post('/memo-notice/{id}', [MemoNoticeController::class, 'update'])->name('admin.memo-notice.update');
+    Route::delete('/memo-notice/{id}', [MemoNoticeController::class, 'destroy'])->name('admin.memo-notice.destroy');
+    Route::post('/memo-notice/upload-pdf', [MemoNoticeController::class, 'uploadPdf'])->name('admin.memo-notice.upload-pdf');
+Route::post('/{id}/status/{status}', [MemoNoticeController::class, 'changeStatus'])->name('admin.memo-notice.status');
+});
 
 
 // setup route
