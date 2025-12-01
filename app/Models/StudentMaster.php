@@ -9,6 +9,7 @@ class StudentMaster extends Model
     protected $table = "student_master";
     protected $primaryKey = 'pk';
     public $timestamps = false;
+    protected $guarded = [];
 
     function courseStudentAttendance()
     {
@@ -20,7 +21,7 @@ class StudentMaster extends Model
     public function courses()
     {
         return $this->belongsToMany(CourseMaster::class, 'student_master_course__map', 'student_master_pk', 'course_master_pk')
-        ->withPivot('active_inactive', 'created_date', 'modified_date');
+            ->withPivot('active_inactive', 'created_date', 'modified_date');
     }
 
 

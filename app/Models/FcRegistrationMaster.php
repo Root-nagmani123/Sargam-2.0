@@ -11,6 +11,7 @@ class FcRegistrationMaster extends Model
     public $primaryKey = 'pk';
 
     protected $fillable = [
+        'display_name',
         'email',
         'contact_no',
         'display_name',
