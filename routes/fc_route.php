@@ -395,3 +395,7 @@ Route::post('/admin/peer/reflection/delete/{id}', [PeerEvaluationController::cla
 
 // Keep your existing routes for backward compatibility if needed
 Route::get('/admin/peer/courses/{eventId}', [PeerEvaluationController::class, 'getCoursesByEvent']); // Keep if used elsewhere
+
+// Enrollment edit routes
+Route::get('/enrollment/{student}/edit', [EnrollementController::class, 'edit'])->name('enrollment.edit');
+Route::post('/enrollment/{student}', [EnrollementController::class, 'update'])->name('enrollment.update');

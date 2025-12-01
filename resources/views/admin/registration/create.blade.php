@@ -31,7 +31,7 @@
         <!-- Form -->
         <div class="card mt-3">
             <div class="card-body">
-                <form action="{{ route('forms.store') }}" method="POST">
+                <form action="{{ route('forms.store') }}" method="POST"  id="createForm">
                     @csrf
                     <div class="row g-3">
                         <!-- Form Name -->
@@ -118,7 +118,7 @@
         endDateInput.setAttribute('min', today);
 
         // Listen for form submission
-        document.querySelector('form').addEventListener('submit', function(e) {
+        document.querySelector('#createForm').addEventListener('submit', function(e) {
             const startDate = new Date(startDateInput.value);
             const endDate = new Date(endDateInput.value);
 

@@ -76,12 +76,13 @@
                                 </div>
 
                                 <!-- Previous Courses Column -->
+                                <!-- Previous Courses Column -->
                                 <div class="col-md-4">
                                     <label for="previous_courses" class="form-label">Select Previous Courses:</label>
                                     <div class="mb-3">
                                         <select id="previous_courses"
                                             class="form-select select2 @error('previous_courses') is-invalid @enderror"
-                                            name="previous_courses[]" multiple>
+                                            name="previous_courses[]" multiple data-placeholder="Select previous courses">
                                             @if (isset($previousCourses) && count($previousCourses) > 0)
                                                 @foreach ($previousCourses as $previousCourse)
                                                     @if ($previousCourse->course)
@@ -110,7 +111,7 @@
                                     <div class="mb-3">
                                         <select id="services"
                                             class="form-select select2 @error('services') is-invalid @enderror"
-                                            name="services[]" multiple>
+                                            name="services[]" multiple data-placeholder="Select services">
                                             @if (isset($services) && count($services) > 0)
                                                 @foreach ($services as $service)
                                                     <option value="{{ $service->pk }}"
@@ -165,6 +166,7 @@
                                                             <th>Student Name</th>
                                                             <th>OT Code</th>
                                                             <th>Service</th>
+                                                            <th width="100px">Actions</th> {{-- New column --}}
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -261,7 +263,37 @@
 @section('scripts')
     <script>
         $(document).ready(function() {
-            // --- CONFIG & STATE ---
+
+                var editStudentBaseUrl = '{{ route("enrollment.edit", ":id") }}';
+
+            // --- INITIALIZE ALL SELECT2 DROPDOWNS ---
+            function initializeSelect2() {
+                // New course select2
+                $('#course_master_pk').select2({
+                    placeholder: "Select course",
+                    allowClear: true,
+                    width: '100%'
+                });
+
+                // Previous courses select2
+                $('#previous_courses').select2({
+                    placeholder: "Select previous courses",
+                    allowClear: true,
+                    width: '100%',
+                    closeOnSelect: false
+                });
+
+                // Services select2
+                $('#services').select2({
+                    placeholder: "Select services",
+                    allowClear: true,
+                    width: '100%',
+                    closeOnSelect: false
+                });
+            }
+
+            // Initialize on page load
+            initializeSelect2();
             let currentPage = 1;
             const perPage = 10;
             let currentSearchTerm = '';
@@ -534,35 +566,44 @@
                 });
             }
 
-            function populateStudentTable(students) {
-                var tableBody = $('#studentTable tbody');
-                tableBody.empty();
+           function populateStudentTable(students) {
+    var tableBody = $('#studentTable tbody');
+    tableBody.empty();
 
-                if (!students || students.length === 0) {
-                    tableBody.html(
-                        '<tr id="noDataRow"><td colspan="7" class="text-center">No students found for the selected filters</td></tr>'
-                    );
-                    $('#studentCount').text(0);
-                    return;
-                }
+    if (!students || students.length === 0) {
+        tableBody.html(
+            '<tr id="noDataRow"><td colspan="6" class="text-center">No students found for the selected filters</td></tr>'
+        );
+        $('#studentCount').text(0);
+        return;
+    }
 
-                students.forEach(function(student) {
-                    var row = '<tr>' +
-                        '<td><input type="checkbox" name="students[]" value="' + student.student_pk +
-                        '" class="student-checkbox" checked></td>' +
-                        '<td>' + student.course_name + '</td>' +
-                        '<td>' + student.student_name + '</td>' +
-                        '<td>' + student.ot_code + '</td>' +
-                        '<td>' + (student.service_name ?? '') + '</td>' +
-                        '</tr>';
+    students.forEach(function(student) {
+        // Now student.edit_url should come from the server response
+        var editUrl = student.edit_url || '#';
+        
+        var row = '<tr>' +
+            '<td><input type="checkbox" name="students[]" value="' + student.student_pk +
+            '" class="student-checkbox" checked></td>' +
+            '<td>' + (student.course_name || 'N/A') + '</td>' +
+            '<td>' + (student.student_name || 'N/A') + '</td>' +
+            '<td>' + (student.ot_code || 'N/A') + '</td>' +
+            '<td>' + (student.service_name || 'N/A') + '</td>' +
+            '<td>' +
+            '<a href="' + editUrl + 
+            '" class="btn btn-sm btn-warning edit-btn" data-id="' + student.student_pk + '" title="Edit Student">' +
+            '<i class="bi bi-pencil"></i> Edit' +
+            '</a>' +
+            '</td>' +
+            '</tr>';
 
-                    tableBody.append(row);
-                });
+        tableBody.append(row);
+    });
 
-                $('#selectAll').prop('checked', true);
-                updateSelectedStudents();
-                $('#studentCount').text(students.length);
-            }
+    $('#selectAll').prop('checked', true);
+    updateSelectedStudents();
+    $('#studentCount').text(students.length);
+}
 
             // -------------------------
             // Auto-open modal after successful enrollment

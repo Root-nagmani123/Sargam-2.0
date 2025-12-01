@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\CourseMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\ServiceMaster;
+use App\Models\FcRegistrationMaster;
 use App\Models\StudentMaster;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -161,9 +162,9 @@ class EnrollementController extends Controller
     public function filterStudents(Request $request)
     {
         try {
-
             $previousCourses = $request->input('previous_courses', []);
             $services = $request->input('services', []);
+
             if (empty($previousCourses)) {
                 return response()->json([
                     'success' => false,
@@ -171,7 +172,7 @@ class EnrollementController extends Controller
                 ]);
             }
 
-            // Corrected query with proper table relationships
+            // Query with proper relationships
             $query = DB::table('student_master_course__map as smcm')
                 ->join('student_master as sm', 'smcm.student_master_pk', '=', 'sm.pk')
                 ->join('course_master as cm', 'smcm.course_master_pk', '=', 'cm.pk')
@@ -180,11 +181,15 @@ class EnrollementController extends Controller
                 ->select(
                     'sm.pk as student_pk',
                     'cm.pk as course_pk',
-                    DB::raw("CONCAT(sm.first_name, ' ', COALESCE(sm.middle_name, ''), ' ', COALESCE(sm.last_name, '')) as student_name"),
+                    'sm.first_name',
+                    'sm.middle_name',
+                    'sm.last_name',
+                    DB::raw("CONCAT(sm.first_name, ' ', COALESCE(sm.middle_name, ''), ' ', sm.last_name) as student_name"),
                     'sm.generated_OT_code as ot_code',
                     'cm.course_name',
                     'svm.service_name'
-                );
+                )
+                ->distinct();
 
             // Filter by services if provided
             if (!empty($services)) {
@@ -193,9 +198,24 @@ class EnrollementController extends Controller
 
             $students = $query->get();
 
+            // Transform students to include edit URLs
+            $transformedStudents = $students->map(function ($student) {
+                return [
+                    'student_pk' => $student->student_pk,
+                    'student_name' => $student->student_name,
+                    'first_name' => $student->first_name,
+                    'middle_name' => $student->middle_name,
+                    'last_name' => $student->last_name,
+                    'ot_code' => $student->ot_code,
+                    'course_name' => $student->course_name,
+                    'service_name' => $student->service_name,
+                    'edit_url' => route('enrollment.edit', $student->student_pk) // This is the key!
+                ];
+            });
+
             return response()->json([
                 'success' => true,
-                'students' => $students
+                'students' => $transformedStudents
             ]);
         } catch (\Exception $e) {
             \Log::error('Error filtering students: ' . $e->getMessage());
@@ -564,4 +584,101 @@ class EnrollementController extends Controller
             return redirect()->back()->with('error', 'Error exporting PDF: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Show the form for editing student information.
+     */
+    public function edit($studentId)
+    {
+        try {
+            // Fetch student details
+            $student = StudentMaster::findOrFail($studentId);
+
+            // Get all active services for dropdown
+            $services = ServiceMaster::where('active_inactive', 1)->get();
+
+            // Use the correct view path
+            return view('admin.registration.enrol_edit', compact('student', 'services'));
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return redirect()->route('enrollment.create')
+                ->with('error', 'Student not found.');
+        } catch (\Exception $e) {
+            \Log::error('Error in edit method: ' . $e->getMessage());
+            return redirect()->route('enrollment.create')
+                ->with('error', 'Error loading student: ' . $e->getMessage());
+        }
+    }
+    /**
+     * Update student information.
+     */
+    public function update(Request $request, $studentId)
+    {
+        try {
+            DB::beginTransaction();
+
+            // Find student
+            $student = StudentMaster::findOrFail($studentId);
+
+            // Get old values for finding in fc_registration_master
+            $oldUserId = $student->user_id;
+            $oldEmail = $student->email;
+
+            // Define validation rules for fields present in BOTH tables
+            $commonRules = [
+                'display_name' => 'nullable|string|max:100',
+                'first_name' => 'required|string|max:100',
+                'middle_name' => 'nullable|string|max:100',
+                'last_name' => 'required|string|max:100',
+                'email' => 'required|email|max:75|unique:student_master,email,' . $studentId . ',pk',
+                'contact_no' => 'required|string|max:15',
+                'service_master_pk' => 'required|exists:service_master,pk',
+                'web_auth' => 'nullable|string|max:100',
+                'dob' => 'nullable|date',
+                'exam_year' => 'nullable|string|max:4',
+                'rank' => 'nullable|string|max:11',
+                'user_id' => 'required|string|max:45|unique:student_master,user_id,' . $studentId . ',pk',
+            ];
+
+            // Validate
+            $validatedData = $request->validate($commonRules);
+
+            // Update student_master
+            $student->update($validatedData);
+
+            // Update fc_registration_master (try multiple ways to find record)
+            $fcUpdated = false;
+
+            // Try to find record in fc_registration_master
+            $fcRecord = FcRegistrationMaster::where('pk', $studentId)
+                ->orWhere('user_id', $oldUserId)
+                ->orWhere('email', $oldEmail)
+                ->first();
+
+            if ($fcRecord) {
+                $fcRecord->update($validatedData);
+                $fcUpdated = true;
+            } else {
+                // Create new record if not found
+                // $fcRecord = FcRegistrationMaster::create(array_merge(
+                //     ['pk' => $studentId],
+                //     $validatedData,
+                //     ['created_date' => now()]
+                // ));
+                $fcUpdated = true;
+            }
+
+            DB::commit();
+
+            return redirect()->route('enrollment.create')
+                ->with('success', 'Student information updated successfully!')
+                ->with('selected_course', session('selected_course'));
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Update failed: ' . $e->getMessage());
+        }
+    }
+
 }
