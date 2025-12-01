@@ -4,22 +4,20 @@
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Notice List" />
-    <x-session_message />
     <div class="card">
         <div class="card-header">
             Notice List
             <a href="{{ route('admin.notice.create') }}" class="btn btn-success btn-sm float-end">Add Notice</a>
         </div>
         @if ($errors->any())
-    <div class="alert alert-danger">
-        <ul>
-            @foreach ($errors->all() as $error)
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
                 <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
+                @endforeach
+            </ul>
+        </div>
+        @endif
 
 
         <div class="card-body">
@@ -48,19 +46,18 @@
                         <td>{{ $n->notice_title }}</td>
                         <td>{{ $n->notice_type }}</td>
                         <td>{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
-                       <td>{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}</td>
+                        <td>{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}</td>
 
                         <td>{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}</td>
                         <td>{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}</td>
 
                         <td>
-                           <div class="form-check form-switch d-inline-block">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="notices" data-column="active_inactive"
-                                                data-id="{{ $n->pk }}"
-                                                {{ $n->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
-                           
+                            <div class="form-check form-switch d-inline-block">
+                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                    data-table="notices" data-column="active_inactive" data-id="{{ $n->pk }}"
+                                    {{ $n->active_inactive == 1 ? 'checked' : '' }}>
+                            </div>
+
                         </td>
 
                         <td>
@@ -80,19 +77,19 @@
 
             </table>
 
-               <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+            <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
 
-                            <div class="text-muted small mb-2">
-                                Showing {{ $notices->firstItem() ?? 0 }}
-                                to {{ $notices->lastItem() }}
-                                of {{ $notices->total() }} items
-                            </div>
+                <div class="text-muted small mb-2">
+                    Showing {{ $notices->firstItem() ?? 0 }}
+                    to {{ $notices->lastItem() }}
+                    of {{ $notices->total() }} items
+                </div>
 
-                            <div>
-                                {{ $notices->links('vendor.pagination.custom') }}
-                            </div>
+                <div>
+                    {{ $notices->links('vendor.pagination.custom') }}
+                </div>
 
-                        </div>
+            </div>
 
         </div>
     </div>
