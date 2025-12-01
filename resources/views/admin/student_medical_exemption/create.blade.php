@@ -180,7 +180,7 @@
                         @enderror
                     </div>
 
-                    <div class="col-md-6">
+                    {{-- <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Status <span class="text-danger">*</span></label>
                             <select name="active_inactive" class="form-control col-form-label" required>
@@ -193,7 +193,7 @@
                         @error('active_inactive')
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
-                    </div>
+                    </div> --}}
                 </div>
                 <hr>
                 <div class="text-end gap-3">
