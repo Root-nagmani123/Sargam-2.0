@@ -151,6 +151,7 @@
                                 <th class="col">S.No.</th>
                                 <th class="col">Date</th>
                                 <th class="col">Student Name</th>
+                                <th class="col">OT Code</th>
                                 <th class="col">Time From</th>
                                 <th class="col">Time To</th>
                                 <th class="col">Programme Name</th>
@@ -165,6 +166,7 @@
                                 <td>{{ $exemptions->firstItem() + $index }}</td>
                                 <td>{{ format_date($row->mdo_date) ?? 'N/A' }}</td>
                                 <td>{{ $row->studentMaster->display_name ?? 'N/A' }}</td>
+                                <td>{{ $row->studentMaster->generated_OT_code ?? 'N/A' }}</td>
                                 <td>{{ $row->Time_from ?? 'N/A' }}</td>
                                 <td>{{ $row->Time_to ?? 'N/A' }}</td>
                                 <td>{{ optional($row->courseMaster)->course_name ?? 'N/A' }}</td>
