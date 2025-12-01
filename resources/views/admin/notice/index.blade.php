@@ -48,9 +48,10 @@
                         <td>{{ $n->notice_title }}</td>
                         <td>{{ $n->notice_type }}</td>
                         <td>{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
-                        <td>{{ $n->created_at->format('d-m-Y') }}</td>
-                        <td>{{ $n->display_date }}</td>
-                        <td>{{ $n->expiry_date }}</td>
+                       <td>{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}</td>
+
+                        <td>{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}</td>
+                        <td>{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}</td>
 
                         <td>
                            <div class="form-check form-switch d-inline-block">
