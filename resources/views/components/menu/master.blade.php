@@ -31,7 +31,11 @@
             </div>
         </li>
         <!-- GENERAL MASTER -->
-        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2">
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
+    border-radius: 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
             <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                 href="#generalMasterMenu" role="button" aria-expanded="false" aria-controls="generalMasterMenu">
                 <span class="hide-menu">General Master</span>
@@ -57,7 +61,11 @@
         </div>
 
         <!-- HOSTEL -->
-        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2">
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
+    border-radius: 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
             <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                 href="#hostelMenu" role="button" aria-expanded="false" aria-controls="hostelMenu">
                 <span class="hide-menu">Hostel</span>
@@ -92,7 +100,11 @@
         </div>
 
         <!-- ADDRESS -->
-        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2">
+        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
+    border-radius: 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
             <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                 href="#addressMenu" role="button" aria-expanded="false" aria-controls="addressMenu">
                 <span class="hide-menu">Address</span>
@@ -112,21 +124,6 @@
                 </a></li>
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.city.index') }}">
                     <span class="hide-menu">City</span>
-                </a></li>
-        </div>
-
-        <!-- TIME TABLE -->
-        <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2">
-            <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                href="#timeTableMenu" role="button" aria-expanded="false" aria-controls="timeTableMenu">
-                <span class="hide-menu">Time Table</span>
-                <i class="material-icons menu-icon material-symbols-rounded"
-                    style="font-size: 24px;">keyboard_arrow_down</i>
-            </a>
-        </li>
-        <div class="collapse" id="timeTableMenu">
-            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
-                    <span class="hide-menu">Calendar</span>
                 </a></li>
         </div>
 

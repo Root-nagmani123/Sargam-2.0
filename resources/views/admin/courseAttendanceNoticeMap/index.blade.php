@@ -35,6 +35,17 @@
     background-color: #0d6efd;
     color: white;
 }
+
+.table .sticky-status {
+    position: sticky;
+    right: 0;
+    background: #fff;
+    /* Solid background */
+    z-index: 10;
+    /* Above other cells */
+    box-shadow: -4px 0 6px rgba(0, 0, 0, 0.08);
+    /* Subtle shadow */
+}
 </style>
 <div class="container-fluid">
 
@@ -118,7 +129,7 @@
                             <th class="col">Conclusion Type</th>
                             <th class="col">Discussion Name</th>
                             <th class="col">Conclusion Remark</th>
-                            <th class="col">Status</th>
+                            <th class="col sticky-status">Status</th>
                         </tr> <!-- end row -->
                     </thead>
                     <tbody>
@@ -242,7 +253,7 @@
                             </td>
 
                             <!-- Status -->
-                            <td class="status">
+                            <td class="status sticky-status">
                                 @if ($memo->status == 1)
                                 <span class="badge bg-success-subtle text-success">
                                     <i class="bi bi-check-circle me-1"></i> Open
@@ -253,6 +264,7 @@
                                 </span>
                                 @endif
                             </td>
+
                         </tr>
                         @endforeach
                         @endif
