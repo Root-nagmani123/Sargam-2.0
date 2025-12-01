@@ -288,6 +288,7 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
     Route::post('/store', 'store')->name('store');
     Route::get('/edit/{id}', 'edit')->name('edit');
     Route::post('/update/{id}', 'update')->name('update');
+    Route::get('/export', 'export')->name('export');
 
     Route::delete('/delete/{id}', 'delete')->name('delete');
 });
