@@ -6,11 +6,6 @@
          <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column;">
              <div style="flex: 1 1 auto; display: flex; flex-direction: column;">
                  <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column;">
-                     <div class="brand-logo d-flex align-items-start justify-content-start py-2 px-2">
-                         <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)">
-                             <img src="{{asset('images/hamburger.svg')}}" alt="" style="width:32px;">
-                         </a>
-                     </div>
                      <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init" style="flex: 1 1 auto;">
                          <div class="simplebar-wrapper" style="margin: 0px;">
                              <div class="simplebar-height-auto-observer-wrapper">
