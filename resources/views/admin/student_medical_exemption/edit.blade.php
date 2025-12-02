@@ -185,6 +185,12 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
+        // Initialize Select2 for student dropdown with search functionality
+        $('#studentDropdown').select2({
+            placeholder: 'Search Student',
+            allowClear: true
+        });
+
         $('#studentDropdown').on('change', function() {
             var otCode = $(this).find(':selected').data('ot_code') || '';
             $('#otCodeField').val(otCode);

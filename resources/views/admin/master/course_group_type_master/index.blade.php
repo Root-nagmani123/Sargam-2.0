@@ -23,23 +23,6 @@
                                     + Add Course Group Type
                                 </a>
 
-                                <!-- Search Container -->
-                                <div class="d-flex align-items-center position-relative">
-
-                                    <!-- Expanding Search Input -->
-                                    <form action="{{ route('master.course.group.type.index') }}" method="GET"
-                                        class="search-expand d-none" id="searchForm">
-                                        <input type="text" name="search" class="form-control" placeholder="Search..."
-                                            style="width: 220px;">
-                                    </form>
-
-                                    <!-- Icon Button -->
-                                    <a id="openSearchBtn" href="javascript:void(0);">
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 32px;">search</i>
-                                    </a>
-
-                                </div>
 
                             </div>
                         </div>
@@ -123,26 +106,6 @@
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const openBtn = document.getElementById('openSearchBtn');
-    const form = document.getElementById('searchForm');
-
-    openBtn.addEventListener('click', () => {
-        form.classList.toggle('d-none');
-        if (!form.classList.contains('d-none')) {
-            form.querySelector('input').focus();
-        }
-    });
-
-    // Hide on outside click
-    document.addEventListener('click', (e) => {
-        if (!openBtn.contains(e.target) && !form.contains(e.target)) {
-            form.classList.add('d-none');
-        }
-    });
-});
-</script>
 
 
 @endsection

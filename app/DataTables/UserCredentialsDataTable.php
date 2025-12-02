@@ -51,7 +51,18 @@ class UserCredentialsDataTable extends DataTable
     $roles = $row->roles ? $row->roles : 'No Roles';
     return '<div class="roles-cell badge bg-success">'.$roles.'</div>';
 })
+        ->filter(function ($query) {
+            $searchValue = request()->input('search.value');
 
+            if (!empty($searchValue)) {
+                $query->where(function ($subQuery) use ($searchValue) {
+                    $subQuery->whereRaw("LOWER(user_credentials.user_name) like ?", ["%".strtolower($searchValue)."%"])
+                        ->orWhereRaw("LOWER(user_credentials.first_name) like ?", ["%".strtolower($searchValue)."%"])
+                        ->orWhereRaw("LOWER(user_credentials.last_name) like ?", ["%".strtolower($searchValue)."%"])
+                        ->orWhereRaw("LOWER(user_credentials.email_id) like ?", ["%".strtolower($searchValue)."%"]);
+                });
+            }
+        }, true)
         ->addColumn('action', function ($row) {
             $url = route('admin.users.assignRole', encrypt($row->pk));
             return '<a href="'.$url.'" class="btn btn-sm btn-primary">Assign Role</a>';
@@ -105,6 +116,18 @@ class UserCredentialsDataTable extends DataTable
             ->selectStyleSingle()
             ->parameters([
                 'order' => [],
+                'ordering' => false,
+                'searching' => true,
+                'lengthChange' => true,
+                'pageLength' => 10,
+                'language' => [
+                    'paginate' => [
+                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_left</i>',
+                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_right</i>'
+                    ]
+                ],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -124,14 +147,14 @@ class UserCredentialsDataTable extends DataTable
    public function getColumns(): array
 {
     return [
-        Column::computed('DT_RowIndex')->title('#'),
+        Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
 
-        Column::make('user_name')->title('Username'),
-        Column::make('first_name')->title('First Name'),
-        Column::make('last_name')->title('Last Name'),
-        Column::make('email_id')->title('Email'),
+        Column::make('user_name')->title('Username')->addClass('text-center')->orderable(false)->searchable(true),
+        Column::make('first_name')->title('First Name')->addClass('text-center')->orderable(false)->searchable(true),
+        Column::make('last_name')->title('Last Name')->addClass('text-center')->orderable(false)->searchable(true),
+        Column::make('email_id')->title('Email')->addClass('text-center')->orderable(false)->searchable(true),
 
-        Column::make('mobile_no')->title('Mobile No'),
+        Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(false),
 
         Column::make('roles')
             ->title('Assigned Roles')
@@ -141,6 +164,7 @@ class UserCredentialsDataTable extends DataTable
 
         Column::make('action')
             ->title('Action')
+            ->addClass('text-center')
             ->orderable(false)
             ->searchable(false),
     ];

@@ -27,6 +27,34 @@ class MDOEscrotExemptionDataTable extends DataTable
                     $q->where('display_name', 'like', "%{$keyword}%");
                 });
             })
+            ->filterColumn('course_name', function ($query, $keyword) {
+                $query->whereHas('courseMaster', function ($q) use ($keyword) {
+                    $q->where('course_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('mdo_name', function ($query, $keyword) {
+                $query->whereHas('mdoDutyTypeMaster', function ($q) use ($keyword) {
+                    $q->where('mdo_duty_type_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->whereHas('studentMaster', function ($studentQuery) use ($searchValue) {
+                            $studentQuery->where('display_name', 'like', "%{$searchValue}%");
+                        })
+                        ->orWhereHas('courseMaster', function ($courseQuery) use ($searchValue) {
+                            $courseQuery->where('course_name', 'like', "%{$searchValue}%");
+                        })
+                        ->orWhereHas('mdoDutyTypeMaster', function ($mdoQuery) use ($searchValue) {
+                            $mdoQuery->where('mdo_duty_type_name', 'like', "%{$searchValue}%");
+                        })
+                        ->orWhere('Remark', 'like', "%{$searchValue}%");
+                    });
+                }
+            }, true)
             ->addColumn('actions', function ($row) {
                 $editUrl = route('mdo-escrot-exemption.edit', $row->pk);
                 $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
@@ -69,7 +97,7 @@ public function html(): HtmlBuilder
             'responsive' => false,
             'autoWidth' => false,
             'ordering' => false,
-            'searching' => false,
+            'searching' => true,
             'lengthChange' => true,
             'pageLength' => 10,
             'language' => [
@@ -88,12 +116,12 @@ public function html(): HtmlBuilder
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_date')->title('Date')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false),
+            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
-            Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(false)->orderable(false),
-            Column::make('mdo_name')->title('MDO Name')->addClass('text-center')->searchable(false)->orderable(false),
-            Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(false)->orderable(false),
+            Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(false),
+            Column::make('mdo_name')->title('MDO Name')->addClass('text-center')->searchable(true)->orderable(false),
+            Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(true)->orderable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
         ];
 

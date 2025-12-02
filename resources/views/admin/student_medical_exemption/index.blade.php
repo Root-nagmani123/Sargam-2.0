@@ -165,16 +165,6 @@
                                         style="font-size: 24px;">add</i>
                                     Add Student Medical Exemption
                                 </a>
-                                <!-- Search Expand -->
-                                <div class="search-expand d-flex align-items-center">
-                                    <a href="javascript:void(0)" id="searchToggle">
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">search</i>
-                                    </a>
-
-                                    <input type="text" class="form-control search-input ms-2" id="searchInput"
-                                        placeholder="Search…" aria-label="Search" style="display: none; width: 200px;">
-                                </div>
 
                             </div>
                         </div>
@@ -570,63 +560,6 @@ function printTable() {
 }
 
 $(document).ready(function() {
-    // Search functionality
-    $('#searchInput').on('keyup', function() {
-        var searchValue = $(this).val().toLowerCase().trim();
-        var table = $('#medicalExemptionTable');
-        var rows = table.find('tbody tr:not(.no-results)');
-        var visibleCount = 0;
-        
-        // Remove any existing "no results" row
-        table.find('tbody tr.no-results').remove();
-        
-        // If search is empty, show all rows
-        if (searchValue === '') {
-            rows.show();
-            return;
-        }
-        
-        // Filter rows based on search value
-        rows.each(function() {
-            var row = $(this);
-            var rowText = row.text().toLowerCase();
-            
-            // Check if row contains search value
-            if (rowText.indexOf(searchValue) > -1) {
-                row.show();
-                visibleCount++;
-            } else {
-                row.hide();
-            }
-        });
-        
-        // Show "No results" message if no rows match
-        if (visibleCount === 0 && searchValue.length > 0) {
-            table.find('tbody').append(
-                '<tr class="no-results"><td colspan="12" class="text-center py-5">' +
-                '<div class="d-flex flex-column align-items-center justify-content-center">' +
-                '<i class="material-icons menu-icon material-symbols-rounded" style="font-size: 64px; color: #ccc; margin-bottom: 16px;">search_off</i>' +
-                '<h5 class="text-muted mb-2">No Results Found</h5>' +
-                '<p class="text-muted small mb-0">No records match your search: "' + searchValue + '"</p>' +
-                '</div></td></tr>'
-            );
-        }
-    });
-    
-    // Search toggle functionality
-    $('#searchToggle').on('click', function() {
-        var searchInput = $('#searchInput');
-        if (searchInput.is(':visible')) {
-            searchInput.hide();
-            searchInput.val('');
-            // Show all rows when search is cleared
-            $('#medicalExemptionTable tbody tr').show();
-            $('#medicalExemptionTable tbody tr.no-results').remove();
-        } else {
-            searchInput.show().focus();
-        }
-    });
-    
     // Function to build and navigate with filters
     function applyFilters() {
         var filter = '{{ $filter }}';
