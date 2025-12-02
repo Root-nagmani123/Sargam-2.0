@@ -25,7 +25,9 @@ use App\Http\Controllers\Admin\{
     CourseAttendanceNoticeMapController,
     HostelBuildingFloorMappingController,
     HostelBuildingFloorRoomMappingController,
-    NoticeNotificationController
+    NoticeNotificationController,
+    MedicalExceptionFacultyViewController,
+    MedicalExceptionOTViewController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -307,6 +309,11 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
 
     Route::delete('/delete/{id}', 'delete')->name('delete');
 });
+
+// Medical Exception Views
+Route::get('/medical-exception-faculty-view', [MedicalExceptionFacultyViewController::class, 'index'])->name('medical.exception.faculty.view');
+
+Route::get('/medical-exception-ot-view', [MedicalExceptionOTViewController::class, 'index'])->name('medical.exception.ot.view');
 
 Route::prefix('admin/course-memo-decision')
     ->name('course.memo.decision.')
