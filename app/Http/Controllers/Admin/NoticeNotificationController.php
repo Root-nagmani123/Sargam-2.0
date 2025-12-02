@@ -6,18 +6,18 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
     
 use Illuminate\Http\Request;
-use App\Models\Notice;
+use App\Models\NoticeNotification as Notice;
 use App\Models\CourseMaster;
 use Illuminate\Support\Facades\Crypt;
 use Auth;
 
-class NoticeController extends Controller
+class NoticeNotificationController extends Controller
 {
     // Notice List Page
     public function index()
     {
         $notices = Notice::orderBy('pk','DESC')->paginate(10);
-        return view('admin.notice.index', compact('notices'));
+        return view('admin.NoticeNotification.index', compact('notices'));
     }
 
     // Create Page
@@ -26,7 +26,7 @@ class NoticeController extends Controller
         $types = ['Course notice','Office order','Personal','Office notice','Service related'];
         $target = ['Office trainee','Staff/Faculty','Group wise'];
 
-        return view('admin.notice.create', compact('types','target'));
+        return view('admin.NoticeNotification.create', compact('types','target'));
     }
 
     // Insert
@@ -63,7 +63,7 @@ public function store(Request $request)
 
     Notice::create($data);
 
-    return redirect()->route('admin.notice.index')->with('success','Notice created successfully!');
+    return redirect()->route('admin.NoticeNotification.index')->with('success','Notice created successfully!');
 }
 
 
@@ -76,7 +76,7 @@ public function store(Request $request)
         $types = ['Course notice','Office order','Personal','Office notice','Service related'];
         $target = ['Office trainee','Staff/Faculty','Group wise'];
 
-        return view('admin.notice.edit', compact('notice','types','target','encId'));
+        return view('admin.NoticeNotification.edit', compact('notice','types','target','encId'));
     }
 
     // Update
@@ -103,7 +103,7 @@ public function store(Request $request)
 
     $notice->update($data);
 
-    return redirect()->route('admin.notice.index')->with('success','Notice updated!');
+    return redirect()->route('admin.NoticeNotification.index')->with('success','Notice updated!');
 }
 
 

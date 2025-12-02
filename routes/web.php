@@ -25,7 +25,7 @@ use App\Http\Controllers\Admin\{
     CourseAttendanceNoticeMapController,
     HostelBuildingFloorMappingController,
     HostelBuildingFloorRoomMappingController,
-    NoticeController
+    NoticeNotificationController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -188,11 +188,11 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
 
     Route::prefix('admin')->name('admin.')->group(function () {
  
-Route::resource('notice', NoticeController::class)
+Route::resource('notice', NoticeNotificationController::class)
      ->except(['show'])
      ->parameters(['notice' => 'encId']);
 
-Route::get('/notice/get-courses', [NoticeController::class, 'getCourses'])
+Route::get('/notice/get-courses', [NoticeNotificationController::class, 'getCourses'])
      ->name('notice.getCourses');
 Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('summernote.upload');
 
