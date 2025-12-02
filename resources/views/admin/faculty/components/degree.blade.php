@@ -1,6 +1,6 @@
 
 
-    <!--<div id="education_fields" class="my-4"></div>-->
+    <div id="education_fields" class="my-4"></div>
     @php
         $qualifications = $faculty->facultyQualificationMap ?? collect();
     @endphp
