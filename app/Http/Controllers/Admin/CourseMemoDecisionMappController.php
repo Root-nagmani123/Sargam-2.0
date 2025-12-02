@@ -17,8 +17,9 @@ class CourseMemoDecisionMappController extends Controller
     public function create()
     { 
         $mappings = CourseMemoDecisionMapp::all();
-        $CourseMaster = CourseMaster::where('active_inactive', 1)
-                              ->get();
+        $CourseMaster = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
+            ->get();
         $MemoTypeMaster = MemoTypeMaster::where('active_inactive', 1)
                               ->get();
         $MemoConclusionMaster = MemoConclusionMaster::where('active_inactive', 1)
@@ -42,7 +43,9 @@ class CourseMemoDecisionMappController extends Controller
 
    public function edit($id)
 {
-    $CourseMaster = CourseMaster::all();
+    $CourseMaster = CourseMaster::where('active_inactive', '1')
+        ->where('end_date', '>', now())
+        ->get();
     $MemoTypeMaster = MemoTypeMaster::all();
     $courseMemoMap = CourseMemoDecisionMapp::findOrFail(decrypt($id));
             $MemoConclusionMaster = MemoConclusionMaster::all();

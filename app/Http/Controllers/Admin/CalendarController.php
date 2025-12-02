@@ -14,7 +14,8 @@ class CalendarController extends Controller
 {
     public function index()
     {
-        $courseMaster = CourseMaster::where('active_inactive', 1)
+        $courseMaster = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
             ->select('pk', 'course_name')
             ->get();
     
