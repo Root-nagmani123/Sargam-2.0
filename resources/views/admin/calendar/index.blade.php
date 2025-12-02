@@ -636,7 +636,7 @@ textarea:focus {
                         <div class="row py-3 border-top">
                             <div class="col-md-3 mb-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox" id="feedback_checkbox" checked>
+                                    {{-- <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox" id="feedback_checkbox" checked> --}}
                                     <label class="form-check-label" for="feedback_checkbox">Feedback</label>
                                 </div>
                             </div>
