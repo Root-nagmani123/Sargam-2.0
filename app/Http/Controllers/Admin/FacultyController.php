@@ -495,14 +495,14 @@ class FacultyController extends Controller
 	public function searchFirstName(Request $request)
 		{
 			$query = $request->get('q', '');
-			
+
 			$names = \App\Models\FacultyMaster::where('first_name', 'like', "%{$query}%")
 				->limit(10)
 				->pluck('first_name');
 
 			return response()->json($names);
 		}
-						
+
 	public function checkFullName(Request $request)
 			{
 				$query = trim($request->get('query', ''));
@@ -531,7 +531,7 @@ class FacultyController extends Controller
 					"TRIM(CONCAT(first_name,' ',COALESCE(middle_name,''),' ',last_name)) = ?",
 					[$query]
 				)->first();
-				
+
 				return response()->json([
 					'suggestions' => $suggestions,
 					'exists' => $exists ? true : false,
@@ -547,11 +547,12 @@ class FacultyController extends Controller
             'countryMaster:pk,country_name',
             'districtMaster:pk,district_name',
             'facultyTypeMaster:pk,faculty_type_name',
-            'facultyExpertiseMap.facultyExpertise:pk,expertise_name',        'facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
-            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk', 
-            'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path'
+            'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path',
+            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
+            'facultyExpertiseMap.facultyExpertise:pk,expertise_name','facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
+
 				])->find($id);
 		   return response()->json($faculty);
 		}
-	
+
 }
