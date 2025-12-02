@@ -20,20 +20,32 @@ use Mpdf\Mpdf;
 
 class EnrollementController extends Controller
 {
-    public function create()
-    {
-        // Get all active courses
-        $courses = CourseMaster::where('active_inactive', 1)->get();
+   public function create()
+{
+    $currentDate = now()->format('Y-m-d');
+    
+    // Get courses that are active AND currently within their date range
+    $courses = CourseMaster::where('active_inactive', 1)
+        ->where(function($query) use ($currentDate) {
+            $query->whereNull('start_year')
+                  ->orWhere('start_year', '<=', $currentDate);
+        })
+        ->where(function($query) use ($currentDate) {
+            $query->whereNull('end_date')
+                  ->orWhere('end_date', '>=', $currentDate);
+        })
+        ->get();
 
-        // Get previous courses from student course map with course details
-        $previousCourses = StudentMasterCourseMap::with('course')
-            ->get()
-            ->unique('course_master_pk'); // Get unique courses
-        // Get all active services
-        $services = ServiceMaster::all();
+    // Get previous courses from student course map with course details
+    $previousCourses = StudentMasterCourseMap::with('course')
+        ->get()
+        ->unique('course_master_pk'); // Get unique courses
+        
+    // Get all active services
+    $services = ServiceMaster::all();
 
-        return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
-    }
+    return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
+}
 
     // public function store(Request $request)
     // {
