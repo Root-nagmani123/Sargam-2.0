@@ -20,32 +20,43 @@ use Mpdf\Mpdf;
 
 class EnrollementController extends Controller
 {
-   public function create()
-{
-    $currentDate = now()->format('Y-m-d');
-    
-    // Get courses that are active AND currently within their date range
-    $courses = CourseMaster::where('active_inactive', 1)
-        ->where(function($query) use ($currentDate) {
-            $query->whereNull('start_year')
-                  ->orWhere('start_year', '<=', $currentDate);
-        })
-        ->where(function($query) use ($currentDate) {
-            $query->whereNull('end_date')
-                  ->orWhere('end_date', '>=', $currentDate);
-        })
-        ->get();
+    public function create()
+    {
+        $currentDate = now()->format('Y-m-d');
 
-    // Get previous courses from student course map with course details
-    $previousCourses = StudentMasterCourseMap::with('course')
-        ->get()
-        ->unique('course_master_pk'); // Get unique courses
-        
-    // Get all active services
-    $services = ServiceMaster::all();
+        // Get courses that are active AND currently within their date range
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($query) use ($currentDate) {
 
-    return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
-}
+                $query
+                    // Current / Ongoing courses
+                    ->where(function ($q) use ($currentDate) {
+                        $q->whereNull('start_year')
+                            ->orWhere('start_year', '<=', $currentDate);
+                    })
+                    ->where(function ($q) use ($currentDate) {
+                        $q->whereNull('end_date')
+                            ->orWhere('end_date', '>=', $currentDate);
+                    })
+
+                    // OR Upcoming courses
+                    ->orWhere(function ($q) use ($currentDate) {
+                        $q->where('start_year', '>', $currentDate);
+                    });
+            })
+            ->get();
+
+
+        // Get previous courses from student course map with course details
+        $previousCourses = StudentMasterCourseMap::with('course')
+            ->get()
+            ->unique('course_master_pk'); // Get unique courses
+
+        // Get all active services
+        $services = ServiceMaster::all();
+
+        return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
+    }
 
     // public function store(Request $request)
     // {
@@ -528,69 +539,72 @@ class EnrollementController extends Controller
 
 
     public function exportEnrolledStudents(Request $request)
-{
-    try {
-        // Start with StudentMasterCourseMap query
-        $query = StudentMasterCourseMap::with([
-            'studentMaster.service',
-            'course'
-        ])->where('active_inactive', 1); // Only active enrollments
+    {
+        try {
+            // Start with StudentMasterCourseMap query
+            $query = StudentMasterCourseMap::with([
+                'studentMaster.service',
+                'course'
+            ])->where('active_inactive', 1); // Only active enrollments
 
-        // Apply course filter if provided
-        if ($request->has('course') && !empty($request->course)) {
-            $query->where('course_master_pk', $request->course);
+            // Apply course filter if provided
+            if ($request->has('course') && !empty($request->course)) {
+                $query->where('course_master_pk', $request->course);
+            }
+
+            // Get the enrollments
+            $enrollments = $query->get();
+
+            // Get course name for export
+            $courseName = 'All Active Courses';
+            if ($request->has('course') && !empty($request->course)) {
+                $course = CourseMaster::find($request->course);
+                $courseName = $course ? $course->course_name : 'Selected Course';
+            }
+
+            // Determine export type
+            $type = $request->input('type', 'pdf');
+
+            if ($type === 'excel') {
+                $export = new StudentEnrollmentExport($enrollments, $courseName);
+                return Excel::download(
+                    $export,
+                    'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.xlsx'
+                );
+            }
+
+            if ($type === 'csv') {
+                $export = new StudentEnrollmentExport($enrollments, $courseName);
+                return Excel::download(
+                    $export,
+                    'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.csv'
+                );
+            }
+
+            // Default to PDF - we need a different approach for PDF
+            return $this->exportEnrolledStudentsPDF($enrollments, $courseName);
+        } catch (\Exception $e) {
+            \Log::error('Export error: ' . $e->getMessage());
+            return back()->with('error', 'Error exporting: ' . $e->getMessage());
         }
-
-        // Get the enrollments
-        $enrollments = $query->get();
-
-        // Get course name for export
-        $courseName = 'All Active Courses';
-        if ($request->has('course') && !empty($request->course)) {
-            $course = CourseMaster::find($request->course);
-            $courseName = $course ? $course->course_name : 'Selected Course';
-        }
-
-        // Determine export type
-        $type = $request->input('type', 'pdf');
-        
-        if ($type === 'excel') {
-            $export = new StudentEnrollmentExport($enrollments, $courseName);
-            return Excel::download($export, 
-                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.xlsx');
-        }
-        
-        if ($type === 'csv') {
-            $export = new StudentEnrollmentExport($enrollments, $courseName);
-            return Excel::download($export, 
-                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.csv');
-        }
-
-        // Default to PDF - we need a different approach for PDF
-        return $this->exportEnrolledStudentsPDF($enrollments, $courseName);
-
-    } catch (\Exception $e) {
-        \Log::error('Export error: ' . $e->getMessage());
-        return back()->with('error', 'Error exporting: ' . $e->getMessage());
     }
-}
 
-// Separate method for PDF export
-private function exportEnrolledStudentsPDF($enrollments, $courseName)
-{
-    $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
-        'enrollments' => $enrollments,
-        'courseName' => $courseName,
-        'exportDate' => now()->format('Y-m-d H:i:s'),
-        'totalCount' => $enrollments->count()
-    ]);
+    // Separate method for PDF export
+    private function exportEnrolledStudentsPDF($enrollments, $courseName)
+    {
+        $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
+            'enrollments' => $enrollments,
+            'courseName' => $courseName,
+            'exportDate' => now()->format('Y-m-d H:i:s'),
+            'totalCount' => $enrollments->count()
+        ]);
 
-    $filename = 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.pdf';
-    
-    return $pdf->setPaper('a4', 'landscape')
-        ->setOption('enable-smart-shrinking', true)
-        ->download($filename);
-}
+        $filename = 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.pdf';
+
+        return $pdf->setPaper('a4', 'landscape')
+            ->setOption('enable-smart-shrinking', true)
+            ->download($filename);
+    }
 
     /**
      * Show the form for editing student information.
@@ -687,5 +701,4 @@ private function exportEnrolledStudentsPDF($enrollments, $courseName)
                 ->with('error', 'Update failed: ' . $e->getMessage());
         }
     }
-
 }
