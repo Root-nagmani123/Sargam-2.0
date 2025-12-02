@@ -173,7 +173,9 @@ class StudentMedicalExemptionController extends Controller
 {
     $record = StudentMedicalExemption::findOrFail(decrypt($id));
 
-    $courses = CourseMaster::where('active_inactive', '1')->get();
+    $courses = CourseMaster::where('active_inactive', '1')
+        ->where('end_date', '>', now())
+        ->get();
     $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
         ->where('status', '1')
         ->get();
