@@ -1,16 +1,15 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Notice')
+@section('title', 'Edit Notice notification')
 
 @section('content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Notice List" />
+    <x-breadcrum title="Notice notification List" />
     <x-session_message />
 
     <div class="card">
-        <div class="card-header">Edit Notice</div>
-
+        <div class="card-header">Edit Notice notification</div>
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul>

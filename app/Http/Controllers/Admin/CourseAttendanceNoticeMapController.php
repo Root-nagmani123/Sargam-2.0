@@ -364,27 +364,42 @@ public function getStudentAttendanceBytopic(Request $request)
 
         // Query to get students with Late (2) or Absent (3) status
         // Handle both integer and string status values
-        $attendance = DB::table('course_student_attendance as a')
-            ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
-            ->where('a.timetable_pk', $topicId)
-            ->where(function($query) {
-                // Check for status 2 (Late) or 3 (Absent) as both integer and string
-                $query->where('a.status', 2)
-                      ->orWhere('a.status', 3)
-                      ->orWhere('a.status', '2')
-                      ->orWhere('a.status', '3');
-            })
-            ->whereNotNull('s.pk')
-            ->whereNotNull('s.display_name')
-            ->where('s.display_name', '!=', '')
-            ->select(
-                'a.pk as studnet_pk',
-                's.pk as pk',
-                's.display_name as display_name',
-                'a.status as attendance_status'
-            )
-            ->distinct()
-            ->get();
+        // $attendance = DB::table('course_student_attendance as a')
+        //     ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
+        //     ->where('a.timetable_pk', $topicId)
+        //     ->where(function($query) {
+        //         // Check for status 2 (Late) or 3 (Absent) as both integer and string
+        //         $query->where('a.status', 2);
+        //         $query->where('a.status', 3);
+                    
+        //     })
+
+        //     ->whereNotNull('s.pk')
+        //     ->whereNotNull('s.display_name')
+        //     ->where('s.display_name', '!=', '')
+        //     ->select(
+        //         'a.pk as studnet_pk',
+        //         's.pk as pk',
+        //         's.display_name as display_name',
+        //         'a.status as attendance_status'
+        //     )
+        //     ->distinct()
+        //     ->get();
+$attendance = DB::table('course_student_attendance as a')
+    ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
+    ->where('a.timetable_pk', $topicId)
+    ->whereRaw("TRIM(a.status) REGEXP '^(2|3)$'")
+    ->whereNotNull('s.pk')
+    ->whereNotNull('s.display_name')
+    ->where('s.display_name', '!=', '')
+    ->select(
+        'a.pk as studnet_pk',
+        's.pk as pk',
+        's.display_name as display_name',
+        'a.status as attendance_status'
+    )
+    ->distinct()
+    ->get();
 
         // If no students found, return empty array instead of error
         // This allows the UI to handle empty state gracefully

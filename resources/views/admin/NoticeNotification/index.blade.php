@@ -1,12 +1,12 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Notice List')
+@section('title', 'Notice notification List')
 
 @section('content')
 <div class="container-fluid">
     <div class="card">
         <div class="card-header">
-            Notice List
+            Notice notification List
             <a href="{{ route('admin.notice.create') }}" class="btn btn-success btn-sm float-end">Add Notice</a>
         </div>
         @if ($errors->any())

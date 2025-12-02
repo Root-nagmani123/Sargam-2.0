@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Create Notice')
+@section('title', 'Create Notice notification')
 
 @section('content')
 
@@ -10,7 +10,7 @@
     <x-session_message />
     <div class="card">
         <div class="card-header">
-            Create Notice
+            Create NotNotice notificationice
         </div>
         @if ($errors->any())
     <div class="alert alert-danger">
