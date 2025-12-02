@@ -505,7 +505,7 @@ class EnrollementController extends Controller
 
 
 
-    public function exportEnrolledStudents(Request $request)
+  public function exportEnrolledStudents(Request $request)
 {
     try {
         // Start with StudentMasterCourseMap query
