@@ -98,67 +98,89 @@ class EnrollementController extends Controller
     //     }
     // }
 
-   public function store(Request $request)
-{
-    $validated = $request->validate([
-        'course_master_pk' => [
-            'required',
-            'integer',
-            Rule::exists('course_master', 'pk')->where('active_inactive', 1)
-        ],
-        'selected_students' => 'required|string',
-    ]);
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'course_master_pk' => [
+                'required',
+                'integer',
+                Rule::exists('course_master', 'pk')->where('active_inactive', 1)
+            ],
+            'selected_students' => 'required|string',
+        ]);
 
-    $newCoursePk = $validated['course_master_pk'];
-    $studentIds = array_unique(array_filter(explode(',', $validated['selected_students'])));
+        $newCoursePk = $validated['course_master_pk'];
+        $studentIds = array_filter(explode(',', $validated['selected_students']));
 
-    if (empty($studentIds)) {
-        return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
-    }
-
-    DB::beginTransaction();
-    try {
-        $now = now();
-        $successCount = 0;
-
-        // First, deactivate all other courses for these students
-        StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
-            ->where('course_master_pk', '!=', $newCoursePk)
-            ->update(['active_inactive' => 0]);
-
-        // Then, activate/insert the new course enrollment
-        foreach ($studentIds as $studentId) {
-            $enrollment = StudentMasterCourseMap::updateOrCreate(
-                [
-                    'student_master_pk' => $studentId,
-                    'course_master_pk' => $newCoursePk
-                ],
-                [
-                    'active_inactive' => 1,
-                    'modified_date' => $now
-                ]
-            );
-
-            // If this was newly created, set created_date
-            if ($enrollment->wasRecentlyCreated) {
-                $enrollment->created_date = $now;
-                $enrollment->save();
-            }
-
-            $successCount++;
+        if (empty($studentIds)) {
+            return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
         }
 
-        DB::commit();
+        DB::beginTransaction();
+        try {
+            // Get existing enrollments for these students in this course
+            $existingEnrollments = StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
+                ->where('course_master_pk', $newCoursePk)
+                ->get()
+                ->keyBy('student_master_pk');
 
-        return redirect()->back()
-            ->with('success', "Enrollment completed! {$successCount} students processed.")
-            ->with('selected_course', $newCoursePk);
-            
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return back()->withErrors(['error' => 'Enrollment failed: ' . $e->getMessage()]);
+            $studentsToInsert = [];
+            $studentsToUpdate = [];
+            $now = now();
+
+            foreach ($studentIds as $studentId) {
+                if (isset($existingEnrollments[$studentId])) {
+                    // Student already enrolled - mark for update if inactive
+                    if ($existingEnrollments[$studentId]->active_inactive == 0) {
+                        $studentsToUpdate[] = $studentId;
+                    }
+                } else {
+                    // New enrollment - mark for insertion
+                    $studentsToInsert[] = $studentId;
+                }
+            }
+
+            // Step 1: Deactivate ALL courses for all selected students
+            StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
+                ->update(['active_inactive' => 0]);
+
+            // Step 2: Activate/insert the new course enrollments
+            if (!empty($studentsToUpdate)) {
+                // Reactivate existing enrollments
+                StudentMasterCourseMap::whereIn('student_master_pk', $studentsToUpdate)
+                    ->where('course_master_pk', $newCoursePk)
+                    ->update([
+                        'active_inactive' => 1,
+                        'modified_date' => $now
+                    ]);
+            }
+
+            if (!empty($studentsToInsert)) {
+                // Insert new enrollments
+                $insertData = [];
+                foreach ($studentsToInsert as $studentId) {
+                    $insertData[] = [
+                        'student_master_pk' => $studentId,
+                        'course_master_pk' => $newCoursePk,
+                        'active_inactive' => 1,
+                        'created_date' => $now,
+                        'modified_date' => $now,
+                    ];
+                }
+                StudentMasterCourseMap::insert($insertData);
+            }
+
+            DB::commit();
+
+            $totalProcessed = count($studentsToInsert) + count($studentsToUpdate);
+            return redirect()->back()
+                ->with('success', "Enrollment completed! {$totalProcessed} students processed.")
+                ->with('selected_course', $newCoursePk);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Enrollment failed: ' . $e->getMessage()]);
+        }
     }
-}
 
     public function filterStudents(Request $request)
     {
