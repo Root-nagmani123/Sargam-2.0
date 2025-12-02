@@ -60,7 +60,7 @@ input.is-invalid {
 
             <form class="facultyForm">
 			  @csrf
-			  <input type="hidden" name="faculty_id" id="faculty_id" value="">
+			  <!--<input type="hidden" name="faculty_id" id="faculty_id" value="">-->
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title">Personal Information</h4>
@@ -400,8 +400,8 @@ input.is-invalid {
                             <h4 class="card-title">Qualification Details</h4>
                             <hr>
                             <div id="education_fields" class="my-4"></div>
-                            <div class="degreeContainer">
-                            <div class="row">
+
+                            <div class="row degree-row" id="education_fields">
                                 <div class="col-3">
 
                                     <x-input
@@ -486,7 +486,7 @@ input.is-invalid {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+
 
                         </div>
                     </div>
@@ -1002,7 +1002,7 @@ function fillFacultyForm(faculty) {
 */
 
 faculty.faculty_qualification_map.forEach(function(q, index) {
-    const row = $(".degreeContainer").eq(index);
+    const row = $(".degree-row").eq(index);
 
 
     row.find("input[name='degree[]']").val(q.Degree_name);
