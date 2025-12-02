@@ -106,6 +106,16 @@
                                         <span
                                             class="hide-menu">MDO Duty Type</span>
                                     </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('medical.exception.faculty.view') }}">
+                                        <span
+                                            class="hide-menu">Medical Exception Faculty View</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('medical.exception.ot.view') }}">
+                                        <span
+                                            class="hide-menu">Medical Exception OT View</span>
+                                    </a></li>
                             </ul>
 
                             {{-- MEMO --}}
