@@ -11,18 +11,20 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
 {
     protected $filter;
     protected $courseFilter;
+    protected $facultyFilter;
     protected $dateFilter;
 
-    public function __construct($filter = 'active', $courseFilter = null, $dateFilter = null)
+    public function __construct($filter = 'active', $courseFilter = null, $facultyFilter = null, $dateFilter = null)
     {
         $this->filter = $filter;
         $this->courseFilter = $courseFilter;
+        $this->facultyFilter = $facultyFilter;
         $this->dateFilter = $dateFilter;
     }
 
     public function collection()
     {
-        $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course']);
+        $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee']);
         
         // Filter by course status (Active/Archive)
         $currentDate = now()->format('Y-m-d');
@@ -44,6 +46,11 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             $query->where('course_master_pk', $this->courseFilter);
         }
         
+        // Filter by faculty/employee if selected
+        if ($this->facultyFilter) {
+            $query->where('employee_master_pk', $this->facultyFilter);
+        }
+        
         // Filter by today's date if date_filter is 'today'
         if ($this->dateFilter === 'today') {
             // Show records where today's date falls within the exemption period
@@ -61,11 +68,13 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
                 'student_name' => optional($record->student)->display_name ?? 'N/A',
                 'ot_code' => optional($record->student)->generated_OT_code ?? 'N/A',
                 'course' => optional($record->course)->course_name ?? 'N/A',
+                'faculty' => ($record->employee && $record->employee->first_name && $record->employee->last_name) ? trim($record->employee->first_name . ' ' . $record->employee->last_name) : 'N/A',
                 'category' => optional($record->category)->exemp_category_name ?? 'N/A',
                 'medical_speciality' => optional($record->speciality)->speciality_name ?? 'N/A',
                 'from_date' => $record->from_date ? Carbon::parse($record->from_date)->format('d-m-Y') : 'N/A',
                 'to_date' => $record->to_date ? Carbon::parse($record->to_date)->format('d-m-Y') : 'N/A',
                 'opd_category' => $record->opd_category ?? 'N/A',
+                'document' => $record->Doc_upload ? asset('storage/' . $record->Doc_upload) : 'N/A',
                 'description' => $record->Description ?? 'N/A',
                 'status' => $record->active_inactive == 1 ? 'Active' : 'Inactive',
             ];
@@ -78,11 +87,13 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             'Student Name',
             'OT Code',
             'Course',
+            'Faculty',
             'Category',
             'Medical Speciality',
             'From Date',
             'To Date',
             'OPD Category',
+            'Document',
             'Description',
             'Status'
         ];

@@ -49,12 +49,16 @@
         }
 
         .student-table-wrapper thead th {
-            background: linear-gradient(90deg, #f5f9ff 0%, #eef4ff 100%);
-            color: #1b3155;
+            background: linear-gradient(90deg, #f5f9ff 0%, #eef4ff 100%) !important;
+            color: #1b3155 !important;
             border-bottom: none;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+        }
+
+        .student-table-wrapper thead.table-primary th {
+            color: #1b3155 !important;
         }
 
         .student-table-wrapper tbody tr {
