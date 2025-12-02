@@ -24,7 +24,10 @@ class MDOEscrotExemptionController extends Controller
     public function create()
     {
         try {
-            $courseMaster = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
+            $courseMaster = CourseMaster::where('active_inactive', '1')
+                ->where('end_date', '>', now())
+                ->pluck('course_name', 'pk')
+                ->toArray();
             $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
             $facultyMaster = FacultyMaster::where('active_inactive', 1)
                 ->orderBy('full_name')

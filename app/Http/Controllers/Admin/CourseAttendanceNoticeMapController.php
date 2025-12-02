@@ -166,11 +166,8 @@ if($memos[0]->status == 2){
     }
 public function create(Request $request)
 {
-    $today = Carbon::today();
-
-    $activeCourses = CourseMaster::where('active_inactive', 1)
-        ->whereDate('start_year', '<=', $today)
-        ->whereDate('end_date', '>=', $today)
+    $activeCourses = CourseMaster::where('active_inactive', '1')
+        ->where('end_date', '>', now())
         ->get();
 // print_r($activeCourses);die;
     return view('admin.courseAttendanceNoticeMap.create', compact('activeCourses'));

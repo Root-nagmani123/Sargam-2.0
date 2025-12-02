@@ -29,12 +29,8 @@ class GroupMappingController extends Controller
 
     public function index(GroupMappingDataTable $dataTable)
     {
-        $currentDate = Carbon::now()->format('Y-m-d');
-        $courses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($query) use ($currentDate) {
-                $query->whereNull('end_date')
-                    ->orWhereDate('end_date', '>=', $currentDate);
-            })
+        $courses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
             ->orderBy('course_name')
             ->pluck('course_name', 'pk')
             ->toArray();
@@ -54,9 +50,8 @@ class GroupMappingController extends Controller
      */
     function create()
     {
-        $currentDate = Carbon::now()->format('Y-m-d');
-        $courses = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>=', $currentDate)
+        $courses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
             ->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();
@@ -78,11 +73,10 @@ class GroupMappingController extends Controller
     function edit(string $id)
     {
         $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($id));
-        $currentDate = Carbon::now()->format('Y-m-d');
         
-        // Get active courses (active_inactive = 1 and end_date >= today)
-        $activeCourses = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>=', $currentDate)
+        // Get active courses (active_inactive = '1' and end_date > now())
+        $activeCourses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
             ->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();

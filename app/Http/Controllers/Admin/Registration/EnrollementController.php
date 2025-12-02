@@ -22,7 +22,9 @@ class EnrollementController extends Controller
     public function create()
     {
         // Get all active courses
-        $courses = CourseMaster::where('active_inactive', 1)->get();
+        $courses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
+            ->get();
 
         // Get previous courses from student course map with course details
         $previousCourses = StudentMasterCourseMap::with('course')
