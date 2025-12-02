@@ -8,42 +8,47 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithTitle;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use Carbon\Carbon;
 
-class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles
+class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMapping, ShouldAutoSize, WithStyles, WithTitle
 {
     protected $enrollments;
+    protected $courseName;
+    protected $serialNumber = 1;
 
-    public function __construct($enrollments)
+    public function __construct($enrollments, $courseName = 'All Active Courses')
     {
         $this->enrollments = $enrollments;
+        $this->courseName = $courseName;
     }
 
     public function collection()
     {
-        // Return the pre-filtered enrollments
         return $this->enrollments;
     }
 
     public function map($enrollment): array
     {
-        $student = $enrollment->studentMaster;
-        $course = $enrollment->course;
-
+        $student = $enrollment->studentMaster ?? null;
+        $course = $enrollment->course ?? null;
+        
+        static $serial = 1;
+        $currentSerial = $serial++;
+        
         return [
-            $enrollment->id ?? '-', // Add serial number or unique identifier
-            trim(($student->first_name ?? '') . ' ' . ($student->middle_name ?? '') . ' ' . ($student->last_name ?? '')),
-            $student->email ?? '-',
-            $course->course_name ?? 'N/A',
-            $student->generated_OT_code ?? '-',
-            $student->service->service_name ?? 'N/A',
-            (int) $enrollment->active_inactive === 1 ? 'Active' : 'Inactive',
-            $enrollment->created_date ? Carbon::parse($enrollment->created_date)->format('d M Y H:i') : '-',
-            $enrollment->modified_date ? Carbon::parse($enrollment->modified_date)->format('d M Y H:i') : '-',
+            $currentSerial,
+            $student ? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) : 'N/A',
+            $student->email ?? 'N/A',
+            $student->contact_no ?? 'N/A',
+            // Display OT Code instead of Course Name
+            $student->generated_OT_code ?? 'N/A',
+            $enrollment->created_date ? Carbon::parse($enrollment->created_date)->format('d M Y') : 'N/A',
+            $enrollment->active_inactive ? 'Active' : 'Inactive',
         ];
     }
 
@@ -53,12 +58,10 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
             'S.No',
             'Student Name',
             'Email',
-            'Course',
-            'OT Code',
-            'Service',
+            'Phone',
+            'OT Code',  // Changed from 'Course' to 'OT Code'
+            'Enrollment Date',
             'Status',
-            'Created Date',
-            'Modified Date',
         ];
     }
 
@@ -70,10 +73,13 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
         // Header styling
         $sheet->getStyle("A1:{$lastColumn}1")
             ->applyFromArray([
-                'font' => ['bold' => true],
+                'font' => [
+                    'bold' => true,
+                    'color' => ['rgb' => 'FFFFFF'],
+                ],
                 'fill' => [
                     'fillType'   => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => 'FFCC00'],
+                    'startColor' => ['rgb' => 'e6423d'],
                 ],
                 'alignment' => [
                     'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -81,7 +87,7 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
                 ],
             ]);
 
-        // All cells borders and alignment
+        // All cells borders
         $sheet->getStyle("A1:{$lastColumn}{$lastRow}")
             ->applyFromArray([
                 'borders' => [
@@ -90,19 +96,45 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
                         'color' => ['argb' => 'FF000000'],
                     ],
                 ],
-                'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical'   => Alignment::VERTICAL_CENTER,
-                ],
             ]);
 
-        // Data rows left alignment for better readability
-        if ($lastRow > 1) {
-            $sheet->getStyle("A2:{$lastColumn}{$lastRow}")
-                ->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        // Center alignment for serial numbers and status
+        $sheet->getStyle("A1:A{$lastRow}")
+            ->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            
+        $sheet->getStyle("G1:G{$lastRow}")
+            ->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Center alignment for OT Code
+        $sheet->getStyle("E1:E{$lastRow}")
+            ->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Left alignment for other columns
+        $sheet->getStyle("B1:D{$lastRow}")
+            ->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            
+        $sheet->getStyle("F1:F{$lastRow}")
+            ->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_LEFT);
+
+        // Auto-size columns
+        foreach (range('A', $lastColumn) as $column) {
+            $sheet->getColumnDimension($column)
+                ->setAutoSize(true);
         }
 
+        // Add some spacing
+        $sheet->getRowDimension(1)->setRowHeight(25);
+
         return [];
+    }
+
+    public function title(): string
+    {
+        return 'Enrolled Students - ' . substr($this->courseName, 0, 25);
     }
 }
