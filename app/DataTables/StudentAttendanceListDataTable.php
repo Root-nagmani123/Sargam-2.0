@@ -31,6 +31,18 @@ class StudentAttendanceListDataTable extends DataTable
             ->addColumn('other_exempt', fn($row) => $this->renderRadio($row, 7, 'Other Exempted'))
             ->filterColumn('student_name', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('display_name', 'like', "%{$keyword}%")))
             ->filterColumn('student_code', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('generated_OT_code', 'like', "%{$keyword}%")))
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->whereHas('studentsMaster', function ($studentQuery) use ($searchValue) {
+                            $studentQuery->where('display_name', 'like', "%{$searchValue}%")
+                                ->orWhere('generated_OT_code', 'like', "%{$searchValue}%");
+                        });
+                    });
+                }
+            }, true)
             ->rawColumns(['student_name', 'student_code', 'attendance_status', 'mdo_duty', 'escort_duty', 'medical_exempt', 'other_exempt']);
     }
 
@@ -73,8 +85,8 @@ class StudentAttendanceListDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('OT Name')->addClass('text-center')->orderable(false),
-            Column::make('student_code')->title('OT Code')->addClass('text-center')->orderable(false),
+            Column::make('student_name')->title('OT Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('student_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('attendance_status')->title('Attendance')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_duty')->title('MDO Duty')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('escort_duty')->title('Escort Duty')->addClass('text-center')->orderable(false)->searchable(false),

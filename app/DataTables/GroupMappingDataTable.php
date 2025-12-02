@@ -189,6 +189,10 @@ public function html(): HtmlBuilder
             'responsive' => true,
             'scrollX' => true,
             'autoWidth' => false,
+            'ordering' => false,
+            'searching' => true,
+            'lengthChange' => true,
+            'pageLength' => 10,
             'order' => [],
             'pagingType' => 'simple_numbers', // Bootstrap 5 pagination style
             'language' => [

@@ -7,18 +7,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use App\Models\{MDODutyTypeMaster, StudentMaster, CourseMaster, MDOEscotDutyMap, FacultyMaster};
 use App\Http\Requests\MDOEscrotExemptionRequest;
+use App\DataTables\MDOEscrotExemptionDataTable;
 
 class MDOEscrotExemptionController extends Controller
 {
-    public function index()
+    public function index(MDOEscrotExemptionDataTable $dataTable)
     {
-        $exemptions = MDOEscotDutyMap::with([
-            'courseMaster' => fn($q) => $q->select('pk', 'course_name'),
-            'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
-            'studentMaster' => fn($q) => $q->select('pk', 'display_name')
-        ])->orderBy('pk', 'desc')->paginate(10);
-
-        return view('admin.mdo_escrot_exemption.index', compact('exemptions'));
+        return $dataTable->render('admin.mdo_escrot_exemption.index');
     }
 
     public function create()
