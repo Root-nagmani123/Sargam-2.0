@@ -6,14 +6,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MemoTypeMaster;
 use Illuminate\Support\Facades\Storage;
+use App\DataTables\MemoTypeMasterDataTable;
 
 
 class MemoTypeMasterController extends Controller
 {
-    public function index()
+    public function index(MemoTypeMasterDataTable $dataTable)
     {
-        $memoTypes = MemoTypeMaster::paginate(10);
-        return view('admin.master.memo_type.index', compact('memoTypes'));
+        return $dataTable->render('admin.master.memo_type.index');
     }
 
     public function create()

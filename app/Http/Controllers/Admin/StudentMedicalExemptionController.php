@@ -178,6 +178,7 @@ class StudentMedicalExemptionController extends Controller
         ->get();
     $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
         ->where('status', '1')
+        ->orderBy('display_name', 'asc')
         ->get();
     $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
     $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
@@ -226,6 +227,7 @@ public function update(Request $request, $id)
             ->where('student_master_course__map.course_master_pk', $courseId)
             ->where('student_master.status', '1')
             ->select('student_master.pk', 'student_master.generated_OT_code', 'student_master.display_name')
+            ->orderBy('student_master.display_name', 'asc')
             ->get();
        
        return response()->json(['students' => $students]);

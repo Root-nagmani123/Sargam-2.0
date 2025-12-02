@@ -89,6 +89,16 @@ class FacultyDataTable extends DataTable
             ->filterColumn('mobile_number', function ($query, $keyword) {
                 $query->where('mobile_no', 'like', "%{$keyword}%");
             })
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('full_name', 'like', "%{$searchValue}%")
+                            ->orWhere('mobile_no', 'like', "%{$searchValue}%");
+                    });
+                }
+            }, true)
             ->rawColumns(['faculty_type','action', 'status', 'current_sector']);
     }
 
@@ -120,6 +130,18 @@ class FacultyDataTable extends DataTable
                     ->selectStyleSingle()
                     ->parameters([
                         'order' => [],
+                        'ordering' => false,
+                        'searching' => true,
+                        'lengthChange' => true,
+                        'pageLength' => 10,
+                        'language' => [
+                            'paginate' => [
+                                'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">chevron_left</i>',
+                                'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">chevron_right</i>'
+                            ]
+                        ],
                     ])
                     ->buttons([
                         Button::make('excel'),

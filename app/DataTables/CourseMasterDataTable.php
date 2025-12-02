@@ -65,6 +65,17 @@ class CourseMasterDataTable extends DataTable
             ->filterColumn('end_date', function ($query, $keyword) {
                 $query->where('end_date', 'like', "%{$keyword}%");
             })
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('course_name', 'like', "%{$searchValue}%")
+                            ->orWhere('couse_short_name', 'like', "%{$searchValue}%")
+                            ->orWhere('course_year', 'like', "%{$searchValue}%");
+                    });
+                }
+            }, true)
             ->rawColumns(['action', 'status'])
             ->setRowId('pk');
     }
@@ -112,7 +123,19 @@ class CourseMasterDataTable extends DataTable
                 'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
+                'ordering' => false,
+                'searching' => true,
+                'lengthChange' => true,
+                'pageLength' => 10,
                 'order' => [],
+                'language' => [
+                    'paginate' => [
+                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_left</i>',
+                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_right</i>'
+                    ]
+                ],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -132,14 +155,14 @@ class CourseMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
-            Column::make('course_name')->title('Course Name')->orderable(false),
-            Column::make('couse_short_name')->title('Short Name')->orderable(false),
-            Column::make('course_year')->title('Course Year')->orderable(false),
-            Column::make('start_year')->title('Start Date')->orderable(false),
-            Column::make('end_date')->title('End Date')->orderable(false),
-            Column::computed('action')->addClass('text-center'),
-            Column::computed('status')->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->searchable(false)->orderable(false),
+            Column::make('course_name')->title('Course Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('couse_short_name')->title('Short Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('course_year')->title('Course Year')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('start_year')->title('Start Date')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('end_date')->title('End Date')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('action')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('status')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
 

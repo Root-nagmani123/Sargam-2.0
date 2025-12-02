@@ -16,7 +16,6 @@
                         </div>
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-center gap-2">
-
                                 <!-- Add Group Mapping -->
                                 <a href="{{route('master.mdo_duty_type.create')}}" id="openCreateDutyType"
                                     class="btn btn-primary d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#mdoDutyTypeModal">
@@ -24,78 +23,12 @@
                                         style="font-size: 24px;">add</i>
                                     Add MDO Duty Type
                                 </a>
-                                <!-- Search Expand -->
-                                <div class="search-expand d-flex align-items-center">
-                                    <a href="javascript:void(0)" id="searchToggle">
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">search</i>
-                                    </a>
-
-                                    <input type="text" class="form-control search-input ms-2" id="searchInput"
-                                        placeholder="Search…" aria-label="Search">
-                                </div>
-
                             </div>
                         </div>
                     </div>
                     <hr>
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th class="col">S.No.</th>
-                                <th class="col">Duty Type Name</th>
-                                <th class="col">Actions</th>
-                                <th class="col">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($mdoDutyTypes as $index => $duty)
-                            <tr data-pk="{{ $duty->pk }}">
-                                <td>{{ $mdoDutyTypes->firstItem() + $index }}</td>
-                                <td>{{ $duty->mdo_duty_type_name }}</td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="{{ route('master.mdo_duty_type.edit', encrypt($duty->pk)) }}"
-                                            title="Edit" class="openEditDutyType" data-id="{{ encrypt($duty->pk) }}" data-bs-toggle="modal" data-bs-target="#mdoDutyTypeModal">
-                                            <i class="material-icons material-symbols-rounded"
-                                                style="font-size:24px">edit</i>
-                                        </a>
-                                        <form action="{{ route('master.mdo_duty_type.delete', encrypt($duty->pk)) }}"
-                                            method="POST" onsubmit="return confirm('Delete this duty type?')">
-                                            @csrf
-                                            <button type="submit" class="btn btn-link p-0" title="Delete">
-                                                <i class="material-icons material-symbols-rounded" style="font-size:24px">delete</i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                   data-table="mdo_duty_type_master" data-column="active_inactive" data-id="{{ $duty->pk }}" {{ ($duty->active_inactive == 1 ? 'checked' : '') }}>
-                        </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="4" class="text-center text-muted">No duty types found</td>
-                            </tr>
-                        @endforelse
-                        </tbody>
-                    </table>
-                    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
 
-                        <div class="text-muted small mb-2">
-                            Showing {{ $mdoDutyTypes->firstItem() }}
-                            to {{ $mdoDutyTypes->lastItem() }}
-                            of {{ $mdoDutyTypes->total() }} items
-                        </div>
-
-                        <div>
-                            {{ $mdoDutyTypes->links('pagination::bootstrap-5') }}
-                        </div>
-
-                    </div>
+                    {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
                 </div>
             </div>
         </div>
@@ -107,9 +40,7 @@
 @endsection
 
 @push('scripts')
-@endpush
-
-@push('scripts')
+    {!! $dataTable->scripts() !!}
 <script>
 document.addEventListener('DOMContentLoaded', function(){
     const createBtn = document.getElementById('openCreateDutyType');
@@ -213,53 +144,11 @@ function interceptEditLink(e){
     openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
 }
 function updateTableAfterSave(payload){
-    if(!payload || !payload.data){ return; }
-    const { action, data } = payload;
-    const tbody = document.querySelector('table tbody');
-    if(!tbody) return;
-
-    if(action === 'create') {
-        // Insert new row at top
-        const newRow = document.createElement('tr');
-        newRow.setAttribute('data-pk', data.pk);
-        newRow.innerHTML = `
-            <td>1</td>
-            <td>${escapeHtml(data.mdo_duty_type_name)}</td>
-            <td>
-                <div class=\"d-flex gap-2\">
-                    <a href=\"${buildEditUrl(data.encrypted_pk)}\" title=\"Edit\" class=\" openEditDutyType\" data-id=\"${data.encrypted_pk}\">
-                        <i class=\"material-icons material-symbols-rounded\" style=\"font-size:24px\">edit</i>
-                    </a>
-                    <form action=\"${window.location.origin + '/master/mdo_duty_type/delete/' + encodeURIComponent(data.encrypted_pk)}\" method=\"POST\" onsubmit=\"return confirm('Delete this duty type?')\">
-                        <input type=\"hidden\" name=\"_token\" value=\"{{ csrf_token() }}\">
-                        <button type=\"submit\" class=\"btn btn-link p-0\" title=\"Delete\">
-                            <i class=\"material-icons material-symbols-rounded\" style=\"font-size:24px\">delete</i>
-                        </button>
-                    </form>
-                </div>
-            </td>
-            <td>
-                <div class=\"form-check form-switch d-inline-block\">
-                    <input class=\"form-check-input status-toggle\" type=\"checkbox\" role=\"switch\" data-table=\"mdo_duty_type_master\" data-column=\"active_inactive\" data-id=\"${data.pk}\" ${data.active_inactive == 1 ? 'checked' : ''}>
-                </div>
-            </td>`;
-        tbody.prepend(newRow);
-        // Recalculate serial numbers for all rows
-        Array.from(tbody.querySelectorAll('tr')).forEach((r,i)=>{
-            const cell = r.querySelector('td');
-            if(cell) cell.textContent = (i+1 + {{ $mdoDutyTypes->firstItem() }} - 1); // keep pagination base
-        });
-        // Bind edit link
-        newRow.querySelector('.openEditDutyType')?.addEventListener('click', interceptEditLink);
-    } else if(action === 'update') {
-        // Find existing row by pk
-        let targetRow = tbody.querySelector(`tr[data-pk='${data.pk}']`);
-        if(targetRow){
-            const tds = targetRow.querySelectorAll('td');
-            if(tds[1]) tds[1].textContent = data.mdo_duty_type_name;
-            // Status toggle remains; adjust checked state
-            const statusInput = targetRow.querySelector('input.status-toggle');
-            if(statusInput){ statusInput.checked = data.active_inactive == 1; }
+    // Reload DataTable after create/update
+    if (typeof $.fn.DataTable !== 'undefined') {
+        const table = $('#mdodutytypemaster-table').DataTable();
+        if (table) {
+            table.ajax.reload(null, false); // false = don't reset pagination
         }
     }
 }

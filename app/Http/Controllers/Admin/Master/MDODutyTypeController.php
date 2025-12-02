@@ -9,15 +9,9 @@ use App\Models\MDODutyTypeMaster;
 
 class MDODutyTypeController extends Controller
 {
-    public function index()
+    public function index(MDODutyTypeMasterDataTable $dataTable)
     {
-        // Show only active by default; include inactive if query param ?show=all
-        $query = MDODutyTypeMaster::orderBy('pk','desc');
-        if (request('show') !== 'all') {
-            $query->where('active_inactive', 1);
-        }
-        $mdoDutyTypes = $query->paginate(10)->appends(request()->query());
-        return view('admin.master.mdo_duty_type.index', compact('mdoDutyTypes'));
+        return $dataTable->render('admin.master.mdo_duty_type.index');
     }
     // {
     //     // $mdoDutyTypes = MDODutyTypeMaster::latest('pk')->get();
