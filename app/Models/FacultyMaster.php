@@ -54,4 +54,9 @@ class FacultyMaster extends Model
     {
         return $this->belongsTo(City::class, 'city_master_pk', 'pk');
     }
+
+    public function timetableCourses()
+    {
+        return $this->hasMany(CalendarEvent::class, 'faculty_master', 'pk');
+    }
 }
