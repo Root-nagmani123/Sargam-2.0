@@ -45,6 +45,22 @@ class MemberDataTable extends DataTable
             ->filterColumn('mobile_no', function ($query, $keyword) {
                 $query->where('mobile', 'like', "%{$keyword}%");
             })
+            ->filterColumn('email', function ($query, $keyword) {
+                $query->where('email', 'like', "%{$keyword}%");
+            })
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('first_name', 'like', "%{$searchValue}%")
+                            ->orWhere('middle_name', 'like', "%{$searchValue}%")
+                            ->orWhere('last_name', 'like', "%{$searchValue}%")
+                            ->orWhere('mobile', 'like', "%{$searchValue}%")
+                            ->orWhere('email', 'like', "%{$searchValue}%");
+                    });
+                }
+            }, true)
             ->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email']);
     }
 
@@ -65,6 +81,18 @@ class MemberDataTable extends DataTable
                     ->selectStyleSingle()
                     ->parameters([
                         'order' => [],
+                        'ordering' => false,
+                        'searching' => true,
+                        'lengthChange' => true,
+                        'pageLength' => 10,
+                        'language' => [
+                            'paginate' => [
+                                'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">chevron_left</i>',
+                                'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">chevron_right</i>'
+                            ]
+                        ],
                     ])
                     ->buttons([
                         Button::make('excel'),
@@ -88,7 +116,7 @@ class MemberDataTable extends DataTable
             Column::make('employee_name')->title('Employee Name')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('employee_id')->title('Employee ID')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('email')->title('Email')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('email')->title('Email')->addClass('text-center')->orderable(false)->searchable(true),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }

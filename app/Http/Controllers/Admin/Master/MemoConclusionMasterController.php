@@ -5,13 +5,13 @@ namespace App\Http\Controllers\Admin\Master;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MemoConclusionMaster;
+use App\DataTables\MemoConclusionMasterDataTable;
 
 class MemoConclusionMasterController extends Controller
 {
-    public function index()
+    public function index(MemoConclusionMasterDataTable $dataTable)
     {
-        $conclusions = MemoConclusionMaster::paginate(10);
-        return view('admin.master.memo_conclusion_master.index', compact('conclusions'));
+        return $dataTable->render('admin.master.memo_conclusion_master.index');
     }
 
     public function create()
