@@ -36,25 +36,42 @@ class MemoConclusionMasterDataTable extends DataTable
             ->addColumn('actions', function ($row) {
                 $editUrl = route('master.memo.conclusion.master.edit', encrypt($row->pk));
                 $deleteUrl = route('master.memo.conclusion.master.delete', encrypt($row->pk));
-                $disabled = $row->active_inactive == 1 ? 'disabled' : '';
+                $isActive = $row->active_inactive == 1;
                 
-                return '
-                    <a href="' . $editUrl . '" title="Edit">
-                        <i class="material-icons menu-icon material-symbols-rounded"
-                            style="font-size: 24px;">edit</i>
-                    </a>
-                    <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this memo conclusion?\')">
-                        ' . csrf_field() . '
-                        <input type="hidden" name="_method" value="DELETE">
-                        <a href="javascript:void(0)" onclick="event.preventDefault();
-                            if(confirm(\'Are you sure you want to delete this memo conclusion?\')) {
-                                this.closest(\'form\').submit();
-                            }" ' . $disabled . ' title="Delete">
+                $html = '
+                    <div class="d-flex justify-content-center align-items-center gap-2">
+                        <a href="' . $editUrl . '" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
                             <i class="material-icons menu-icon material-symbols-rounded"
-                                style="font-size: 24px;">delete</i>
+                                style="font-size: 24px;">edit</i>
                         </a>
-                    </form>
-                ';
+                        <div class="delete-icon-container" data-item-id="' . $row->pk . '" data-delete-url="' . $deleteUrl . '">';
+                
+                if ($isActive) {
+                    $html .= '
+                            <span class="delete-icon-disabled" title="Cannot delete active memo conclusion">
+                                <i class="material-icons menu-icon material-symbols-rounded"
+                                    style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
+                            </span>';
+                } else {
+                    $csrf = csrf_token();
+                    $html .= '
+                            <form action="' . $deleteUrl . '" method="POST" class="m-0 delete-form" data-status="0">
+                                <input type="hidden" name="_token" value="' . $csrf . '">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <a href="javascript:void(0)" onclick="event.preventDefault();
+                                    if(confirm(\'Are you sure you want to delete this memo conclusion?\')) {
+                                        this.closest(\'form\').submit();
+                                    }" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete">
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
+                                </a>
+                            </form>';
+                }
+                
+                $html .= '
+                        </div>
+                    </div>';
+                
+                return $html;
             })
             ->addColumn('status', function ($row) {
                 return '<div class="form-check form-switch d-inline-block">
