@@ -43,9 +43,10 @@ class CourseAttendanceNoticeMapController extends Controller
     //     ->get();
     
         $notices = DB::table('course_student_attendance as csa')
-    ->leftJoin('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+    ->Join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
     ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
     ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+    ->whereRaw("TRIM(csa.status) REGEXP '^(2|3)$'")
     ->select(
         'sns.pk as notice_id',
         'sns.pk as memo_notice_id',

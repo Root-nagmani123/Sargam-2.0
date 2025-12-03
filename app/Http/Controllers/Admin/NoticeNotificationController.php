@@ -63,7 +63,7 @@ public function store(Request $request)
 
     Notice::create($data);
 
-    return redirect()->route('admin.NoticeNotification.index')->with('success','Notice created successfully!');
+    return redirect()->route('admin.notice.index')->with('success','Notice created successfully!');
 }
 
 
@@ -103,7 +103,7 @@ public function store(Request $request)
 
     $notice->update($data);
 
-    return redirect()->route('admin.NoticeNotification.index')->with('success','Notice updated!');
+    return redirect()->route('admin.notice.index')->with('success','Notice updated!');
 }
 
 

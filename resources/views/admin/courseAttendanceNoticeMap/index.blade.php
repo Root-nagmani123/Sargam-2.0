@@ -119,7 +119,7 @@
                             <th class="col">Conclusion Type</th>
                             <th class="col">Discussion Name</th>
                             <th class="col">Conclusion Remark</th>
-                            <th class="col sticky-status">Status</th>
+                            <th class="col">Status</th>
                         </tr> <!-- end row -->
                     </thead>
                     <tbody>
