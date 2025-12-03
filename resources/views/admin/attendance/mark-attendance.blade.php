@@ -72,7 +72,10 @@
                         <h4 class="card-title">Attendance</h4>
                         <div class="">
                             <a href="{{ route('attendance.index') }}" class="btn btn-secondary">Back</a>
+                            @if($currentPath === 'mark')
                             <button type="submit" class="btn btn-primary ">save</button>
+                            
+                            @endif
                         </div>
                     </div>
                     <hr>

@@ -20,20 +20,32 @@ use Mpdf\Mpdf;
 
 class EnrollementController extends Controller
 {
-    public function create()
-    {
-        // Get all active courses
-        $courses = CourseMaster::where('active_inactive', 1)->get();
+   public function create()
+{
+    $currentDate = now()->format('Y-m-d');
+    
+    // Get courses that are active AND currently within their date range
+    $courses = CourseMaster::where('active_inactive', 1)
+        ->where(function($query) use ($currentDate) {
+            $query->whereNull('start_year')
+                  ->orWhere('start_year', '<=', $currentDate);
+        })
+        ->where(function($query) use ($currentDate) {
+            $query->whereNull('end_date')
+                  ->orWhere('end_date', '>=', $currentDate);
+        })
+        ->get();
 
-        // Get previous courses from student course map with course details
-        $previousCourses = StudentMasterCourseMap::with('course')
-            ->get()
-            ->unique('course_master_pk'); // Get unique courses
-        // Get all active services
-        $services = ServiceMaster::all();
+    // Get previous courses from student course map with course details
+    $previousCourses = StudentMasterCourseMap::with('course')
+        ->get()
+        ->unique('course_master_pk'); // Get unique courses
+        
+    // Get all active services
+    $services = ServiceMaster::all();
 
-        return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
-    }
+    return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
+}
 
     // public function store(Request $request)
     // {
@@ -75,89 +87,67 @@ class EnrollementController extends Controller
     //     }
     // }
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'course_master_pk' => [
-                'required',
-                'integer',
-                Rule::exists('course_master', 'pk')->where('active_inactive', 1)
-            ],
-            'selected_students' => 'required|string',
-        ]);
+   public function store(Request $request)
+{
+    $validated = $request->validate([
+        'course_master_pk' => [
+            'required',
+            'integer',
+            Rule::exists('course_master', 'pk')->where('active_inactive', 1)
+        ],
+        'selected_students' => 'required|string',
+    ]);
 
-        $newCoursePk = $validated['course_master_pk'];
-        $studentIds = array_filter(explode(',', $validated['selected_students']));
+    $newCoursePk = $validated['course_master_pk'];
+    $studentIds = array_unique(array_filter(explode(',', $validated['selected_students'])));
 
-        if (empty($studentIds)) {
-            return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
-        }
-
-        DB::beginTransaction();
-        try {
-            // Get existing enrollments for these students in this course
-            $existingEnrollments = StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
-                ->where('course_master_pk', $newCoursePk)
-                ->get()
-                ->keyBy('student_master_pk');
-
-            $studentsToInsert = [];
-            $studentsToUpdate = [];
-            $now = now();
-
-            foreach ($studentIds as $studentId) {
-                if (isset($existingEnrollments[$studentId])) {
-                    // Student already enrolled - mark for update if inactive
-                    if ($existingEnrollments[$studentId]->active_inactive == 0) {
-                        $studentsToUpdate[] = $studentId;
-                    }
-                } else {
-                    // New enrollment - mark for insertion
-                    $studentsToInsert[] = $studentId;
-                }
-            }
-
-            // Step 1: Deactivate ALL courses for all selected students
-            StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
-                ->update(['active_inactive' => 0]);
-
-            // Step 2: Activate/insert the new course enrollments
-            if (!empty($studentsToUpdate)) {
-                // Reactivate existing enrollments
-                StudentMasterCourseMap::whereIn('student_master_pk', $studentsToUpdate)
-                    ->where('course_master_pk', $newCoursePk)
-                    ->update([
-                        'active_inactive' => 1,
-                        'modified_date' => $now
-                    ]);
-            }
-
-            if (!empty($studentsToInsert)) {
-                // Insert new enrollments
-                $insertData = [];
-                foreach ($studentsToInsert as $studentId) {
-                    $insertData[] = [
-                        'student_master_pk' => $studentId,
-                        'course_master_pk' => $newCoursePk,
-                        'active_inactive' => 1,
-                        'created_date' => $now,
-                        'modified_date' => $now,
-                    ];
-                }
-                StudentMasterCourseMap::insert($insertData);
-            }
-
-            DB::commit();
-
-            $totalProcessed = count($studentsToInsert) + count($studentsToUpdate);
-            return redirect()->back()
-                ->with('success', "Enrollment completed! {$totalProcessed} students processed.")
-                ->with('selected_course', $newCoursePk);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withErrors(['error' => 'Enrollment failed: ' . $e->getMessage()]);
-        }
+    if (empty($studentIds)) {
+        return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
     }
+
+    DB::beginTransaction();
+    try {
+        $now = now();
+        $successCount = 0;
+
+        // First, deactivate all other courses for these students
+        StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
+            ->where('course_master_pk', '!=', $newCoursePk)
+            ->update(['active_inactive' => 0]);
+
+        // Then, activate/insert the new course enrollment
+        foreach ($studentIds as $studentId) {
+            $enrollment = StudentMasterCourseMap::updateOrCreate(
+                [
+                    'student_master_pk' => $studentId,
+                    'course_master_pk' => $newCoursePk
+                ],
+                [
+                    'active_inactive' => 1,
+                    'modified_date' => $now
+                ]
+            );
+
+            // If this was newly created, set created_date
+            if ($enrollment->wasRecentlyCreated) {
+                $enrollment->created_date = $now;
+                $enrollment->save();
+            }
+
+            $successCount++;
+        }
+
+        DB::commit();
+
+        return redirect()->back()
+            ->with('success', "Enrollment completed! {$successCount} students processed.")
+            ->with('selected_course', $newCoursePk);
+            
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->withErrors(['error' => 'Enrollment failed: ' . $e->getMessage()]);
+    }
+}
 
     public function filterStudents(Request $request)
     {
@@ -515,75 +505,70 @@ class EnrollementController extends Controller
 
 
 
-    public function exportEnrolledStudents(Request $request)
-    {
-        try {
-            $query = StudentMaster::with(['courses'])
-                ->whereHas('courses');
+ public function exportEnrolledStudents(Request $request)
+{
+    try {
+        // Start with StudentMasterCourseMap query
+        $query = StudentMasterCourseMap::with([
+            'studentMaster.service',
+            'course'
+        ])->where('active_inactive', 1); // Only active enrollments
 
-            // Apply filters
-            if ($request->has('course') && !empty($request->course)) {
-                $query->whereHas('courses', function ($q) use ($request) {
-                    $q->where('course_master_pk', $request->course);
-                });
-            }
-
-            if ($request->has('search') && !empty($request->search)) {
-                $searchTerm = $request->search;
-                $query->where(function ($q) use ($searchTerm) {
-                    $q->where('first_name', 'like', "%{$searchTerm}%")
-                        ->orWhere('last_name', 'like', "%{$searchTerm}%")
-                        ->orWhere('email', 'like', "%{$searchTerm}%");
-                });
-            }
-
-            $students = $query->get();
-
-            // Build HTML for PDF
-            $html = '
-        <h2 style="text-align:center;">Enrolled Students</h2>
-        <table border="1" cellspacing="0" cellpadding="6" width="100%">
-            <thead>
-                <tr style="background-color:#f2f2f2;">
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Course</th>
-                    <th>Enrollment Date</th>
-                </tr>
-            </thead>
-            <tbody>';
-
-            foreach ($students as $student) {
-                $latestCourse = $student->courses->sortByDesc('pivot.created_date')->first();
-
-                $html .= '<tr>
-                <td>' . $student->pk . '</td>
-                <td>' . trim($student->first_name . ' ' . $student->last_name) . '</td>
-                <td>' . $student->email . '</td>
-                <td>' . $student->contact_no . '</td>
-                <td>' . ($latestCourse->course_name ?? 'N/A') . '</td>
-                <td>' . ($latestCourse->pivot->created_date
-                    ? date('Y-m-d', strtotime($latestCourse->pivot->created_date))
-                    : 'N/A') . '</td>
-            </tr>';
-            }
-
-            $html .= '</tbody></table>';
-
-            // Generate PDF
-            $mpdf = new Mpdf();
-            $mpdf->WriteHTML($html);
-
-            $filename = 'enrolled_students_' . date('Y-m-d') . '.pdf';
-            return response($mpdf->Output($filename, 'S'))
-                ->header('Content-Type', 'application/pdf')
-                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
-        } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error exporting PDF: ' . $e->getMessage());
+        // Apply course filter if provided
+        if ($request->has('course') && !empty($request->course)) {
+            $query->where('course_master_pk', $request->course);
         }
+
+        // Get the enrollments
+        $enrollments = $query->get();
+
+        // Get course name for export
+        $courseName = 'All Active Courses';
+        if ($request->has('course') && !empty($request->course)) {
+            $course = CourseMaster::find($request->course);
+            $courseName = $course ? $course->course_name : 'Selected Course';
+        }
+
+        // Determine export type
+        $type = $request->input('type', 'pdf');
+        
+        if ($type === 'excel') {
+            $export = new StudentEnrollmentExport($enrollments, $courseName);
+            return Excel::download($export, 
+                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.xlsx');
+        }
+        
+        if ($type === 'csv') {
+            $export = new StudentEnrollmentExport($enrollments, $courseName);
+            return Excel::download($export, 
+                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.csv');
+        }
+
+        // Default to PDF - we need a different approach for PDF
+        return $this->exportEnrolledStudentsPDF($enrollments, $courseName);
+
+    } catch (\Exception $e) {
+        \Log::error('Export error: ' . $e->getMessage());
+        return back()->with('error', 'Error exporting: ' . $e->getMessage());
     }
+}
+
+// Separate method for PDF export
+private function exportEnrolledStudentsPDF($enrollments, $courseName)
+{
+    $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
+        'enrollments' => $enrollments,
+        'courseName' => $courseName,
+        'exportDate' => now()->format('Y-m-d H:i:s'),
+        'totalCount' => $enrollments->count()
+    ]);
+
+    $filename = 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.pdf';
+    
+    return $pdf->setPaper('a4', 'landscape')
+        ->setOption('enable-smart-shrinking', true)
+        ->download($filename);
+}
 
     /**
      * Show the form for editing student information.

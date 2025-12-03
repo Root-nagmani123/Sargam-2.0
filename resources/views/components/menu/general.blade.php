@@ -32,6 +32,11 @@
                                         <span class="hide-menu">Dashboard</span>
                                     </a>
                                 </li>
+                                 <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.notice.index') }}">
+                                        <span
+                                            class="hide-menu">Notice notification</span>
+                                    </a></li>
                             </ul>
 
                             {{-- COURSE --}}
@@ -103,6 +108,16 @@
                                         href="{{ route('master.mdo_duty_type.index') }}">
                                         <span
                                             class="hide-menu">MDO Duty Type</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('medical.exception.faculty.view') }}">
+                                        <span
+                                            class="hide-menu">Medical Exception Faculty View</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('medical.exception.ot.view') }}">
+                                        <span
+                                            class="hide-menu">Medical Exception OT View</span>
                                     </a></li>
                             </ul>
 

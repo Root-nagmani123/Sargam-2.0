@@ -30,7 +30,7 @@
 
 <div class="student-table-wrapper">
 <table class="table table-bordered table-hover align-middle mb-0">
-    <thead class="table-primary">
+    <thead>
         <tr>
             <th scope="col" style="width: 45px;">
                 <div class="form-check mb-0">

@@ -209,6 +209,12 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // Initialize Select2 for student dropdown with search functionality
+    $('#studentDropdown').select2({
+        placeholder: 'Search Student',
+        allowClear: true
+    });
+
     // Course to Student AJAX
     $('#courseDropdown').on('change', function() {
         let courseId = $(this).val();
@@ -226,11 +232,20 @@ $(document).ready(function() {
                                         ${student.display_name}
                                     </option>`;
                     });
-                    $('#studentDropdown').html(options).trigger('change');
+                    $('#studentDropdown').html(options);
+                    // Re-initialize Select2 with search functionality
+                    $('#studentDropdown').select2('destroy').select2({
+                        placeholder: 'Search Student',
+                        allowClear: true
+                    });
                 }
             });
         } else {
             $('#studentDropdown').html('<option value="">Select Course First</option>');
+            $('#studentDropdown').select2('destroy').select2({
+                placeholder: 'Select Course First',
+                allowClear: true
+            });
         }
     });
 

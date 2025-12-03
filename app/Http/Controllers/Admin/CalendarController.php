@@ -14,7 +14,8 @@ class CalendarController extends Controller
 {
     public function index()
     {
-        $courseMaster = CourseMaster::where('active_inactive', 1)
+        $courseMaster = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
             ->select('pk', 'course_name')
             ->get();
     
@@ -132,11 +133,13 @@ public function fullCalendarDetails(Request $request)
     
      $events = DB::table('timetable')
       ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+      ->leftjoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
         ->whereDate('START_DATE', '>=', $request->start)
         ->whereDate('END_DATE', '<=', $request->end)
          ->select(
             'timetable.*',
-            'venue_master.venue_name as venue_name'
+            'venue_master.venue_name as venue_name',
+            'faculty_master.full_name as faculty_name'
         )
         ->get();
 
@@ -151,6 +154,7 @@ public function fullCalendarDetails(Request $request)
             'start' => $event->START_DATE,
             'end'   => $event->END_DATE,
             'vanue'   => $event->venue_name,
+            'faculty_name'   => $event->faculty_name,
             'backgroundColor' => $colors[array_rand($colors)],  // background color for event
             'borderColor' => $colors[array_rand($colors)],  // border color for event
             'textColor' => '#fff',  // Text color for event (White text on colored background)

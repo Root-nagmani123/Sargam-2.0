@@ -117,98 +117,20 @@
                         </div>
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-end mb-3">
-                                <div class="d-flex align-items-center gap-2">
-
-                                    <!-- Add New Button -->
-                                    <a href="{{ route('mdo-escrot-exemption.create') }}"
-                                        class="btn btn-primary px-3 py-2 rounded shadow-sm">
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 20px; vertical-align: middle;">add</i>
-                                        Add New MDO Escrot Exemption
-                                    </a>
-
-                                    <!-- Search Box + Icon -->
-                                    <!-- Search Expand -->
-                                    <div class="search-expand d-flex align-items-center">
-                                        <a href="javascript:void(0)" id="searchToggle">
-                                            <i class="material-icons menu-icon material-symbols-rounded"
-                                                style="font-size: 24px; vertical-align: middle;font-weight: 600;">search</i>
-                                        </a>
-
-                                        <input type="text" class="form-control search-input ms-2" id="searchInput"
-                                            placeholder="Search…" aria-label="Search">
-                                    </div>
-                                </div>
+                                <!-- Add New Button -->
+                                <a href="{{ route('mdo-escrot-exemption.create') }}"
+                                    class="btn btn-primary px-3 py-2 rounded shadow-sm">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 20px; vertical-align: middle;">add</i>
+                                    Add New MDO Escrot Exemption
+                                </a>
                             </div>
                         </div>
                     </div>
 
                     <hr>
 
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th class="col">S.No.</th>
-                                <th class="col">Date</th>
-                                <th class="col">Student Name</th>
-                                <th class="col">Time From</th>
-                                <th class="col">Time To</th>
-                                <th class="col">Programme Name</th>
-                                <th class="col">MDO Name</th>
-                                <th class="col">Remarks</th>
-                                <th class="col">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($exemptions as $index => $row)
-                            <tr>
-                                <td>{{ $exemptions->firstItem() + $index }}</td>
-                                <td>{{ format_date($row->mdo_date) ?? 'N/A' }}</td>
-                                <td>{{ $row->studentMaster->display_name ?? 'N/A' }}</td>
-                                <td>{{ $row->Time_from ?? 'N/A' }}</td>
-                                <td>{{ $row->Time_to ?? 'N/A' }}</td>
-                                <td>{{ optional($row->courseMaster)->course_name ?? 'N/A' }}</td>
-                                <td>{{ optional($row->mdoDutyTypeMaster)->mdo_duty_type_name ?? 'N/A' }}</td>
-                                <td>{{ $row->Remark ?? 'N/A' }}</td>
-                                <td>
-                                    <div class="d-flex justify-content-center gap-2">
-                                        <a href="{{ route('mdo-escrot-exemption.edit', $row->pk) }}" title="Edit">
-                                            <i class="material-icons material-symbols-rounded">edit</i>
-                                        </a>
-                                        <form action="{{ route('mdo-escrot-exemption.destroy', $row->pk) }}"
-                                            method="POST" class="d-inline"
-                                            onsubmit="return confirm('Are you sure you want to delete this record?')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <a href="javascript:void(0)" title="Delete">
-                                                <i class="material-icons material-symbols-rounded">delete</i>
-                                                </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="9" class="text-center">No records found</td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-
-                    <!-- Pagination -->
-                    <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                        <div class="text-muted small mb-2">
-                            Showing {{ $exemptions->firstItem() }}
-                            to {{ $exemptions->lastItem() }}
-                            of {{ $exemptions->total() }} items
-                        </div>
-
-                        <div>
-                            {{ $exemptions->links('vendor.pagination.custom') }}
-                        </div>
-
-                    </div>
+                    {!! $dataTable->table(['class' => 'table table-striped table-bordered custom-mdo-table']) !!}
 
                 </div>
             </div>
@@ -218,3 +140,7 @@
 </div>
 
 @endsection
+
+@push('scripts')
+    {!! $dataTable->scripts() !!}
+@endpush

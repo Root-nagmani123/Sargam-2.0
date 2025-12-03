@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use App\Models\MDOEscotDutyMap;
 
 class MDOEscrotExemptionRequest extends FormRequest
 {
@@ -23,7 +24,7 @@ class MDOEscrotExemptionRequest extends FormRequest
      */
     public function rules()
     {
-        return [
+        $rules = [
             'course_master_pk' => 'required|exists:course_master,pk',
             'mdo_duty_type_master_pk' => 'required|exists:mdo_duty_type_master,pk',
             'mdo_date' => 'required|date',
@@ -31,7 +32,16 @@ class MDOEscrotExemptionRequest extends FormRequest
             'Time_to' => 'required|date_format:H:i|after:Time_from',
             'Remark' => 'nullable|string|max:255',
             'selected_student_list' => 'required|array',
+            'faculty_master_pk' => 'nullable|exists:faculty_master,pk',
         ];
+
+        // If duty type is Escort, faculty is required
+        $escortDutyTypeId = MDOEscotDutyMap::getMdoDutyTypes()['escort'] ?? null;
+        if ($this->mdo_duty_type_master_pk == $escortDutyTypeId) {
+            $rules['faculty_master_pk'] = 'required|exists:faculty_master,pk';
+        }
+
+        return $rules;
     }
 
     public function messages()
@@ -46,6 +56,8 @@ class MDOEscrotExemptionRequest extends FormRequest
             'selected_student_list.required' => 'Please select at least one student.',
             'Remark.string' => 'The remark must be a string.',
             'Remark.max' => 'The remark may not be greater than 255 characters.',
+            'faculty_master_pk.required' => 'The faculty field is required when Duty Type is Escort.',
+            'faculty_master_pk.exists' => 'The selected faculty is invalid.',
         ];
     }
 }

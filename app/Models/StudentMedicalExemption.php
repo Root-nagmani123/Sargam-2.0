@@ -26,6 +26,10 @@ class StudentMedicalExemption extends Model
         'created_date',
         'modified_date',
     ];
+
+    protected $attributes = [
+        'active_inactive' => 1,
+    ];
     public function category()
 {
     return $this->belongsTo(ExemptionCategoryMaster::class, 'exemption_category_master_pk', 'pk');
@@ -43,5 +47,10 @@ public function course()
 public function student()
 {
     return $this->belongsTo(StudentMaster::class, 'student_master_pk', 'pk');
+}
+
+public function employee()
+{
+    return $this->belongsTo(EmployeeMaster::class, 'employee_master_pk', 'pk');
 }
 }
