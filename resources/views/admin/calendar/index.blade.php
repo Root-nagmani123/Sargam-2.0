@@ -854,12 +854,12 @@ $(document).ready(function() {
 
                     // Step 2: Fill the dropdown with unique group_type_name
                     $('#group_type').empty().append(
+                       
                         '<option value="">Select Group Type</option>');
                     $('#type_name_container').html('');
                     for (const key in groupedData) {
                         if (groupedData[key].length > 0) {
-                            const typeName = groupedData[key][0]
-                                .type_name; // use first element's type_name
+                            const typeName = groupedData[key][0].type_name; // use first element's type_name
                             $('#group_type').append(
                                 `<option value="${key}">${typeName}</option>`
                             );
@@ -867,6 +867,7 @@ $(document).ready(function() {
                     }
 
                     $('#group_type').off('change').on('change', function() {
+                       
                         const selectedType = $(this).val();
                         let html = '';
                         let groupNames = window.selectedGroupNames;
@@ -921,8 +922,15 @@ waitForGroupTypeAndSet(event.course_group_type_master, function() {
 // $('.btn-update-event').on('click', function() {
 //     $('#eventForm').submit();
 // });
-$('#eventForm').on('submit', function(e) {
+
+
+
+    $(document).ready(function() {
+$('#eventForm').off('submit').on('submit', function(e) {
     e.preventDefault();
+    // console.log("Form submission triggered");return false;
+     // Clear previous validation errors
+  
 
     let isValid = true;
     let errorMsg = "";
@@ -1055,6 +1063,7 @@ $('#eventForm').on('submit', function(e) {
             }
         }
     });
+});
 });
 </script>
 <script>
@@ -1212,6 +1221,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     $('#Course_name').val(event
                                         .course_master_pk).trigger(
                                         'change');
+                                      
                                     waitForGroupTypeAndSet(event
                                         .course_group_type_master,
                                         function() {
@@ -1598,16 +1608,7 @@ if (selectedDate < today) {
     });
 });
 
-function waitForGroupTypeAndSet(value, callback, retries = 20) {
-    if ($('#group_type option[value="' + value + '"]').length > 0) {
-        $('#group_type').val(value).trigger('change');
-        if (callback) callback();
-    } else if (retries > 0) {
-        setTimeout(function() {
-            waitForGroupTypeAndSet(value, callback, retries - 1);
-        }, 150);
-    }
-}
+
 $(document).on('click', '#createEventupperButton', function() {
     $('#eventModalLabel').text('Add Calendar Event');
     $('#eventForm')[0].reset();
@@ -1649,6 +1650,18 @@ function convertTo24Hour(timeStr) {
 
     return `${String(hours).padStart(2, '0')}:${minutes}`;
 }
+function waitForGroupTypeAndSet(value, callback, retries = 20) {
+    if ($('#group_type option[value="' + value + '"]').length > 0) {
+        $('#group_type').val(value).trigger('change');
+        if (callback) callback();
+    } else if (retries > 0) {
+        setTimeout(function() {
+            waitForGroupTypeAndSet(value, callback, retries - 1);
+        }, 150);
+    }
+}
+
+
 function makeCheckboxReadonly(selector, isReadonly, isChecked = false) {
     const checkbox = $(selector);
     checkbox.prop('checked', isChecked);

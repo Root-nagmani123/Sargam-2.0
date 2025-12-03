@@ -108,7 +108,15 @@
                 </a></li>
             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
                     <span
-                        class="hide-menu">Attendance</span>
+                        class="hide-menu">Admin Attendance</span>
+                </a></li>
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
+                    <span
+                        class="hide-menu">Faculty Attendance</span>
+                </a></li>
+            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
+                    <span
+                        class="hide-menu">Student Attendance</span>
                 </a></li>
         </div>
 
