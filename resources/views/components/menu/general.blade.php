@@ -102,6 +102,16 @@
                                             class="hide-menu">MDO/Escort Exemption</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('faculty.mdo.escort.exception.view') }}">
+                                        <span
+                                            class="hide-menu">Faculty MDO/Escort Exception</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('ot.mdo.escrot.exemption.view') }}">
+                                        <span
+                                            class="hide-menu">OT MDO/Escort Exception</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.mdo_duty_type.index') }}">
                                         <span
                                             class="hide-menu">MDO Duty Type</span>
