@@ -1,92 +1,3 @@
-<style>
-    /* Modern Sidebar UI (GIGW Compliant) */
-    .sidebar-menu .nav-section {
-        padding: 0.5rem 0 1rem;
-    }
-
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        letter-spacing: .3px;
-        color: #fff;
-    }
-
-    .sidebartoggler {
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        border-radius: 50%;
-    }
-
-    .sidebartoggler:focus-visible {
-        outline: 2px solid #fff;
-        outline-offset: 3px;
-    }
-
-    /* Modern collapsible group container */
-    .menu-block {
-        background: #3f6ea1;
-        border-radius: 14px;
-        padding: .75rem 1rem;
-        margin-bottom: .4rem;
-        transition: background 0.2s ease;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .menu-block:hover,
-    .menu-block:focus-within {
-        background: #4b7ab7;
-    }
-
-    .menu-block .sidebar-link {
-        color: #ffffff;
-        font-weight: 600;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        outline: none;
-    }
-
-    .menu-block .sidebar-link:hover {
-        color: #fff;
-    }
-
-    /* Submenu styling */
-    .sidebar-submenu {
-        margin-left: 1rem;
-        padding-left: .5rem;
-        border-left: 2px solid rgba(255, 255, 255, 0.2);
-        margin-top: .3rem;
-        margin-bottom: .5rem;
-    }
-
-    .sidebar-submenu .sidebar-link {
-        display: block;
-        padding: .45rem 0;
-        color: #e8eef6;
-        font-size: 0.95rem;
-        transition: padding-left 0.2s ease;
-    }
-
-    .sidebar-submenu .sidebar-link:hover {
-        padding-left: .35rem;
-        color: #ffffff;
-    }
-
-    /* Arrow icon animation */
-    .menu-icon {
-        transition: transform 0.25s ease;
-    }
-
-    [aria-expanded="true"] .menu-icon {
-        transform: rotate(180deg);
-    }
-
-    /* Improved scroll area */
-    .simplebar-content {
-        padding: 1rem 0 2rem 1.2rem !important;
-    }
-</style>
 <nav class="sidebar-nav simplebar-scrollable-y" id="menu-right-setup-mini-4" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
@@ -98,6 +9,7 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px;">
                         <ul class="sidebar-menu" id="sidebarnav">
+                            @include('components.profile')
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
@@ -253,31 +165,6 @@
                                             class="hide-menu">Memo & Notice Chat (User)</span>
                                     </a></li>
                             </ul>
-                            <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#feedbackCollapse" role="button" aria-expanded="false"
-                                    aria-controls="feedbackCollapse"
-                                    >
-                                    <span class="hide-menu fw-bold">User Feedback</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
-                                </a>
-                            </li>
-                            <ul class="collapse list-unstyled ps-3" id="feedbackCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}">
-                                        <span
-                                            class="hide-menu">Feedback</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('feedback.get.studentFeedback') }}">
-                                        <span
-                                            class="hide-menu">Student Feedback</span>
-                                    </a></li>
-                            </ul>
-
                         </ul>
                     </div>
                 </div>

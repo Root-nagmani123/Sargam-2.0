@@ -39087,7 +39087,7 @@ pre.code-view code.hljs {
 .side-mini-panel .mini-nav .mini-nav-item>a {
     display: flex;
     width: 100%;
-    font-size: 18px;
+    font-size: 16px;
     text-align: center;
     color: #000;
     position: relative;
@@ -39113,8 +39113,8 @@ pre.code-view code.hljs {
     color: #004a93;
 }
 .side-mini-panel .mini-nav .mini-nav-item.selected>a .mini-nav-title {
-    font-size: 18px;
-    font-weight: 900;
+    font-size: 16px;
+    font-weight: 600;
     color: #004a93 !important;
 }
 
@@ -39150,12 +39150,15 @@ pre.code-view code.hljs {
     height: calc(100vh - 72px);
 
     /* SVG background panel */
-    /* background-image: url("../images/menu_panel.svg"); */
+    background-image: url("../images/menu_panel.svg");
     background-repeat: no-repeat;
     background-size: cover;
-filter: drop-shadow(-1px -2px 7px rgba(0,0,0,0.2));
-    
-    z-index: 98;
+    margin-top: 30px;
+    filter: drop-shadow(-1px -2px 7px rgba(0,0,0,0.2));
+    display: none; 
+    padding: 20px 0px 24px 20px; 
+    z-index: 98; 
+    border-radius: 0 20px 20px 0;
 }
 
 .brand-logo {
@@ -39185,20 +39188,33 @@ filter: drop-shadow(-1px -2px 7px rgba(0,0,0,0.2));
     width: 100%;
 }
 
+/* NORMAL STATE */
 .sidebar-nav ul .sidebar-item .sidebar-link {
     display: flex;
-    font-size: 15px;
-    white-space: normal;
     align-items: center;
-    position: relative;
-    padding: 11px 16px;
-    border-radius: 2px;
     gap: 10px;
-    text-decoration: none;
+    padding: 11px 16px;
+    font-size: 14px;
     font-weight: 600;
-    margin-bottom: 4px;
-    color: #fff;
+    white-space: normal;
+    color: #ffffff;
+    border-radius: 30px;       /* keep shape always round */
+    background: transparent;
+    transition: 0.25s ease-in-out;
+    margin-bottom: 10px;
 }
+
+/* HOVER STATE */
+.sidebar-nav ul .sidebar-item .sidebar-link:hover {
+    background-color: #4077ad;
+    color: #fff;
+    padding-left: 20px;        /* smooth slide effect */
+    box-shadow: -2px 3px rgba(255, 255, 255, 0.1);
+    width: 100%;
+    border-radius:30px 0 0 30px; /* keep shape always round */
+    transition: all 0.3s ease-in-out;
+}
+
 
 .sidebar-nav ul .sidebar-item .sidebar-link .active {
     background-color: #E5EDF4;
@@ -39216,23 +39232,6 @@ filter: drop-shadow(-1px -2px 7px rgba(0,0,0,0.2));
     transition: all 0.3s ease-in-out;
     flex-shrink: 0;
     font-weight: 600;
-}
-
-.sidebar-nav ul .sidebar-item .sidebar-link:hover {
-    color: var(--bs-white);
-    display: flex;
-    font-size: 15px;
-    white-space: normal;
-    align-items: center;
-    position: relative;
-    padding: 11px 16px;
-    border-radius: 30px;
-    gap: 10px;
-    text-decoration: none;
-    font-weight: 600;
-    margin-bottom: 4px;
-    background-color: #4077ad;
-    width: 240px;
 }
 
 .sidebar-nav ul .sidebar-item .sidebar-link:hover iconify-icon {
