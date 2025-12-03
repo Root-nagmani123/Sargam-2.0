@@ -14,6 +14,12 @@ class CalendarController extends Controller
 {
     public function index()
     {
+        //print_r(Auth::user()->roles()->pluck('user_role_name')->toArray());die;
+        //Array ( [0] => Training )
+
+        // print_r(auth()->user());die;
+        if(hasRole('GUEST FACULTY')){}
+        
         $courseMaster = CourseMaster::where('active_inactive', '1')
             ->where('end_date', '>', now())
             ->select('pk', 'course_name')
@@ -129,19 +135,34 @@ foreach ($group_pks as $group_pk) {
 
 public function fullCalendarDetails(Request $request)
 {
+  
     $event = new CalendarEvent();
     
-     $events = DB::table('timetable')
-      ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-      ->leftjoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-        ->whereDate('START_DATE', '>=', $request->start)
-        ->whereDate('END_DATE', '<=', $request->end)
-         ->select(
-            'timetable.*',
-            'venue_master.venue_name as venue_name',
-            'faculty_master.full_name as faculty_name'
-        )
-        ->get();
+    $events = DB::table('timetable')
+    ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+    ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk');
+
+if (hasRole('Student-OT')) {
+
+    $student_pk = auth()->user()->user_id;  // 🔥 FIXED
+
+    $events = $events
+        ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
+        ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
+        ->where('student_course_group_map.student_master_pk', $student_pk);
+}
+
+$events = $events
+    ->whereDate('START_DATE', '>=', $request->start)
+    ->whereDate('END_DATE', '<=', $request->end)
+    ->select(
+        'timetable.*',
+        'venue_master.venue_name as venue_name',
+        'faculty_master.full_name as faculty_name'
+    )
+    ->get();
+
+
 
     // Array of some sample colors
     $colors = ['#9edcf5ff'];
@@ -333,13 +354,23 @@ function studentFeedback() {
         ->where('student_master_pk', $student_pk)
         ->pluck('timetable_pk')
         ->toArray();
+        // print_r($submittedTimetablePks);die;
+
 
     $data = DB::table('timetable')
         ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
         ->join('course_master', 'timetable.course_master_pk', '=', 'course_master.pk')
-        ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-        ->whereNotIn('timetable.pk', $submittedTimetablePks)
-        ->where('timetable.feedback_checkbox', 1)
+        ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
+        if (hasRole('Student-OT')) {
+
+    $student_pk = auth()->user()->user_id;  // 🔥 FIXED
+
+    $data = $data->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
+        ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
+        ->where('student_course_group_map.student_master_pk', $student_pk);
+}
+        // ->whereNotIn('timetable.pk', $submittedTimetablePks)
+        $data = $data->where('timetable.feedback_checkbox', 1)
         ->select(
             'timetable.*',
             'faculty_master.full_name as faculty_name',
@@ -350,6 +381,7 @@ function studentFeedback() {
             DB::raw("CASE WHEN timetable.class_session LIKE '%-%' THEN TRIM(SUBSTRING(timetable.class_session, LOCATE('-', timetable.class_session) + 1)) ELSE NULL END as to_time")
         )
         ->get();
+        // print_r($data);die;
 
     return view('admin.feedback.student_feedback', compact('data'));
 }
