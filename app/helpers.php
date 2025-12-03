@@ -29,9 +29,10 @@ function hasRole($role)
     if (!$user) return false;
 
     $roles = Cache::remember('user_roles_'.$user->pk, 10, function () use ($user) {
-        return $user->roles()->pluck('user_role_display_name')->toArray();
+        return $user->roles()->pluck('user_role_name')->toArray();
     });
 
     return in_array($role, $roles);
 }
+
 
