@@ -113,7 +113,7 @@
         <!-- Enhanced Navigation Container -->
         <div class="nav-container position-relative">
             <ul class="navbar-nav shadow-lg px-4 py-2 gap-2 align-items-center"
-                style="border-radius: 40px; height: 64px; background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%); 
+                style="border-radius: 40px; height: 60px; background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%); 
                        border: 1px solid rgba(0, 0, 0, 0.05); backdrop-filter: blur(10px);"
                 role="menubar" aria-label="Main navigation">
                 
@@ -128,8 +128,6 @@
                        id="home-tab">
                         <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">home</i>
                         <span>Home</span>
-                        <div class="active-indicator" style="width: 4px; height: 4px; background: #2563eb; 
-                              border-radius: 50%; position: absolute; bottom: 6px;"></div>
                     </a>
                 </li>
 
@@ -240,11 +238,6 @@
                     </button>
                 </li>
             </ul>
-
-            <!-- Active Tab Indicator -->
-            <div class="active-tab-indicator" style="position: absolute; bottom: -8px; height: 3px; 
-                  background: linear-gradient(90deg, #2563eb, #3b82f6); border-radius: 3px; 
-                  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;"></div>
         </div>
     </div>
 

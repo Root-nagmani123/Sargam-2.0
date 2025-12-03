@@ -1,18 +1,10 @@
 <nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-3" data-simplebar="">
         <ul class="sidebar-menu" id="sidebarnav">
-            <div class="text-center mb-3">
-                <div class="mx-auto mb-3" style="width:140px; height:140px;">
-                    <img src="https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="User Photo"
-                        class="img-fluid rounded-circle w-100 h-100 object-fit-cover border shadow-sm">
-                </div>
-
-                <h5 class="fw-bold mb-0 text-white">Shreyash Verma</h5>
-                <p class="text-secondary small mb-0 text-white">Admin User</p>
-            </div>
+            @include('components.profile')
 
             <!-- ======= GENERAL ======= -->
             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
+    border-radius: 30px 0px 0px 30px;
     width: 100%;
     box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
     min-width: 250px;">
@@ -45,7 +37,7 @@
 
             <!-- ======= REGISTRATION MANAGEMENT ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px;
+    border-radius: 30px 0px 0px 30px;
     width: 100%;
     box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
     min-width: 250px;">
@@ -73,7 +65,7 @@
 
             <!-- ======= EXEMPTION ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px;
+    border-radius: 30px 0px 0px 30px;
     width: 100%;
     box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
     min-width: 250px;">
@@ -99,7 +91,7 @@
 
             <!-- ======= DATABASE TOOLS ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px;
+    border-radius: 30px 0px 0px 30px;
     width: 100%;
     box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
     min-width: 250px;">
@@ -142,7 +134,7 @@
 
             <!-- ======= DOCUMENTS ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px;
+    border-radius: 30px 0px 0px 30px;
     width: 100%;
     box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
     min-width: 250px;">
@@ -168,7 +160,7 @@
 
             <!-- ======= PEER EVALUATION ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px;
+    border-radius: 30px 0px 0px 30px;
     width: 100%;
     box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
     min-width: 250px;">
