@@ -38,6 +38,10 @@ class AttendanceController extends Controller
 
     function getAttendanceList(Request $request)
     {
+        $backUrl = url()->previous();        // Full previous URL
+$segments = explode('/', trim($backUrl, '/')); // Split by '/'
+$currentPath = end($segments);   
+        
         try {
             $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
             $toDate = $request->to_date ? date('Y-m-d', strtotime($request->to_date)) : null;
@@ -102,12 +106,29 @@ class AttendanceController extends Controller
 
                 ->addColumn('subject_topic', fn($row) => optional($row->timetable)->subject_topic ?? 'N/A')
                 ->addColumn('faculty_name', fn($row) => optional($row->timetable)->faculty->full_name ?? 'N/A')
-                ->addColumn('actions', function ($row) {
-                    $actions = '<a href="' . route('attendance.mark', ['group_pk' => $row->group_pk, 'course_pk' => $row->Programme_pk, 'timetable_pk' => $row->timetable_pk]) . '" class="btn btn-primary btn-sm" data-id="' . $row->pk . '">Mark Attendance</a>';
-                    return $actions;
-                })
-                ->rawColumns(['actions'])
-                ->make(true);
+                ->addColumn('actions', function ($row) use ($currentPath) {
+
+        if ($currentPath === 'user_attendance') {
+            // User Page
+            return '<a href="' . route('attendance.student_mark', [
+                'group_pk' => $row->group_pk,
+                'course_pk' => $row->Programme_pk,
+                'timetable_pk' => $row->timetable_pk
+            ]) . '" class="btn btn-primary btn-sm 1">Show Attendance</a>';
+        }else{
+            return '<a href="' . route('attendance.mark', [
+            'group_pk' => $row->group_pk,
+            'course_pk' => $row->Programme_pk,
+            'timetable_pk' => $row->timetable_pk
+        ]) . '" class="btn btn-primary btn-sm">Mark Attendance</a>';
+        }
+
+        // Admin Page
+       
+    })
+
+    ->rawColumns(['actions'])
+    ->make(true);
 
             // return view('admin.attendance.partial.attendance', compact('attendanceData'));
 
@@ -125,7 +146,10 @@ class AttendanceController extends Controller
     {
         try {
 
-
+$backUrl = url()->current();                 // Full previous URL
+$segments = explode('/', trim(parse_url($backUrl, PHP_URL_PATH), '/')); // URL ko path me convert karke split
+$currentPath = $segments[1] ?? null;
+// print_r($currentPath);die;
             $courseGroup = CourseGroupTimetableMapping::with([
                 'course:pk,course_name',
                 'timetable',
@@ -142,6 +166,7 @@ class AttendanceController extends Controller
                 'group_pk' => $group_pk,
                 'course_pk' => $course_pk,
                 'courseGroup' => $courseGroup,
+                'currentPath' => $currentPath,
             ]);
         } catch (\Exception $e) {
             \Log::error('Error fetching attendance data: ' . $e->getMessage());
