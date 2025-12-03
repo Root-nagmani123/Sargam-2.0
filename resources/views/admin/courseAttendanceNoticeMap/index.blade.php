@@ -60,13 +60,16 @@
                     </div>
                 </div>
             </div>
+            <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
             <div class="row">
                 <div class="col-4">
                     <div class="mb-3">
                         <label for="program_name" class="form-label">Program Name</label>
                         <select class="form-select" id="program_name" name="program_name">
                             <option value="">Select Program</option>
-                            <!-- Options will be populated dynamically -->
+                            @foreach($courses as $course)
+                            <option value="{{ $course->pk }}" {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
+                            @endforeach
                         </select>
                     </div>
                 </div>
@@ -75,8 +78,8 @@
                         <label for="type" class="form-label">Type (Notice / Memo)</label>
                         <select class="form-select" id="type" name="type">
                             <option value="">Select type</option>
-                            <option value="1">Notice</option>
-                            <option value="0">Memo</option>
+                            <option value="1" {{ $typeFilter == '1' ? 'selected' : '' }}>Notice</option>
+                            <option value="0" {{ $typeFilter == '0' ? 'selected' : '' }}>Memo</option>
                         </select>
                     </div>
                 </div>
@@ -85,13 +88,13 @@
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status">
                             <option value="">Select status</option>
-                            <option value="1">Open</option>
-                            <option value="0">Close</option>
+                            <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
+                            <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
                         </select>
                     </div>
                 </div>
-
             </div>
+            </form>
             <hr>
             <div class="table-responsive">
                 <table class="table text-nowrap" style="border-radius: 10px; overflow: hidden; width: 100%;">
@@ -99,6 +102,7 @@
                         <!-- start row -->
                         <tr>
                             <th class="col">S.No.</th>
+                            <th class="col">Program Name</th>
                             <th class="col">Participant Name</th>
                             <th class="col">Type</th>
                             <th class="col">Session Date</th>
@@ -114,7 +118,7 @@
                     <tbody>
                         @if ($memos->isEmpty())
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="12" class="text-center text-muted py-4">
                                 <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                 No records found
                             </td>
@@ -124,6 +128,9 @@
                         <tr>
                             <!-- Serial -->
                             <td class="sno">{{ $memos->firstItem() + $index }}</td>
+
+                            <!-- Program Name -->
+                            <td class="fw-medium">{{ $memo->course_name ?? 'N/A' }}</td>
 
                             <!-- Student -->
                             <td class="s_name fw-medium">{{ $memo->student_name }}</td>
@@ -469,6 +476,11 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(document).ready(function() {
+    // Filter form submission on change
+    $('#program_name, #type, #status').on('change', function() {
+        $('#filterForm').submit();
+    });
+    
     $('.generate-memo-btn').on('click', function() {
         let memoId = $(this).data('id');
 
