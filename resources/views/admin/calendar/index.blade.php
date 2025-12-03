@@ -414,9 +414,11 @@ textarea:focus {
                 <i class="bi bi-list-ul me-1"></i> List
             </button>
         </div>
+        @if(hasRole('Training'))
         <button type="button" class="btn btn-primary btn-sm" id="createEventupperButton">
             <i class="bi bi-plus-circle me-1"></i> Add Event
         </button>
+        @endif
     </div>
     
     <!-- Calendar Container -->
@@ -686,12 +688,15 @@ textarea:focus {
                         <small class="text-white" id="eventDate">Event Date</small><br>
                     </div>
                     <div>
+                       
+                        @if(hasRole('Training'))
                         <button type="button" class="btn btn-sm btn-primary me-1" id="editEventBtn">
                             <i class="bi bi-pencil me-1"></i> Edit
                         </button>
                         <button type="button" class="btn btn-sm btn-danger me-1" id="deleteEventBtn">
                             <i class="bi bi-trash me-1"></i> Delete
                         </button>
+                        @endif
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
@@ -1346,7 +1351,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             $('#start_datetime').val(startDateTime);
             $('#start_datetime').prop('readonly', true);
+            @if(hasRole('Training'))
             $('#eventModal').modal('show');
+            @endif
             $('#fullDayCheckbox').off('change').on('change', function() {
                 if ($(this).is(':checked')) {
                     $('#start_time').val('08:00');
