@@ -116,7 +116,13 @@
                             <h4>MDO/Escort Exemption</h4>
                         </div>
                         <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-end mb-3">
+                            <div class="d-flex justify-content-end align-items-end mb-3 gap-2">
+                                <!-- Print / Download Button -->
+                                <button type="button" id="printDownloadBtn" class="btn btn-info px-3 py-2 rounded shadow-sm">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 20px; vertical-align: middle;">print</i>
+                                    Print / Download
+                                </button>
                                 <!-- Add New Button -->
                                 <a href="{{ route('mdo-escrot-exemption.create') }}"
                                     class="btn btn-primary px-3 py-2 rounded shadow-sm">
@@ -193,6 +199,46 @@
                 data.year_filter = $('#year_filter').val();
                 data.time_from_filter = $('#time_from_filter').val();
                 data.time_to_filter = $('#time_to_filter').val();
+            });
+
+            // Print / Download functionality
+            $('#printDownloadBtn').on('click', function() {
+                var table = $('#mdoescot-table').DataTable();
+                
+                // Clone the table and remove action column
+                var tableClone = $('#mdoescot-table').clone();
+                tableClone.find('th:last-child, td:last-child').remove();
+                
+                // Create a new window for printing
+                var printWindow = window.open('', '_blank');
+                var tableHtml = '<!DOCTYPE html><html><head><title>MDO/Escort Exemption</title>';
+                tableHtml += '<style>';
+                tableHtml += 'body { font-family: Arial, sans-serif; margin: 20px; }';
+                tableHtml += 'table { border-collapse: collapse; width: 100%; margin-top: 20px; }';
+                tableHtml += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }';
+                tableHtml += 'th { background-color: #b72a2a; color: white; font-weight: bold; }';
+                tableHtml += 'tr:nth-child(even) { background-color: #f2f2f2; }';
+                tableHtml += 'h2 { color: #004a93; margin-bottom: 20px; }';
+                tableHtml += '@media print { body { margin: 0; } @page { margin: 1cm; } }';
+                tableHtml += '</style></head><body>';
+                tableHtml += '<h2>MDO/Escort Exemption</h2>';
+                
+                // Get the table HTML without action column
+                var cleanTable = tableClone[0].outerHTML;
+                // Remove any action-related content
+                cleanTable = cleanTable.replace(/<th[^>]*>Actions<\/th>/gi, '');
+                cleanTable = cleanTable.replace(/<td[^>]*>[\s\S]*?(edit|delete|Actions)[\s\S]*?<\/td>/gi, '');
+                
+                tableHtml += cleanTable;
+                tableHtml += '</body></html>';
+                
+                printWindow.document.write(tableHtml);
+                printWindow.document.close();
+                
+                // Wait for content to load, then print
+                setTimeout(function() {
+                    printWindow.print();
+                }, 250);
             });
         });
     </script>

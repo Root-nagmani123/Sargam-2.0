@@ -27,7 +27,9 @@ use App\Http\Controllers\Admin\{
     HostelBuildingFloorRoomMappingController,
     NoticeNotificationController,
     MedicalExceptionFacultyViewController,
-    MedicalExceptionOTViewController
+    MedicalExceptionOTViewController,
+    OTMDOEscrotExemptionController,
+    FacultyMDOEscortExceptionViewController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 
@@ -301,6 +303,12 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
 Route::get('/medical-exception-faculty-view', [MedicalExceptionFacultyViewController::class, 'index'])->name('medical.exception.faculty.view');
 
 Route::get('/medical-exception-ot-view', [MedicalExceptionOTViewController::class, 'index'])->name('medical.exception.ot.view');
+
+// OT MDO/Escort Exception View
+Route::get('/ot-mdo-escrot-exemption-view', [OTMDOEscrotExemptionController::class, 'index'])->name('ot.mdo.escrot.exemption.view');
+
+// Faculty MDO/Escort Exception View
+Route::get('/faculty-mdo-escort-exception-view', [FacultyMDOEscortExceptionViewController::class, 'index'])->name('faculty.mdo.escort.exception.view');
 
 Route::prefix('admin/course-memo-decision')
     ->name('course.memo.decision.')
