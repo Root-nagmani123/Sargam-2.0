@@ -1071,7 +1071,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let calendarEl = document.getElementById('calendar');
     let calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
+        initialView: 'timeGridDay',
           headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -1119,14 +1119,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get custom fields
             const topic = arg.event.title || '';
             const venue = arg.event.extendedProps.vanue || '';
+            const faculty_name = arg.event.extendedProps.faculty_name || '';
             const start = arg.event.start ? new Date(arg.event.start).toLocaleDateString() : '';
 
             // Modern card design with dynamic color
             let html = `
                 <div class="fc-event-card" style="border-left: 6px solid ${cardColor}; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.10);">
-                    <div class="fw-bold mb-1" style="color: ${cardColor}; font-size: 1rem;">${topic}</div>
-                    <div class="fst-italic text-muted mb-1">${venue}</div>
-                    <div class="small text-secondary">${start}</div>
+                    <div class="fw-bold mb-1" style="color: ${cardColor}; font-size: 1rem;">Topic: ${topic}</div>
+                    <div class="fst-italic text-muted mb-1">Vanue: ${venue}</div>
+                    <div class="fst-italic text-muted mb-1">Faculty: ${faculty_name}</div>
+             
                 </div>
             `;
             return { html };
