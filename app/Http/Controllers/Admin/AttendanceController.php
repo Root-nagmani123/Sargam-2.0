@@ -25,7 +25,22 @@ class AttendanceController extends Controller
 
 
             $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
-            $courseMasters = CourseMaster::whereIn('pk', $courseMasterPK)->select('course_name', 'pk')->get()->toArray();
+         $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
+                        ->select('course_master.course_name', 'course_master.pk');
+
+                    if (hasRole('Student-OT')) {
+
+                        $courseMasters = $courseMasters->join(
+                            'student_master_course__map',
+                            'student_master_course__map.course_master_pk',
+                            '=',
+                            'course_master.pk'
+                        )
+                        ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
+                    }
+
+                    $courseMasters = $courseMasters->get()->toArray();
+
 
             return view('admin.attendance.index', compact('courseMasters', 'sessions', 'maunalSessions'));
         } catch (\Exception $e) {

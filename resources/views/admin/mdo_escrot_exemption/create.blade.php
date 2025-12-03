@@ -213,7 +213,7 @@
 
 </style>
 @endsection
-@section('title', 'MDO Escrot Exemption')
+@section('title', 'MDO/Escort Exemption')
 
 @section('content')
 
@@ -222,7 +222,7 @@
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">
-                {{ !empty($mdoDutyType) ? 'Edit MDO Escrot Exemption' : 'Create MDO Escrot Exemption' }}
+                {{ !empty($mdoDutyType) ? 'Edit MDO/Escort Exemption' : 'Create MDO/Escort Exemption' }}
             </h4>
             <hr>
             <form action="{{ route('mdo-escrot-exemption.store') }}" method="POST" id="mdoDutyTypeForm">

@@ -83,14 +83,12 @@ class LoginController extends Controller
             $user = User::where('user_name', $username)->first();
 
             if( $user ) {
-              $roles = $user->roles()->pluck('user_role_display_name')->toArray();
-         
-            Auth::login($user);
-           
-            Session::put('user_roles', $roles);
+             Auth::login($user);
 
-            logger('Redirecting to: ' . url()->previous());
-            return redirect()->intended(default: $this->redirectTo);
+    $roles = $user->roles()->pluck('user_role_name')->toArray();
+    Session::put('user_roles', $roles);
+
+    return redirect()->intended($this->redirectTo);
         }
         } else {
              // 🌐 Production: LDAP authentication
@@ -99,7 +97,7 @@ class LoginController extends Controller
                 if ($user) {
 
                     Auth::login($user);
-                    $roles = $user->roles()->pluck('user_role_display_name')->toArray();
+                    $roles = $user->roles()->pluck('user_role_name')->toArray();
                
                     Session::put('user_roles', $roles);
 

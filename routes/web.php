@@ -27,7 +27,9 @@ use App\Http\Controllers\Admin\{
     HostelBuildingFloorRoomMappingController,
     NoticeNotificationController,
     MedicalExceptionFacultyViewController,
-    MedicalExceptionOTViewController
+    MedicalExceptionOTViewController,
+    OTMDOEscrotExemptionController,
+    FacultyMDOEscortExceptionViewController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -277,7 +279,7 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
        Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');
         Route::post('/submit-feedback', [CalendarController::class, 'submitFeedback'])->name('submit.feedback');
     });
-    // MDO Escrot Exemption Routes
+    // MDO/Escort Exemption Routes
     Route::prefix('mdo-escrot-exemption')->name('mdo-escrot-exemption.')->controller(MDOEscrotExemptionController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -318,6 +320,12 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
 Route::get('/medical-exception-faculty-view', [MedicalExceptionFacultyViewController::class, 'index'])->name('medical.exception.faculty.view');
 
 Route::get('/medical-exception-ot-view', [MedicalExceptionOTViewController::class, 'index'])->name('medical.exception.ot.view');
+
+// OT MDO/Escort Exception View
+Route::get('/ot-mdo-escrot-exemption-view', [OTMDOEscrotExemptionController::class, 'index'])->name('ot.mdo.escrot.exemption.view');
+
+// Faculty MDO/Escort Exception View
+Route::get('/faculty-mdo-escort-exception-view', [FacultyMDOEscortExceptionViewController::class, 'index'])->name('faculty.mdo.escort.exception.view');
 
 Route::prefix('admin/course-memo-decision')
     ->name('course.memo.decision.')

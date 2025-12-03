@@ -15,7 +15,7 @@
     <div class="card">
         <div class="card-body">
             <h4 class="card-title mb-3">
-                {{ !empty($mdoDutyType) ? 'Edit MDO Escrot Exemption' : 'Create MDO Escrot Exemption' }}
+                {{ !empty($mdoDutyType) ? 'Edit MDO/Escort Exemption' : 'Create MDO/Escort Exemption' }}
             </h4>
             <hr>
 
