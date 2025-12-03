@@ -429,13 +429,13 @@ class FacultyController extends Controller
                 }
             }
             DB::commit();
-            return response()->json([
+          /*  return response()->json([
                 'status' => true,
                 'message' => 'Faculty created successfully',
                 'data' => $faculty
             ]);
-
-            // return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
+*/
+             return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             dump($e);
