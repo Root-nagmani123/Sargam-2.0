@@ -25,7 +25,9 @@ use App\Http\Controllers\Admin\{
     CourseAttendanceNoticeMapController,
     HostelBuildingFloorMappingController,
     HostelBuildingFloorRoomMappingController,
-    NoticeController
+    NoticeNotificationController,
+    MedicalExceptionFacultyViewController,
+    MedicalExceptionOTViewController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -188,11 +190,11 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
 
     Route::prefix('admin')->name('admin.')->group(function () {
  
-Route::resource('notice', NoticeController::class)
+Route::resource('notice', NoticeNotificationController::class)
      ->except(['show'])
      ->parameters(['notice' => 'encId']);
 
-Route::get('/notice/get-courses', [NoticeController::class, 'getCourses'])
+Route::get('/notice/get-courses', [NoticeNotificationController::class, 'getCourses'])
      ->name('notice.getCourses');
 Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('summernote.upload');
 
@@ -294,6 +296,10 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('mark');
         Route::post('/save', 'save')->name('save');
+
+        Route::get('/user_attendance', 'index')->name('user_attendance.index');
+        Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('student_mark');
+
     });
 
    Route::prefix('student-medical-exemption')->name('student.medical.exemption.')->controller(StudentMedicalExemptionController::class)->group(function () {
@@ -307,6 +313,11 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
 
     Route::delete('/delete/{id}', 'delete')->name('delete');
 });
+
+// Medical Exception Views
+Route::get('/medical-exception-faculty-view', [MedicalExceptionFacultyViewController::class, 'index'])->name('medical.exception.faculty.view');
+
+Route::get('/medical-exception-ot-view', [MedicalExceptionOTViewController::class, 'index'])->name('medical.exception.ot.view');
 
 Route::prefix('admin/course-memo-decision')
     ->name('course.memo.decision.')

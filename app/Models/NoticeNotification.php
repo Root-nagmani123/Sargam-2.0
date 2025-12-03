@@ -5,11 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Notice extends Model
+class NoticeNotification extends Model
 {
     use HasFactory;
 
-    protected $table = "notices";
+    protected $table = "notices_notification";
 
     protected $fillable = [
         'notice_title',
@@ -21,7 +21,7 @@ class Notice extends Model
         'target_audience',
         'created_by',
         'active_inactive',
-        'course_id'
+        'course_master_pk'
     ];
     protected $primaryKey = 'pk';
 

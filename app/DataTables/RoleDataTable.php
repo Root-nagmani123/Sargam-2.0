@@ -66,6 +66,22 @@ class RoleDataTable extends DataTable
                 ';
             })
 
+            ->filterColumn('user_role_name', function ($query, $keyword) {
+                $query->where('user_role_name', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('user_role_display_name', function ($query, $keyword) {
+                $query->where('user_role_display_name', 'like', "%{$keyword}%");
+            })
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('user_role_name', 'like', "%{$searchValue}%")
+                            ->orWhere('user_role_display_name', 'like', "%{$searchValue}%");
+                    });
+                }
+            }, true)
             ->rawColumns(['user_role_name', 'user_role_display_name', 'STATUS', 'action']);
     }
 
@@ -80,7 +96,21 @@ class RoleDataTable extends DataTable
             ->setTableId('role-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->parameters(['order' => []])
+            ->parameters([
+                'order' => [],
+                'ordering' => false,
+                'searching' => true,
+                'lengthChange' => true,
+                'pageLength' => 10,
+                'language' => [
+                    'paginate' => [
+                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_left</i>',
+                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_right</i>'
+                    ]
+                ],
+            ])
             ->selectStyleSingle()
             ->buttons([
                 Button::make('excel'),
@@ -103,11 +133,15 @@ class RoleDataTable extends DataTable
 
             Column::make('user_role_name')
                 ->title('Role Name')
-                ->addClass('text-center'),
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(true),
 
             Column::make('user_role_display_name')
                 ->title('Display Name')
-                ->addClass('text-center'),
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(true),
 
             // STATUS Column
             Column::make('STATUS')
@@ -120,6 +154,8 @@ class RoleDataTable extends DataTable
             Column::computed('action')
                 ->title('Action')
                 ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false)
                 ->exportable(false)
                 ->printable(false)
         ];

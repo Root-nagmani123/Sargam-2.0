@@ -46,6 +46,24 @@
     border-color: #666;
 }
 
+/* Horizontal Scroll for Table */
+.datatables .table-responsive {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.datatables #medicalExemptionTable {
+    min-width: 100%;
+    width: max-content;
+}
+
+.datatables #medicalExemptionTable th,
+.datatables #medicalExemptionTable td {
+    white-space: nowrap;
+    padding: 10px 12px;
+    vertical-align: middle;
+}
+
 /* Print Styles */
 @media print {
     body * {
@@ -82,10 +100,10 @@
     }
     
     /* Hide action and status columns in print */
-    .table th:nth-child(9),
-    .table td:nth-child(9),
-    .table th:nth-child(10),
-    .table td:nth-child(10) {
+    .table th:nth-child(11),
+    .table td:nth-child(11),
+    .table th:nth-child(12),
+    .table td:nth-child(12) {
         display: none;
     }
     
@@ -133,6 +151,7 @@
                                 <a href="{{ route('student.medical.exemption.export', [
                                     'filter' => $filter,
                                     'course_filter' => $courseFilter ?? '',
+                                    'faculty_filter' => $facultyFilter ?? '',
                                     'date_filter' => $dateFilter ?? ''
                                 ]) }}" class="btn btn-success d-flex align-items-center">
                                     <i class="material-icons menu-icon material-symbols-rounded"
@@ -146,16 +165,6 @@
                                         style="font-size: 24px;">add</i>
                                     Add Student Medical Exemption
                                 </a>
-                                <!-- Search Expand -->
-                                <div class="search-expand d-flex align-items-center">
-                                    <a href="javascript:void(0)" id="searchToggle">
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">search</i>
-                                    </a>
-
-                                    <input type="text" class="form-control search-input ms-2" id="searchInput"
-                                        placeholder="Search…" aria-label="Search">
-                                </div>
 
                             </div>
                         </div>
@@ -178,8 +187,21 @@
                             </select>
                         </div>
                         
-                        <!-- Today Filter -->
+                        <!-- Faculty Filter -->
                         <div class="col-md-3">
+                            <label for="faculty_filter" class="form-label fw-semibold">Faculty</label>
+                            <select name="faculty_filter" id="faculty_filter" class="form-select">
+                                <option value="">-- All Faculty --</option>
+                                @foreach($employees ?? [] as $employee)
+                                    <option value="{{ $employee['pk'] }}" {{ (isset($facultyFilter) && $facultyFilter == $employee['pk']) ? 'selected' : '' }}>
+                                        {{ $employee['name'] }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <!-- Today Filter -->
+                        <div class="col-md-2">
                             <label for="date_filter" class="form-label fw-semibold">Date Filter</label>
                             <select name="date_filter" id="date_filter" class="form-select">
                                 <option value="">-- All Dates --</option>
@@ -205,7 +227,7 @@
                         </div>
                         
                         <!-- Active/Archive Buttons -->
-                        <div class="col-md-4 text-end">
+                        <div class="col-md-2 text-end">
                             <div class="d-flex align-items-center justify-content-end gap-2">
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                     aria-label="Course Status Filter">
@@ -215,6 +237,10 @@
                                         if ($courseFilter) {
                                             $activeParams['course_filter'] = $courseFilter;
                                             $archiveParams['course_filter'] = $courseFilter;
+                                        }
+                                        if (isset($facultyFilter) && $facultyFilter) {
+                                            $activeParams['faculty_filter'] = $facultyFilter;
+                                            $archiveParams['faculty_filter'] = $facultyFilter;
                                         }
                                         if ($dateFilter) {
                                             $activeParams['date_filter'] = $dateFilter;
@@ -244,10 +270,12 @@
                                     <th class="col">Student</th>
                                     <th class="col">OT Code</th>
                                     <th class="col">Course</th>
+                                    <th class="col">Faculty</th>
                                     <th class="col">Category</th>
                                     <th class="col">Medical Speciality</th>
                                     <th class="col">From-To</th>
                                     <th class="col">OPD Type</th>
+                                    <th class="col">Document</th>
                                     <th class="col">Action</th>
                                     <th class="col">Status</th>
                                 </tr>
@@ -259,6 +287,7 @@
                                     <td>{{ $row->student->display_name ?? 'N/A' }}</td>
                                     <td>{{ $row->student->generated_OT_code ?? 'N/A' }}</td>
                                     <td>{{ $row->course->course_name ?? 'N/A' }}</td>
+                                    <td>{{ ($row->employee && $row->employee->first_name && $row->employee->last_name) ? trim($row->employee->first_name . ' ' . $row->employee->last_name) : 'N/A' }}</td>
                                     <td>{{ $row->category->exemp_category_name ?? 'N/A' }}</td>
                                     <td>{{ $row->speciality->speciality_name ?? 'N/A' }}</td>
                                     <td>
@@ -268,6 +297,18 @@
                                     </td>
 
                                     <td>{{ $row->opd_category }}</td>
+                                    <td class="text-center">
+                                        @if($row->Doc_upload)
+                                            <a href="{{ asset('storage/' . $row->Doc_upload) }}" target="_blank" 
+                                               class="btn btn-sm btn-info"
+                                               title="View Document"
+                                               data-bs-toggle="tooltip" data-bs-placement="top">
+                                                <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px;">description</i>
+                                            </a>
+                                        @else
+                                            <span class="text-muted">N/A</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <a
                                             href="{{ route('student.medical.exemption.edit', ['id' => encrypt(value: $row->pk)])  }}"><i
@@ -300,14 +341,14 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="10" class="text-center py-5">
+                                    <td colspan="12" class="text-center py-5">
                                         <div class="d-flex flex-column align-items-center justify-content-center">
                                             <i class="material-icons menu-icon material-symbols-rounded" 
                                                style="font-size: 64px; color: #ccc; margin-bottom: 16px;">
                                                 search_off
                                             </i>
                                             <h5 class="text-muted mb-2">No Record Found</h5>
-                                            @if($filter || $courseFilter || $dateFilter)
+                                            @if($filter || $courseFilter || (isset($facultyFilter) && $facultyFilter) || $dateFilter)
                                                 <p class="text-muted small mb-0">
                                                     No records match the applied filters. 
                                                     <a href="{{ route('student.medical.exemption.index') }}" class="text-primary">
@@ -335,6 +376,7 @@
                                 {{ $records->appends([
                                     'filter' => $filter,
                                     'course_filter' => $courseFilter,
+                                    'faculty_filter' => $facultyFilter ?? '',
                                     'date_filter' => $dateFilter ?? ''
                                 ])->links('pagination::bootstrap-5') }}
                             </div>
@@ -397,14 +439,14 @@ function printTable() {
     // Clone the table to avoid modifying the original
     var tableClone = table.cloneNode(true);
     
-    // Remove Action and Status columns (9th and 10th columns)
+    // Remove Action and Status columns (11th and 12th columns)
     var rows = tableClone.querySelectorAll('tr');
     rows.forEach(function(row) {
         var cells = row.querySelectorAll('th, td');
-        if (cells.length >= 10) {
-            // Remove Action column (9th) and Status column (10th)
-            if (cells[8]) cells[8].remove(); // Action
-            if (cells[8]) cells[8].remove(); // Status (now at index 8 after first removal)
+        if (cells.length >= 12) {
+            // Remove Action column (11th) and Status column (12th)
+            if (cells[10]) cells[10].remove(); // Action
+            if (cells[10]) cells[10].remove(); // Status (now at index 10 after first removal)
         }
     });
     
@@ -518,10 +560,11 @@ function printTable() {
 }
 
 $(document).ready(function() {
-    // Auto-submit when course filter changes
-    $('#course_filter').on('change', function() {
-        var courseFilter = $(this).val();
+    // Function to build and navigate with filters
+    function applyFilters() {
         var filter = '{{ $filter }}';
+        var courseFilter = $('#course_filter').val();
+        var facultyFilter = $('#faculty_filter').val();
         var dateFilter = $('#date_filter').val();
         var url = '{{ route("student.medical.exemption.index") }}';
         var params = { filter: filter };
@@ -530,6 +573,10 @@ $(document).ready(function() {
             params.course_filter = courseFilter;
         }
         
+        if (facultyFilter) {
+            params.faculty_filter = facultyFilter;
+        }
+        
         if (dateFilter) {
             params.date_filter = dateFilter;
         }
@@ -537,27 +584,21 @@ $(document).ready(function() {
         // Build URL with query parameters
         var queryString = Object.keys(params).map(key => key + '=' + encodeURIComponent(params[key])).join('&');
         window.location.href = url + '?' + queryString;
+    }
+    
+    // Auto-submit when course filter changes
+    $('#course_filter').on('change', function() {
+        applyFilters();
+    });
+    
+    // Auto-submit when faculty filter changes
+    $('#faculty_filter').on('change', function() {
+        applyFilters();
     });
     
     // Auto-submit when date filter changes
     $('#date_filter').on('change', function() {
-        var dateFilter = $(this).val();
-        var filter = '{{ $filter }}';
-        var courseFilter = $('#course_filter').val();
-        var url = '{{ route("student.medical.exemption.index") }}';
-        var params = { filter: filter };
-        
-        if (courseFilter) {
-            params.course_filter = courseFilter;
-        }
-        
-        if (dateFilter) {
-            params.date_filter = dateFilter;
-        }
-        
-        // Build URL with query parameters
-        var queryString = Object.keys(params).map(key => key + '=' + encodeURIComponent(params[key])).join('&');
-        window.location.href = url + '?' + queryString;
+        applyFilters();
     });
 });
 </script>

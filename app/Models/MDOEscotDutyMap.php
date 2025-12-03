@@ -40,4 +40,9 @@ class MDOEscotDutyMap extends Model
     {
         return $this->hasMany(StudentMasterCourseMap::class, 'course_master_pk', 'course_master_pk');
     }
+
+    public function facultyMaster()
+    {
+        return $this->belongsTo(FacultyMaster::class, 'faculty_master_pk', 'pk');
+    }
 }

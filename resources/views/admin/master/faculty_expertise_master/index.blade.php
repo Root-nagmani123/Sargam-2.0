@@ -25,16 +25,6 @@
                                     Add Faculty Expertise
                                 </a>
 
-                                <!-- Search Expand -->
-                                <div class="search-expand d-flex align-items-center">
-                                    <a href="javascript:void(0)" id="searchToggle">
-                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">search</i>
-                                    </a>
-
-                                    <input type="text" class="form-control search-input ms-2" id="searchInput"
-                                        placeholder="Search…" aria-label="Search">
-                                </div>
 
                             </div>
                         </div>

@@ -60,7 +60,7 @@ input.is-invalid {
 
             <form class="facultyForm">
 			  @csrf
-			  <input type="hidden" name="faculty_id" id="faculty_id" value="">
+			  <!--<input type="hidden" name="faculty_id" id="faculty_id" value="">-->
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title">Personal Information</h4>
@@ -75,6 +75,7 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         :options="$facultyTypeList"
                                         required="true"
+                                        labelRequired="true"
                                         value="{{ $hostelFloorMapping->hostel_building_master_pk ?? '' }}"
                                         />
                                 </div>
@@ -231,7 +232,7 @@ input.is-invalid {
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <x-select
+                                    <!--<x-select
                                         name="state"
                                         label="State :"
                                         placeholder="State"
@@ -239,28 +240,47 @@ input.is-invalid {
                                         {{-- :options="$state" --}}
                                         required="true"
                                         labelRequired="true"
-                                        />
+                                        />-->
+						<x-select
+							name="state"
+							label="State :"
+							placeholder="State"
+							formLabelClass="form-label"
+							:options="$state"
+
+
+							/>
+
 
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <x-select
+                                    <!--<x-select
                                         name="district"
                                         label="District :"
                                         placeholder="District"
                                         formLabelClass="form-label"
                                         {{-- :options="$district" --}}
                                         required="true"
-                                        />
+                                        />-->
+
+					<x-select
+						name="district"
+						label="District :"
+						placeholder="District"
+						formLabelClass="form-label"
+						:options="$district"
+
+						/>
 
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <x-select
+                                    <!--<x-select
                                         name="city"
                                         label="City :"
                                         placeholder="City"
@@ -268,7 +288,16 @@ input.is-invalid {
                                         {{-- :options="$city" --}}
                                         required="true"
                                         labelRequired="true"
-                                        />
+                                        />-->
+
+				<x-select
+                name="city"
+                label="City :"
+                placeholder="City"
+                formLabelClass="form-label"
+                :options="$city"
+
+                />
 
                                 </div>
                             </div>
@@ -370,7 +399,8 @@ input.is-invalid {
                         <div>
                             <h4 class="card-title">Qualification Details</h4>
                             <hr>
-                            <div id="education_fields_wrapper" class="my-4"></div>
+                            <div id="education_fields" class="my-4"></div>
+
                             <div class="row degree-row" id="education_fields">
                                 <div class="col-3">
 
@@ -456,6 +486,7 @@ input.is-invalid {
                                     </div>
                                 </div>
                             </div>
+
 
                         </div>
                     </div>
@@ -920,29 +951,29 @@ function fillFacultyForm(faculty) {
 
             $("select[name='gender']").val(faculty.gender);
 
-          // Set Country
- setTimeout(() => {
-            $("select[name='country']").val(faculty.country_master_pk).trigger("change");
-        }, 200);
+         // --- COUNTRY ---
 
-        // --- STATE ---
-        setTimeout(() => {
-            $("select[name='state']").val(faculty.state_master.state_name).trigger("change");
-        }, 400);
+    $("select[name='country']").val(faculty.country_master.pk);
 
-        // --- DISTRICT ---
-        setTimeout(() => {
-            $("select[name='district']").val(faculty.state_district_mapping_pk).trigger("change");
-        }, 600);
 
-        // --- CITY ---
-        setTimeout(() => {
-            $("select[name='city']").val(faculty.city_master_pk).trigger("change");
-        }, 800);
+// --- STATE ---
 
-$("input[name='residence_address']").val(faculty.Residence_address);
+    $("select[name='state']").val(faculty.state_master.Pk);
 
-$("input[name='permanent_address']").val(faculty.Permanent_Address);
+
+// --- DISTRICT ---
+
+    $("select[name='district']").val(faculty.district_master.pk);
+
+
+// --- CITY ---
+
+    $("select[name='city']").val(faculty.city_master.pk);
+	$("input[name='residence_address']").val(faculty.Residence_address);
+
+
+	$("input[name='permanent_address']").val(faculty.Permanent_Address);
+
 
 
 
@@ -963,8 +994,16 @@ $("input[name='permanent_address']").val(faculty.Permanent_Address);
 
 //Qualification Details
 
+/*if (faculty.faculty_qualification_map.length > 1) {
+    for (let i = 0; i < faculty.faculty_qualification_map.length; i++) {
+        education_fields();
+    }
+}
+*/
+
 faculty.faculty_qualification_map.forEach(function(q, index) {
     const row = $(".degree-row").eq(index);
+
 
     row.find("input[name='degree[]']").val(q.Degree_name);
     row.find("input[name='university_institution_name[]']").val(q.University_Institution_Name);
@@ -1011,13 +1050,14 @@ faculty.faculty_experience_map.forEach(function(exp, index) {
 	}
 
 	faculty.faculty_expertise_map.forEach(item => {
-    $('input[name="expertise[]"][value="' + item.faculty_expertise_pk + '"]').prop("checked", true);
-	});
+    $('input[name="faculties[]"][value="' + item.faculty_expertise_pk + '"]').prop("checked", true);
+});
 
- //$('input[name="current_sector"][value="' + faculty.faculty_sector //+ '"]').prop("checked", true);
 
- document.querySelector('input[name="current_sector"]:checked').value;
- document.querySelectorAll('input[name="faculties[]"]:checked');
+ $('input[name="current_sector"][value="' + faculty.faculty_sector + '"]').prop("checked", true);
+
+ //document.querySelector('input[name="current_sector"]:checked').value;
+ //document.querySelectorAll('input[name="faculties[]"]:checked');
 
 
 	$("#faculty_id").val(faculty.id);

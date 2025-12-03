@@ -21,11 +21,21 @@ class MDODutyTypeMasterDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->addIndexColumn()
             ->setRowId('pk')
             ->editColumn('mdo_duty_type_name', fn($row) => '<label class="text-dark">' . $row->mdo_duty_type_name . '</label>')
             ->filterColumn('mdo_duty_type_name', function ($query, $keyword) {
                 $query->where('mdo_duty_type_name', 'like', "%{$keyword}%");
             })
+            ->filter(function ($query) {
+                $searchValue = request()->input('search.value');
+
+                if (!empty($searchValue)) {
+                    $query->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('mdo_duty_type_name', 'like', "%{$searchValue}%");
+                    });
+                }
+            }, true)
             ->addColumn('status', function ($row) {
                 return '<div class="form-check form-switch d-inline-block">
                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
@@ -46,7 +56,12 @@ class MDODutyTypeMasterDataTable extends DataTable
      */
     public function query(MDODutyTypeMaster $model): QueryBuilder
     {
-        return $model->newQuery()->orderBy('pk');
+        // Show only active by default; include inactive if query param ?show=all
+        $query = $model->newQuery();
+        if (request('show') !== 'all') {
+            $query->where('active_inactive', 1);
+        }
+        return $query->orderBy('pk', 'desc');
     }
 
     /**
@@ -66,8 +81,9 @@ class MDODutyTypeMasterDataTable extends DataTable
                         'responsive' => true,
                         'autoWidth' => false,
                         'scrollX' => true,
-                        'scrollY' => '100vh',
-                        'scrollCollapse' => true,
+                        'searching' => true,
+                        'lengthChange' => true,
+                        'pageLength' => 10,
                         'lengthMenu' => [[10, 25, 50, 100], [10, 25, 50, 100]],
                         'buttons' => ['excel', 'csv', 'pdf', 'print', 'reset', 'reload'],
                         'columnDefs' => [
@@ -75,6 +91,14 @@ class MDODutyTypeMasterDataTable extends DataTable
                             ['orderable' => false, 'targets' => 1],
                             ['orderable' => false, 'targets' => 2],
                             ['orderable' => false, 'targets' => 3],
+                        ],
+                        'language' => [
+                            'paginate' => [
+                                'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">chevron_left</i>',
+                                'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                                    style="font-size: 24px;">chevron_right</i>'
+                            ]
                         ],
 
                     ])
@@ -97,10 +121,10 @@ class MDODutyTypeMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::make('pk')->title('ID')->addClass('text-center')->orderable(false),
-            Column::make('mdo_duty_type_name')->title('Duty Type Name')->addClass('text-center')->orderable(false),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
-            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false),
+            Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('mdo_duty_type_name')->title('Duty Type Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
 

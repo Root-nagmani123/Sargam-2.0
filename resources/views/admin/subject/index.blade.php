@@ -18,22 +18,6 @@
                         Add Subject
                     </a>
 
-                    <!-- Search Box + Icon -->
-                    <div class="position-relative">
-
-                        <!-- Hidden Search Input -->
-                        <form action="{{ route('subject.index') }}" method="GET" class="search-box d-none"
-                            id="searchBox">
-                            <input type="text" name="search" class="form-control" placeholder="Search..."
-                                style="width: 220px;">
-                        </form>
-
-                        <!-- Search Icon Button -->
-                        <a href="javascript:void(0)" id="searchToggleBtn" style="padding: 7px 10px;">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 22px;">search</i>
-                        </a>
-
-                    </div>
 
                 </div>
             </div>
@@ -113,16 +97,5 @@
 </div>
 <script>
 window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
-</script>
-<script>
-document.getElementById("searchToggleBtn").addEventListener("click", function() {
-    const box = document.getElementById("searchBox");
-    box.classList.toggle("d-none");
-
-    if (!box.classList.contains("d-none")) {
-        box.querySelector("input").focus();
-    }
-});
-
 </script>
 @endsection

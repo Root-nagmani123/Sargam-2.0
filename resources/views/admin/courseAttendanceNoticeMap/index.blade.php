@@ -67,27 +67,17 @@
                             Add Notice
                         </a>
 
-                        <!-- Search Expand -->
-                        <div class="search-expand d-flex align-items-center">
-                            <a href="javascript:void(0)" id="searchToggle">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 24px;">search</i>
-                            </a>
-
-                            <input type="text" class="form-control search-input ms-2" id="searchInput"
-                                placeholder="Search…" aria-label="Search">
-                        </div>
 
                     </div>
                 </div>
             </div>
-            <div class="row">
+            <!-- <div class="row">
                 <div class="col-4">
                     <div class="mb-3">
                         <label for="program_name" class="form-label">Program Name</label>
                         <select class="form-select" id="program_name" name="program_name">
                             <option value="">Select Program</option>
-                            <!-- Options will be populated dynamically -->
+                           
                         </select>
                     </div>
                 </div>
@@ -112,7 +102,7 @@
                     </div>
                 </div>
 
-            </div>
+            </div> -->
             <hr>
             <div class="table-responsive">
                 <table class="table text-nowrap" style="border-radius: 10px; overflow: hidden; width: 100%;">
@@ -129,7 +119,7 @@
                             <th class="col">Conclusion Type</th>
                             <th class="col">Discussion Name</th>
                             <th class="col">Conclusion Remark</th>
-                            <th class="col sticky-status">Status</th>
+                            <th class="col">Status</th>
                         </tr> <!-- end row -->
                     </thead>
                     <tbody>

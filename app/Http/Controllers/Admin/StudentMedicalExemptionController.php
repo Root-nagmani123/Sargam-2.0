@@ -9,6 +9,7 @@ use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
+use App\Models\EmployeeMaster;
 use App\Exports\StudentMedicalExemptionExport;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -18,7 +19,7 @@ class StudentMedicalExemptionController extends Controller
 {
     public function index(Request $request)
     {
-       $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course']);
+       $query = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee']);
        
        // Filter by course status (Active/Archive)
        $filter = $request->get('filter', 'active'); // Default to 'active'
@@ -42,6 +43,12 @@ class StudentMedicalExemptionController extends Controller
            $query->where('course_master_pk', $courseFilter);
        }
        
+       // Filter by faculty/employee if selected
+       $facultyFilter = $request->get('faculty_filter');
+       if ($facultyFilter) {
+           $query->where('employee_master_pk', $facultyFilter);
+       }
+       
        // Filter by today's date if date_filter is 'today'
        $dateFilter = $request->get('date_filter');
        if ($dateFilter === 'today') {
@@ -57,7 +64,7 @@ class StudentMedicalExemptionController extends Controller
        $records = $query->orderBy('pk', 'desc')->paginate(10);
        
        // Calculate total exemption count for today
-       $todayCountQuery = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course']);
+       $todayCountQuery = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee']);
        
        // Apply same filters as main query for accurate count
        if ($filter === 'active') {
@@ -72,6 +79,10 @@ class StudentMedicalExemptionController extends Controller
        
        if ($courseFilter) {
            $todayCountQuery->where('course_master_pk', $courseFilter);
+       }
+       
+       if ($facultyFilter) {
+           $todayCountQuery->where('employee_master_pk', $facultyFilter);
        }
        
        // Count exemptions valid for today
@@ -90,8 +101,24 @@ class StudentMedicalExemptionController extends Controller
            $coursesQuery->where('end_date', '<', $currentDate);
        }
        $courses = $coursesQuery->orderBy('course_name', 'asc')->get();
+       
+       // Get employees/faculty for filter dropdown
+       $employees = EmployeeMaster::select('pk', 'first_name', 'last_name')
+           ->whereNotNull('first_name')
+           ->whereNotNull('last_name')
+           ->orderBy('first_name')
+           ->orderBy('last_name')
+           ->get()
+           ->map(function($employee) {
+               return [
+                   'pk' => $employee->pk,
+                   'name' => trim($employee->first_name . ' ' . $employee->last_name)
+               ];
+           })
+           ->sortBy('name')
+           ->values();
     
-        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'dateFilter', 'todayTotalCount'));
+        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'dateFilter', 'todayTotalCount', 'employees', 'facultyFilter'));
     }
 
    public function create()
@@ -146,9 +173,12 @@ class StudentMedicalExemptionController extends Controller
 {
     $record = StudentMedicalExemption::findOrFail(decrypt($id));
 
-    $courses = CourseMaster::where('active_inactive', '1')->get();
+    $courses = CourseMaster::where('active_inactive', '1')
+        ->where('end_date', '>', now())
+        ->get();
     $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
         ->where('status', '1')
+        ->orderBy('display_name', 'asc')
         ->get();
     $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
     $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
@@ -197,6 +227,7 @@ public function update(Request $request, $id)
             ->where('student_master_course__map.course_master_pk', $courseId)
             ->where('student_master.status', '1')
             ->select('student_master.pk', 'student_master.generated_OT_code', 'student_master.display_name')
+            ->orderBy('student_master.display_name', 'asc')
             ->get();
        
        return response()->json(['students' => $students]);
@@ -207,12 +238,13 @@ public function update(Request $request, $id)
     {
         $filter = $request->get('filter', 'active');
         $courseFilter = $request->get('course_filter');
+        $facultyFilter = $request->get('faculty_filter');
         $dateFilter = $request->get('date_filter');
         
         $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
         
         return Excel::download(
-            new StudentMedicalExemptionExport($filter, $courseFilter, $dateFilter),
+            new StudentMedicalExemptionExport($filter, $courseFilter, $facultyFilter, $dateFilter),
             $fileName
         );
     }

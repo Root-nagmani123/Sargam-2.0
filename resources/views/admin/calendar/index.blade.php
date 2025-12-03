@@ -636,7 +636,7 @@ textarea:focus {
                         <div class="row py-3 border-top">
                             <div class="col-md-3 mb-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox" id="feedback_checkbox" checked>
+                                    {{-- <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox" id="feedback_checkbox" checked> --}}
                                     <label class="form-check-label" for="feedback_checkbox">Feedback</label>
                                 </div>
                             </div>
@@ -854,12 +854,12 @@ $(document).ready(function() {
 
                     // Step 2: Fill the dropdown with unique group_type_name
                     $('#group_type').empty().append(
+                       
                         '<option value="">Select Group Type</option>');
                     $('#type_name_container').html('');
                     for (const key in groupedData) {
                         if (groupedData[key].length > 0) {
-                            const typeName = groupedData[key][0]
-                                .type_name; // use first element's type_name
+                            const typeName = groupedData[key][0].type_name; // use first element's type_name
                             $('#group_type').append(
                                 `<option value="${key}">${typeName}</option>`
                             );
@@ -867,6 +867,7 @@ $(document).ready(function() {
                     }
 
                     $('#group_type').off('change').on('change', function() {
+                       
                         const selectedType = $(this).val();
                         let html = '';
                         let groupNames = window.selectedGroupNames;
@@ -921,8 +922,15 @@ waitForGroupTypeAndSet(event.course_group_type_master, function() {
 // $('.btn-update-event').on('click', function() {
 //     $('#eventForm').submit();
 // });
-$('#eventForm').on('submit', function(e) {
+
+
+
+    $(document).ready(function() {
+$('#eventForm').off('submit').on('submit', function(e) {
     e.preventDefault();
+    // console.log("Form submission triggered");return false;
+     // Clear previous validation errors
+  
 
     let isValid = true;
     let errorMsg = "";
@@ -1056,13 +1064,14 @@ $('#eventForm').on('submit', function(e) {
         }
     });
 });
+});
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
     let calendarEl = document.getElementById('calendar');
     let calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
+        initialView: 'timeGridDay',
           headerToolbar: {
             left: 'prev,next today',
             center: 'title',
@@ -1110,14 +1119,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get custom fields
             const topic = arg.event.title || '';
             const venue = arg.event.extendedProps.vanue || '';
+            const faculty_name = arg.event.extendedProps.faculty_name || '';
             const start = arg.event.start ? new Date(arg.event.start).toLocaleDateString() : '';
 
             // Modern card design with dynamic color
             let html = `
                 <div class="fc-event-card" style="border-left: 6px solid ${cardColor}; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.10);">
-                    <div class="fw-bold mb-1" style="color: ${cardColor}; font-size: 1rem;">${topic}</div>
-                    <div class="fst-italic text-muted mb-1">${venue}</div>
-                    <div class="small text-secondary">${start}</div>
+                    <div class="fw-bold mb-1" style="color: ${cardColor}; font-size: 1rem;">Topic: ${topic}</div>
+                    <div class="fst-italic text-muted mb-1">Vanue: ${venue}</div>
+                    <div class="fst-italic text-muted mb-1">Faculty: ${faculty_name}</div>
+             
                 </div>
             `;
             return { html };
@@ -1212,6 +1223,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     $('#Course_name').val(event
                                         .course_master_pk).trigger(
                                         'change');
+                                      
                                     waitForGroupTypeAndSet(event
                                         .course_group_type_master,
                                         function() {
@@ -1598,16 +1610,7 @@ if (selectedDate < today) {
     });
 });
 
-function waitForGroupTypeAndSet(value, callback, retries = 20) {
-    if ($('#group_type option[value="' + value + '"]').length > 0) {
-        $('#group_type').val(value).trigger('change');
-        if (callback) callback();
-    } else if (retries > 0) {
-        setTimeout(function() {
-            waitForGroupTypeAndSet(value, callback, retries - 1);
-        }, 150);
-    }
-}
+
 $(document).on('click', '#createEventupperButton', function() {
     $('#eventModalLabel').text('Add Calendar Event');
     $('#eventForm')[0].reset();
@@ -1649,6 +1652,18 @@ function convertTo24Hour(timeStr) {
 
     return `${String(hours).padStart(2, '0')}:${minutes}`;
 }
+function waitForGroupTypeAndSet(value, callback, retries = 20) {
+    if ($('#group_type option[value="' + value + '"]').length > 0) {
+        $('#group_type').val(value).trigger('change');
+        if (callback) callback();
+    } else if (retries > 0) {
+        setTimeout(function() {
+            waitForGroupTypeAndSet(value, callback, retries - 1);
+        }, 150);
+    }
+}
+
+
 function makeCheckboxReadonly(selector, isReadonly, isChecked = false) {
     const checkbox = $(selector);
     checkbox.prop('checked', isChecked);

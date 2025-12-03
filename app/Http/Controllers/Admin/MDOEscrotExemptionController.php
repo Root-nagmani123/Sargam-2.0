@@ -5,30 +5,32 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use App\Models\{MDODutyTypeMaster, StudentMaster, CourseMaster, MDOEscotDutyMap};
+use App\Models\{MDODutyTypeMaster, StudentMaster, CourseMaster, MDOEscotDutyMap, FacultyMaster};
 use App\Http\Requests\MDOEscrotExemptionRequest;
+use App\DataTables\MDOEscrotExemptionDataTable;
 
 class MDOEscrotExemptionController extends Controller
 {
-    public function index()
+    public function index(MDOEscrotExemptionDataTable $dataTable)
     {
-        $exemptions = MDOEscotDutyMap::with([
-            'courseMaster' => fn($q) => $q->select('pk', 'course_name'),
-            'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
-            'studentMaster' => fn($q) => $q->select('pk', 'display_name')
-        ])->orderBy('pk', 'desc')->paginate(10);
-
-        return view('admin.mdo_escrot_exemption.index', compact('exemptions'));
+        return $dataTable->render('admin.mdo_escrot_exemption.index');
     }
 
     public function create()
     {
         try {
-            $courseMaster = CourseMaster::where('active_inactive', 1)->pluck('course_name', 'pk')->toArray();
+            $courseMaster = CourseMaster::where('active_inactive', '1')
+                ->where('end_date', '>', now())
+                ->pluck('course_name', 'pk')
+                ->toArray();
             $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
+            $facultyMaster = FacultyMaster::where('active_inactive', 1)
+                ->orderBy('full_name')
+                ->pluck('full_name', 'pk')
+                ->toArray();
             $students = []; // Initialize empty array, will be populated via AJAX
 
-            return view('admin.mdo_escrot_exemption.create', compact('MDODutyTypeMaster', 'courseMaster', 'students'));
+            return view('admin.mdo_escrot_exemption.create', compact('MDODutyTypeMaster', 'courseMaster', 'students', 'facultyMaster'));
         } catch (\Exception $e) {
             return response()->json(['status' => false, 'message' => 'Error occurred while fetching MDO Duty Type Master.']);
         }
@@ -37,10 +39,14 @@ class MDOEscrotExemptionController extends Controller
     public function edit($id)
     {
         $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();
+        $facultyMaster = FacultyMaster::where('active_inactive', 1)
+            ->orderBy('full_name')
+            ->pluck('full_name', 'pk')
+            ->toArray();
 
         $mdoDutyType = MDOEscotDutyMap::with(['studentMaster'])->findOrFail($id);
 
-        return view('admin.mdo_escrot_exemption.edit', compact('id', 'MDODutyTypeMaster', 'mdoDutyType'));
+        return view('admin.mdo_escrot_exemption.edit', compact('id', 'MDODutyTypeMaster', 'mdoDutyType', 'facultyMaster'));
     }
 
     function store(MDOEscrotExemptionRequest $request)
@@ -59,6 +65,7 @@ class MDOEscrotExemptionController extends Controller
                         'Time_to' => $request->Time_to,
                         'Remark' => $request->Remark,
                         'selected_student_list' => $student_id,
+                        'faculty_master_pk' => $request->faculty_master_pk ?? null,
                     ];
                 }
             }
@@ -123,7 +130,17 @@ class MDOEscrotExemptionController extends Controller
         try{
             
             $mdoDutyType = MDOEscotDutyMap::findOrFail(decrypt($request->pk));
-            $mdoDutyType->update($request->only('mdo_duty_type_master_pk', 'mdo_date', 'Time_from', 'Time_to'));
+            $updateData = $request->only('mdo_duty_type_master_pk', 'mdo_date', 'Time_from', 'Time_to');
+            
+            // If duty type is not Escort, set faculty_master_pk to null
+            $escortDutyTypeId = MDOEscotDutyMap::getMdoDutyTypes()['escort'] ?? null;
+            if ($request->mdo_duty_type_master_pk != $escortDutyTypeId) {
+                $updateData['faculty_master_pk'] = null;
+            } else {
+                $updateData['faculty_master_pk'] = $request->faculty_master_pk ?? null;
+            }
+            
+            $mdoDutyType->update($updateData);
 
             return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO Escrot Exemption updated successfully.');
         } catch (\Exception $e) {

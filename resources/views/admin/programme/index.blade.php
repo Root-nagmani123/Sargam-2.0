@@ -58,25 +58,12 @@
                     </div>
                     <div class="col-6">
                         <div class="d-flex justify-content-end align-items-center gap-2">
-
                             <!-- Add Group Mapping -->
                             <a href="{{route('programme.create')}}"
                                 class="btn btn-primary d-flex align-items-center">
                                 <iconify-icon icon="ep:circle-plus-filled" class="me-1"></iconify-icon>
                                 Add Course
                             </a>
-
-                            <!-- Search Expand -->
-                            <div class="search-expand d-flex align-items-center">
-                                <a href="javascript:void(0)" id="searchToggle">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">search</i>
-                                </a>
-
-                                <input type="text" class="form-control search-input ms-2" id="searchInput"
-                                    placeholder="Search…" aria-label="Search">
-                            </div>
-
                         </div>
                     </div>
                 </div>
