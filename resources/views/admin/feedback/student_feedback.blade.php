@@ -445,15 +445,21 @@
                                 </tr>
                                 @endif
                                 @endforeach
+                                @if($data->count() == 0)
+                                <tr>
+                                    <td colspan="7" class="text-center">No feedback available.</td>
+                                </tr>
+                                @endif
                             </tbody>
                         </table>
                     </div>
                 </div>
-
+                @if($data->count() > 0)
                 <div class="text-end mt-3 mb-4 me-4">
                     <button type="submit" class="btn btn-primary px-4 rounded-pill"
                         style="background-color: #004a93;border-color: #004a93;">Submit Feedback</button>
                 </div>
+                @endif
             </form>
         </div>
     </div>
