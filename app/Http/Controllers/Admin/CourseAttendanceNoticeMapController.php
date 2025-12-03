@@ -15,33 +15,14 @@ use Illuminate\Support\Facades\Validator;
 class CourseAttendanceNoticeMapController extends Controller
 {
     //
-    public function index()
+    public function index(Request $request)
 {
-    // Get initial notice records
-    // $notices = DB::table('student_notice_status')
-    //     ->leftjoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk')
-    //     ->leftjoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
-    //     ->leftjoin('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')
-    //     ->select(
-    //         'student_notice_status.pk as notice_id',
-    //         'student_notice_status.student_pk',
-    //         'student_notice_status.course_master_pk',
-    //         'student_notice_status.date_',
-    //         'student_notice_status.subject_master_pk',
-    //         'student_notice_status.subject_topic',
-    //         'student_notice_status.venue_id',
-    //         'student_notice_status.class_session_master_pk',
-    //         'student_notice_status.faculty_master_pk',
-    //         'student_notice_status.message',
-    //         'student_notice_status.notice_memo',
-    //         'student_notice_status.status',
-    //         'sm.display_name as student_name',
-    //         'sm.pk as student_id',
-    //         't.subject_topic as topic_name',
-    //         DB::raw('"Notice" as type_notice_memo'),
-    //     )
-    //     ->get();
+    // Get filter parameters
+    $programNameFilter = $request->get('program_name', '');
+    $typeFilter = $request->get('type', '');
+    $statusFilter = $request->get('status', '');
     
+    // Get initial notice records with course name
         $notices = DB::table('course_student_attendance as csa')
     ->Join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
     ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
@@ -64,22 +45,93 @@ class CourseAttendanceNoticeMapController extends Controller
         'sm.display_name as student_name',
         'sm.pk as student_id',
         't.subject_topic as topic_name',
+        'cm.course_name',
         DB::raw('"Notice" as type_notice_memo')
-    )
-    ->get();
-
+    );
+    
+    // Apply filters
+    if ($programNameFilter) {
+        $notices->where('sns.course_master_pk', $programNameFilter);
+    }
+    // Type filter: For Notice, get notices that haven't been converted to memos (status != 2)
+    // For Memo, we'll filter after fetching memo data
+    if ($typeFilter !== null && $typeFilter !== '') {
+        if ($typeFilter == '1') {
+            // Notice: get notices that haven't been converted to memos
+            $notices->where('sns.notice_memo', 1)->where('sns.status', '!=', 2);
+        }
+        // For Memo (typeFilter == '0'), we don't filter here - we'll get all notices with status == 2
+        // and then filter the final collection
+    }
+    if ($statusFilter !== null && $statusFilter !== '') {
+        if ($statusFilter == '1') {
+            $notices->where('sns.status', 1);
+        } elseif ($statusFilter == '0') {
+            $notices->where('sns.status', 2);
+        }
+    }
+    
+    $notices = $notices->get();
 
     $memos = collect(); // final result
-// print_r($notices);die;
+    
+    // If filtering for Memo, query student_memo_status directly
+    if ($typeFilter == '0') {
+        $memoQuery = DB::table('student_memo_status')
+            ->leftjoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+            ->leftjoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
+            ->leftjoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+            ->leftjoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
+            ->leftjoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
+            ->select(
+                'student_memo_status.pk as memo_id',
+                'student_memo_status.pk as memo_notice_id',
+                'student_memo_status.student_notice_status_pk as notice_id',
+                'student_memo_status.student_pk',
+                'student_memo_status.communication_status',
+                'student_memo_status.course_master_pk',
+                'student_memo_status.date as date_',
+                'student_memo_status.conclusion_remark',
+                DB::raw('NULL as subject_master_pk'),
+                DB::raw('NULL as subject_topic'),
+                DB::raw('NULL as venue_id'),
+                DB::raw('NULL as class_session_master_pk'),
+                DB::raw('NULL as faculty_master_pk'),
+                DB::raw('"Memo" as type_notice_memo'),
+                'student_memo_status.message',
+                DB::raw('2 as notice_memo'),
+                'student_memo_status.status',
+                'sm.display_name as student_name',
+                'sm.pk as student_id',
+                't.subject_topic as topic_name',
+                'mcm.discussion_name',
+                'cm.course_name',
+            );
+        
+        // Apply filters to memo query
+        if ($programNameFilter) {
+            $memoQuery->where('student_memo_status.course_master_pk', $programNameFilter);
+        }
+        if ($statusFilter !== null && $statusFilter !== '') {
+            if ($statusFilter == '1') {
+                $memoQuery->where('student_memo_status.status', 1);
+            } elseif ($statusFilter == '0') {
+                $memoQuery->where('student_memo_status.status', 2);
+            }
+        }
+        
+        $memos = $memoQuery->get();
+    } else {
+        // For Notice or no type filter, process notices normally
     foreach ($notices as $notice) {
         // If memo is generated (status == 2), fetch from memo_status
         if ($notice->status == 2) {
-            // print_r($notice);die;
             $memoData = DB::table('student_memo_status')
                 ->leftjoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
                 ->leftjoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
                 ->leftjoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
                 ->leftjoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
+                    ->leftjoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
                 ->where('student_memo_status.student_notice_status_pk', $notice->notice_id)
                 ->select(
                     'student_memo_status.pk as memo_id',
@@ -103,6 +155,7 @@ class CourseAttendanceNoticeMapController extends Controller
                     'sm.pk as student_id',
                     't.subject_topic as topic_name',
                     'mcm.discussion_name',
+                        'cm.course_name',
                 )
                 ->first();
                 
@@ -116,11 +169,45 @@ class CourseAttendanceNoticeMapController extends Controller
             $memos->push($notice);
         }
     }
-//    print_r($memos);die;
+    }
+    
+    // Apply filters to the final collection if needed (only for non-memo type filters)
+    // For Memo type, filters are already applied at query level
+    if ($typeFilter != '0') {
+        if ($programNameFilter) {
+            $memos = $memos->filter(function($item) use ($programNameFilter) {
+                return isset($item->course_master_pk) && $item->course_master_pk == $programNameFilter;
+            });
+        }
+        if ($typeFilter !== null && $typeFilter !== '') {
+            if ($typeFilter == '1') {
+                $memos = $memos->filter(function($item) {
+                    return isset($item->notice_memo) && $item->notice_memo == 1;
+                });
+            }
+        }
+        if ($statusFilter !== null && $statusFilter !== '') {
+            if ($statusFilter == '1') {
+                $memos = $memos->filter(function($item) {
+                    return isset($item->status) && $item->status == 1;
+                });
+            } elseif ($statusFilter == '0') {
+                $memos = $memos->filter(function($item) {
+                    return isset($item->status) && $item->status == 2;
+                });
+            }
+        }
+    }
 
     // Get memo type and venues if needed
     $venue = VenueMaster::where('active_inactive', 1)->get();
     $memo_master = MemoTypeMaster::where('active_inactive', 1)->get();
+    
+    // Get courses for Program Name filter - only active courses (active_inactive = 1 and end_date > now)
+    $courses = CourseMaster::where('active_inactive', 1)
+        ->where('end_date', '>', now())
+        ->orderBy('course_name', 'asc')
+        ->get();
 
     // Paginate the collection
     $perPage = 10;
@@ -134,7 +221,7 @@ class CourseAttendanceNoticeMapController extends Controller
         ['path' => request()->url(), 'query' => request()->query()]
     );
 
-    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master'));
+    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter'));
 }
 
     public function index_bkp()
