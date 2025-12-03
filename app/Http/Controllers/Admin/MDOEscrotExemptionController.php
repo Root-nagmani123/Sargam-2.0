@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use App\Models\{MDODutyTypeMaster, StudentMaster, CourseMaster, MDOEscotDutyMap, FacultyMaster};
 use App\Http\Requests\MDOEscrotExemptionRequest;
 use App\DataTables\MDOEscrotExemptionDataTable;
@@ -13,7 +14,21 @@ class MDOEscrotExemptionController extends Controller
 {
     public function index(MDOEscrotExemptionDataTable $dataTable)
     {
-        return $dataTable->render('admin.mdo_escrot_exemption.index');
+        $courseMaster = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk')
+            ->toArray();
+        
+        // Get distinct years from mdo_date
+        $years = DB::table('mdo_escot_duty_map')
+            ->select(DB::raw('DISTINCT YEAR(mdo_date) as year'))
+            ->whereNotNull('mdo_date')
+            ->orderBy('year', 'desc')
+            ->pluck('year', 'year')
+            ->toArray();
+        
+        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('courseMaster', 'years'));
     }
 
     public function create()
@@ -72,10 +87,10 @@ class MDOEscrotExemptionController extends Controller
 
             MDOEscotDutyMap::insert($data);
 
-            return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO Escrot Exemption created successfully.');
+            return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO/Escort Exemption created successfully.');
         } catch (\Exception $e) {
             dd($e->getMessage());
-            return response()->json(['status' => false, 'message' => 'Error occurred while creating MDO Escrot Exemption.']);
+            return response()->json(['status' => false, 'message' => 'Error occurred while creating MDO/Escort Exemption.']);
         }
     }
 
@@ -142,9 +157,9 @@ class MDOEscrotExemptionController extends Controller
             
             $mdoDutyType->update($updateData);
 
-            return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO Escrot Exemption updated successfully.');
+            return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO/Escort Exemption updated successfully.');
         } catch (\Exception $e) {
-            return response()->json(['status' => false, 'message' => 'Error occurred while updating MDO Escrot Exemption.']);
+            return response()->json(['status' => false, 'message' => 'Error occurred while updating MDO/Escort Exemption.']);
         }
     }
 }

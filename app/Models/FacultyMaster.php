@@ -59,4 +59,9 @@ class FacultyMaster extends Model
     {
         return $this->hasMany(CalendarEvent::class, 'faculty_master', 'pk');
     }
+
+    public function mdoEscotDutyMaps()
+    {
+        return $this->hasMany(MDOEscotDutyMap::class, 'faculty_master_pk', 'pk');
+    }
 }
