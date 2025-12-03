@@ -1281,7 +1281,7 @@ $('#editStudentModal').on('hidden.bs.modal', function () {
 
 // End Group Mapping Modules
 
-// MDO Escrot Exemption
+// MDO/Escort Exemption
 // let dualListbox; // To keep reference for later reinitialization
 
 // document.addEventListener('DOMContentLoaded', function () {
@@ -1457,7 +1457,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 
-// END MDO Escrot Exemption
+// END MDO/Escort Exemption
 
 // Attendance
 $(document).on('click', '#searchAttendance', function () {

@@ -113,7 +113,7 @@
 
                     <div class="row">
                         <div class="col-6">
-                            <h4>MDO Escrot Exemption</h4>
+                            <h4>MDO/Escort Exemption</h4>
                         </div>
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-end mb-3">
@@ -122,13 +122,43 @@
                                     class="btn btn-primary px-3 py-2 rounded shadow-sm">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add New MDO Escrot Exemption
+                                    Add New MDO/Escort Exemption
                                 </a>
                             </div>
                         </div>
                     </div>
 
                     <hr>
+
+                    <!-- Course, Year, Time From, and Time To Filters -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label for="course_filter" class="form-label fw-semibold">Course:</label>
+                            <select id="course_filter" class="form-select">
+                                <option value="">-- All Courses --</option>
+                                @foreach ($courseMaster as $id => $name)
+                                    <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="year_filter" class="form-label fw-semibold">Year:</label>
+                            <select id="year_filter" class="form-select">
+                                <option value="">-- All Years --</option>
+                                @foreach ($years as $year => $yearValue)
+                                    <option value="{{ $year }}">{{ $year }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="time_from_filter" class="form-label fw-semibold">Time From:</label>
+                            <input type="time" id="time_from_filter" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="time_to_filter" class="form-label fw-semibold">Time To:</label>
+                            <input type="time" id="time_to_filter" class="form-control">
+                        </div>
+                    </div>
 
                     {!! $dataTable->table(['class' => 'table table-striped table-bordered custom-mdo-table']) !!}
 
@@ -143,4 +173,27 @@
 
 @push('scripts')
     {!! $dataTable->scripts() !!}
+    <script>
+        $(document).ready(function() {
+            var table = $('#mdoescot-table').DataTable();
+
+            // Reload DataTable on filter change
+            $('#course_filter, #year_filter').on('change', function() {
+                table.ajax.reload();
+            });
+
+            // Reload DataTable on time filter change
+            $('#time_from_filter, #time_to_filter').on('change', function() {
+                table.ajax.reload();
+            });
+
+            // Pass all filters to server
+            $('#mdoescot-table').on('preXhr.dt', function(e, settings, data) {
+                data.course_filter = $('#course_filter').val();
+                data.year_filter = $('#year_filter').val();
+                data.time_from_filter = $('#time_from_filter').val();
+                data.time_to_filter = $('#time_to_filter').val();
+            });
+        });
+    </script>
 @endpush

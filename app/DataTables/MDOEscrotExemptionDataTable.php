@@ -78,12 +78,33 @@ class MDOEscrotExemptionDataTable extends DataTable
 
     public function query(): QueryBuilder
     {
-        return MDOEscotDutyMap::with([
+        $query = MDOEscotDutyMap::with([
             'courseMaster' => fn($q) => $q->select('pk', 'course_name'),
             'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
             'studentMaster' => fn($q) => $q->select('pk', 'display_name')
         ])->orderBy('pk', 'desc')->newQuery();
 
+        // Apply course filter if provided
+        if ($courseFilter = request('course_filter')) {
+            $query->where('course_master_pk', $courseFilter);
+        }
+
+        // Apply year filter if provided
+        if ($yearFilter = request('year_filter')) {
+            $query->whereYear('mdo_date', $yearFilter);
+        }
+
+        // Apply time from filter if provided
+        if ($timeFromFilter = request('time_from_filter')) {
+            $query->where('Time_from', '>=', $timeFromFilter);
+        }
+
+        // Apply time to filter if provided
+        if ($timeToFilter = request('time_to_filter')) {
+            $query->where('Time_to', '<=', $timeToFilter);
+        }
+
+        return $query;
     }
 
 public function html(): HtmlBuilder
