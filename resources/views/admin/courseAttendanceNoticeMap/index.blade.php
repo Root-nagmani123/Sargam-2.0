@@ -71,13 +71,13 @@
                     </div>
                 </div>
             </div>
-            <div class="row">
+            <!-- <div class="row">
                 <div class="col-4">
                     <div class="mb-3">
                         <label for="program_name" class="form-label">Program Name</label>
                         <select class="form-select" id="program_name" name="program_name">
                             <option value="">Select Program</option>
-                            <!-- Options will be populated dynamically -->
+                           
                         </select>
                     </div>
                 </div>
@@ -102,7 +102,7 @@
                     </div>
                 </div>
 
-            </div>
+            </div> -->
             <hr>
             <div class="table-responsive">
                 <table class="table text-nowrap" style="border-radius: 10px; overflow: hidden; width: 100%;">
