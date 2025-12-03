@@ -264,7 +264,7 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
        Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');
         Route::post('/submit-feedback', [CalendarController::class, 'submitFeedback'])->name('submit.feedback');
     });
-    // MDO Escrot Exemption Routes
+    // MDO/Escort Exemption Routes
     Route::prefix('mdo-escrot-exemption')->name('mdo-escrot-exemption.')->controller(MDOEscrotExemptionController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');

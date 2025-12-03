@@ -99,7 +99,7 @@
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('mdo-escrot-exemption.index') }}">
                                         <span
-                                            class="hide-menu">MDO Escrot Exemption</span>
+                                            class="hide-menu">MDO/Escort Exemption</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.mdo_duty_type.index') }}">
