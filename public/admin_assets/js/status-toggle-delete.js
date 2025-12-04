@@ -33,6 +33,11 @@
             deleteRoute: 'group.mapping.delete',
             itemName: 'group name mapping',
             useEncryptedId: true // Uses encrypted IDs
+        },
+        'mdo_duty_type_master': {
+            deleteRoute: 'master.mdo_duty_type.delete',
+            itemName: 'MDO Duty Type',
+            useEncryptedId: true // Uses encrypted IDs
         }
     };
 
@@ -60,8 +65,8 @@
             const itemName = config.itemName || 'item';
             $container.html(`
                 <span class="delete-icon-disabled" title="Cannot delete active ${itemName}">
-                    <i class="material-icons material-symbols-rounded"
-                        style="font-size: 22px; color: #ccc; cursor: not-allowed;">delete</i>
+                    <i class="material-icons menu-icon material-symbols-rounded"
+                        style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
                 </span>
             `);
         } else {
@@ -94,15 +99,15 @@
             
             $container.html(`
                 <form action="${deleteUrl}" method="POST"
-                    class="m-0 delete-form" data-status="0">
+                    class="d-inline m-0 delete-form" data-status="0">
                     <input type="hidden" name="_token" value="${csrfToken}">
                     <input type="hidden" name="_method" value="DELETE">
                     <a href="javascript:void(0)" onclick="event.preventDefault();
                             if(confirm('${confirmMessage}')) {
                                 this.closest('form').submit();
-                            }">
-                        <i class="material-icons material-symbols-rounded"
-                            style="font-size: 22px;">delete</i>
+                            }" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete ${itemName}">
+                        <i class="material-icons menu-icon material-symbols-rounded"
+                            style="font-size: 24px;">delete</i>
                     </a>
                 </form>
             `);

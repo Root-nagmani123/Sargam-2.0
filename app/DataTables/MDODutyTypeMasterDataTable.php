@@ -37,9 +37,10 @@ class MDODutyTypeMasterDataTable extends DataTable
                 }
             }, true)
             ->addColumn('status', function ($row) {
+                $isActive = $row->active_inactive == 1;
                 return '<div class="form-check form-switch d-inline-block">
                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                   data-table="mdo_duty_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
+                                   data-table="mdo_duty_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . ($isActive ? 'checked' : '') . '>
                         </div>';
             })
             ->addColumn('actions', function ($row) {
@@ -56,12 +57,8 @@ class MDODutyTypeMasterDataTable extends DataTable
      */
     public function query(MDODutyTypeMaster $model): QueryBuilder
     {
-        // Show only active by default; include inactive if query param ?show=all
-        $query = $model->newQuery();
-        if (request('show') !== 'all') {
-            $query->where('active_inactive', 1);
-        }
-        return $query->orderBy('pk', 'desc');
+        // Show all records (both active and inactive)
+        return $model->newQuery()->orderBy('pk', 'desc');
     }
 
     /**

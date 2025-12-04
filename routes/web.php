@@ -29,7 +29,8 @@ use App\Http\Controllers\Admin\{
     MedicalExceptionFacultyViewController,
     MedicalExceptionOTViewController,
     OTMDOEscrotExemptionController,
-    FacultyMDOEscortExceptionViewController
+    FacultyMDOEscortExceptionViewController,
+    OTNoticeMemoViewController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -142,6 +143,8 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
         Route::get('download-pdf/{id}', 'downloadPdf')->name('download.pdf');
         Route::get('debug/{id}', 'debug')->name('debug');
         Route::post('store', 'store')->name('store');
+        Route::delete('delete/{id}', 'destroy')->name('destroy');
+        Route::get('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
     });
 
     // batch route
@@ -326,6 +329,9 @@ Route::get('/ot-mdo-escrot-exemption-view', [OTMDOEscrotExemptionController::cla
 
 // Faculty MDO/Escort Exception View
 Route::get('/faculty-mdo-escort-exception-view', [FacultyMDOEscortExceptionViewController::class, 'index'])->name('faculty.mdo.escort.exception.view');
+
+// OT Notice / Memo View
+Route::get('/ot-notice-memo-view', [OTNoticeMemoViewController::class, 'index'])->name('ot.notice.memo.view');
 
 Route::prefix('admin/course-memo-decision')
     ->name('course.memo.decision.')
