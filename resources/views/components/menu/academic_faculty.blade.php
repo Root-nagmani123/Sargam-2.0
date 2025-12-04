@@ -194,22 +194,22 @@
 
                             <!-- faculty menu start -->
  @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
-                                <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
-                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
                                     <span class="hide-menu">OT - Attendance</span>
                                 </a></li>
-                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.mdo.escort.exception.view') }}">
                                     <span class="hide-menu">OT - MDO / Escort Duty</span>
                                 </a></li>
-                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.faculty.view') }}">
                                     <span class="hide-menu">OT - Medical Exemption</span>
                                 </a></li>
-                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.notice.memo.view') }}">
                                     <span class="hide-menu">OT - Memo / Notice</span>
                                 </a></li>
- <li class="sidebar-item"><a class="sidebar-link" href="#">
+ <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.get.facultyFeedback') }}">
                                     <span class="hide-menu">My Feedback</span>
                                 </a></li>
                                 @endif
