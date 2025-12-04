@@ -507,11 +507,14 @@ class EnrollementController extends Controller
 
  public function exportEnrolledStudents(Request $request)
 {
+
+    dd($request->all());
     \Log::info('Export params', $request->all());
 
     // CLEAN AND FIX TYPE
     $type = strtolower(trim($request->input('type', 'pdf')));
     \Log::info("Detected cleaned export type = $type");
+    
 
     try {
 
