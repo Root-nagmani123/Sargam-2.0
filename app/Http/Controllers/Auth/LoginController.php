@@ -85,25 +85,34 @@ class LoginController extends Controller
             if( $user ) {
              Auth::login($user);
 
-    $roles = $user->roles()->pluck('user_role_name')->toArray();
-    Session::put('user_roles', $roles);
+                if($user->user_category == 'S'){
+                    $roles = ['Student-OT'];
+                    }else{
+                    $roles = $user->roles()->pluck('user_role_name')->toArray();
+                    }
+                    Session::put('user_roles', $roles);
 
     return redirect()->intended($this->redirectTo);
         }
         } else {
              // 🌐 Production: LDAP authentication
-            if (Adldap::auth()->attempt($username, $password)) {
+            // if (Adldap::auth()->attempt($username, $password)) {
                 $user = User::where('user_name', $username)->first();
                 if ($user) {
 
                     Auth::login($user);
+                    if($user->user_category == 'S'){
+                    $roles = ['Student-OT'];
+                    }else{
                     $roles = $user->roles()->pluck('user_role_name')->toArray();
+
+                    }
                
                     Session::put('user_roles', $roles);
 
                     return redirect()->intended($this->redirectTo);
                 }
-            }
+            // }
         }
     } catch (\Exception $e) {
         logger('Authentication failed: ' . $e->getMessage());
