@@ -28,7 +28,11 @@
                                                             style="font-size: 32px;">
                                                             background_dot_large
                                                         </i>
-                                                        <span class="mini-nav-title">Faculty</span>
+                                                        <span class="mini-nav-title"> @php
+                                            $roles = session('user_roles', []);
+                                           
+                                             @endphp
+                                            {{ !empty($roles) ? implode(', ', $roles) : '' }}</span>
                                                     </div>
 
                                                     <!-- Right Arrow -->

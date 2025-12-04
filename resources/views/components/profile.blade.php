@@ -15,7 +15,7 @@
                         }
                         if(!in_array('Student-OT', $roles) && Auth::user()->user_category == 'E'){
                             $designation = employee_designation_search();
-                            print_r($designation);
+                           
                             $roles = ['Employee ('.$designation.')'];
                         }
                       
