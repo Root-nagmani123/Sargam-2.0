@@ -507,44 +507,46 @@ class EnrollementController extends Controller
 
  public function exportEnrolledStudents(Request $request)
 {
+    \Log::info('Export params', $request->all());
+
+    // CLEAN AND FIX TYPE
+    $type = strtolower(trim($request->input('type', 'pdf')));
+    \Log::info("Detected cleaned export type = $type");
+
     try {
-        // Start with StudentMasterCourseMap query
+
         $query = StudentMasterCourseMap::with([
             'studentMaster.service',
             'course'
-        ])->where('active_inactive', 1); // Only active enrollments
+        ])->where('active_inactive', 1);
 
-        // Apply course filter if provided
         if ($request->has('course') && !empty($request->course)) {
             $query->where('course_master_pk', $request->course);
         }
 
-        // Get the enrollments
         $enrollments = $query->get();
 
-        // Get course name for export
         $courseName = 'All Active Courses';
-        if ($request->has('course') && !empty($request->course)) {
+        if (!empty($request->course)) {
             $course = CourseMaster::find($request->course);
             $courseName = $course ? $course->course_name : 'Selected Course';
         }
 
-        // Determine export type
-        $type = $request->input('type', 'pdf');
-        
         if ($type === 'excel') {
-            $export = new StudentEnrollmentExport($enrollments, $courseName);
-            return Excel::download($export, 
-                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.xlsx');
-        }
-        
-        if ($type === 'csv') {
-            $export = new StudentEnrollmentExport($enrollments, $courseName);
-            return Excel::download($export, 
-                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.csv');
+            return Excel::download(
+                new StudentEnrollmentExport($enrollments, $courseName),
+                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.xlsx'
+            );
         }
 
-        // Default to PDF - we need a different approach for PDF
+        if ($type === 'csv') {
+            return Excel::download(
+                new StudentEnrollmentExport($enrollments, $courseName),
+                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.csv'
+            );
+        }
+
+        // DEFAULT PDF
         return $this->exportEnrolledStudentsPDF($enrollments, $courseName);
 
     } catch (\Exception $e) {
@@ -552,6 +554,7 @@ class EnrollementController extends Controller
         return back()->with('error', 'Error exporting: ' . $e->getMessage());
     }
 }
+
 
 // Separate method for PDF export
 private function exportEnrolledStudentsPDF($enrollments, $courseName)
