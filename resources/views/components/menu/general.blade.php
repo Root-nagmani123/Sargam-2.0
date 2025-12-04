@@ -174,6 +174,16 @@
                                         <span
                                             class="hide-menu">Memo / Notice Creation (Admin)</span>
                                     </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('ot.notice.memo.view') }}">
+                                        <span
+                                            class="hide-menu">OT Notice / Memo View</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('faculty.notice.memo.view') }}">
+                                        <span
+                                            class="hide-menu">Faculty Notice / Memo View</span>
+                                    </a></li>
                             </ul>
 
                             {{-- EMPLOYEE --}}
