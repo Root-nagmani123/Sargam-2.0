@@ -19,7 +19,37 @@ class CourseController extends Controller
 {
     public function index(CourseMasterDataTable $dataTable)
     {
-        return $dataTable->render('admin.programme.index');
+        // Default to active courses (matching the default status filter)
+        $currentDate = Carbon::now()->format('Y-m-d');
+        $courses = CourseMaster::where('end_date', '>=', $currentDate)
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk')
+            ->toArray();
+
+        return $dataTable->render('admin.programme.index', compact('courses'));
+    }
+
+    public function getCoursesByStatus(Request $request)
+    {
+        $status = $request->input('status', 'active');
+        $currentDate = Carbon::now()->format('Y-m-d');
+
+        if ($status === 'active') {
+            $courses = CourseMaster::where('end_date', '>=', $currentDate)
+                ->orderBy('course_name')
+                ->pluck('course_name', 'pk')
+                ->toArray();
+        } else {
+            $courses = CourseMaster::where('end_date', '<', $currentDate)
+                ->orderBy('course_name')
+                ->pluck('course_name', 'pk')
+                ->toArray();
+        }
+
+        return response()->json([
+            'success' => true,
+            'courses' => $courses
+        ]);
     }
 
     public function create()
@@ -378,6 +408,36 @@ class CourseController extends Controller
             ]);
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function destroy(string $id)
+    {
+        DB::beginTransaction();
+        try {
+            $decryptedId = decrypt($id);
+            $course = CourseMaster::findOrFail($decryptedId);
+            
+            // Delete related course coordinators
+            $course->courseCordinatorMater()->delete();
+            
+            // Delete the course
+            $course->delete();
+            
+            DB::commit();
+            return redirect()->route('programme.index')->with('success', 'Course deleted successfully');
+        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
+            DB::rollBack();
+            \Log::error('Decryption error in course delete: ' . $e->getMessage());
+            return redirect()->route('programme.index')->with('error', 'Invalid course ID');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+            \Log::error('Course not found: ' . $e->getMessage());
+            return redirect()->route('programme.index')->with('error', 'Course not found');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Course delete error: ' . $e->getMessage());
+            return redirect()->route('programme.index')->with('error', 'An error occurred while deleting the course');
         }
     }
 }
