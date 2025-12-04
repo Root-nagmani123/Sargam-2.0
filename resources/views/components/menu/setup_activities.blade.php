@@ -81,26 +81,26 @@
                                     </a>
                                 </li>
                                 <ul class="collapse list-unstyled ps-3" id="employeeMasterCollapse">
+                                     <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.employee.type.index') }}">
+                                        <span class="hide-menu">Employee Type</span>
+                                    </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
-                                            href="">
-                                            <span class="hide-menu">Employee Type</span>
-                                        </a></li>
+                                        href="{{ route('master.employee.group.index') }}">
+                                        <span class="hide-menu">Employee Group</span>
+                                    </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
-                                            href="">
-                                            <span class="hide-menu">Employee Group</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="">
-                                            <span class="hide-menu">Department Master</span>
-                                        </a></li>
-                                        <li class="sidebar-item"><a class="sidebar-link"
-                                            href="">
-                                            <span class="hide-menu">Designation Master</span>
-                                        </a></li>
-                                        <li class="sidebar-item"><a class="sidebar-link"
-                                            href="">
-                                            <span class="hide-menu">Caste Category</span>
-                                        </a></li>
+                                        href="{{ route('master.department.master.index') }}">
+                                        <span class="hide-menu">Department Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.designation.index') }}">
+                                        <span class="hide-menu">Designation Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.caste.category.index') }}">
+                                        <span class="hide-menu">Caste Category</span>
+                                    </a></li>
                                 </ul>
                             </ul>
 
