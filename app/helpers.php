@@ -54,8 +54,19 @@ $service_name = Cache::remember($cacheKey, 600, function () use ($user) {
         ->where('student_master.pk', $user->user_id)
         ->value('service_master.service_short_name');
 });
-return $service_name;
-
+return $service_name; 
+}
+function employee_designation_search(){
+    $user = Auth::user();
+    // print_r($user);
+$cacheKey = 'employee_designation_'.$user->user_id;
+$designation = Cache::remember($cacheKey, 600, function () use ($user) {
+    return DB::table('employee_master')
+        ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+        ->where('employee_master.pk', $user->user_id)
+        ->value('designation_master.designation_name','designation_master.*');
+});
+return $designation;
 
     
 }

@@ -13,6 +13,12 @@
                             $service_find = service_find();
                             $roles = ['Student-OT ('.$service_find.')'];
                         }
+                        if(!in_array('Student-OT', $roles) && Auth::user()->user_category == 'E'){
+                            $designation = employee_designation_search();
+                            print_r($designation);
+                            $roles = ['Employee ('.$designation.')'];
+                        }
+                      
                     @endphp
 
                     {{ !empty($roles) ? implode(', ', $roles) : 'No role assigned' }}
