@@ -30,7 +30,8 @@ use App\Http\Controllers\Admin\{
     MedicalExceptionOTViewController,
     OTMDOEscrotExemptionController,
     FacultyMDOEscortExceptionViewController,
-    OTNoticeMemoViewController
+    OTNoticeMemoViewController,
+    FacultyNoticeMemoViewController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 
@@ -315,6 +316,9 @@ Route::get('/faculty-mdo-escort-exception-view', [FacultyMDOEscortExceptionViewC
 
 // OT Notice / Memo View
 Route::get('/ot-notice-memo-view', [OTNoticeMemoViewController::class, 'index'])->name('ot.notice.memo.view');
+
+// Faculty Notice / Memo View
+Route::get('/faculty-notice-memo-view', [FacultyNoticeMemoViewController::class, 'index'])->name('faculty.notice.memo.view');
 
 Route::prefix('admin/course-memo-decision')
     ->name('course.memo.decision.')
