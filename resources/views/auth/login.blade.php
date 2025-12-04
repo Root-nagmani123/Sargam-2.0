@@ -30,7 +30,7 @@
                                     <div class="card-body">
                                         <a href="{{ route('login') }}" class="text-nowrap logo-img d-block mb-4 w-100">
                                             <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" class="dark-logo"
-                                                alt="Logo" width="180"> | 
+                                                alt="Logo" width="180">
                                             <img src="{{asset('admin_assets/images/logos/logo.svg')}}" class="dark-logo"
                                                 alt="Logo-Dark">
                                         </a>
