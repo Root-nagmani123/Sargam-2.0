@@ -6,9 +6,6 @@
         <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
            @include('admin.layouts.sidebar.home')
         </div>
-        <div class="tab-pane fade" id="tab-setup" role="tabpanel" aria-labelledby="setup-tab">
-            @include('admin.layouts.sidebar.setup')
-        </div>
         <div class="tab-pane fade" id="tab-communications" role="tabpanel" aria-labelledby="communications-tab">
             @include('admin.layouts.sidebar.communication') 
         </div>
