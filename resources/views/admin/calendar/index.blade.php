@@ -2,7 +2,7 @@
 
 @section('title', 'Calendar - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 
 <style>
 :root {

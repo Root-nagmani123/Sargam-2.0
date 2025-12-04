@@ -2,7 +2,7 @@
 
 @section('title', 'Create Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <link rel="stylesheet" href="{{asset('admin_assets/css/dual-listbox.css')}}">
 <div class="container-fluid">
     <x-breadcrum title="Create Memo/Notice Management" />

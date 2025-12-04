@@ -2,7 +2,7 @@
 
 @section('title', 'Subject module - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <x-breadcrum title="Subject module" />

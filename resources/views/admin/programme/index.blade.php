@@ -2,7 +2,7 @@
 
 @section('title', 'Course Master - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <style>
 .btn-group[role="group"] .btn {
     transition: all 0.3s ease-in-out;
@@ -47,6 +47,7 @@
 }
 </style>
 <div class="container-fluid">
+    <x-breadcrum title="Course module" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">

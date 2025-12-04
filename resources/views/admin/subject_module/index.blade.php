@@ -2,9 +2,9 @@
 
 @section('title', 'Subject module - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
-
+<x-breadcrum title="Subject module" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
