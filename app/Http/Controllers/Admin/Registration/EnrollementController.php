@@ -508,8 +508,7 @@ class EnrollementController extends Controller
  public function exportEnrolledStudents(Request $request)
 {
 
-    dd($request->all());
-    \Log::info('Export params', $request->all());
+    // dd($request->all());
 
     // CLEAN AND FIX TYPE
     $type = strtolower(trim($request->input('type', 'pdf')));
@@ -534,6 +533,7 @@ class EnrollementController extends Controller
             $course = CourseMaster::find($request->course);
             $courseName = $course ? $course->course_name : 'Selected Course';
         }
+    \Log::info('Export params', $request->all());
 
         if ($type === 'excel') {
             return Excel::download(
