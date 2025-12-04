@@ -28,7 +28,7 @@ class AttendanceController extends Controller
          $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
                         ->select('course_master.course_name', 'course_master.pk');
 
-                    if (hasRole('Student-OT')) {
+                    if (hasRole('Student-OT') || hasRole('Admin')) {
 
                         $courseMasters = $courseMasters->join(
                             'student_master_course__map',
@@ -126,7 +126,7 @@ $currentPath = end($segments);
                 ->addColumn('actions', function ($row) use ($currentPath) {
 
         // if ($currentPath === 'user_attendance') {
-             if (hasRole('Student-OT') || hasRole('Guest Faculty') || hasRole('Internal Faculty')) {
+             if (hasRole('Student-OT') || hasRole('Guest Faculty') || hasRole('Internal Faculty') || hasRole('Admin')) {
             // User Page
             return '<a href="' . route('attendance.student_mark', [
                 'group_pk' => $row->group_pk,
