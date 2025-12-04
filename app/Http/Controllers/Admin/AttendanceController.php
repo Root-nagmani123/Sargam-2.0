@@ -38,6 +38,8 @@ class AttendanceController extends Controller
                         )
                         ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
                     }
+                    $courseMasters->where('course_master.active_inactive', 1);
+
 
                     $courseMasters = $courseMasters->get()->toArray();
 
@@ -123,7 +125,8 @@ $currentPath = end($segments);
                 ->addColumn('faculty_name', fn($row) => optional($row->timetable)->faculty->full_name ?? 'N/A')
                 ->addColumn('actions', function ($row) use ($currentPath) {
 
-        if ($currentPath === 'user_attendance') {
+        // if ($currentPath === 'user_attendance') {
+             if (hasRole('Student-OT') || hasRole('Guest Faculty') || hasRole('Internal Faculty')) {
             // User Page
             return '<a href="' . route('attendance.student_mark', [
                 'group_pk' => $row->group_pk,
