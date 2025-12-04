@@ -84,7 +84,24 @@
                             </button>
                         </div>
                     </div>
-
+                </div>
+                
+                <!-- Course Name Filter -->
+                <div class="row g-3 mb-3 align-items-end">
+                    <div class="col-md-6 col-lg-4">
+                        <label for="courseFilter" class="form-label mb-1">Course Name</label>
+                        <select id="courseFilter" class="form-select">
+                            <option value="">All Courses</option>
+                            @foreach($courses ?? [] as $pk => $name)
+                                <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-12 col-lg-4 d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                        </button>
+                    </div>
                 </div>
                 <div class="table-responsive">
 
@@ -139,36 +156,99 @@ $(document).ready(function() {
         // Set initial active state - Active button is already styled as active in HTML
         // No need to change styling initially
 
+        // Function to load courses by status
+        function loadCoursesByStatus(status) {
+            $.ajax({
+                url: '{{ route("programme.get.courses.by.status") }}',
+                type: 'GET',
+                data: { status: status },
+                success: function(response) {
+                    if (response.success) {
+                        var courseFilter = $('#courseFilter');
+                        var currentValue = courseFilter.val();
+                        
+                        // Clear existing options except "All Courses"
+                        courseFilter.find('option:not(:first)').remove();
+                        
+                        // Add new course options
+                        $.each(response.courses, function(pk, name) {
+                            courseFilter.append($('<option>', {
+                                value: pk,
+                                text: name
+                            }));
+                        });
+                        
+                        // Reset to "All Courses" when status changes
+                        courseFilter.val('');
+                        
+                        // Reload table
+                        table.ajax.reload();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Error loading courses:', xhr);
+                }
+            });
+        }
+
         // Filter button click handlers
         $('#filterActive').on('click', function() {
             setActiveButton($(this));
             currentFilter = 'active';
-            table.ajax.reload();
+            loadCoursesByStatus('active');
         });
 
         $('#filterArchive').on('click', function() {
             setActiveButton($(this));
             currentFilter = 'archive';
-            table.ajax.reload();
+            loadCoursesByStatus('archive');
         });
 
         // Function to set active button styling
         function setActiveButton(activeBtn) {
-            $('#filterActive, #filterArchive').each(function() {
-                $(this).removeClass('btn-success btn-secondary')
-                    .addClass('btn-outline-success btn-outline-secondary');
-            });
+            // Reset all buttons to outline style
+            $('#filterActive')
+                .removeClass('btn-success active text-white')
+                .addClass('btn-outline-success')
+                .attr('aria-pressed', 'false');
 
+            $('#filterArchive')
+                .removeClass('btn-secondary active text-white')
+                .addClass('btn-outline-secondary')
+                .attr('aria-pressed', 'false');
+
+            // Set the active button
             if (activeBtn.attr('id') === 'filterActive') {
-                activeBtn.removeClass('btn-outline-success').addClass('btn-success');
+                activeBtn.removeClass('btn-outline-success')
+                    .addClass('btn-success text-white active')
+                    .attr('aria-pressed', 'true');
             } else if (activeBtn.attr('id') === 'filterArchive') {
-                activeBtn.removeClass('btn-outline-secondary').addClass('btn-secondary');
+                activeBtn.removeClass('btn-outline-secondary')
+                    .addClass('btn-secondary text-white active')
+                    .attr('aria-pressed', 'true');
             }
         }
 
         // Pass filter parameter to server
         $('#coursemaster-table').on('preXhr.dt', function(e, settings, data) {
             data.status_filter = currentFilter;
+            var courseFilter = $('#courseFilter').val();
+            if (courseFilter) {
+                data.course_filter = courseFilter;
+            }
+        });
+
+        // Handle course filter change
+        $('#courseFilter').on('change', function () {
+            table.ajax.reload();
+        });
+
+        // Handle reset filters
+        $('#resetFilters').on('click', function () {
+            $('#courseFilter').val('');
+            currentFilter = 'active'; // Reset to active by default
+            setActiveButton($('#filterActive'));
+            loadCoursesByStatus('active');
         });
 
         // Handle view course button click
