@@ -18,6 +18,14 @@
             </ul>
         </div>
         @endif
+         
+        @if(session('success'))
+            <div class="alert alert-success">
+               {{ session('success') }}
+            </div>
+            @endif
+
+        <div id="status-msg"></div>
 
 
         <div class="card-body">
@@ -54,7 +62,7 @@
                         <td>
                             <div class="form-check form-switch d-inline-block">
                                 <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                    data-table="notices" data-column="active_inactive" data-id="{{ $n->pk }}"
+                                    data-table="notices_notification" data-column="active_inactive" data-id="{{ $n->pk }}"
                                     {{ $n->active_inactive == 1 ? 'checked' : '' }}>
                             </div>
 
@@ -62,13 +70,19 @@
 
                         <td>
                             <a href="{{ route('admin.notice.edit',$encId) }}" class="btn btn-primary btn-sm">Edit</a>
+                            @if( $n->active_inactive == 0)
+                           <form id="deleteForm{{ $encId }}" action="{{ route('admin.notice.destroy',$encId) }}" 
+                                    method="POST" style="display:inline-block;">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="button" class="btn btn-danger btn-sm" 
+                                            onclick="deleteConfirm('{{ $encId }}')">Delete</button>
+                                </form>
 
-                            <form action="{{ route('admin.notice.destroy',$encId) }}" method="POST"
-                                style="display:inline-block;">
-                                @csrf
-                                @method('DELETE')
-                                <button class="btn btn-danger btn-sm">Delete</button>
-                            </form>
+                            @else
+                            <button class="btn btn-danger btn-sm" disabled>Delete</button>
+
+                            @endif
                         </td>
 
                     </tr>
