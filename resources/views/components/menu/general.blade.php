@@ -107,11 +107,13 @@
                                         <span
                                             class="hide-menu">Faculty MDO/Escort Exception</span>
                                     </a></li>
+                                    @if(hasRole('Student-OT'))
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('ot.mdo.escrot.exemption.view') }}">
                                         <span
                                             class="hide-menu">OT MDO/Escort Exception</span>
                                     </a></li>
+                                    @endif
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.mdo_duty_type.index') }}">
                                         <span
@@ -122,11 +124,14 @@
                                         <span
                                             class="hide-menu">Medical Exception Faculty View</span>
                                     </a></li>
+                                    
+                                    @if(hasRole('Student-OT'))
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('medical.exception.ot.view') }}">
                                         <span
                                             class="hide-menu">Medical Exception OT View</span>
                                     </a></li>
+                                    @endif
                             </ul>
 
                             {{-- MEMO --}}
