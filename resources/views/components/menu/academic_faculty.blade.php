@@ -220,7 +220,7 @@
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
-                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.get.attendance.list') }}">
+                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
                                     <span class="hide-menu">My Attendance</span>
                                 </a></li>
                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.mdo.escrot.exemption.view') }}">
