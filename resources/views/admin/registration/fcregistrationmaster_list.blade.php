@@ -2,7 +2,7 @@
 
 @section('title', 'Registration List')
 
-@section('content')
+@section('setup_content')
     <style>
         .highlight-row td {
             background-color: #ffe6e6 !important;
