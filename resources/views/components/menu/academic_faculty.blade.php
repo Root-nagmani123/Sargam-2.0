@@ -44,11 +44,16 @@
                                         <!-- Section Title with Proper Semantic Markup -->
                                         <h2 class="section-title text-white m-0"
                                             style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
-                                            Faculty
+                                           @php
+                                            $roles = session('user_roles', []);
+                                           
+                                             @endphp
+                                            {{ !empty($roles) ? implode(', ', $roles) : '' }}
                                         </h2>
                                     </div>
                                 </div>
                             </li>
+                            @if(hasRole('Admin') || hasRole('Training') )
                             <li class="sidebar-item" style="background: #4077ad;
     border-radius: 30px 0px 0px 30px;
     width: 100%;
@@ -185,9 +190,10 @@
                                             class="hide-menu">Student Feedback</span>
                                     </a></li>
                             </ul>
+                            @endif
 
                             <!-- faculty menu start -->
-
+ @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
                                 <li class="sidebar-item"><a class="sidebar-link" href="#">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
@@ -206,10 +212,12 @@
  <li class="sidebar-item"><a class="sidebar-link" href="#">
                                     <span class="hide-menu">My Feedback</span>
                                 </a></li>
+                                @endif
                             <!-- faculty menu end -->
 
                             <!-- OTs menu start -->
- <li class="sidebar-item"><a class="sidebar-link" href="#">
+                              @if(hasRole('Student-OT'))
+                                <li class="sidebar-item"><a class="sidebar-link" href="#">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
@@ -230,6 +238,7 @@
                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
                                     <span class="hide-menu">Peer Evaluation</span>
                                 </a></li>
+                                @endif
                         </ul>
                         
 
