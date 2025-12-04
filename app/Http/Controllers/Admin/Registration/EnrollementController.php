@@ -512,7 +512,7 @@ class EnrollementController extends Controller
 
     // CLEAN AND FIX TYPE
     $type = strtolower(trim($request->input('type', 'pdf')));
-    \Log::info("Detected cleaned export type = $type");
+    // \Log::info("Detected cleaned export type = $type");
     
 
     try {
@@ -533,16 +533,18 @@ class EnrollementController extends Controller
             $course = CourseMaster::find($request->course);
             $courseName = $course ? $course->course_name : 'Selected Course';
         }
+
+    \Log::info("Detected cleaned export type = $type");
     \Log::info('Export params', $request->all());
 
-        if ($type === 'excel') {
+        if ($type == 'excel') {
             return Excel::download(
                 new StudentEnrollmentExport($enrollments, $courseName),
                 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.xlsx'
             );
         }
 
-        if ($type === 'csv') {
+        if ($type =='csv') {
             return Excel::download(
                 new StudentEnrollmentExport($enrollments, $courseName),
                 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.csv'
@@ -560,21 +562,45 @@ class EnrollementController extends Controller
 
 
 // Separate method for PDF export
+// private function exportEnrolledStudentsPDF($enrollments, $courseName)
+// {
+//     $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
+//         'enrollments' => $enrollments,
+//         'courseName' => $courseName,
+//         'exportDate' => now()->format('Y-m-d H:i:s'),
+//         'totalCount' => $enrollments->count()
+//     ]);
+
+//     $filename = 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.pdf';
+    
+//     return $pdf->setPaper('a4', 'landscape')
+//         ->setOption('enable-smart-shrinking', true)
+//         ->download($filename);
+// }
+
 private function exportEnrolledStudentsPDF($enrollments, $courseName)
 {
-    $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
-        'enrollments' => $enrollments,
-        'courseName' => $courseName,
-        'exportDate' => now()->format('Y-m-d H:i:s'),
-        'totalCount' => $enrollments->count()
-    ]);
+    \Log::info("Starting PDF generation for course: $courseName");
 
-    $filename = 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.pdf';
-    
-    return $pdf->setPaper('a4', 'landscape')
-        ->setOption('enable-smart-shrinking', true)
-        ->download($filename);
+    try {
+        $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
+            'enrollments' => $enrollments,
+            'courseName' => $courseName,
+            'exportDate' => now()->format('Y-m-d H:i:s'),
+            'totalCount' => $enrollments->count()
+        ]);
+
+        \Log::info("PDF Loaded - attempting download...");
+
+        return $pdf->setPaper('a4', 'landscape')
+            ->setOption('enable-smart-shrinking', true)
+            ->download('test.pdf');
+    } catch (\Exception $e) {
+        \Log::error("PDF EXPORT ERROR: " . $e->getMessage());
+        return back()->with('error', 'PDF ERROR: ' . $e->getMessage());
+    }
 }
+
 
     /**
      * Show the form for editing student information.
