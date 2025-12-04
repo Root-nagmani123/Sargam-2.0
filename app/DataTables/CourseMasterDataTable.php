@@ -37,10 +37,48 @@ class CourseMasterDataTable extends DataTable
             ->addColumn('action', function ($row) {
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
                 $viewUrl = route('programme.show', ['id' => encrypt($row->pk)]);
-                $encryptedId = encrypt($row->pk);
-                return '<a href="'.$editUrl.'" class="btn btn-primary btn-sm me-1">Edit</a>
-                        <a href="'.$viewUrl.'" class="btn btn-info btn-sm me-1" target="_blank">View</a>
-                        <!-- <button type="button" class="btn btn-secondary btn-sm view-course-btn" data-id="'.$encryptedId.'" data-bs-toggle="modal" data-bs-target="#viewCourseModal">Quick View</button> -->';
+                $deleteUrl = route('programme.destroy', ['id' => encrypt($row->pk)]);
+                $isActive = $row->active_inactive == 1;
+                
+                $html = <<<HTML
+    <div class="d-flex justify-content-center align-items-center gap-2">
+        <a href="{$editUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Course">
+            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">edit</i>
+        </a>
+        <a href="{$viewUrl}" target="_blank" data-bs-toggle="tooltip" data-bs-placement="top" title="View Course">
+            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">visibility</i>
+        </a>
+        <div class="delete-icon-container" data-item-id="{$row->pk}" data-delete-url="{$deleteUrl}">
+HTML;
+                
+                if ($isActive) {
+                    $html .= <<<HTML
+            <span class="delete-icon-disabled" title="Cannot delete active course">
+                <i class="material-icons menu-icon material-symbols-rounded"
+                    style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
+            </span>
+HTML;
+                } else {
+                    $csrf = csrf_token();
+                    $html .= <<<HTML
+            <form action="{$deleteUrl}" method="POST" class="m-0 delete-form" data-status="0">
+                <input type="hidden" name="_token" value="{$csrf}">
+                <input type="hidden" name="_method" value="DELETE">
+                <a href="javascript:void(0)" onclick="event.preventDefault();
+                    if(confirm('Are you sure you want to delete this course?')) {
+                        this.closest('form').submit();
+                    }" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Course">
+                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
+                </a>
+            </form>
+HTML;
+                }
+                
+                $html .= <<<HTML
+        </div>
+    </div>
+HTML;
+                return $html;
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
@@ -92,6 +130,7 @@ class CourseMasterDataTable extends DataTable
         
         // Apply status filter if provided
         $statusFilter = request('status_filter');
+        $courseFilter = request('course_filter');
         $currentDate = Carbon::now()->format('Y-m-d');
         
         if ($statusFilter === 'active' || !$statusFilter) {
@@ -100,6 +139,11 @@ class CourseMasterDataTable extends DataTable
         } elseif ($statusFilter === 'archive') {
             // Archived courses: end_date has already passed (expired courses)
             $query->where('end_date', '<', $currentDate);
+        }
+        
+        // Apply course filter if provided
+        if (!empty($courseFilter)) {
+            $query->where('pk', $courseFilter);
         }
         
         return $query;

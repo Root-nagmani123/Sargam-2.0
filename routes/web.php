@@ -143,6 +143,8 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
         Route::get('download-pdf/{id}', 'downloadPdf')->name('download.pdf');
         Route::get('debug/{id}', 'debug')->name('debug');
         Route::post('store', 'store')->name('store');
+        Route::delete('delete/{id}', 'destroy')->name('destroy');
+        Route::get('get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
     });
 
     // batch route
