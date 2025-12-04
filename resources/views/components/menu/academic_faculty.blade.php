@@ -9,6 +9,7 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px;">
                         <ul class="sidebar-menu" id="sidebarnav">
+                             @include('components.profile')
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
@@ -48,7 +49,11 @@
                                     </div>
                                 </div>
                             </li>
-                            <li class="sidebar-item">
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px 0px 0px 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#coursemasterCollapse" role="button" aria-expanded="false"
                                     aria-controls="coursemasterCollapse"
@@ -73,7 +78,11 @@
                                             class="hide-menu">Course Group Mapping</span>
                                     </a></li>
                             </ul>
-                            <li class="sidebar-item">
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px 0px 0px 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#exemptionmasterCollapse" role="button" aria-expanded="false"
                                     aria-controls="exemptionmasterCollapse"
@@ -118,7 +127,11 @@
                                     </a></li>
                             </ul>
                             </ul>
-                            <li class="sidebar-item">
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px 0px 0px 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#memoCollapse" role="button" aria-expanded="false"
                                     aria-controls="memoCollapse"
@@ -148,7 +161,11 @@
                                             class="hide-menu">Memo & Notice Chat (User)</span>
                                     </a></li>
                             </ul>
-                            <li class="sidebar-item">
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px 0px 0px 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#feedbackCollapse" role="button" aria-expanded="false"
                                     aria-controls="feedbackCollapse"
@@ -169,7 +186,57 @@
                                     </a></li>
                             </ul>
 
+                            <!-- faculty menu start -->
+
+                                <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">My Time Table</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">OT - Attendance</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">OT - MDO / Escort Duty</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">OT - Medical Exemption</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">OT - Memo / Notice</span>
+                                </a></li>
+ <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">My Feedback</span>
+                                </a></li>
+                            <!-- faculty menu end -->
+
+                            <!-- OTs menu start -->
+ <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">My Time Table</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">My Attendance</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">MDO/Escort Duty</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">Medical Exemption</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">Memo/Notice</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">Session Feedback</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                    <span class="hide-menu">Peer Evaluation</span>
+                                </a></li>
                         </ul>
+                        
+
+
+
+
+
                     </div>
                 </div>
             </div>

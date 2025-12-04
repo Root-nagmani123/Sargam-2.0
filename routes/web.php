@@ -491,4 +491,10 @@ Route::middleware(['auth'])->group(function(){
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
+
+
+    /// Faculty Dashboard Route
+    Route::get('/faculty_dashboard', function () {
+    return view('faculty.dashboard');
+})->name('faculty.dashboard');
 });
