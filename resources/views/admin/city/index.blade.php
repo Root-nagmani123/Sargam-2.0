@@ -2,7 +2,7 @@
 
 @section('title', 'City - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
 
     <div class="datatables">

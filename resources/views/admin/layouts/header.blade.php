@@ -137,6 +137,7 @@
                             </li>
 
                             <!-- Setup -->
+                             @if(hasRole('Admin') || hasRole('Training') )
                             <li class="nav-item" role="none">
                                 <a href="#tab-setup"
                                     class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
@@ -147,6 +148,7 @@
                                     <span>Setup</span>
                                 </a>
                             </li>
+                            @endif
 
                             <!-- Communications -->
                             <li class="nav-item" role="none">
@@ -160,6 +162,7 @@
                             </li>
 
                             <!-- Academics -->
+                             @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Student-OT')  || hasRole('Admin'))
                             <li class="nav-item" role="none">
                                 <a href="#tab-academics"
                                     class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
@@ -170,6 +173,7 @@
                                     <span>Academics</span>
                                 </a>
                             </li>
+                            @endif
 
                             <!-- Material Management -->
                             <li class="nav-item" role="none">
