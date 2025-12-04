@@ -193,7 +193,7 @@
                             @endif
 
                             <!-- faculty menu start -->
- @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+ @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
                                 <li class="sidebar-item"><a class="sidebar-link" href="#">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
@@ -216,7 +216,7 @@
                             <!-- faculty menu end -->
 
                             <!-- OTs menu start -->
-                              @if(hasRole('Student-OT'))
+                              @if(hasRole('Student-OT') || hasRole('Admin'))
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
