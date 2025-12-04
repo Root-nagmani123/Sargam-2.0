@@ -15,6 +15,18 @@
     $selected = $selected ? \Carbon\Carbon::parse($selected) : null;
 @endphp
 
+<style>
+    .calendar-table thead th {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 10px 5px !important;
+        font-weight: 600 !important;
+        color: #666 !important;
+        border-bottom: 2px solid #e0e0e0 !important;
+    }
+</style>
+
 <div class="calendar-component" data-year="{{ $year }}" data-month="{{ $month }}">
 <div class="d-flex align-items-center mb-3">
 <select class="form-select form-select-sm calendar-year" aria-label="Select Year">

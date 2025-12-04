@@ -35,45 +35,6 @@
                                                  </a>
                                              </li>
 
-                                             <li class="mini-nav-item {{ request()->is('admin/*') ? 'selected' : '' }}"
-                                                 id="mini-2">
-                                                 <a href="javascript:void(0)"
-                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                     data-bs-placement="right" data-bs-title="Master">
-
-                                                     <div class="d-flex align-items-center gap-2">
-                                                         <i class="material-icons menu-icon material-symbols-rounded"
-                                                             style="font-size: 32px;">menu_open</i>
-                                                         <span
-                                                             class="mini-nav-title fs-4 fw-bold text-dark">Master</span>
-                                                     </div>
-
-                                                     <i class="material-icons material-symbols-rounded"
-                                                         style="font-size: 20px;">chevron_right</i>
-                                                 </a>
-                                             </li>
-
-                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                 id="mini-3">
-                                                 <a href="javascript:void(0)"
-                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                     data-bs-placement="right" data-bs-title="FC Forms">
-
-                                                     <div class="d-flex align-items-center gap-2">
-                                                         <i class="material-icons menu-icon material-symbols-rounded"
-                                                             style="font-size: 32px;">note_add</i>
-                                                         <span
-                                                             class="mini-nav-title fs-4 fw-bold text-dark text-wrap">FC
-                                                             Registration</span>
-                                                     </div>
-
-                                                     <i class="material-icons material-symbols-rounded"
-                                                         style="font-size: 20px;">chevron_right</i>
-                                                 </a>
-                                             </li>
-
                                          </div>
                                      </div>
                                  </div>
@@ -89,40 +50,6 @@
                              </div>
                          </div>
                      </ul>
-                     <!-- Bottom User Section -->
-                     <div class="mini-bottom px-2 pb-3" style="margin-top: auto;">
-                         <!-- Settings Icon -->
-                         <div class="mini-settings text-center mb-3">
-                             <a href="javascript:void(0)" data-bs-toggle="tooltip" data-bs-placement="right"
-                                 data-bs-custom-class="custom-tooltip" data-bs-title="Settings">
-                                 <i class="material-icons material-symbols-rounded" style="font-size:32px;">settings</i>
-                             </a>
-                         </div>
-                         <!-- Profile Dropdown -->
-                         <div class="dropdown mini-profile text-center">
-                             <a href="#" class="d-block" data-bs-toggle="dropdown" aria-expanded="false">
-                                 <img src="{{ Auth::user()->profile_photo_url ?? 'https://ui-avatars.com/api/?name=User' }}"
-                                     class="rounded-circle" width="45" height="45" alt="profile">
-                             </a>
-                             <ul class="dropdown-menu shadow border-0 mt-2">
-                                 <li>
-                                     <a class="dropdown-item" href="#">
-                                         <i class="material-icons material-symbols-rounded me-2 fs-5">account_circle</i>
-                                         View Profile
-                                     </a>
-                                 </li>
-                                 <li>
-                                     <form action="{{ route('logout') }}" method="POST">
-                                         @csrf
-                                         <button class="dropdown-item text-danger" type="submit">
-                                             <i class="material-icons material-symbols-rounded me-2 fs-5">logout</i>
-                                             Logout
-                                         </button>
-                                     </form>
-                                 </li>
-                             </ul>
-                         </div>
-                     </div>
                  </div>
                  <div class="sidebarmenu">
                      <div class="brand-logo d-flex align-items-center nav-logo">
@@ -134,12 +61,7 @@
                      <!-- Dashboard -->
                      <!-- ---------------------------------- -->
                      <x-menu.general />
-                     <!-- Master -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.master />
-                     <!-- Forms -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.fc-sidebar />
+                     
                  </div>
              </div>
          </div>
