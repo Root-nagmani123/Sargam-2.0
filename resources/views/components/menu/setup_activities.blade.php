@@ -139,7 +139,7 @@
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.users.index') }}">
-                                        <span class="hide-menu">Permissions</span>
+                                        <span class="hide-menu">User Permissions</span>
                                     </a></li>
 
                                 {{-- <li class="sidebar-item"><a class="sidebar-link"
