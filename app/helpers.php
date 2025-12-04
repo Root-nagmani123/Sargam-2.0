@@ -1,4 +1,5 @@
 <?php
+use Illuminate\Support\Facades\Cache;
 function view_file_link($path) {
     return $path ? asset('storage/' . $path) : null;
 }
@@ -28,11 +29,35 @@ function hasRole($role)
     $user = Auth::user();
     if (!$user) return false;
 
+    // Step 1: Check session roles first (Student static role bhi yahi me milega)
+    $sessionRoles = Session::get('user_roles', []);
+    if (in_array($role, $sessionRoles)) {
+        return true;
+    }
+
+    // Step 2: Check database roles + cache
     $roles = Cache::remember('user_roles_'.$user->pk, 10, function () use ($user) {
         return $user->roles()->pluck('user_role_name')->toArray();
     });
 
     return in_array($role, $roles);
+}
+function service_find()
+{
+    $user = Auth::user();
+
+$cacheKey = 'service_name_'.$user->user_id;
+
+$service_name = Cache::remember($cacheKey, 600, function () use ($user) {
+    return DB::table('student_master')
+        ->join('service_master', 'student_master.service_master_pk', '=', 'service_master.pk')
+        ->where('student_master.pk', $user->user_id)
+        ->value('service_master.service_short_name');
+});
+return $service_name;
+
+
+    
 }
 
 

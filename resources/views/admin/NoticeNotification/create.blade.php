@@ -28,17 +28,17 @@
                 @csrf
 
                 <div class="mb-3">
-                    <label>Notice Title</label>
+                    <label>Notice Title <span class="text-danger">*</span></label>
                     <input type="text" name="notice_title" class="form-control">
                 </div>
 
                 <div class="mb-3">
-                    <label>Description</label>
+                    <label>Description <span class="text-danger">*</span></label>
                     <textarea id="editor" name="description" class="form-control"></textarea>
                 </div>
 
                 <div class="mb-3">
-                    <label>Notice Type</label>
+                    <label>Notice Type <span class="text-danger">*</span></label>
                     <select name="notice_type" class="form-control">
                         <option value="">Select Notice Type</option>
                         @foreach($types as $t)
@@ -48,22 +48,22 @@
                 </div>
 
                 <div class="mb-3">
-                    <label>Display Date</label>
-                    <input type="date" name="display_date" class="form-control">
-                </div>
+                    <label>Display Date <span class="text-danger">*</span></label>
+                   <input type="date" name="display_date" class="form-control">
+                 </div>
 
                 <div class="mb-3">
-                    <label>Expiry Date</label>
-                    <input type="date" name="expiry_date" class="form-control">
+                    <label>Expiry Date <span class="text-danger">*</span></label>
+                    <input type="date" name="expiry_date" class="form-control" >
                 </div>
-
+    
                 <div class="mb-3">
                     <label>Upload Document</label>
                     <input type="file" name="document" class="form-control">
                 </div>
 
                 <div class="mb-3">
-                    <label>Target Audience</label>
+                    <label>Target Audience <span class="text-danger">*</span></label>
                     <select name="target_audience" id="targetAudience" class="form-control">
                         <option value="">Select Target Audience</option>
                         @foreach($target as $t)

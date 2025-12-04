@@ -160,8 +160,8 @@ $(document).on('change', '.status-toggle', function () {
                     </div>
                 `);
                  setTimeout(function() {
-       // location.reload();
-        $('#status-msg .alert').alert('close');
+       location.reload();
+       
        //console.log(data);
     }, 1000);
             },
@@ -173,6 +173,21 @@ $(document).on('change', '.status-toggle', function () {
         });
     }
 });
+function deleteConfirm(id) {
+    Swal.fire({
+        title: "Are you sure?",
+        text: "This record will be permanently deleted!",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Yes, delete it!"
+    }).then((result) => {
+        if (result.isConfirmed) {
+            document.getElementById("deleteForm" + id).submit();
+        }
+    });
+}
 
 // Faculty Form Creation
 
