@@ -18,7 +18,7 @@ class CalendarController extends Controller
         //Array ( [0] => Training )
 
         // print_r(auth()->user());die;
-        if(hasRole('GUEST FACULTY')){}
+       
         
         $courseMaster = CourseMaster::where('active_inactive', '1')
             ->where('end_date', '>', now())
