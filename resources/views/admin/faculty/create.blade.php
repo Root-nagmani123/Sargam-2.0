@@ -2,7 +2,7 @@
 
 @section('title', 'Faculty')
 
-@section('content')
+@section('setup_content')
 <style>
 input.is-invalid {
     border-color: #dc3545;

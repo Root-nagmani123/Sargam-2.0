@@ -2,7 +2,7 @@
 
 @section('title', 'State - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <div class="datatables">
         <!-- start Zero Configuration -->

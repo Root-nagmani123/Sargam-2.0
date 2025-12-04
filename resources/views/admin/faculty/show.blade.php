@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'View Faculty Details')
 
-@section('content')
+@section('setup_content')
 <style>
 @media print {
     /* Hide everything except the print area */

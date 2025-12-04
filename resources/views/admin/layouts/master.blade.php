@@ -331,7 +331,7 @@
 
                     <!-- Setup Tab -->
                     <div class="tab-pane fade" id="tab-setup" role="tabpanel">
-                        @yield('content')
+                        @yield('setup_content')
                     </div>
 
                     <!-- Communications Tab -->

@@ -2,7 +2,7 @@
 
 @section('title', 'Faculty')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <!--<x-session_message />-->
     <div id="status-msg"></div>

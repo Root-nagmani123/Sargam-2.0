@@ -2,7 +2,7 @@
 
 @section('title', 'Hostel Building Floor Mapping')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
 
     <x-breadcrum title="Hostel Building Floor Mapping" />

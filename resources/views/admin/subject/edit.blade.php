@@ -1,8 +1,8 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Subject - Sargam | Lal Bahadur')
+@section('title', 'Edit Subject - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <div class="card card-body py-3">
