@@ -111,9 +111,13 @@ public function store(Request $request)
     public function destroy($encId)
     {
         $id = Crypt::decrypt($encId);
+        $data = Notice::findOrFail($id);
+        if($data->active_inactive ==0){
         Notice::findOrFail($id)->delete();
-
         return back()->with('success','Notice deleted!');
+        }else{
+        return back()->with('error','Active Notice cannot be deleted!');
+        }    
     }
 public function getCourses()
 {

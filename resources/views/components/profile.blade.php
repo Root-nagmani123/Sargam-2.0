@@ -4,6 +4,18 @@
                         class="img-fluid rounded-circle w-100 h-100 object-fit-cover shadow-sm" style="margin-top:-16px;">
                 </div>
 
-                <h5 class="fw-bold mb-0 text-white">Shreyash Verma</h5>
-                <p class="text-secondary small mb-0 text-white">Admin User</p>
+                <h5 class="fw-bold mb-0 text-white">{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</h5>
+                <p class="text-secondary small mb-0 text-white"><p class="text-secondary small mb-0 text-white">
+            
+                    @php
+                        $roles = session('user_roles', []);
+                        if(in_array('Student-OT', $roles)){
+                            $service_find = service_find();
+                            $roles = ['Student-OT ('.$service_find.')'];
+                        }
+                    @endphp
+
+                    {{ !empty($roles) ? implode(', ', $roles) : 'No role assigned' }}
+
+                    </p>
             </div>
