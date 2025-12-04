@@ -26,7 +26,7 @@
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
-                                                            background_dot_large
+                                                            dashboard_customize
                                                         </i>
                                                         <span class="mini-nav-title">Training</span>
                                                     </div>
@@ -49,7 +49,7 @@
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
-                                                            background_dot_large
+                                                            calendar_month
                                                         </i>
                                                         <span class="mini-nav-title">Time
                                                             Table</span>
@@ -71,7 +71,7 @@
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
-                                                            background_dot_large
+                                                            user_attributes
                                                         </i>
                                                         <span class="mini-nav-title">User
                                                             Management</span>
@@ -93,7 +93,7 @@
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
-                                                            background_dot_large
+                                                            menu_open
                                                         </i>
                                                         <span class="mini-nav-title">Master</span>
                                                     </div>
@@ -105,6 +105,25 @@
                                                     </i>
                                                 </a>
                                             </li>
+                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
+                                                 id="mini-3">
+                                                 <a href="javascript:void(0)"
+                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                     data-bs-placement="right" data-bs-title="FC Forms">
+
+                                                     <div class="d-flex align-items-center gap-2">
+                                                         <i class="material-icons menu-icon material-symbols-rounded"
+                                                             style="font-size: 32px;">note_add</i>
+                                                         <span
+                                                             class="mini-nav-title fs-4 fw-bold text-dark text-wrap">FC
+                                                             Registration</span>
+                                                     </div>
+
+                                                     <i class="material-icons material-symbols-rounded"
+                                                         style="font-size: 20px;">chevron_right</i>
+                                                 </a>
+                                             </li>
 
 
                                         </div>
@@ -151,6 +170,10 @@
                     <!-- Academic -->
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mappings />
+
+                    <!-- Forms -->
+                     <!-- ---------------------------------- -->
+                     <x-menu.fc-sidebar />
 
                 </div>
             </div>

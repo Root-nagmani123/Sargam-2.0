@@ -4,6 +4,6 @@
                         class="img-fluid rounded-circle w-100 h-100 object-fit-cover shadow-sm" style="margin-top:-16px;">
                 </div>
 
-                <h5 class="fw-bold mb-0 text-white">Shreyash Verma</h5>
-                <p class="text-secondary small mb-0 text-white">Admin User</p>
+                <h4 class="mb-1 text-white" style="font-weight: 500;">Shreyash Verma</h4>
+                <h6 class="small mb-0 text-white" style="font-weight: 300;">Admin User</h6>
             </div>
