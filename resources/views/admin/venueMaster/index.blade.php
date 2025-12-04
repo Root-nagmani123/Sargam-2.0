@@ -1,8 +1,8 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Venue-Master - Sargam | Lal Bahadur')
+@section('title', 'Venue Master - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
 
     <div class="datatables">

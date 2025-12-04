@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Member - Sargam | Lal Bahadur')
-@section('content')
+@section('setup_content')
 <style>
     .roles-cell {
     max-height: 100px;       /* Limit the height */

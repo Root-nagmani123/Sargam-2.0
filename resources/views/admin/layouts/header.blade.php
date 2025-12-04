@@ -430,29 +430,51 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentPath = window.location.pathname;
         console.log('Current path:', currentPath);
 
-        // Map routes to tabs
-        const routeTabMap = {
-            '/admin/setup': '#tab-setup',
-            '/admin/master': '#home',
-            '/admin/dashboard': '#home',
-            '/admin/subject': '#home',
-            '/admin/stream': '#home',
-            '/admin/section': '#home',
-            '/admin/attendance': '#home',
-            '/admin/faculty': '#tab-academics',
-            '/admin/academics': '#tab-academics',
-            '/admin/course': '#tab-academics',
-        };
-
-        // Find matching route
-        for (const [route, tab] of Object.entries(routeTabMap)) {
-            if (currentPath.includes(route)) {
-                console.log('Route matched:', route, 'Tab:', tab);
-                return tab;
-            }
+        // Setup routes - CHECK FIRST (more specific)
+        if (currentPath.includes('/admin/setup') || 
+            currentPath.includes('/admin/caste') ||
+            currentPath.includes('/admin/category') ||
+            currentPath.includes('/admin/religion') ||
+            currentPath.includes('/admin/state') ||
+            currentPath.includes('/admin/district') ||
+            currentPath.includes('/admin/building') ||
+            currentPath.includes('/admin/hostel') ||
+            currentPath.includes('/admin/designation') ||
+            currentPath.includes('/admin/department') ||
+            currentPath.includes('/admin/stream') ||
+            currentPath.includes('/admin/section') ||
+            currentPath.includes('/admin/subject') ||
+            currentPath.includes('/admin/venueMaster') ||
+            currentPath.includes('/admin/building-floor-room')) {
+            console.log('Route matched: Setup tab');
+            return '#tab-setup';
         }
 
-        // Default to home if no match
+        // Academics routes
+        if (currentPath.includes('/admin/faculty') ||
+            currentPath.includes('/admin/academics') ||
+            currentPath.includes('/admin/course') ||
+            currentPath.includes('/admin/batch')) {
+            console.log('Route matched: Academics tab');
+            return '#tab-academics';
+        }
+
+        // Communications routes
+        if (currentPath.includes('/admin/communications') ||
+            currentPath.includes('/admin/notices')) {
+            console.log('Route matched: Communications tab');
+            return '#tab-communications';
+        }
+
+        // Material Management routes
+        if (currentPath.includes('/admin/material') ||
+            currentPath.includes('/admin/inventory')) {
+            console.log('Route matched: Material Management tab');
+            return '#tab-material-management';
+        }
+
+        // Default to home
+        console.log('Route matched: Home tab (default)');
         return '#home';
     }
 

@@ -2,7 +2,7 @@
 
 @section('title', 'Assign Role')
 
-@section('content')
+@section('setup_content')
 
 <div class="card">
     <div class="card-header">

@@ -1,8 +1,8 @@
 @extends('admin.layouts.master')
 
-@section('title', 'District - Sargam | Lal Bahadur')
+@section('title', 'Edit District - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 
     <div class="container-fluid">
         <x-breadcrum title="District" />

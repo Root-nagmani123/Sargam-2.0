@@ -2,7 +2,7 @@
 
 @section('title', 'Designation Master')
     
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <x-breadcrum title="Designation Master" />

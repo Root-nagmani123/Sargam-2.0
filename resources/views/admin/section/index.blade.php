@@ -2,7 +2,7 @@
 
 @section('title', 'Section master - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <div class="card card-body py-3" style="border-left:4px solid #004a93;">
         <div class="row align-items-center">

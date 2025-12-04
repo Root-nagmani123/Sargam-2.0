@@ -2,7 +2,7 @@
 
 @section('title', 'Member')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
 
     <div class="datatables">
