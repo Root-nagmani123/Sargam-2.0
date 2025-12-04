@@ -6,13 +6,14 @@
     {{-- <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.20/summernote-lite.min.css" rel="stylesheet"> --}}
 @endsection
 
-@section('content')
+@section('setup_content')
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.js"></script>
     <div class="container-fluid">
         <!-- Page Header -->
-
+    <x-breadcrum title="Create Path Page" />
+    <x-session_message />
         <!-- Form Card -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
