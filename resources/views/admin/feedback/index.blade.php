@@ -2,7 +2,7 @@
 
 @section('title', 'Feedback - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 
 <style>
 .star-rating {
@@ -21,7 +21,7 @@
 }
 </style>
 <div class="container-fluid">
-
+<x-breadcrum title="Feedback Management" />
     <div>
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">

@@ -2,7 +2,7 @@
 
 @section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <style>
 .chat-body {
     height: 400px;
@@ -48,6 +48,7 @@
 }
 </style>
 <div class="container-fluid">
+       <x-breadcrum title="Notice /Memo Management" />
 
     <!-- start Zero Configuration -->
     <div class="card" style="border-left:4px solid #004a93;">
