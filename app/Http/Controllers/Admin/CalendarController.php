@@ -135,21 +135,32 @@ foreach ($group_pks as $group_pk) {
 
 public function fullCalendarDetails(Request $request)
 {
+    // print_r(Auth::user());die;
   
     $event = new CalendarEvent();
-    
-    $events = DB::table('timetable')
-    ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-    ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk');
 
+$events = DB::table('timetable')
+    ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+    ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk');  // single join
+
+// Student-OT Role
 if (hasRole('Student-OT')) {
 
-    $student_pk = auth()->user()->user_id;  // 🔥 FIXED
+    $student_pk = auth()->user()->user_id;
 
     $events = $events
         ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
         ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
         ->where('student_course_group_map.student_master_pk', $student_pk);
+}
+
+// Internal / Guest Faculty
+if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+
+    $faculty_pk = auth()->user()->user_id;
+
+    // ❗⚠ Only WHERE — NO NEW JOIN
+    $events = $events->where('faculty_master.employee_master_pk', $faculty_pk);
 }
 
 $events = $events
@@ -161,6 +172,7 @@ $events = $events
         'faculty_master.full_name as faculty_name'
     )
     ->get();
+
 
 
 
