@@ -219,14 +219,19 @@ class UserController extends Controller
 }
 public function assignRole($id)
 {
-     $decryptedId = decrypt($id);
+    try {
+        $decryptedId = decrypt($id);
+    } catch (\Exception $e) {
+        return redirect()->route('admin.users.index')
+            ->with('error', 'Invalid user ID. Please try again.');
+    }
+    
     $user = User::findOrFail($decryptedId);
    
     $userRoles = \DB::table('employee_role_mapping')
         ->where('user_credentials_pk', $decryptedId)
         ->pluck('user_role_master_pk')
         ->toArray();
-        //  print_r($userRoles);exit;
 
     return view('admin.user_management.users.assign_role',
         compact('user', 'userRoles'));
