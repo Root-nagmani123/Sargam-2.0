@@ -20,32 +20,32 @@ use Mpdf\Mpdf;
 
 class EnrollementController extends Controller
 {
-   public function create()
-{
-    $currentDate = now()->format('Y-m-d');
-    
-    // Get courses that are active AND currently within their date range
-    $courses = CourseMaster::where('active_inactive', 1)
-        ->where(function($query) use ($currentDate) {
-            $query->whereNull('start_year')
-                  ->orWhere('start_year', '<=', $currentDate);
-        })
-        ->where(function($query) use ($currentDate) {
-            $query->whereNull('end_date')
-                  ->orWhere('end_date', '>=', $currentDate);
-        })
-        ->get();
+    public function create()
+    {
+        $currentDate = now()->format('Y-m-d');
 
-    // Get previous courses from student course map with course details
-    $previousCourses = StudentMasterCourseMap::with('course')
-        ->get()
-        ->unique('course_master_pk'); // Get unique courses
-        
-    // Get all active services
-    $services = ServiceMaster::all();
+        // Get courses that are active AND currently within their date range
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($query) use ($currentDate) {
+                $query->whereNull('start_year')
+                    ->orWhere('start_year', '<=', $currentDate);
+            })
+            ->where(function ($query) use ($currentDate) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', $currentDate);
+            })
+            ->get();
 
-    return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
-}
+        // Get previous courses from student course map with course details
+        $previousCourses = StudentMasterCourseMap::with('course')
+            ->get()
+            ->unique('course_master_pk'); // Get unique courses
+
+        // Get all active services
+        $services = ServiceMaster::all();
+
+        return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
+    }
 
     // public function store(Request $request)
     // {
@@ -87,67 +87,66 @@ class EnrollementController extends Controller
     //     }
     // }
 
-   public function store(Request $request)
-{
-    $validated = $request->validate([
-        'course_master_pk' => [
-            'required',
-            'integer',
-            Rule::exists('course_master', 'pk')->where('active_inactive', 1)
-        ],
-        'selected_students' => 'required|string',
-    ]);
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'course_master_pk' => [
+                'required',
+                'integer',
+                Rule::exists('course_master', 'pk')->where('active_inactive', 1)
+            ],
+            'selected_students' => 'required|string',
+        ]);
 
-    $newCoursePk = $validated['course_master_pk'];
-    $studentIds = array_unique(array_filter(explode(',', $validated['selected_students'])));
+        $newCoursePk = $validated['course_master_pk'];
+        $studentIds = array_unique(array_filter(explode(',', $validated['selected_students'])));
 
-    if (empty($studentIds)) {
-        return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
-    }
-
-    DB::beginTransaction();
-    try {
-        $now = now();
-        $successCount = 0;
-
-        // First, deactivate all other courses for these students
-        StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
-            ->where('course_master_pk', '!=', $newCoursePk)
-            ->update(['active_inactive' => 0]);
-
-        // Then, activate/insert the new course enrollment
-        foreach ($studentIds as $studentId) {
-            $enrollment = StudentMasterCourseMap::updateOrCreate(
-                [
-                    'student_master_pk' => $studentId,
-                    'course_master_pk' => $newCoursePk
-                ],
-                [
-                    'active_inactive' => 1,
-                    'modified_date' => $now
-                ]
-            );
-
-            // If this was newly created, set created_date
-            if ($enrollment->wasRecentlyCreated) {
-                $enrollment->created_date = $now;
-                $enrollment->save();
-            }
-
-            $successCount++;
+        if (empty($studentIds)) {
+            return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
         }
 
-        DB::commit();
+        DB::beginTransaction();
+        try {
+            $now = now();
+            $successCount = 0;
 
-        return redirect()->back()
-            ->with('success', "Enrollment completed! {$successCount} students processed.")
-            ->with('selected_course', $newCoursePk);
-            
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return back()->withErrors(['error' => 'Enrollment failed: ' . $e->getMessage()]);
+            // First, deactivate all other courses for these students
+            StudentMasterCourseMap::whereIn('student_master_pk', $studentIds)
+                ->where('course_master_pk', '!=', $newCoursePk)
+                ->update(['active_inactive' => 0]);
+
+            // Then, activate/insert the new course enrollment
+            foreach ($studentIds as $studentId) {
+                $enrollment = StudentMasterCourseMap::updateOrCreate(
+                    [
+                        'student_master_pk' => $studentId,
+                        'course_master_pk' => $newCoursePk
+                    ],
+                    [
+                        'active_inactive' => 1,
+                        'modified_date' => $now
+                    ]
+                );
+
+                // If this was newly created, set created_date
+                if ($enrollment->wasRecentlyCreated) {
+                    $enrollment->created_date = $now;
+                    $enrollment->save();
+                }
+
+                $successCount++;
+            }
+
+            DB::commit();
+
+            return redirect()->back()
+                ->with('success', "Enrollment completed! {$successCount} students processed.")
+                ->with('selected_course', $newCoursePk);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Enrollment failed: ' . $e->getMessage()]);
+        }
     }
-}
 
     public function filterStudents(Request $request)
     {
@@ -337,60 +336,6 @@ class EnrollementController extends Controller
     }
 
 
-
-
-    // public function StudenEnroll_export(Request $request)
-    // {
-    //     $courseId = $request->input('course');
-    //     $status = $request->input('status');
-    //     $format = $request->input('format');
-
-    //     // Use the SAME query as your main page for consistency
-    //     $enrollmentsQuery = StudentMasterCourseMap::with([
-    //         'studentMaster.service',
-    //         'course'
-    //     ])
-    //         ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
-    //         ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
-    //         ->orderByDesc('created_date');
-
-    //     $enrollments = $enrollmentsQuery->get();
-    //     $totalCount = $enrollments->count();
-
-    //     // Get course name if course filter is applied
-    //     $courseName = null;
-    //     if ($courseId) {
-    //         $course = CourseMaster::find($courseId);
-    //         $courseName = $course ? $course->course_name : null;
-    //     }
-
-    //     if ($format === 'xlsx') {
-    //         $export = new StudentEnrollmentExport($courseId, $status);
-    //         return Excel::download($export, 'student_enrollments.xlsx');
-    //     }
-
-    //     if ($format === 'csv') {
-    //         $export = new StudentEnrollmentExport($courseId, $status);
-    //         return Excel::download($export, 'student_enrollments.csv');
-    //     }
-
-    //     if ($format === 'pdf') {
-    //         $pdf = Pdf::loadView('admin.report.studentsenroll_pdf', compact(
-    //             'enrollments',
-    //             'courseName',
-    //             'totalCount',
-    //             'status'
-    //         ));
-
-    //         return $pdf->setPaper('a4', 'landscape')
-    //             ->setOption('enable-smart-shrinking', true)
-    //             ->setOption('viewport-size', '1280x1024')
-    //             ->download('student_enrollments.pdf');
-    //     }
-
-    //     return back()->with('error', 'Invalid export format selected.');
-    // }
-
     public function StudenEnroll_export(Request $request)
     {
         $courseId = $request->input('course');
@@ -505,73 +450,100 @@ class EnrollementController extends Controller
 
 
 
- public function exportEnrolledStudents(Request $request)
-{
-    \Log::info('Export params', $request->all());
+    public function exportEnrolledStudents(Request $request)
+    {
 
-    // CLEAN AND FIX TYPE
-    $type = strtolower(trim($request->input('type', 'pdf')));
-    \Log::info("Detected cleaned export type = $type");
 
-    try {
+        $type = strtolower(trim($request->input('type', 'pdf')));
+        // \Log::info("Detected cleaned export type = $type");
 
-        $query = StudentMasterCourseMap::with([
-            'studentMaster.service',
-            'course'
-        ])->where('active_inactive', 1);
 
-        if ($request->has('course') && !empty($request->course)) {
-            $query->where('course_master_pk', $request->course);
+        try {
+
+            $query = StudentMasterCourseMap::with([
+                'studentMaster.service',
+                'course'
+            ])->where('active_inactive', 1);
+
+            if ($request->has('course') && !empty($request->course)) {
+                $query->where('course_master_pk', $request->course);
+            }
+
+            $enrollments = $query->get();
+
+            $courseName = 'All Active Courses';
+            if (!empty($request->course)) {
+                $course = CourseMaster::find($request->course);
+                $courseName = $course ? $course->course_name : 'Selected Course';
+            }
+
+            // \Log::info("Detected cleaned export type = $type");
+            // \Log::info('Export params', $request->all());
+
+            if ($type == 'excel') {
+                return Excel::download(
+                    new StudentEnrollmentExport($enrollments, $courseName),
+                    'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.xlsx'
+                );
+            }
+
+            if ($type == 'csv') {
+                return Excel::download(
+                    new StudentEnrollmentExport($enrollments, $courseName),
+                    'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.csv'
+                );
+            }
+
+            // DEFAULT PDF
+            return $this->exportEnrolledStudentsPDF($enrollments, $courseName);
+        } catch (\Exception $e) {
+            \Log::error('Export error: ' . $e->getMessage());
+            return back()->with('error', 'Error exporting: ' . $e->getMessage());
         }
-
-        $enrollments = $query->get();
-
-        $courseName = 'All Active Courses';
-        if (!empty($request->course)) {
-            $course = CourseMaster::find($request->course);
-            $courseName = $course ? $course->course_name : 'Selected Course';
-        }
-
-        if ($type === 'excel') {
-            return Excel::download(
-                new StudentEnrollmentExport($enrollments, $courseName),
-                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.xlsx'
-            );
-        }
-
-        if ($type === 'csv') {
-            return Excel::download(
-                new StudentEnrollmentExport($enrollments, $courseName),
-                'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.csv'
-            );
-        }
-
-        // DEFAULT PDF
-        return $this->exportEnrolledStudentsPDF($enrollments, $courseName);
-
-    } catch (\Exception $e) {
-        \Log::error('Export error: ' . $e->getMessage());
-        return back()->with('error', 'Error exporting: ' . $e->getMessage());
     }
-}
 
 
-// Separate method for PDF export
-private function exportEnrolledStudentsPDF($enrollments, $courseName)
-{
-    $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
-        'enrollments' => $enrollments,
-        'courseName' => $courseName,
-        'exportDate' => now()->format('Y-m-d H:i:s'),
-        'totalCount' => $enrollments->count()
-    ]);
+    // Separate method for PDF export
+    // private function exportEnrolledStudentsPDF($enrollments, $courseName)
+    // {
+    //     $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
+    //         'enrollments' => $enrollments,
+    //         'courseName' => $courseName,
+    //         'exportDate' => now()->format('Y-m-d H:i:s'),
+    //         'totalCount' => $enrollments->count()
+    //     ]);
 
-    $filename = 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.pdf';
-    
-    return $pdf->setPaper('a4', 'landscape')
-        ->setOption('enable-smart-shrinking', true)
-        ->download($filename);
-}
+    //     $filename = 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.pdf';
+
+    //     return $pdf->setPaper('a4', 'landscape')
+    //         ->setOption('enable-smart-shrinking', true)
+    //         ->download($filename);
+    // }
+
+    private function exportEnrolledStudentsPDF($enrollments, $courseName)
+    {
+        // \Log::info("Starting PDF generation for course: $courseName");
+
+        try {
+            $pdf = Pdf::loadView('admin.export.enrolled_students_pdf', [
+                'enrollments' => $enrollments,
+                'courseName' => $courseName,
+                'exportDate' => now()->format('Y-m-d H:i:s'),
+                'totalCount' => $enrollments->count()
+            ]);
+
+            // \Log::info("PDF Loaded - attempting download...");
+            $filename = 'enrolled_students_' . str_replace([' ', '/', '\\'], '_', $courseName) . '_' . date('Y-m-d') . '.pdf';
+
+            return $pdf->setPaper('a4', 'landscape')
+                ->setOption('enable-smart-shrinking', true)
+                ->download($filename);
+        } catch (\Exception $e) {
+            \Log::error("PDF EXPORT ERROR: " . $e->getMessage());
+            return back()->with('error', 'PDF ERROR: ' . $e->getMessage());
+        }
+    }
+
 
     /**
      * Show the form for editing student information.
@@ -668,5 +640,4 @@ private function exportEnrolledStudentsPDF($enrollments, $courseName)
                 ->with('error', 'Update failed: ' . $e->getMessage());
         }
     }
-
 }
