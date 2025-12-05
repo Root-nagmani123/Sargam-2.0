@@ -2,7 +2,7 @@
 
 @section('title', 'Create Notice notification')
 
-@section('content')
+@section('setup_content')
 
 
 <div class="container-fluid">
