@@ -428,11 +428,11 @@ Route::prefix('admin')->group(function () {
     Route::get('/memo-notice/create', [MemoNoticeController::class, 'create'])->name('admin.memo-notice.create');
     Route::post('/memo-notice', [MemoNoticeController::class, 'store'])->name('admin.memo-notice.store');
     Route::get('/memo-notice/preview', [MemoNoticeController::class, 'preview'])->name('admin.memo-notice.preview');
-    Route::get('/memo-notice/{id}/edit', [MemoNoticeController::class, 'edit'])->name('admin.memo-notice.edit');
-    Route::post('/memo-notice/{id}', [MemoNoticeController::class, 'update'])->name('admin.memo-notice.update');
-    Route::delete('/memo-notice/{id}', [MemoNoticeController::class, 'destroy'])->name('admin.memo-notice.destroy');
+    Route::get('/memo-notice/{pk}/edit', [MemoNoticeController::class, 'edit'])->name('admin.memo-notice.edit');
+    Route::post('/memo-notice/{pk}', [MemoNoticeController::class, 'update'])->name('admin.memo-notice.update');
+    Route::delete('/memo-notice/{pk}', [MemoNoticeController::class, 'destroy'])->name('admin.memo-notice.destroy');
     Route::post('/memo-notice/upload-pdf', [MemoNoticeController::class, 'uploadPdf'])->name('admin.memo-notice.upload-pdf');
-Route::post('/{id}/status/{status}', [MemoNoticeController::class, 'changeStatus'])->name('admin.memo-notice.status');
+Route::post('/memo-notice/{pk}/status/{status}', [MemoNoticeController::class, 'changeStatus'])->name('admin.memo-notice.status');
 });
 
 
