@@ -39,7 +39,7 @@ class UserController extends Controller
         ->select('employee_master.first_name','employee_master.email','employee_master.mobile','employee_master.profile_picture', 'employee_master.last_name', 'designation_master.designation_name', 'employee_master.dob')
       ->get();
 
-      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('end_date', '>=', now())->count();
+      $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<', now())->where('end_date', '>=', now())->count();
       $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
 
 
