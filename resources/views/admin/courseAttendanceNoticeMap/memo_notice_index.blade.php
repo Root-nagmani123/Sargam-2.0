@@ -11,26 +11,30 @@
         <x-session_message />
 
         <!-- Filter Card -->
-        <div class="card shadow-sm mb-4 border-0" style="border-left: 4px solid #004a93;">
-    <div class="card-body">
-
-        <form action="{{ route('admin.memo-notice.index') }}" method="GET" class="row g-3 align-items-end" role="form">
-
-            <!-- Course Filter -->
-            <div class="col-md-4">
-                <label for="courseFilter" class="form-label fw-semibold text-dark">
-                    Filter by Course
-                </label>
-                <select id="courseFilter" name="course_id" class="form-select form-select-lg"
-                    aria-label="Select course to filter memo and notices">
-                    <option value="">All Courses</option>
-                    @foreach ($courses as $course)
-                        <option value="{{ $course->pk }}"
-                            {{ request('course_id') == $course->pk ? 'selected' : '' }}>
-                            {{ $course->course_name }}
-                        </option>
-                    @endforeach
-                </select>
+        <div class="card mb-4">
+            <div class="card-body">
+                <form action="{{ route('admin.memo-notice.index') }}" method="GET" class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Filter by Course</label>
+                        <select name="course_master_pk" class="form-select">
+                            <option value="">All Courses</option>
+                            @foreach ($courses as $course)
+                                <option value="{{ $course->pk }}"
+                                    {{ request('course_master_pk') == $course->pk ? 'selected' : '' }}>
+                                    {{ $course->course_name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter me-1"></i> Filter
+                        </button>
+                        <a href="{{ route('admin.memo-notice.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-redo me-1"></i> Reset
+                        </a>
+                    </div>
+                </form>
             </div>
 
             <!-- Buttons -->
@@ -79,6 +83,7 @@
                                 <tr>
                                     <th>#</th>
                                     <th>Course</th>
+                                    <th>Title</th>
                                     <th>Director</th>
                                     <th>Designation</th>
                                     <th>Created</th>
@@ -97,17 +102,18 @@
                                                 <span class="text-muted">General</span>
                                             @endif
                                         </td>
+                                        <td>{{ $template->title }}</td>
                                         <td>{{ $template->director_name }}</td>
                                         <td>{{ $template->director_designation }}</td>
 
-                                        <td>{{ $template->created_at->format('d M Y') }}</td>
+                                        <td>{{ $template->created_date->format('d M Y') }}</td>
                                         <td>
                                             <div class="d-flex gap-1">
-                                                <a href="{{ route('admin.memo-notice.edit', $template->id) }}"
+                                                <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
                                                     class="btn btn-sm btn-primary py-0 px-2">
                                                     Edit
                                                 </a>
-                                                <form action="{{ route('admin.memo-notice.destroy', $template->id) }}"
+                                                <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
                                                     method="POST" class="d-inline"
                                                     onsubmit="return confirm('Are you sure you want to delete this template?')">
                                                     @csrf @method('DELETE')
