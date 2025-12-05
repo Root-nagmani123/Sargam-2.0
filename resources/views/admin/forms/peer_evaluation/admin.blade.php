@@ -4,7 +4,7 @@
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 @extends('admin.layouts.master')
 @section('title', 'Peer Evaluation - Admin Panel | Sargam Admin')
-@section('content')
+@section('setup_content')
 <style>
     /* ✅ Improve focus visibility */
     .table a:focus, .btn:focus, .form-check-input:focus {
@@ -29,6 +29,7 @@
 </style>
 
 <div class="container-fluid">
+     <x-breadcrum title="Peer Evaluation - Admin Panel" />
     <div class="card p-3" style="border-left: 4px solid #004a93;">
         <h4 class="mb-4">Peer Evaluation - Admin Panel</h4>
 

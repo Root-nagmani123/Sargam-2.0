@@ -2,7 +2,7 @@
 
 @section('title', 'Course Group Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <style>
 .btn-group[role="group"] .btn {
     transition: all 0.3s ease-in-out;

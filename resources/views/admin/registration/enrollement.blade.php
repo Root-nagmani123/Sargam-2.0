@@ -2,7 +2,7 @@
 
 @section('title', 'Enrollment - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
     <div class="container-fluid">
         <x-breadcrum title="Enroll to New Course" />
         <x-session_message />

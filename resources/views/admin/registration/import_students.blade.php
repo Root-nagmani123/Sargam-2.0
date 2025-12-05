@@ -39,7 +39,7 @@
     </style>
 @endpush
 
-@section('content')
+@section('setup_content')
     <div class="container-fluid mt-5">
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">

@@ -6,7 +6,7 @@
 @endsection
 @section('title', 'MDO Escrot Exemption')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <x-breadcrum title="MDO Escrot Exemption" />

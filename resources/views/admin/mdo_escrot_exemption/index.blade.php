@@ -2,7 +2,7 @@
 
 @section('title', 'MDO Escrot Exemption')
 
-@section('content')
+@section('setup_content')
 <style>
 /* ====== TABLE HEADER ====== */
 .custom-mdo-table thead th {

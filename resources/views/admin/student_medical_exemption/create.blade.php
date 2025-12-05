@@ -2,7 +2,7 @@
 
 @section('title', 'Student Medical Exemption - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <x-session_message />
     <div class="card card-body py-3" style="border-left:4px solid #004a93;">
