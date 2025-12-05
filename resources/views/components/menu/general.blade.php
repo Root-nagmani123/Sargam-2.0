@@ -12,16 +12,22 @@
                             @include('components.profile')
                             {{-- GENERAL --}}
                             
-                           
-
-                        </ul>
                         <!-- Faculty Dashboard Route -->
+                         @if(hasRole('Doctor'))
+                          
+                          <li class="sidebar-item"><a class="sidebar-link" href="{{ route('student.medical.exemption.index') }}">
+                                        <span class="hide-menu">Student Medical Exemption (Doctor)</span>
+                                    </a></li>
+                        @endif
+                       
+
+
                         <ul class="sidebar-menu" id="sidebarnav">
                             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#generalCollapse" role="button"
                                     aria-expanded="false" aria-controls="generalCollapse">
