@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="{{asset('css/custom.css')}}">
 
 <link rel="stylesheet" href="{{asset('admin_assets/libs/datatables.net-bs5/css/dataTables.bootstrap5.min.css')}}">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Rounded" rel="stylesheet">
 <link rel="stylesheet" href="{{asset('admin_assets/libs/select2/dist/css/select2.min.css')}}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/plugins/datatable.min.css')}}">
