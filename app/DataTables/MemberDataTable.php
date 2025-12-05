@@ -32,9 +32,16 @@ class MemberDataTable extends DataTable
             ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
             ->addColumn('email', fn($row) => '<label class="text-dark">' . $row->email . '</label>')
             ->addColumn('actions', function($row) {
-                return '<a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
-                    <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-secondary">View</a>
-                ';
+                $deleteUrl = route('member.destroy', encrypt($row->pk));
+                return '<div class="d-flex justify-content-center gap-2">
+                    <a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
+                    <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-success">View</a>
+                    <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this member?\')">
+                        ' . csrf_field() . '
+                        ' . method_field('DELETE') . '
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </div>';
 
             })
             ->filterColumn('employee_name', function ($query, $keyword) {

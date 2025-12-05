@@ -3,6 +3,7 @@
 @section('title', 'Calendar - Sargam | Lal Bahadur')
 
 @section('setup_content')
+@section('academics_content')
 
 <style>
 :root {
@@ -1688,4 +1689,5 @@ function makeCheckboxReadonly(selector, isReadonly, isChecked = false) {
   dateInput.setAttribute('min', today);
 </script>
 
+@endsection
 @endsection
