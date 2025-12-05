@@ -3,11 +3,12 @@
             @include('components.profile')
 
             <!-- ======= GENERAL ======= -->
+             @if(hasRole('Admin') || hasRole('Training'))
             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                border-radius: 30px 0px 0px 30px;
+                width: 100%;
+                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                min-width: 250px;">
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseGeneral" role="button" aria-expanded="false" aria-controls="collapseGeneral">
                     <span class="fw-bold">General</span>
@@ -37,10 +38,10 @@
 
             <!-- ======= REGISTRATION MANAGEMENT ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                border-radius: 30px 0px 0px 30px;
+                width: 100%;
+                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                min-width: 250px;">
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseRegistration" role="button" aria-expanded="false"
                     aria-controls="collapseRegistration">
@@ -65,10 +66,10 @@
 
             <!-- ======= EXEMPTION ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                border-radius: 30px 0px 0px 30px;
+                width: 100%;
+                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                min-width: 250px;">
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseExemption" role="button" aria-expanded="false" aria-controls="collapseExemption">
                     <span class="fw-bold">Exemption</span>
@@ -91,10 +92,10 @@
 
             <!-- ======= DATABASE TOOLS ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                border-radius: 30px 0px 0px 30px;
+                width: 100%;
+                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                min-width: 250px;">
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseDatabase" role="button" aria-expanded="false" aria-controls="collapseDatabase">
                     <span class="fw-bold">Database Tools</span>
@@ -134,10 +135,10 @@
 
             <!-- ======= DOCUMENTS ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                border-radius: 30px 0px 0px 30px;
+                width: 100%;
+                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                min-width: 250px;">
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseDocuments" role="button" aria-expanded="false" aria-controls="collapseDocuments">
                     <span class="fw-bold">Documents</span>
@@ -160,10 +161,10 @@
 
             <!-- ======= PEER EVALUATION ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                border-radius: 30px 0px 0px 30px;
+                width: 100%;
+                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                min-width: 250px;">
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapsePeerEvaluation" role="button" aria-expanded="false"
                     aria-controls="collapsePeerEvaluation">
@@ -185,5 +186,6 @@
                     </a>
                 </li>
             </ul>
+            @endif
         </ul>
     </nav>
