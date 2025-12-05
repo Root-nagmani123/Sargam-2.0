@@ -12,6 +12,7 @@
                             @include('components.profile')
                           
                             <li class="nav-section" role="listitem">
+                            @if(hasRole('Admin') || hasRole('Training'))
 
                                 <!-- Main Container with Improved Layout -->
                                 <div class="d-flex align-items-center justify-content-between w-100">
