@@ -41,15 +41,10 @@
                         <div class="mb-3">
                             <label class="form-label">Doctor Name <span class="text-danger">*</span></label>
                             <select name="employee_master_pk" class="form-control col-form-label" readonly required>
-                                <option value="1" selected>XYZ</option>
+                                <option value="{{ Auth::user()->user_id }}" selected>{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</option>
                             </select>
                         </div>
-
-                        @error('employee_master_pk')
-                        <small class="text-danger">{{ $message }}</small>
-                        @enderror
                     </div>
-
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label class="form-label">Course <span class="text-danger">*</span></label>
