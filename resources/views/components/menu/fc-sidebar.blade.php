@@ -3,6 +3,7 @@
             @include('components.profile')
 
             <!-- Section Header -->
+             @if(hasRole('Admin') || hasRole('Training'))
             <li class="nav-section" role="listitem">
                 <div class="d-flex align-items-center justify-content-between w-100">
                     <div class="d-flex align-items-center">
@@ -36,7 +37,7 @@
             </li>
 
             <!-- ======= GENERAL ======= -->
-             @if(hasRole('Admin') || hasRole('Training'))
+          
             <li class="sidebar-item" style="background: #4077ad;
                 border-radius: 30px 0px 0px 30px;
                 width: 100%;
@@ -214,5 +215,6 @@
                 </li>
             </ul>
             @endif
+           
         </ul>
     </nav>

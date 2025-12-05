@@ -626,4 +626,3 @@
         });
     </script>
 @endsection
-@endsection

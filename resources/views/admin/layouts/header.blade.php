@@ -136,18 +136,24 @@
                             </li>
 
                             <!-- Setup -->
-                             @if(hasRole('Admin') || hasRole('Training') )
-                            <li class="nav-item" role="none">
-                                <a href="#tab-setup"
+                           <li class="nav-item" role="none">
+                                    <a href="#tab-setup"
                                     class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
                                     id="setup-tab">
-                                    <span>Setup</span>  | 
-                                    <span>Academics</span>
-                                </a>
-                            </li>
-                            @endif
 
+                                        @if(hasRole('Admin') || hasRole('Training'))
+                                            <span>Setup</span>
+                                        @elseif(hasRole('Internal Faculty')  || hasRole('Guest Faculty') || hasRole('Student-OT'))
+                                            <span>Academics</span>
+                                        @else
+                                            <span>Setup</span>
+                                        @endif
+
+                                    </a>
+                                </li>
+
+                           
                             <!-- Communications -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-communications"
@@ -159,17 +165,15 @@
                             </li>
 
                             <!-- Academics -->
-                             @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Student-OT')  || hasRole('Admin'))
-                            <li class="nav-item" role="none">
+                            <!-- <li class="nav-item" role="none">
                                 <a href="#tab-academics"
                                     class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="academics-panel" id="academics-tab">
                                     <span>Academics</span>
                                 </a>
-                            </li>
-                            @endif
-
+                            </li> -->
+                           
                             <!-- Material Management -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-material-management"
