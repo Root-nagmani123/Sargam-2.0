@@ -125,55 +125,30 @@
             <div class="modal-body">
                 <div id="zero_config_wrapper" class="dataTables_wrapper dt-bootstrap4 no-footer table-responsive">
 
-                    <table id="zero_config"
-                        class="table table-striped table-bordered text-nowrap align-middle dataTable"
-                        aria-describedby="zero_config_info">
-                        <thead>
-                            <!-- start row -->
-                            <tr>
-                                <th class="col">S.No.</th>
-                                <th class="col">Rating</th>
-                                <th class="col">Remarks</th>
-                                <th class="col">Presentation</th>
-                                <th class="col">Content</th>
-                            </tr>
-                            <!-- end row -->
-                        </thead>
-                        <tbody>
-                            <tr class="odd">
-                                <td>1</td>
-                                <td class="sorting_1">
-                                    <div class="d-flex align-items-center gap-6">
-                                        <h6 class="mb-0">feedback</h6>
-                                    </div>
-                                </td>
-                                <td class="sorting_1">
-                                    <div class="d-flex align-items-center gap-6">
-                                        <h6 class="mb-0">feedback</h6>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr class="odd">
-                                <td>2</td>
-                                <td class="sorting_1">
-                                    <div class="d-flex align-items-center gap-6">
-                                        <h6 class="mb-0">feedback</h6>
-                                    </div>
-                                </td>
-                                <td class="sorting_1">
-                                    <div class="d-flex align-items-center gap-6">
-                                        <h6 class="mb-0">feedback</h6>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                   <table id="zero_config"
+                                class="table table-striped table-bordered text-nowrap align-middle dataTable">
+                                <thead>
+                                    <tr>
+                                        <th>S.No.</th>
+                                        <th>Rating</th>
+                                        <th>Remarks</th>
+                                        <th>Presentation</th>
+                                        <th>Content</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+
                 </div>
             </div>
         </div>
     </div>
 </div>
 <script>
+    $(document).ready(function() {
+        $('#zero_config').DataTable().clear().destroy(); // Disable global auto init
+    });
+
 document.addEventListener('DOMContentLoaded', function() {
     const viewButtons = document.querySelectorAll('.view-btn');
 
@@ -213,28 +188,28 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             const eventId = this.getAttribute('data-event');
             const tbody = document.querySelector('#viewModal tbody');
-            tbody.innerHTML = `<tr><td colspan="3">Loading...</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
 
             fetch(`/feedback/event-feedback/${eventId}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        let rows = '';
+                    .then(res => res.json())
+                    .then(data => {
+                        let rows = "";
                         data.forEach((item, index) => {
                             rows += `<tr>
-                                    <td>${index + 1}</td>
-                                    <td>${item.rating}</td>
-                                    <td>${item.remark}</td>
-                                    <td>${item.presentation}</td>
-                                    <td>${item.content}</td>
-                                </tr>`;
+                                        <td>${index + 1}</td>
+                                        <td>${item.rating}</td>
+                                        <td>${item.remark}</td>
+                                        <td>${item.presentation}</td>
+                                        <td>${item.content}</td>
+                                    </tr>`;
                         });
+
+                        const tbody = document.querySelector('#zero_config tbody');
                         tbody.innerHTML = rows;
-                    } else {
-                        tbody.innerHTML =
-                            `<tr><td colspan="3">No feedback found.</td></tr>`;
-                    }
-                });
+
+                        $('#zero_config').DataTable(); // Initialize now
+                    });
+
         });
     });
 });

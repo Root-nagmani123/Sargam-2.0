@@ -50,6 +50,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
+                             @if(hasRole('Admin') || hasRole('Training'))
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">Calendar Creation</span>
                                 </a></li>
@@ -67,10 +68,10 @@
 
                             {{-- USER Feedback --}}
                             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#userFeedbackCollapse" role="button"
                                     aria-expanded="false" aria-controls="userFeedbackCollapse">
@@ -91,10 +92,10 @@
 
                             </ul>
                             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                    border-radius: 30px 0px 0px 30px;
+                                    width: 100%;
+                                    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#subjectCollapse" role="button"
                                     aria-expanded="false" aria-controls="subjectCollapse">
@@ -112,6 +113,7 @@
                                         <span class="hide-menu">Subject Module Master</span>
                                     </a></li>
                             </ul>
+                            @endif
 
                         </ul>
                     </div>
