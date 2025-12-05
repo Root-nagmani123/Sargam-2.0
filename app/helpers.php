@@ -70,5 +70,26 @@ return $designation;
 
     
 }
+function get_profile_pic(){
+    $user = Auth::user();
+    $cacheKey = 'profile_pic_'.$user->user_id;
+    if($user->user_category == 'S'){
+        return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+    }else{
+$profile_pic = Cache::remember($cacheKey, 600, function () use ($user) {
+        $data = DB::table('employee_master')
+            ->where('employee_master.pk', $user->user_id)
+            ->value('profile_picture');
+            if($data == null ){
+             return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+            }else{
+                // return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+                return asset('storage/'.$data);
+            }
+    });
+    return $profile_pic;
+}
+
+}
 
 
