@@ -13,6 +13,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
+                             @if(hasRole('Admin') || hasRole('Training'))
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -61,7 +62,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
-                             @if(hasRole('Admin') || hasRole('Training'))
+                            
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">Calendar Creation</span>
                                 </a></li>
@@ -125,6 +126,7 @@
                                     </a></li>
                             </ul>
                             @endif
+                        
 
                         </ul>
                     </div>

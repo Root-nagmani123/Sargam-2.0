@@ -11,7 +11,7 @@
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer"></div>
                             </div>
-                              @if(hasRole('Admin') || hasRole('Training'))
+                           
                             <div class="simplebar-mask">
                                 <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
@@ -29,7 +29,14 @@
                                                             style="font-size: 32px;">
                                                             dashboard_customize
                                                         </i>
-                                                        <span class="mini-nav-title">Training</span>
+                                                        <span class="mini-nav-title">
+                                                            @if(hasRole('Admin') || hasRole('Training'))
+                                                                Training
+                                                        @elseif(hasRole('Internal Faculty')  || hasRole('Guest Faculty') || hasRole('Student-OT'))
+
+                                                                Academic
+                                                            @endif
+                                                        </span>
                                                     </div>
 
                                                     <!-- Right Arrow -->
@@ -40,7 +47,7 @@
                                                 </a>
                                             </li>
 
-
+@if(hasRole('Admin') || hasRole('Training'))
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -126,12 +133,13 @@
                                                  </a>
                                              </li>
 
+@endif
 
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            @endif
+                          
                             <div class="simplebar-placeholder" style="width: 80px; height: 537px;"></div>
                         </div>
                         <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">

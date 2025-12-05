@@ -214,5 +214,3 @@ $(document).ready(function () {
 
 
     @endsection
-
-@endsection

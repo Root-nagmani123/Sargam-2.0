@@ -53,7 +53,7 @@
                                     </div>
                                 </div>
                             </li>
-                            @if(hasRole('Admin') || hasRole('Training') )
+                          
                             <li class="sidebar-item" style="background: #4077ad;
     border-radius: 30px 0px 0px 30px;
     width: 100%;
@@ -190,10 +190,9 @@
                                             class="hide-menu">Student Feedback</span>
                                     </a></li>
                             </ul>
-                            @endif
+                          
 
                             <!-- faculty menu start -->
- @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
@@ -212,11 +211,10 @@
  <li class="sidebar-item"><a class="sidebar-link" href="{{route('feedback.get.feedbackList')}}">
                                     <span class="hide-menu">My Feedback</span>
                                 </a></li>
-                                @endif
+                               
                             <!-- faculty menu end -->
 
                             <!-- OTs menu start -->
-                              @if(hasRole('Student-OT') || hasRole('Admin'))
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
@@ -238,7 +236,7 @@
                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
                                     <span class="hide-menu">Peer Evaluation</span>
                                 </a></li>
-                                @endif
+                              
                         </ul>
                         
 
