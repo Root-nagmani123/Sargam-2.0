@@ -145,7 +145,7 @@
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="memoCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link" href="#">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.notice.management.index') }}">
                                         <span
                                             class="hide-menu">Memo /Notice Management</span>
                                     </a></li>

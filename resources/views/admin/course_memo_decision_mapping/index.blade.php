@@ -2,9 +2,9 @@
 
 @section('title', 'Course Memo Decision Mapping - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
-
+<x-breadcrum title="Course Memo Decision Mapping" />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">

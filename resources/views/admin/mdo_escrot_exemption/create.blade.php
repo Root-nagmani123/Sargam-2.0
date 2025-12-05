@@ -215,7 +215,7 @@
 @endsection
 @section('title', 'MDO/Escort Exemption')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <!-- start Vertical Steps Example -->

@@ -2,9 +2,9 @@
 
 @section('title', isset($memoType) ? 'Edit Memo Type' : 'Add Memo Type')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
-
+<x-breadcrum title="Memo Type Master" />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">

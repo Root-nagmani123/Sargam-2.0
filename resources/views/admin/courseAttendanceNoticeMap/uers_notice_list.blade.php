@@ -2,9 +2,10 @@
 
 @section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
-
+<x-breadcrum title="Notice /Memo Management" />
+    <x-session_message />
     <!-- start Zero Configuration -->
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">

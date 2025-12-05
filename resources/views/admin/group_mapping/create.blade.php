@@ -2,7 +2,7 @@
 
 @section('title', 'Group Mapping')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <x-breadcrum title="Group Mapping" />

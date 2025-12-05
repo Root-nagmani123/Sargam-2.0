@@ -2,7 +2,7 @@
 
 @section('title', isset($courseMemoMap) ? 'Edit Course Memo Mapping' : 'Add Course Memo Mapping')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Course Memo Decision Mapping" />
     <x-session_message />

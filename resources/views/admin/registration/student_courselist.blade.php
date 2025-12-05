@@ -2,8 +2,8 @@
 
 @section('title', 'Student - Course Mapping')
 
-@section('content')
-    <div class="container-fluid">
+@section('setup_content')
+    <div class="container-fluid">   <x-breadcrum title="Course Wise OTs List" />
 
         {{-- Filters + Counts + Export --}}
         <div class="card mb-3 p-3" style="border-left: 4px solid #004a93;">

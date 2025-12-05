@@ -2,7 +2,7 @@
 
 @section('title', isset($conclusion) ? 'Edit Memo Conclusion' : 'Add Memo Conclusion')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Memo Conclusion Master" />
     <x-session_message />

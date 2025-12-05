@@ -2,7 +2,7 @@
 
 @section('title', 'Add Exemption')
 
-@section('content')
+@section('setup_content')
     <div class="container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="fw-bold">Add New Exemption</h4>

@@ -8,7 +8,7 @@
         }
     </style>
 @endsection
-@section('content')
+@section('setup_content')
     <form action="{{ route('attendance.save') }}" method="post">
         @csrf
         <div class="container-fluid">

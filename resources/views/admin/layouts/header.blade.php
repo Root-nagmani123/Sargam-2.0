@@ -121,8 +121,8 @@
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container -->
                     <div class="nav-container position-relative">
-                        <ul class="navbar-nav shadow-lg px-4 py-2 gap-2 align-items-center" style="border-radius: 40px; height: 60px; background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%); 
-                       border: 1px solid rgba(0, 0, 0, 0.05); backdrop-filter: blur(10px);" role="menubar"
+                        <ul class="navbar-nav px-4 py-2 gap-2 align-items-center" style="border-radius: 20px; height: 60px; background: #f2f2f2; 
+                       border: 1px solid rgba(0, 0, 0, 0.05);" role="menubar"
                             aria-label="Main navigation">
 
                             <!-- Home -->
@@ -131,7 +131,6 @@
                                     class="nav-link active rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2"
                                     data-bs-toggle="tab" role="tab" aria-selected="true" aria-controls="home-panel"
                                     id="home-tab">
-                                    <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">home</i>
                                     <span>Home</span>
                                 </a>
                             </li>
@@ -143,8 +142,6 @@
                                     class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
                                     id="setup-tab">
-                                    <i class="material-icons material-symbols-rounded fs-6"
-                                        aria-hidden="true">settings</i>
                                     <span>Setup</span>
                                 </a>
                             </li>
@@ -156,7 +153,6 @@
                                     class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="communications-panel" id="communications-tab">
-                                    <i class="material-icons material-symbols-rounded fs-6" aria-hidden="true">chat</i>
                                     <span>Communications</span>
                                 </a>
                             </li>
@@ -168,8 +164,6 @@
                                     class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="academics-panel" id="academics-tab">
-                                    <i class="material-icons material-symbols-rounded fs-6"
-                                        aria-hidden="true">school</i>
                                     <span>Academics</span>
                                 </a>
                             </li>
@@ -181,8 +175,6 @@
                                     class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="material-management-panel" id="material-management-tab">
-                                    <i class="material-icons material-symbols-rounded fs-6"
-                                        aria-hidden="true">inventory</i>
                                     <span>Material Management</span>
                                 </a>
                             </li>
@@ -192,8 +184,6 @@
                                 <a class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
                                     href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
                                     aria-expanded="false" data-bs-toggle="dropdown">
-                                    <i class="material-icons material-symbols-rounded fs-6"
-                                        aria-hidden="true">payments</i>
                                     <span>Financial</span>
                                     <i class="material-icons material-symbols-rounded fs-6 dropdown-arrow transition-all"
                                         aria-hidden="true">expand_more</i>
@@ -205,16 +195,12 @@
                                     <li role="none">
                                         <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
                                             href="#" role="menuitem">
-                                            <i class="material-icons material-symbols-rounded fs-6"
-                                                aria-hidden="true">account_balance</i>
                                             <span>Budget</span>
                                         </a>
                                     </li>
                                     <li role="none">
                                         <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
                                             href="#" role="menuitem">
-                                            <i class="material-icons material-symbols-rounded fs-6"
-                                                aria-hidden="true">receipt_long</i>
                                             <span>Accounts</span>
                                         </a>
                                     </li>
