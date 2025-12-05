@@ -13,13 +13,12 @@
                             {{-- GENERAL --}}
                             
                         <!-- Faculty Dashboard Route -->
-                         @if(hasRole('Doctor'))
+                       
                           
                           <li class="sidebar-item"><a class="sidebar-link" href="{{ route('student.medical.exemption.index') }}">
                                         <span class="hide-menu">Student Medical Exemption (Doctor)</span>
                                     </a></li>
-                        @endif
-                       
+                        
 
 
                         <ul class="sidebar-menu" id="sidebarnav">
