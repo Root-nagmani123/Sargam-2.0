@@ -2,7 +2,7 @@
 
 @section('title', 'Student Medical Exemption - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <style>
 .btn-group[role="group"] .btn {
     transition: all 0.3s ease-in-out;
