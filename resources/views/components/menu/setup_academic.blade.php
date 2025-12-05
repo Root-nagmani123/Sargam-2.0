@@ -207,12 +207,12 @@
                                     </div>
                                 </div>
                             </li>
-                            @if(hasRole('Admin') || hasRole('Training') )
+                          
                             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#coursemasterCollapse" role="button"
                                     aria-expanded="false" aria-controls="coursemasterCollapse">
@@ -235,10 +235,10 @@
                                     </a></li>
                             </ul>
                             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                            border-radius: 30px 0px 0px 30px;
+                            width: 100%;
+                            box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                            min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#exemptionmasterCollapse" role="button"
                                     aria-expanded="false" aria-controls="exemptionmasterCollapse">
@@ -334,7 +334,7 @@
                                         <span class="hide-menu">Student Feedback</span>
                                     </a></li>
                             </ul>
-                            @endif
+                          @endif
 
                             <!-- faculty menu start -->
                             @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
@@ -363,6 +363,12 @@
                                 </a></li>
                             @endif
                             <!-- faculty menu end -->
+                             <!-- medical exemption for OTs -->
+                              @if(hasRole('Doctor'))
+                              <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.faculty.view') }}">
+                                    <span class="hide-menu">OT - Medical Exemption</span>
+                                </a></li>
+                                @endif
 
                             <!-- OTs menu start -->
                             @if(hasRole('Student-OT') || hasRole('Admin'))
