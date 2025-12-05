@@ -28,7 +28,12 @@ class MDOEscrotExemptionController extends Controller
             ->pluck('year', 'year')
             ->toArray();
         
-        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('courseMaster', 'years'));
+        // Get duty types for filter - show all duty types
+        $dutyTypes = MDODutyTypeMaster::orderBy('mdo_duty_type_name')
+            ->pluck('mdo_duty_type_name', 'pk')
+            ->toArray();
+        
+        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('courseMaster', 'years', 'dutyTypes'));
     }
 
     public function create()

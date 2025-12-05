@@ -104,6 +104,11 @@ class MDOEscrotExemptionDataTable extends DataTable
             $query->where('Time_to', '<=', $timeToFilter);
         }
 
+        // Apply duty type filter if provided
+        if ($dutyTypeFilter = request('duty_type_filter')) {
+            $query->where('mdo_duty_type_master_pk', $dutyTypeFilter);
+        }
+
         return $query;
     }
 
@@ -141,7 +146,7 @@ public function html(): HtmlBuilder
             Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::make('mdo_name')->title('MDO Name')->addClass('text-center')->searchable(true)->orderable(false),
+            Column::make('mdo_name')->title('Duty type')->addClass('text-center')->searchable(true)->orderable(false),
             Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(true)->orderable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
         ];
