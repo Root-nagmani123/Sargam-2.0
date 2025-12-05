@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Adldap\Laravel\Facades\Adldap;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\DB;
 
 
 class LoginController extends Controller
@@ -84,6 +85,10 @@ class LoginController extends Controller
 
             if( $user ) {
              Auth::login($user);
+             $current_date_time = date('Y-m-d H:i:s');
+             DB::table('user_credentials')
+                 ->where('pk', $user->pk)
+                 ->update(['last_login' => $current_date_time]);
 
                 if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
@@ -101,6 +106,10 @@ class LoginController extends Controller
                 if ($user) {
 
                     Auth::login($user);
+                    $current_date_time = date('Y-m-d H:i:s');
+                    DB::table('user_credentials')
+                        ->where('pk', $user->pk)
+                        ->update(['last_login' => $current_date_time]);
                     if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
                     }else{

@@ -255,12 +255,23 @@
                    aria-hidden="true">schedule</i>
                 <span class="fw-medium">Last login:</span>
             </div>
+            @php
+                $lastLogin = Auth::user()->last_login ?? null;
+                if ($lastLogin) {
+                    $date = \Carbon\Carbon::parse($lastLogin);
+                    $formattedDate = $date->format('d-m-Y H:i:s');
+                    $isoDate = $date->toIso8601String();
+                } else {
+                    $formattedDate = 'Never';
+                    $isoDate = '';
+                }
+            @endphp
             <time id="myTime" 
-                  datetime="2025-05-14T13:56:02"
+                  datetime="{{ $isoDate }}"
                   class="text-dark fw-semibold"
                   style="font-size: 13px; line-height: 16px;"
                   aria-live="polite">
-                14 May 2025, 13:56
+                {{ $formattedDate }}
             </time>
         </div>
     </div>
@@ -268,19 +279,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Update time format for better UX
-    const timeElement = document.getElementById('myTime');
-    if (timeElement) {
-        const date = new Date(timeElement.getAttribute('datetime'));
-        const options = { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        };
-        timeElement.textContent = date.toLocaleDateString('en-US', options);
-    }
+    // Time format is already set in PHP, no need to override
     
     // Active tab indicator animation
     const activeTab = document.querySelector('.nav-link.active');
