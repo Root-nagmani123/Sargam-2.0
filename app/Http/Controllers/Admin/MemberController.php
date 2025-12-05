@@ -466,4 +466,28 @@ class MemberController extends Controller
         $fileName = 'members-'.date('d-m-Y').'.xlsx';
         return Excel::download(new MemberExport, $fileName);
     }
+
+    public function destroy($id)
+    {
+        try {
+            $memberId = decrypt($id);
+            $member = EmployeeMaster::findOrFail($memberId);
+
+            // Delete related UserCredential and EmployeeRoleMapping
+            $userCredential = UserCredential::where('user_id', $memberId)->first();
+            if ($userCredential) {
+                // Delete role mappings first
+                EmployeeRoleMapping::where('user_credentials_pk', $userCredential->pk)->delete();
+                // Delete user credential
+                $userCredential->delete();
+            }
+
+            // Delete the member
+            $member->delete();
+
+            return redirect()->route('member.index')->with('success', 'Member deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('member.index')->with('error', 'Error deleting member: ' . $e->getMessage());
+        }
+    }
 }
