@@ -60,7 +60,7 @@ input.is-invalid {
 
             <form class="facultyForm">
 			  @csrf
-			  <!--<input type="hidden" name="faculty_id" id="faculty_id" value="">-->
+			  <input type="hidden" name="faculty_id" id="faculty_id" value="">
                 <div class="card">
                     <div class="card-body">
                         <h4 class="card-title">Personal Information</h4>
@@ -786,6 +786,50 @@ input.is-invalid {
 </script>
 <script>
 $(document).ready(function () {
+    // AJAX submit for Save button
+    $(document).on('click', '#saveFacultyForm', function (e) {
+        e.preventDefault();
+        var form = $('.facultyForm')[0];
+        var formData = new FormData(form);
+
+        // Validate required fields before submit
+        var requiredFields = [
+            'facultytype', 'firstName', 'middlename', 'lastname', 'fullname', 'gender', 'landline', 'mobile',
+            'country', 'state', 'district', 'city', 'email', 'residence_address', 'permanent_address', 'bankname',
+            'accountnumber', 'ifsccode', 'pannumber', 'joiningdate', 'current_sector'
+        ];
+        var missing = [];
+        requiredFields.forEach(function(field) {
+            if (!formData.get(field) || formData.get(field) === 'undefined') {
+                missing.push(field);
+            }
+        });
+        if (missing.length > 0) {
+            alert('Please fill all required fields: ' + missing.join(', '));
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('faculty.store') }}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.status) {
+                    window.location.href = "{{ route('faculty.index') }}";
+                } else {
+                    alert(response.message || 'Error saving faculty.');
+                }
+            },
+            error: function(xhr) {
+                alert('Error: ' + (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error'));
+            }
+        });
+    });
 
     // Check Email
     $('input[name="email"]').on('blur', function () {
@@ -837,9 +881,17 @@ $(document).ready(function () {
     // =============================
     // 1) Live Search Full Name
     // =============================
+    $input.on('input', function () {
+        let query = $(this).val().trim();
+        // Always hide 'No results found' if any value is present
+        if (query.length > 0) {
+            $suggestionBox.hide();
+        }
+    });
+
     $input.on('keyup', function () {
         let query = $(this).val().trim();
-
+        $suggestionBox.find('.list-group-item.disabled').remove();
         if (query.length > 1) {
             $.ajax({
                 url: "{{ route('faculty.checkFullName') }}",
@@ -847,7 +899,6 @@ $(document).ready(function () {
                 data: { query: query },
                 success: function (response) {
                     let html = "";
-
                     if (response.suggestions.length > 0) {
                         response.suggestions.forEach(function (item) {
                             html += `<a href="#" class="list-group-item list-group-item-action suggestion-item"
@@ -857,10 +908,18 @@ $(document).ready(function () {
                                      </a>`;
                         });
                     } else {
-                        html = '<a class="list-group-item disabled">No results found</a>';
+                            html = '<a class="list-group-item disabled">No results found</a>';
                     }
-
-                    $suggestionBox.html(html).show();
+                        $suggestionBox.html(html).show();
+                        // If "No results found" is shown, hide it after 1.5 seconds
+                        if (response.suggestions.length === 0) {
+                            setTimeout(function() {
+                                // Only hide if still showing and still no suggestions
+                                if ($suggestionBox.find('.list-group-item.disabled').length > 0) {
+                                    $suggestionBox.hide();
+                                }
+                            }, 1500);
+                        }
                 }
             });
         } else {
@@ -994,49 +1053,42 @@ function fillFacultyForm(faculty) {
 
 //Qualification Details
 
-/*if (faculty.faculty_qualification_map.length > 1) {
-    for (let i = 0; i < faculty.faculty_qualification_map.length; i++) {
+    // Clear existing dynamic rows except the first template row
+    $(".degree-row:gt(0)").remove();
+    $(".experience-row:gt(0)").remove();
+
+    // Add rows if needed for qualifications
+    for (let i = 1; i < faculty.faculty_qualification_map.length; i++) {
         education_fields();
     }
-}
-*/
+    faculty.faculty_qualification_map.forEach(function(q, index) {
+        const row = $(".degree-row").eq(index);
+        row.find("input[name='degree[]']").val(q.Degree_name);
+        row.find("input[name='university_institution_name[]']").val(q.University_Institution_Name);
+        row.find("select[name='year_of_passing[]']").val(q.Year_of_passing).trigger('change');
+        row.find("input[name='percentage_CGPA[]']").val(q.Percentage_CGPA);
+        if (q.Certifcates_upload_path) {
+            row.find(".existing-certificate").html(`
+                <a href="storage/${q.Certifcates_upload_path}" target="_blank" class="text-primary">
+                    View Existing Certificate
+                </a>
+            `);
+        }
+    });
 
-faculty.faculty_qualification_map.forEach(function(q, index) {
-    const row = $(".degree-row").eq(index);
-
-
-    row.find("input[name='degree[]']").val(q.Degree_name);
-    row.find("input[name='university_institution_name[]']").val(q.University_Institution_Name);
-   row.find("select[name='year_of_passing[]']").val(q.Year_of_passing).trigger('change');
-
-  row.find("input[name='percentage_CGPA[]']").val(q.Percentage_CGPA);
-
- if (q.Certifcates_upload_path) {
-        row.find(".existing-certificate").html(`
-            <a href="storage/${q.Certifcates_upload_path}" target="_blank" class="text-primary">
-                View Existing Certificate
-            </a>
-			`);
-		}
-	});
-
-
-faculty.faculty_experience_map.forEach(function(exp, index) {
- const row = $(".experience-row").eq(index);
-
- row.find("input[name='experience[]']").val(exp.Years_Of_Experience);
-
- row.find("input[name='specialization[]']").val(exp.Specialization);
-
- row.find("input[name='institution[]']").val(exp.pre_Institutions);
-
- row.find("input[name='position[]']").val(exp.Position_hold);
-
- row.find("input[name='duration[]']").val(exp.duration);
-
- row.find("input[name='work[]']").val(exp.Nature_of_Work);
-
-});
+    // Add rows if needed for experience
+    for (let i = 1; i < faculty.faculty_experience_map.length; i++) {
+        experience_fields();
+    }
+    faculty.faculty_experience_map.forEach(function(exp, index) {
+        const row = $(".experience-row").eq(index);
+        row.find("input[name='experience[]']").val(exp.Years_Of_Experience);
+        row.find("input[name='specialization[]']").val(exp.Specialization);
+        row.find("input[name='institution[]']").val(exp.pre_Institutions);
+        row.find("input[name='position[]']").val(exp.Position_hold);
+        row.find("input[name='duration[]']").val(exp.duration);
+        row.find("input[name='work[]']").val(exp.Nature_of_Work);
+    });
 
 	//Bank Details
 	$("input[name='bankname']").val(faculty.bank_name);
