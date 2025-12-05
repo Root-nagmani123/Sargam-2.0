@@ -10,6 +10,7 @@
                     <div class="simplebar-content" style="padding: 0px 0px 20px 24px;">
                         <ul class="sidebar-menu" id="sidebarnav">
                             @include('components.profile')
+                            @if(hasRole('Admin') || hasRole('Training'))
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -44,10 +45,10 @@
                                 </div>
                             </li>
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                        border-radius: 30px 0px 0px 30px;
+                                        width: 100%;
+                                        box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                        min-width: 250px;">
                                 <a class="text-white d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#generalMasterMenu" role="button"
                                     aria-expanded="false" aria-controls="generalMasterMenu">
@@ -77,10 +78,10 @@
 
                             <!-- HOSTEL -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
                                 <a class="text-white d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#hostelMenu" role="button" aria-expanded="false"
                                     aria-controls="hostelMenu">
@@ -122,10 +123,10 @@
 
                             <!-- ADDRESS -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
                                 <a class="text-white d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#addressMenu" role="button" aria-expanded="false"
                                     aria-controls="addressMenu">
@@ -153,6 +154,7 @@
                                     </a></li>
                             </div>
                         </ul>
+                        @endif
                     </div>
                 </div>
             </div>
