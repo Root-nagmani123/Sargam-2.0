@@ -61,7 +61,7 @@
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
                             {{-- EMPLOYEE --}}
-                            @if(hasRole('Admin') || hasRole('Training'))
+                          
                             <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -163,7 +163,7 @@
                                         <span class="hide-menu">Notice Notifications</span>
                                     </a></li>
                             </ul>
-                            @endif
+                            
 
                         </ul>
                     </div>
