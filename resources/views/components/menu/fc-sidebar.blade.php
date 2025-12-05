@@ -3,6 +3,7 @@
             @include('components.profile')
 
             <!-- Section Header -->
+             @if(hasRole('Admin') || hasRole('Training'))
             <li class="nav-section" role="listitem">
                 <div class="d-flex align-items-center justify-content-between w-100">
                     <div class="d-flex align-items-center">
@@ -213,6 +214,7 @@
                     </a>
                 </li>
             </ul>
+            @endif
            
         </ul>
     </nav>

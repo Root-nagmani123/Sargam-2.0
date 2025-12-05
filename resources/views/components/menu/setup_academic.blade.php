@@ -16,7 +16,10 @@
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
-                           <li class="nav-section" role="listitem">
+                            @if(hasRole('Admin') || hasRole('Training'))
+                           
+                       
+                            <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
                                 <div class="d-flex align-items-center justify-content-between w-100">
@@ -44,24 +47,18 @@
                                         <!-- Section Title with Proper Semantic Markup -->
                                         <h2 class="section-title text-white m-0"
                                             style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
-                                            Trainings
+                                           @php
+                                            $roles = session('user_roles', []);
+                                           
+                                             @endphp
+                                            {{ !empty($roles) ? implode(', ', $roles) : '' }}
                                         </h2>
                                     </div>
-
-                                    <!-- Right Side: Collapse All Button -->
-                                    <button 
-                                        class="btn btn-sm btn-link text-white p-1 collapse-all-btn" 
-                                        onclick="collapseAllMenus()"
-                                        data-bs-toggle="tooltip"
-                                        data-bs-placement="left"
-                                        title="Collapse All Menus"
-                                        style="font-size: 12px; text-decoration: none;">
-                                        <i class="material-icons material-symbols-rounded" style="font-size: 20px;">unfold_less</i>
-                                    </button>
                                 </div>
                             </li>
+                          
                             <li class="sidebar-item" style="background: #4077ad;
-                                border-radius: 30px;
+                                border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
                                 min-width: 250px;">
@@ -90,10 +87,10 @@
                                     </a></li>
                             </ul>
                             <li class="sidebar-item" style="background: #4077ad;
-                                border-radius: 30px;
-                                width: 100%;
-                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                                min-width: 250px;">
+                            border-radius: 30px 0px 0px 30px;
+                            width: 100%;
+                            box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                            min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#exemptionmasterCollapse" role="button" aria-expanded="false"
                                     aria-controls="exemptionmasterCollapse"
@@ -112,11 +109,7 @@
                                         <span
                                             class="hide-menu">MDO Escort Exemption</span>
                                     </a></li>
-                                    <li class="sidebar-item" style="background: #4077ad;
-                                    border-radius: 30px;
-                                    width: 100%;
-                                    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                                    min-width: 250px;">
+                                    <li class="sidebar-item">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#exemptionCollapse" role="button" aria-expanded="false"
                                     aria-controls="exemptionCollapse"
@@ -143,10 +136,10 @@
                             </ul>
                             </ul>
                             <li class="sidebar-item" style="background: #4077ad;
-                                border-radius: 30px;
-                                width: 100%;
-                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                                min-width: 250px;">
+    border-radius: 30px 0px 0px 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#memoCollapse" role="button" aria-expanded="false"
                                     aria-controls="memoCollapse"
@@ -156,10 +149,6 @@
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="memoCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.notice.management.index') }}">
-                                        <span
-                                            class="hide-menu">Memo /Notice Management</span>
-                                    </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.memo.type.master.index') }}">
                                         <span
                                             class="hide-menu">Memo Type Master</span>
@@ -180,7 +169,86 @@
                                             class="hide-menu">Memo & Notice Chat (User)</span>
                                     </a></li>
                             </ul>
-                           
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px 0px 0px 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#feedbackCollapse" role="button" aria-expanded="false"
+                                    aria-controls="feedbackCollapse"
+                                    >
+                                    <span class="hide-menu fw-bold">User Feedback</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="feedbackCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}">
+                                        <span
+                                            class="hide-menu">Feedback</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.studentFeedback') }}">
+                                        <span
+                                            class="hide-menu">Student Feedback</span>
+                                    </a></li>
+                            </ul>
+                          @endif
+
+                            <!-- faculty menu start -->
+ @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                                    <span class="hide-menu">My Time Table</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
+                                    <span class="hide-menu">OT - Attendance</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.mdo.escort.exception.view') }}">
+                                    <span class="hide-menu">OT - MDO / Escort Duty</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.faculty.view') }}">
+                                    <span class="hide-menu">OT - Medical Exemption</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.notice.memo.view') }}">
+                                    <span class="hide-menu">OT - Memo / Notice</span>
+                                </a></li>
+ <li class="sidebar-item"><a class="sidebar-link" href="{{route('feedback.get.feedbackList')}}">
+                                    <span class="hide-menu">My Feedback</span>
+                                </a></li>
+                                @endif
+                            <!-- faculty menu end -->
+                             <!-- medical exemption for OTs -->
+                              @if(hasRole('Doctor'))
+                              <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.faculty.view') }}">
+                                    <span class="hide-menu">OT - Medical Exemption</span>
+                                </a></li>
+                                @endif
+
+                            <!-- OTs menu start -->
+
+                              @if(hasRole('Student-OT') || hasRole('Admin'))
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                                    <span class="hide-menu">My Time Table</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
+                                    <span class="hide-menu">My Attendance</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.mdo.escrot.exemption.view') }}">
+                                    <span class="hide-menu">MDO/Escort Duty</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.ot.view') }}">
+                                    <span class="hide-menu">Medical Exemption</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
+                                    <span class="hide-menu">Memo/Notice</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.get.studentFeedback') }}">
+                                    <span class="hide-menu">Session Feedback</span>
+                                </a></li>
+                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
+                                    <span class="hide-menu">Peer Evaluation</span>
+                                </a></li>
+                                @endif
                         </ul>
                     </div>
                 </div>

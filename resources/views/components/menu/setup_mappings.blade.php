@@ -10,7 +10,7 @@
                     <div class="simplebar-content" style="padding: 0px 0px 20px 24px;">
                         <ul class="sidebar-menu" id="sidebarnav">
                             @include('components.profile')
-                          
+                            @if(hasRole('Admin') || hasRole('Training'))
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -165,6 +165,7 @@
                                     </a></li>
                             </div>
                         </ul>
+                    @endif
                      
                     </div>
                 </div>
