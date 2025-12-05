@@ -142,7 +142,8 @@
                                     class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
                                     id="setup-tab">
-                                    <span>Setup</span>
+                                    <span>Setup</span>  | 
+                                    <span>Academics</span>
                                 </a>
                             </li>
                             @endif
