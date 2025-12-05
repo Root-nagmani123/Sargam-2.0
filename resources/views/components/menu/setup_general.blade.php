@@ -61,7 +61,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
-                             @if(hasRole('Admin') || hasRole('Training'))
+                            
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">Calendar Creation</span>
                                 </a></li>
@@ -124,7 +124,7 @@
                                         <span class="hide-menu">Subject Module Master</span>
                                     </a></li>
                             </ul>
-                            @endif
+                        
 
                         </ul>
                     </div>
