@@ -34,17 +34,10 @@
 
 .search-box input {
     width: 100%;
-    padding: 8px 12px;
+    padding: 6px 12px;
     border: 1px solid #ced4da;
     border-radius: 4px;
     font-size: 14px;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.search-box input:focus {
-    outline: none;
-    border-color: #004a93;
-    box-shadow: 0 0 0 2px rgba(0, 74, 147, 0.1);
 }
 
 .select-all-box {
@@ -202,15 +195,6 @@
 .no-students {
     font-size: 0.9rem;
     color: #6c757d;
-    text-align: center;
-    padding: 20px;
-}
-
-/* Search no results message */
-.search-no-results {
-    font-style: italic;
-    color: #dc3545;
-    padding: 15px;
 }
 
 /* Scrollbar (GIGW accessible visible scrollbar) */
@@ -425,7 +409,7 @@ moveRightBtn.addEventListener('click', () => {
     const checkedBoxes = availableList.querySelectorAll('input[type="checkbox"]:checked');
     checkedBoxes.forEach(cb => {
         const row = cb.closest('.student-row');
-        if (row && row.style.display !== 'none') { // Only move visible rows
+        if (row) {
             cb.checked = false;
             selectedList.appendChild(row);
             // Update arrow button
@@ -439,9 +423,6 @@ moveRightBtn.addEventListener('click', () => {
     });
     updateHiddenSelect();
     updateNoStudentsMessage();
-    // Clear search after moving
-    searchAvailableInput.value = '';
-    filterStudents(availableList, '', true);
 });
 
 // Move selected rows from selected to available
@@ -449,7 +430,7 @@ moveLeftBtn.addEventListener('click', () => {
     const checkedBoxes = selectedList.querySelectorAll('input[type="checkbox"]:checked');
     checkedBoxes.forEach(cb => {
         const row = cb.closest('.student-row');
-        if (row && row.style.display !== 'none') { // Only move visible rows
+        if (row) {
             cb.checked = false;
             availableList.appendChild(row);
             // Update arrow button
@@ -463,9 +444,6 @@ moveLeftBtn.addEventListener('click', () => {
     });
     updateHiddenSelect();
     updateNoStudentsMessage();
-    // Clear search after moving
-    searchSelectedInput.value = '';
-    filterStudents(selectedList, '', false);
 });
 
 // Per-row arrow click handler
@@ -474,7 +452,7 @@ document.addEventListener('click', (e) => {
     if (!arrowBtn) return;
 
     const row = arrowBtn.closest('.student-row');
-    if (!row || row.style.display === 'none') return; // Don't move hidden rows
+    if (!row) return;
 
     if (arrowBtn.classList.contains('add')) {
         // Move to selected
@@ -484,9 +462,6 @@ document.addEventListener('click', (e) => {
         arrowBtn.classList.remove('add');
         arrowBtn.classList.add('remove');
         arrowBtn.title = 'Remove from selection';
-        // Clear search after moving
-        searchAvailableInput.value = '';
-        filterStudents(availableList, '', true);
     } else if (arrowBtn.classList.contains('remove')) {
         // Move to available
         availableList.appendChild(row);
@@ -494,95 +469,41 @@ document.addEventListener('click', (e) => {
         arrowBtn.classList.remove('remove');
         arrowBtn.classList.add('add');
         arrowBtn.title = 'Add to selection';
-        // Clear search after moving
-        searchSelectedInput.value = '';
-        filterStudents(selectedList, '', false);
     }
     updateHiddenSelect();
     updateNoStudentsMessage();
 });
 
-// Select all functionality - only select visible rows
+// Select all functionality
 document.getElementById('selectAllAvailable').addEventListener('change', function() {
-    availableList.querySelectorAll('.student-row').forEach(row => {
-        if (row.style.display !== 'none') {
-            const cb = row.querySelector('input[type="checkbox"]');
-            if (cb) cb.checked = this.checked;
-        }
+    availableList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = this.checked;
     });
 });
 
 document.getElementById('selectAllSelected').addEventListener('change', function() {
-    selectedList.querySelectorAll('.student-row').forEach(row => {
-        if (row.style.display !== 'none') {
-            const cb = row.querySelector('input[type="checkbox"]');
-            if (cb) cb.checked = this.checked;
-        }
+    selectedList.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.checked = this.checked;
     });
 });
 
-// Search functionality - Enhanced with real-time filtering
-const searchAvailableInput = document.getElementById('searchAvailable');
-const searchSelectedInput = document.getElementById('searchSelected');
+// Search functionality
+document.getElementById('searchAvailable').addEventListener('input', function() {
+    filterStudents(availableList, this.value);
+});
 
-// Enhanced filter function that works with both name and OT code
-function filterStudents(list, searchTerm, isAvailable = true) {
-    const term = searchTerm.toLowerCase().trim();
-    
-    // If search is empty, show all rows
-    if (!term) {
-        list.querySelectorAll('.student-row').forEach(row => {
-            row.style.display = 'grid';
-        });
-        updateNoStudentsMessage();
-        return;
-    }
-    
-    let visibleCount = 0;
+document.getElementById('searchSelected').addEventListener('input', function() {
+    filterStudents(selectedList, this.value);
+});
+
+function filterStudents(list, searchTerm) {
+    const term = searchTerm.toLowerCase();
     list.querySelectorAll('.student-row').forEach(row => {
-        // Get student name and OT code from data attributes
-        const name = (row.getAttribute('data-name') || '').toLowerCase();
-        const otCode = (row.getAttribute('data-ot') || '').toLowerCase();
-        
-        // Check if search term matches name or OT code
-        const matches = name.includes(term) || otCode.includes(term);
-        
-        if (matches) {
-            row.style.display = 'grid';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
+        const name = row.dataset.name?.toLowerCase() || '';
+        const otCode = row.dataset.ot?.toLowerCase() || '';
+        row.style.display = (name.includes(term) || otCode.includes(term)) ? 'grid' : 'none';
     });
-    
-    // Show "No results" message if no matches found
-    const noStudentsMsg = list.querySelector('.no-students');
-    if (visibleCount === 0 && list.querySelectorAll('.student-row').length > 0) {
-        if (!noStudentsMsg || !noStudentsMsg.classList.contains('search-no-results')) {
-            const existingMsg = list.querySelector('.no-students');
-            if (existingMsg) existingMsg.remove();
-            
-            const msg = document.createElement('div');
-            msg.className = 'no-students search-no-results';
-            msg.textContent = 'No students found matching your search';
-            list.appendChild(msg);
-        }
-    } else if (noStudentsMsg && noStudentsMsg.classList.contains('search-no-results')) {
-        noStudentsMsg.remove();
-    }
-    
-    updateNoStudentsMessage();
 }
-
-// Real-time search for Available Students
-searchAvailableInput.addEventListener('input', function() {
-    filterStudents(availableList, this.value, true);
-});
-
-// Real-time search for Selected Students
-searchSelectedInput.addEventListener('input', function() {
-    filterStudents(selectedList, this.value, false);
-});
 
 function updateHiddenSelect() {
     hiddenSelect.innerHTML = '';
@@ -718,10 +639,6 @@ $(document).ready(function() {
                         availableList.innerHTML += createStudentRow(s);
                     }
                 });
-                
-                // Clear search input and reset filter
-                searchAvailableInput.value = '';
-                filterStudents(availableList, '', true);
                 updateNoStudentsMessage();
                 console.log('Students loaded:', response.students.length);
             },
