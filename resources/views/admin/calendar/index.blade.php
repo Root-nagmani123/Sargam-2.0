@@ -1687,4 +1687,3 @@ function makeCheckboxReadonly(selector, isReadonly, isChecked = false) {
 </script>
 
 @endsection
-@endsection
