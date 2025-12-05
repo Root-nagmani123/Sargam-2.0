@@ -49,11 +49,12 @@
                                     </div>
                                 </div>
                             </li>
+                            @if(hasRole('Admin') || hasRole('Training'))
                             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                border-radius: 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#coursemasterCollapse" role="button" aria-expanded="false"
                                     aria-controls="coursemasterCollapse"
@@ -79,10 +80,10 @@
                                     </a></li>
                             </ul>
                             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                border-radius: 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#exemptionmasterCollapse" role="button" aria-expanded="false"
                                     aria-controls="exemptionmasterCollapse"
@@ -102,10 +103,10 @@
                                             class="hide-menu">MDO Escort Exemption</span>
                                     </a></li>
                                     <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                    border-radius: 30px;
+                                    width: 100%;
+                                    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                    min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#exemptionCollapse" role="button" aria-expanded="false"
                                     aria-controls="exemptionCollapse"
@@ -132,10 +133,10 @@
                             </ul>
                             </ul>
                             <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
+                                border-radius: 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#memoCollapse" role="button" aria-expanded="false"
                                     aria-controls="memoCollapse"
@@ -169,6 +170,7 @@
                                             class="hide-menu">Memo & Notice Chat (User)</span>
                                     </a></li>
                             </ul>
+                            @endif
                         </ul>
                     </div>
                 </div>

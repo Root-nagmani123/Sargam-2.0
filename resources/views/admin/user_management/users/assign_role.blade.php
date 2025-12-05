@@ -10,7 +10,7 @@
     
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-header">
-            <h4>Assign Role to: {{ $user->name }}</h4>
+            <h4>Assign Role to: {{ $user->first_name }} {{ $user->last_name }}</h4>
         </div>
 
         <div class="card-body mt-4 mb-4">
