@@ -1092,14 +1092,14 @@ document.addEventListener('DOMContentLoaded', function() {
             meridiem: false,
             hour12: false
         },
-        selectAllow: function(selectInfo) {
-            let today = new Date();
-            today.setHours(0, 0, 0, 0); // remove time for accuracy
+        // selectAllow: function(selectInfo) {
+        //     let today = new Date();
+        //     today.setHours(0, 0, 0, 0); // remove time for accuracy
 
-            let selectedDate = new Date(selectInfo.start);
-            selectedDate.setHours(0, 0, 0, 0);
-            return selectedDate >= today;
-        },
+        //     let selectedDate = new Date(selectInfo.start);
+        //     selectedDate.setHours(0, 0, 0, 0);
+        //     return selectedDate >= today;
+        // },
         events: '/calendar/full-calendar-details', // Data fetch karna
         eventContent: function(arg) {
             // Color palette for event cards
