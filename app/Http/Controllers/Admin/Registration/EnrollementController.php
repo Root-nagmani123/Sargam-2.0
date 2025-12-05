@@ -22,30 +22,41 @@ class EnrollementController extends Controller
 {
     public function create()
     {
-        $currentDate = now()->format('Y-m-d');
+        $currentDate = now()->toDateString();
 
-        // Get courses that are active AND currently within their date range
+        // Get courses that are active AND valid (ongoing or upcoming)
         $courses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($query) use ($currentDate) {
-                $query->whereNull('start_year')
-                    ->orWhere('start_year', '<=', $currentDate);
+            ->where(function ($q) use ($currentDate) {
+
+                // Ongoing courses
+                $q->where(function ($ongoing) use ($currentDate) {
+                    $ongoing->where('start_year', '<=', $currentDate)
+                        ->where(function ($end) use ($currentDate) {
+                            $end->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $currentDate);
+                        });
+                })
+
+                    // OR upcoming courses (start_year in future)
+                    ->orWhere('start_year', '>', $currentDate);
             })
-            ->where(function ($query) use ($currentDate) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', $currentDate);
-            })
-            ->get();
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name']);
 
         // Get previous courses from student course map with course details
         $previousCourses = StudentMasterCourseMap::with('course')
             ->get()
-            ->unique('course_master_pk'); // Get unique courses
+            ->unique('course_master_pk');
 
-        // Get all active services
+        // Get services (unchanged)
         $services = ServiceMaster::all();
 
-        return view('admin.registration.enrollement', compact('courses', 'previousCourses', 'services'));
+        return view(
+            'admin.registration.enrollement',
+            compact('courses', 'previousCourses', 'services')
+        );
     }
+
 
     // public function store(Request $request)
     // {

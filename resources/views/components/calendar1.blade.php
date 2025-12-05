@@ -1,7 +1,5 @@
-@extends('admin.layouts.master')
-@section('title', 'Calendar - Sargam | Lal Bahadur')
 
-@section('setup_content')
+
 <style>
 :root {
     --primary-color: #004a93;
@@ -1408,26 +1406,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 let faculty = event.extendedProps.faculty_name || '';
                 let topic = event.extendedProps.topic || '';
                 let row = `<tr>
-                    <td>${title}</td>
-                    <td>${startDate}</td>
-                    <td>${startTime}</td>
-                    <td>${endTime}</td>
-                    <td>${venue}</td>
-                    <td>${faculty}</td>
-                    <td>${topic}</td>
-                </tr>
-                  <tr>
-                    <td rowspan="2">9:30 to 10:20</td>
-                    <td>A</td>
-                    <td rowspan="2">Recruitment in state (SPM) (Full Group) (0930-1030 hrs)</td>
-                    <td rowspan="2">E-7 <br> Economics Growth (Rajan Govil) (Full Group) (SN)</td>
-                    <td rowspan="2">E-13 <br> Case Study : The Global Financial Crisis (Rajan Govil) (Full Group) (AC)</td>
-                    <td rowspan="2">Election - 1 Overview of Elections (SW)</td>
-                    <td rowspan="2">Election - 6 Model Code of Conduct & Election Expenditure (GSM) (Full Group</td>
-                </tr>
-                <tr>
-                    <td>B</td>
-                    </tr>`;
+    <td>${title}</td>
+    <td>${startDate}</td>
+    <td>${startTime}</td>
+    <td>${endTime}</td>
+    <td>${venue}</td>
+    <td>${faculty}</td>
+    <td>${topic}</td>
+</tr>`;
+
                 tbody.innerHTML += row;
             });
         }
@@ -1685,6 +1672,3 @@ function makeCheckboxReadonly(selector, isReadonly, isChecked = false) {
   const today = new Date().toISOString().split('T')[0]; // Format: YYYY-MM-DD
   dateInput.setAttribute('min', today);
 </script>
-
-@endsection
-@endsection

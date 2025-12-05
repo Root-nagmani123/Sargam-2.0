@@ -390,7 +390,7 @@ h4 {
                     </div>
 
                 </div>
-            </div>
+            </div>   
 
             <h3 class="fw-bold py-3">Today Birthday's</h3>
             <hr class="my-2 mb-4">
@@ -416,7 +416,7 @@ h4 {
                                     @php
                                     $photo = !empty($employee->profile_picture)
                                     ? asset('storage/' . $employee->profile_picture)
-                                    : asset('admin_assets/images/profile/user-1.jpg');
+                                    : 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
                                     @endphp
 
                                     <!-- IMAGE -->

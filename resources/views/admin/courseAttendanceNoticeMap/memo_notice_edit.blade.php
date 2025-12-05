@@ -2,7 +2,7 @@
 
 @section('title', 'Edit Memo / Notice - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Edit Memo / Notice" />
     <x-session_message />
@@ -10,25 +10,39 @@
         <div class="card-body">
             <h4 class="card-title mb-3">Edit Memo / Notice</h4>
             <hr>
-            <form action="{{ route('admin.memo-notice.update', $template->id) }}" method="POST">
+            <form action="{{ route('admin.memo-notice.update', $template->pk) }}" method="POST">
                 @csrf
                 <div class="row">
-                      <div class="col-6">
-                        <label for="course_id" class="form-label">Select Course (Optional)</label>
+                    <div class="col-6">
+                        <label for="course_master_pk" class="form-label">Select Course <span
+                                class="text-danger">*</span></label>
                         <div class="mb-3">
-                            <select name="course_id" class="form-select">
-                        <option value="">All Courses</option>
-                        @foreach($courses as $course)
-                            <option value="{{ $course->pk }}" {{ old('course_id', $template->course_id) == $course->pk ? 'selected' : '' }}>
-                                {{ $course->course_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                            <small class="text-muted">Select an active course if this memo/notice is course-specific</small>
+                            <select name="course_master_pk" class="form-select" required>
+                                <option value="">All Courses</option>
+                                @foreach ($courses as $course)
+                                <option value="{{ $course->pk }}"
+                                    {{ old('course_master_pk', $template->course_master_pk) == $course->pk ? 'selected' : '' }}>
+                                    {{ $course->course_name }}
+                                </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">Select an active course if this memo/notice is
+                                course-specific</small>
                         </div>
                     </div>
+
                     <div class="col-6">
-                        <label for="director" class="form-label">Director's Name</label>
+                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="title" name="title"
+                                placeholder="Enter Memo / Notice Title"
+                                value="{{ old('title', $template->title ?? '') }}" required>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <label for="director" class="form-label">Director's Name <span
+                                class="text-danger">*</span></label>
                         <div class="mb-3">
                             <input type="text" class="form-control" id="director" name="director"
                                 value="{{ old('director', $template->director_name) }}"
@@ -36,18 +50,21 @@
                         </div>
                     </div>
                     <div class="col-6">
-                        <label for="designation" class="form-label">Director's Designation</label>
-                       <div class="mb-3">
-                         <input type="text" class="form-control" id="designation" name="designation"
-                            value="{{ old('designation', $template->director_designation) }}"
-                            placeholder="Enter designation" required>
-                       </div>
+                        <label for="designation" class="form-label">Director's Designation <span
+                                class="text-danger">*</span></label>
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="designation" name="designation"
+                                value="{{ old('designation', $template->director_designation) }}"
+                                placeholder="Enter designation" required>
+                        </div>
                     </div>
-                    
-                    
+
+
                     <div class="col-12">
-                        <label for="content" class="form-label">Memo / Notice Content</label>
-                        <textarea name="content" class="form-control" id="content" rows="3">{{ old('content', $template->content) }}</textarea>
+                        <label for="content" class="form-label">Memo / Notice Content <span
+                                class="text-danger">*</span></label>
+                        <textarea name="content" class="form-control" id="content" rows="3"
+                            required>{{ old('content', $template->content) }}</textarea>
                     </div>
                 </div>
                 <hr>
@@ -75,7 +92,9 @@ $(document).ready(function() {
         height: 300,
         toolbar: [
             ['style', ['style']],
-            ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript', 'subscript', 'clear']],
+            ['font', ['bold', 'italic', 'underline', 'strikethrough', 'superscript',
+                'subscript', 'clear'
+            ]],
             ['fontname', ['fontname']],
             ['fontsize', ['fontsize']],
             ['color', ['color']],
@@ -87,15 +106,15 @@ $(document).ready(function() {
             ['misc', ['undo', 'redo']]
         ],
         buttons: {
-            pdf: function () {
+            pdf: function() {
                 var ui = $.summernote.ui;
 
                 return ui.button({
                     contents: '<i class="note-icon-file"></i> PDF',
                     tooltip: 'Upload PDF',
-                    click: function () {
+                    click: function() {
                         $('<input type="file" accept="application/pdf">')
-                            .on('change', function (event) {
+                            .on('change', function(event) {
                                 var file = event.target.files[0];
                                 if (file) {
                                     uploadPDF(file);
@@ -121,10 +140,10 @@ $(document).ready(function() {
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            success: function (response) {
+            success: function(response) {
                 $('#content').summernote('insertText', response.url);
             },
-            error: function (xhr) {
+            error: function(xhr) {
                 alert('Failed to upload PDF. Please try again.');
             }
         });
@@ -135,7 +154,7 @@ $(document).ready(function() {
     $('#tab-communications .note-editor').hide();
     $('#tab-academics .note-editor').hide();
     $('#tab-material-management .note-editor').hide();
-    
+
     // Only show the editor in active tab
     $('#home .note-editor').show();
 });

@@ -39492,7 +39492,8 @@ pre.code-view code.hljs {
     margin: 10px 0;
     padding: 0 16px;
     font-size: 14px;
-    color: var(--bs-muted);
+    color: rgb(51, 51, 51);
+    font-weight: 500;
 }
 
 .topbar>.navbar>.navbar-nav>.nav-item>.tab-item>.active {
