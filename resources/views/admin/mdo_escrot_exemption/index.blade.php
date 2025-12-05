@@ -136,9 +136,9 @@
 
                     <hr>
 
-                    <!-- Course, Year, Time From, and Time To Filters -->
+                    <!-- Course, Year, Time From, Time To, and Duty Type Filters -->
                     <div class="row mb-3">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="course_filter" class="form-label fw-semibold">Course:</label>
                             <select id="course_filter" class="form-select">
                                 <option value="">-- All Courses --</option>
@@ -147,7 +147,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="year_filter" class="form-label fw-semibold">Year:</label>
                             <select id="year_filter" class="form-select">
                                 <option value="">-- All Years --</option>
@@ -156,11 +156,20 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <label for="duty_type_filter" class="form-label fw-semibold">Duty type:</label>
+                            <select id="duty_type_filter" class="form-select">
+                                <option value="">-- All Duty Types --</option>
+                                @foreach ($dutyTypes as $id => $name)
+                                    <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-md-2">
                             <label for="time_from_filter" class="form-label fw-semibold">Time From:</label>
                             <input type="time" id="time_from_filter" class="form-control">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="time_to_filter" class="form-label fw-semibold">Time To:</label>
                             <input type="time" id="time_to_filter" class="form-control">
                         </div>
@@ -184,7 +193,7 @@
             var table = $('#mdoescot-table').DataTable();
 
             // Reload DataTable on filter change
-            $('#course_filter, #year_filter').on('change', function() {
+            $('#course_filter, #year_filter, #duty_type_filter').on('change', function() {
                 table.ajax.reload();
             });
 
@@ -197,6 +206,7 @@
             $('#mdoescot-table').on('preXhr.dt', function(e, settings, data) {
                 data.course_filter = $('#course_filter').val();
                 data.year_filter = $('#year_filter').val();
+                data.duty_type_filter = $('#duty_type_filter').val();
                 data.time_from_filter = $('#time_from_filter').val();
                 data.time_to_filter = $('#time_to_filter').val();
             });
