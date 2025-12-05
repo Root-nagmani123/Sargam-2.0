@@ -13,6 +13,8 @@ use App\Http\Requests\FacultyUpdateRequest;
 use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificationMap, FacultyExperienceMap, FacultyExpertiseMaster, FacultyExpertiseMap, FacultyTypeMaster};
 use App\DataTables\FacultyDataTable;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Log;
+
 class FacultyController extends Controller
 {
     public function index(FacultyDataTable $dataTable)
@@ -38,8 +40,29 @@ class FacultyController extends Controller
     }
 
         public function store(FacultyRequest $request)
-    { //FacultyRequest
+    {
+echo 'add store'; exit;
+       /* Log::info('Faculty store called', [
+            'request' => $request->all(),
+            'user_id' => auth()->id()
+        ]); */
+
+        //FacultyRequest
         try {
+            // Validation for Certificates/Documents Upload
+            if (!is_array($request->certificate) || count($request->certificate) === 0 || empty($request->certificate[0])) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Please upload at least one certificate/document.'
+                ], 422);
+            }
+            // Validation for Joining Date
+            if (empty($request->joiningdate)) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Joining date is required.'
+                ], 422);
+            }
 
             DB::beginTransaction();
 
@@ -130,26 +153,28 @@ class FacultyController extends Controller
 
                 $degreeDetails = [];
 
-                if (!empty($request->degree) && $request->degree[0] != null) {
-
+                if (!empty($request->degree) && is_array($request->degree)) {
                     FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->delete();
-
                     foreach ($request->degree as $key => $degree) {
-
-                        $degreeDetails[] = [
+                        // Skip empty degree rows (e.g., last empty row from form)
+                        if (empty($degree) && empty($request->university_institution_name[$key]) && empty($request->year_of_passing[$key]) && empty($request->percentage_CGPA[$key]) && (empty($request->certificate) || empty($request->certificate[$key]))) {
+                            continue;
+                        }
+                        $degreeDetail = [
                             'Degree_name' => $degree,
-                            'University_Institution_Name' => $request->university_institution_name[$key],
-                            'Year_of_passing' => $request->year_of_passing[$key],
-                            'Percentage_CGPA' => $request->percentage_CGPA[$key],
+                            'University_Institution_Name' => $request->university_institution_name[$key] ?? '',
+                            'Year_of_passing' => $request->year_of_passing[$key] ?? '',
+                            'Percentage_CGPA' => $request->percentage_CGPA[$key] ?? '',
                             'faculty_master_pk' => $faculty->pk,
                         ];
-
-                        if ($request->hasFile('certificate')) {
-                            $degreeDetails[$key]['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
+                        if ($request->hasFile('certificate') && !empty($request->certificate[$key])) {
+                            $degreeDetail['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
                         }
+                        $degreeDetails[] = $degreeDetail;
                     }
-
-                    FacultyQualificationMap::insert(values: $degreeDetails);
+                    if (count($degreeDetails) > 0) {
+                        FacultyQualificationMap::insert($degreeDetails);
+                    }
                 }
 
                 # Step : 3
@@ -193,17 +218,18 @@ class FacultyController extends Controller
                         ];
                     }
 
-                    FacultyExpertiseMap::insert($expertiseDetails);
+                  //  print_r($expertiseDetails);die;
+                   FacultyExpertiseMap::insert($expertiseDetails);
                 }
             }
             DB::commit();
-            return response()->json([
+           /* return response()->json([
                 'status' => true,
                 'message' => 'Faculty created successfully',
                 'data' => $faculty
-            ]);
+            ]);*/
 
-            // return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
+            return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             dump($e->getLine());
@@ -236,6 +262,13 @@ class FacultyController extends Controller
 
     public function update(Request $request)
     {
+
+        /* Log::info('Faculty update called', [
+            'request' => $request->all(),
+            'user_id' => auth()->id()
+        ]);*/
+
+        echo 'update method'; exit;
         try {
             DB::beginTransaction();
 
