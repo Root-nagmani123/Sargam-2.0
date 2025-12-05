@@ -2,7 +2,7 @@
 
 @section('title', 'Member Details - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
     <div class="container py-4">
         <x-breadcrum title="Member Details" />
         <x-session_message />
