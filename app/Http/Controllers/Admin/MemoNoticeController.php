@@ -19,8 +19,8 @@ class MemoNoticeController extends Controller
             ->orderBy('created_date', 'desc');
 
         // Filter by course if selected
-        if ($request->filled('course_id')) {
-            $query->where('course_master_pk', $request->course_id);
+        if ($request->filled('course_master_pk')) {
+            $query->where('course_master_pk', $request->course_master_pk);
         }
 
         // Filter by status if selected
@@ -55,19 +55,34 @@ class MemoNoticeController extends Controller
         return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
     }
 
-
-
-
-
     // Show create form
     public function create()
     {
+        $currentDate = now()->toDateString();
+
         $courses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) use ($currentDate) {
+
+                // Ongoing courses
+                $q->where(function ($ongoing) use ($currentDate) {
+                    $ongoing->where('start_year', '<=', $currentDate)
+                        ->where(function ($end) use ($currentDate) {
+                            $end->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $currentDate);
+                        });
+                })
+
+                    // OR upcoming courses
+                    ->orWhere(function ($upcoming) use ($currentDate) {
+                        $upcoming->where('start_year', '>', $currentDate);
+                    });
+            })
             ->orderBy('course_name')
-            ->get(['pk', 'course_name', 'created_date', 'modified_date']);
+            ->get(['pk', 'course_name', 'start_year', 'end_date']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_create', compact('courses'));
     }
+
 
     // Store new template
     public function store(Request $request)
