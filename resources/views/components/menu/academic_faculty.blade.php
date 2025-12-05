@@ -194,7 +194,7 @@
 
                             <!-- faculty menu start -->
  @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
                                   <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
@@ -217,7 +217,7 @@
 
                             <!-- OTs menu start -->
                               @if(hasRole('Student-OT') || hasRole('Admin'))
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
