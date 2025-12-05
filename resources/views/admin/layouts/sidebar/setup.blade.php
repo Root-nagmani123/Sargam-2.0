@@ -29,7 +29,14 @@
                                                             style="font-size: 32px;">
                                                             dashboard_customize
                                                         </i>
-                                                        <span class="mini-nav-title">Training</span>
+                                                        <span class="mini-nav-title">
+                                                            @if(hasRole('Admin') || hasRole('Training'))
+                                                                Training
+                                                        @elseif(hasRole('Internal Faculty')  || hasRole('Guest Faculty') || hasRole('Student-OT'))
+
+                                                                Academic
+                                                            @endif
+                                                        </span>
                                                     </div>
 
                                                     <!-- Right Arrow -->
@@ -40,7 +47,7 @@
                                                 </a>
                                             </li>
 
-
+@if(hasRole('Admin') || hasRole('Training'))
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -126,6 +133,7 @@
                                                  </a>
                                              </li>
 
+@endif
 
                                         </div>
                                     </div>

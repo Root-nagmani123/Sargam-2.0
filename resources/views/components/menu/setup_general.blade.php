@@ -13,6 +13,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
+                             @if(hasRole('Admin') || hasRole('Training'))
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -124,6 +125,7 @@
                                         <span class="hide-menu">Subject Module Master</span>
                                     </a></li>
                             </ul>
+                            @endif
                         
 
                         </ul>
