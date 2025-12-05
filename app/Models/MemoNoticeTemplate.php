@@ -9,29 +9,28 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class MemoNoticeTemplate extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
-    protected $fillable = [
-        'course_id',
-        'title',
-        'director_name',
-        'director_designation',
-        'content',
-        'status',
-        'created_by',
-        'updated_by'
+    protected $table = 'memo_notice_templates';
+    protected $primaryKey = 'pk';   
+
+    const CREATED_AT = 'created_date';
+    const UPDATED_AT = 'updated_date';
+    const DELETED_AT = 'deleted_date';
+
+    protected $dates = [
+        'created_date',
+        'updated_date',
+        'deleted_date',
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
-    ];
+    protected $guarded = []; 
 
     // Relationships
     public function course()
-{
-    return $this->belongsTo(CourseMaster::class, 'course_id', 'pk');
-}
+    {
+        return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
+    }
 
     public function creator()
     {
@@ -62,7 +61,7 @@ class MemoNoticeTemplate extends Model
     public function scopeForCourse($query, $courseId)
     {
         if ($courseId) {
-            return $query->where('course_id', $courseId);
+            return $query->where('course_master_pk', $courseId);
         }
         return $query;
     }

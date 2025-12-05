@@ -185,6 +185,72 @@
 
 
 <script>
+// Global function to collapse all menus
+function collapseAllMenus() {
+    const allCollapses = document.querySelectorAll('.sidebarmenu .collapse');
+    allCollapses.forEach(collapse => {
+        const bsCollapse = bootstrap.Collapse.getInstance(collapse);
+        if (bsCollapse) {
+            bsCollapse.hide();
+        } else {
+            collapse.classList.remove('show');
+        }
+        
+        // Update the toggle button arrow
+        const collapseId = collapse.id;
+        const toggleBtn = document.querySelector(`[href="#${collapseId}"], [data-bs-target="#${collapseId}"]`);
+        if (toggleBtn) {
+            toggleBtn.setAttribute('aria-expanded', 'false');
+            toggleBtn.classList.add('collapsed');
+            const icon = toggleBtn.querySelector('.material-icons');
+            if (icon && icon.textContent.includes('keyboard_arrow_up')) {
+                icon.textContent = 'keyboard_arrow_down';
+            }
+        }
+    });
+}
+
+// Add accordion behavior - when one opens, others close
+document.addEventListener('DOMContentLoaded', function() {
+    const setupTab = document.getElementById('tab-setup');
+    if (!setupTab) return;
+    
+    // Add accordion behavior to collapsible menus
+    const collapseElements = setupTab.querySelectorAll('.sidebar-item [data-bs-toggle="collapse"]');
+    collapseElements.forEach(trigger => {
+        trigger.addEventListener('click', function(e) {
+            const targetId = this.getAttribute('href') || this.getAttribute('data-bs-target');
+            const targetCollapse = document.querySelector(targetId);
+            
+            // Find all collapse elements in the same parent container
+            const parentNav = this.closest('.sidebar-nav');
+            if (parentNav) {
+                const allCollapses = parentNav.querySelectorAll('.collapse');
+                allCollapses.forEach(collapse => {
+                    if (collapse !== targetCollapse && collapse.classList.contains('show')) {
+                        const bsCollapse = bootstrap.Collapse.getInstance(collapse);
+                        if (bsCollapse) {
+                            bsCollapse.hide();
+                        }
+                    }
+                });
+            }
+            
+            // Rotate arrow icon
+            const icon = this.querySelector('.material-icons');
+            if (icon) {
+                setTimeout(() => {
+                    if (targetCollapse.classList.contains('show')) {
+                        icon.textContent = 'keyboard_arrow_up';
+                    } else {
+                        icon.textContent = 'keyboard_arrow_down';
+                    }
+                }, 350);
+            }
+        });
+    });
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Setup sidebar script started');
 

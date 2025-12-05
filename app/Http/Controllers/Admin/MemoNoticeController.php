@@ -16,11 +16,11 @@ class MemoNoticeController extends Controller
     public function index(Request $request)
     {
         $query = MemoNoticeTemplate::with('course')
-            ->latest();
+            ->orderBy('created_date', 'desc');
 
         // Filter by course if selected
         if ($request->filled('course_id')) {
-            $query->where('course_id', $request->course_id);
+            $query->where('course_master_pk', $request->course_id);
         }
 
         // Filter by status if selected
@@ -29,10 +29,35 @@ class MemoNoticeController extends Controller
         }
 
         $templates = $query->paginate(20);
-        $courses = CourseMaster::where('active_inactive', 1)->get(['pk', 'course_name']);
+
+        // Current date for filtering
+        $currentDate = now()->toDateString();
+
+        // Only active + ongoing + upcoming courses
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->where(function ($q) use ($currentDate) {
+
+                // Ongoing courses: start_year <= today AND (end_date is null OR end_date >= today)
+                $q->where(function ($ongoing) use ($currentDate) {
+                    $ongoing->where('start_year', '<=', $currentDate)
+                        ->where(function ($end) use ($currentDate) {
+                            $end->whereNull('end_date')
+                                ->orWhere('end_date', '>=', $currentDate);
+                        });
+                })
+
+                    // OR upcoming courses: start_year > today
+                    ->orWhere('start_year', '>', $currentDate);
+            })
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
     }
+
+
+
+
 
     // Show create form
     public function create()
@@ -50,15 +75,18 @@ class MemoNoticeController extends Controller
         try {
             // Validate the incoming request with exact form field names
             $validated = $request->validate([
-            'course_id' => 'nullable|integer', // Just validate it's an integer if provided
+                'course_master_pk' => 'nullable|integer', // Just validate it's an integer if provided
+                'title' => 'required|string|max:255',
                 'director' => 'required|string|max:255',
                 'designation' => 'required|string|max:255',
                 'content' => 'required|string',
+
             ]);
 
             // Create memo notice with array directly
             MemoNoticeTemplate::create([
-                'course_id' => $validated['course_id'] ?: null,
+                'course_master_pk' => $validated['course_master_pk'] ?: null,
+                'title' => $validated['title'],
                 'director_name' => $validated['director'],
                 'director_designation' => $validated['designation'],
                 'content' => $validated['content'],
@@ -90,42 +118,42 @@ class MemoNoticeController extends Controller
 
     // Update template
     public function update(Request $request, $id)
-{
-    try {
-        $template = MemoNoticeTemplate::findOrFail($id);
+    {
 
-        // Use the correct field names from your form
-        $validated = $request->validate([
-            'course_id' => 'nullable|integer',
-            'director' => 'required|string|max:255', // Changed from director_name to director
-            'designation' => 'required|string|max:255', // Changed from director_designation to designation
-            'content' => 'required|string',
-        ]);
+        try {
+            $template = MemoNoticeTemplate::findOrFail($id);
 
-        // Map form fields to database columns
-        $updateData = [
-            'course_id' => $validated['course_id'] ?: null,
-            'director_name' => $validated['director'], // Map 'director' to 'director_name'
-            'director_designation' => $validated['designation'], // Map 'designation' to 'director_designation'
-            'content' => $validated['content'],
-            'updated_by' => Auth::id()
-        ];
+            // Use the correct field names from your form
+            $validated = $request->validate([
+                'course_master_pk' => 'nullable|integer',
+                'title' => 'required|string|max:255',
+                'director' => 'required|string|max:255', // Changed from director_name to director
+                'designation' => 'required|string|max:255', // Changed from director_designation to designation
+                'content' => 'required|string',
+            ]);
 
-        $template->update($updateData);
+            // Map form fields to database columns
+            $updateData = [
+                'course_master_pk' => $validated['course_master_pk'] ?: null,
+                'title' => $validated['title'],
+                'director_name' => $validated['director'], // Map 'director' to 'director_name'
+                'director_designation' => $validated['designation'], // Map 'designation' to 'director_designation'
+                'content' => $validated['content'],
+                'updated_by' => Auth::id()
+            ];
+            $template->update($updateData);
 
-        return redirect()->route('admin.memo-notice.index')
-            ->with('success', 'Memo/Notice template updated successfully.');
-            
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        return redirect()->back()
-            ->withErrors($e->validator)
-            ->withInput();
-            
-    } catch (\Exception $e) {
-        \Log::error('Update error: ' . $e->getMessage());
-        return back()->withInput()->with('error', 'Error updating template: ' . $e->getMessage());
+            return redirect()->route('admin.memo-notice.index')
+                ->with('success', 'Memo/Notice template updated successfully.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->validator)
+                ->withInput();
+        } catch (\Exception $e) {
+            \Log::error('Update error: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Error updating template: ' . $e->getMessage());
+        }
     }
-}
 
     // Delete template
     public function destroy($id)

@@ -128,7 +128,7 @@
                             <!-- Home -->
                             <li class="nav-item" role="none">
                                 <a href="#home"
-                                    class="nav-link active rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2"
+                                    class="nav-link active rounded-pill px-4 py-2 d-flex align-items-center gap-2"
                                     data-bs-toggle="tab" role="tab" aria-selected="true" aria-controls="home-panel"
                                     id="home-tab">
                                     <span>Home</span>
@@ -139,10 +139,11 @@
                              @if(hasRole('Admin') || hasRole('Training') )
                             <li class="nav-item" role="none">
                                 <a href="#tab-setup"
-                                    class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
                                     id="setup-tab">
-                                    <span>Setup</span>
+                                    <span>Setup</span>  | 
+                                    <span>Academics</span>
                                 </a>
                             </li>
                             @endif
@@ -150,7 +151,7 @@
                             <!-- Communications -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-communications"
-                                    class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="communications-panel" id="communications-tab">
                                     <span>Communications</span>
@@ -161,7 +162,7 @@
                              @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Student-OT')  || hasRole('Admin'))
                             <li class="nav-item" role="none">
                                 <a href="#tab-academics"
-                                    class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="academics-panel" id="academics-tab">
                                     <span>Academics</span>
@@ -172,7 +173,7 @@
                             <!-- Material Management -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-material-management"
-                                    class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="material-management-panel" id="material-management-tab">
                                     <span>Material Management</span>
@@ -181,7 +182,7 @@
 
                             <!-- Financial Dropdown - Enhanced -->
                             <li class="nav-item dropdown" role="none">
-                                <a class="nav-link rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
+                                <a class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
                                     href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
                                     aria-expanded="false" data-bs-toggle="dropdown">
                                     <span>Financial</span>

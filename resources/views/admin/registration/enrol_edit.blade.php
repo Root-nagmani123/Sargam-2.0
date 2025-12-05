@@ -2,15 +2,10 @@
 
 @section('title', 'Edit Student - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
     <div class="container-fluid">
-        <div class="card card-body py-3 mb-4">
-            <div class="row align-items-center">
-                <div class="col-12 d-sm-flex align-items-center justify-content-between">
-                    <h4 class="mb-0">Edit Student Information</h4>
-                </div>
-            </div>
-        </div>
+        <x-breadcrum title="Edit Student Information" />
+    <x-session_message />
 
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -26,7 +21,7 @@
             </div>
         @endif
 
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-header d-flex justify-content-between align-items-center bg-warning-subtle">
                 <h5 class="mb-0">Student Details</h5>
                 <span class="badge bg-primary">ID: {{ $student->pk }}</span>
@@ -255,9 +250,9 @@
                     </div> --}}
 
                         <!-- Read-only System Information -->
-                        <div class="d-flex justify-content-end">
+                        <div class="d-flex justify-content-end gap-2">
                             <a href="{{ route('enrollment.create') }}" class="btn btn-secondary">Cancel</a>
-                            <button type="submit" class="btn btn-warning" onclick="return submitEditForm(event, this)">
+                            <button type="submit" class="btn btn-primary" onclick="return submitEditForm(event, this)">
                                 Update Student
                             </button>
                         </div>

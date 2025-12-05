@@ -2,6 +2,39 @@
         <ul class="sidebar-menu" id="sidebarnav">
             @include('components.profile')
 
+            <!-- Section Header -->
+            <li class="nav-section" role="listitem">
+                <div class="d-flex align-items-center justify-content-between w-100">
+                    <div class="d-flex align-items-center">
+                        <button
+                            class="nav-link sidebartoggler d-flex align-items-center justify-content-center p-2 me-2"
+                            id="headerCollapse" aria-label="Toggle sidebar navigation"
+                            aria-expanded="true" aria-controls="sidebarContent" data-bs-toggle="tooltip"
+                            data-bs-placement="right">
+                            <i class="material-icons material-symbols-rounded text-white transition-all"
+                                style="font-size: 24px; transition: transform 0.3s ease;"
+                                aria-hidden="true">
+                                keyboard_arrow_left
+                            </i>
+                            <span class="visually-hidden">Toggle sidebar navigation</span>
+                        </button>
+                        <h2 class="section-title text-white m-0"
+                            style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
+                            FC Registration
+                        </h2>
+                    </div>
+                    <button 
+                        class="btn btn-sm btn-link text-white p-1 collapse-all-btn" 
+                        onclick="collapseAllMenus()"
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="left"
+                        title="Collapse All Menus"
+                        style="font-size: 12px; text-decoration: none;">
+                        <i class="material-icons material-symbols-rounded" style="font-size: 20px;">unfold_less</i>
+                    </button>
+                </div>
+            </li>
+
             <!-- ======= GENERAL ======= -->
              @if(hasRole('Admin') || hasRole('Training'))
             <li class="sidebar-item" style="background: #4077ad;
