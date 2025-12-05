@@ -129,6 +129,7 @@
 }
 </style>
 <div class="container-fluid">
+    <x-breadcrum title="Medical Exemption Form" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
