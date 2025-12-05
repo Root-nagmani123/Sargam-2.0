@@ -3,8 +3,6 @@
 @section('title', 'Calendar - Sargam | Lal Bahadur')
 
 @section('setup_content')
-@section('academics_content')
-
 <style>
 :root {
     --primary-color: #004a93;

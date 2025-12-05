@@ -9,7 +9,6 @@
     </style>
 @endsection
 @section('setup_content')
-@section('academics_content')
     <form action="{{ route('attendance.save') }}" method="post">
         @csrf
         <div class="container-fluid">

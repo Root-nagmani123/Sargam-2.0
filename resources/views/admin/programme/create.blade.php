@@ -170,9 +170,9 @@
     </div>
     <!-- end Vertical Steps Example -->
 </div>
-
-
 @endsection
+
+
 
 @push('scripts')
 <script src="{{ asset('js/programme.js') }}"></script>

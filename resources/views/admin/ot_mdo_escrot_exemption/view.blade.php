@@ -2,7 +2,7 @@
 
 @section('title', 'OT MDO/Escort Exception View - Sargam | Lal Bahadur')
 
-@section('academics_content')
+@section('setup_content')
 <style>
     .student-card {
         background: #ffffff;

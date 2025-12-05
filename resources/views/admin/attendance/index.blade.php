@@ -3,7 +3,7 @@
 @section('title', 'Attendance')
 
 @section('setup_content')
-@section('academics_content')
+
 <div class="container-fluid">
     <x-breadcrum title="Attendance" />
     <div class="card" style="border-left: 4px solid #004a93;">
