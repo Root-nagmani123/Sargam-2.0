@@ -24,7 +24,7 @@ class CourseAttendanceNoticeMapController extends Controller
     
     // Get initial notice records with course name
         $notices = DB::table('course_student_attendance as csa')
-    ->leftJoin('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+    ->Join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
     ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
     ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
     ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
