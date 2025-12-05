@@ -4,42 +4,63 @@
 
 @section('title', 'Memo/Notice Templates - Sargam | LBSNAA')
 
-@section('content')
+@section('setup_content')
     <div class="container-fluid">
         <x-breadcrum title="Memo/Notice Template Management" />
 
         <x-session_message />
 
         <!-- Filter Card -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <form action="{{ route('admin.memo-notice.index') }}" method="GET" class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Filter by Course</label>
-                        <select name="course_id" class="form-select">
-                            <option value="">All Courses</option>
-                            @foreach ($courses as $course)
-                                <option value="{{ $course->pk }}"
-                                    {{ request('course_id') == $course->pk ? 'selected' : '' }}>
-                                    {{ $course->course_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary me-2">
-                            <i class="fas fa-filter me-1"></i> Filter
-                        </button>
-                        <a href="{{ route('admin.memo-notice.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-redo me-1"></i> Reset
-                        </a>
-                    </div>
-                </form>
+        <div class="card shadow-sm mb-4 border-0" style="border-left: 4px solid #004a93;">
+    <div class="card-body">
+
+        <form action="{{ route('admin.memo-notice.index') }}" method="GET" class="row g-3 align-items-end" role="form">
+
+            <!-- Course Filter -->
+            <div class="col-md-4">
+                <label for="courseFilter" class="form-label fw-semibold text-dark">
+                    Filter by Course
+                </label>
+                <select id="courseFilter" name="course_id" class="form-select form-select-lg"
+                    aria-label="Select course to filter memo and notices">
+                    <option value="">All Courses</option>
+                    @foreach ($courses as $course)
+                        <option value="{{ $course->pk }}"
+                            {{ request('course_id') == $course->pk ? 'selected' : '' }}>
+                            {{ $course->course_name }}
+                        </option>
+                    @endforeach
+                </select>
             </div>
-        </div>
+
+            <!-- Buttons -->
+            <div class="col-md-4 d-flex gap-2">
+
+                <!-- Filter Button -->
+                <button type="submit"
+                    class="btn btn-primary btn-lg px-4 d-flex align-items-center gap-2 shadow-sm"
+                    aria-label="Apply filter">
+                    <i class="material-icons material-symbols-rounded">tune</i>
+                    <span>Filter</span>
+                </button>
+
+                <!-- Reset Button -->
+                <a href="{{ route('admin.memo-notice.index') }}"
+                    class="btn btn-outline-secondary btn-lg px-4 d-flex align-items-center gap-2"
+                    aria-label="Reset filters">
+                    <i class="material-icons material-symbols-rounded">refresh</i>
+                    <span>Reset</span>
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+</div>
+
 
         <!-- Main Content Card -->
-        <div class="card">
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">Memo/Notice Templates</h5>
                 <a href="{{ route('admin.memo-notice.create') }}" class="btn btn-primary">
