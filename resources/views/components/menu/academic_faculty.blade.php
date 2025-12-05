@@ -232,7 +232,7 @@
                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
                                     <span class="hide-menu">Memo/Notice</span>
                                 </a></li>
-                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.get.feedbackList') }}">
+                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.get.studentFeedback') }}">
                                     <span class="hide-menu">Session Feedback</span>
                                 </a></li>
                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
