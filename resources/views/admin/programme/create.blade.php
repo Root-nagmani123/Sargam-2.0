@@ -2,7 +2,7 @@
 
 @section('title', 'Programme - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <!-- start Vertical Steps Example -->

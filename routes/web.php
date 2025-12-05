@@ -107,6 +107,7 @@ Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
         Route::post('/store', 'store')->name('store');
         Route::post('update', 'update')->name('update');
         Route::get('excel-export', 'excelExport')->name('excel.export');
+        Route::delete('delete/{id}', 'destroy')->name('destroy');
     });
 
     // Faculty Routes
