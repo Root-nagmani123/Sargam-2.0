@@ -144,6 +144,8 @@
         </div>
     </div>
 </div>
+@endsection
+@section('scripts')
 <script>
     $(document).ready(function() {
         $('#zero_config').DataTable().clear().destroy(); // Disable global auto init
@@ -179,41 +181,57 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-</>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const viewButtons = document.querySelectorAll('.view-btn');
+document.addEventListener('DOMContentLoaded', function () {
 
-    viewButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
+    let dataTable = null;
+
+    document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+
             const eventId = this.getAttribute('data-event');
-            const tbody = document.querySelector('#viewModal tbody');
-            tbody.innerHTML = `<tr><td colspan="5">Loading...</td></tr>`;
+            const tbody = document.querySelector('#zero_config tbody');
+
+            tbody.innerHTML = `<tr><td colspan="5" class="text-center">Loading...</td></tr>`;
 
             fetch(`/feedback/event-feedback/${eventId}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        let rows = "";
-                        data.forEach((item, index) => {
-                            rows += `<tr>
-                                        <td>${index + 1}</td>
-                                        <td>${item.rating}</td>
-                                        <td>${item.remark}</td>
-                                        <td>${item.presentation}</td>
-                                        <td>${item.content}</td>
-                                    </tr>`;
-                        });
+                .then(res => res.json())
+                .then(data => {
 
-                        const tbody = document.querySelector('#zero_config tbody');
-                        tbody.innerHTML = rows;
+                    if (!data.length) {
+                        tbody.innerHTML = `<tr><td colspan="5" class="text-center">No feedback found</td></tr>`;
+                        return;
+                    }
 
-                        $('#zero_config').DataTable(); // Initialize now
+                    let rows = '';
+                    data.forEach((item, index) => {
+                        rows += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${item.rating ?? '-'}</td>
+                                <td>${item.remark ?? '-'}</td>
+                                <td>${item.presentation ?? '-'}</td>
+                                <td>${item.content ?? '-'}</td>
+                            </tr>
+                        `;
                     });
 
+                    tbody.innerHTML = rows;
+
+                    // ✅ Proper Re-init
+                    if (dataTable) {
+                        dataTable.destroy();
+                    }
+
+                    dataTable = $('#zero_config').DataTable({
+                        pageLength: 5,
+                        destroy: true
+                    });
+                });
         });
     });
 });
 </script>
+
 
 
 

@@ -401,7 +401,7 @@
                                         {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
                                         <br>
                                         <small
-                                            class="text-muted">{{ $feedback->from_time }}–{{ $feedback->to_time }}</small>
+                                            class="text-muted">{{ $feedback->class_session }}</small>
                                     </td>
                                     <td>{{ $feedback->subject_topic }}</td>
                                     <td>{{ $feedback->faculty_name }}</td>
@@ -442,6 +442,13 @@
                                             required>{{ old('remarks.' . $index) }}</textarea>
                                         @endif
                                     </td>
+                                    <input type="hidden" name="timetable_pk[{{ $index }}]"
+                                        value="{{ $feedback->timetable_pk }}">
+                                        <input type="hidden" name="topic_name[{{ $index }}]" value="{{ $feedback->subject_topic }}">
+<input type="hidden" name="faculty_pk[{{ $index }}]" value="{{ $feedback->faculty_pk ?? '' }}">
+<input type="hidden" name="Ratting_checkbox[{{ $index }}]" value="{{ $feedback->Ratting_checkbox }}">
+<input type="hidden" name="Remark_checkbox[{{ $index }}]" value="{{ $feedback->Remark_checkbox }}">
+
                                 </tr>
                                 @endif
                                 @endforeach
