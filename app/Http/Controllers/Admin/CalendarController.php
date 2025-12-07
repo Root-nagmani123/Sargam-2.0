@@ -328,157 +328,152 @@ public function delete_event($id)
     return response()->json(['status' => 'success']);
 }
 
-function feedbackList(){
-$events = DB::table('timetable')
-    ->join('course_master', 'timetable.course_master_pk', '=', 'course_master.pk')
-    ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-    ->join('subject_master', 'timetable.subject_master_pk', '=', 'subject_master.pk')
-    ->join('topic_feedback', 'topic_feedback.timetable_pk', '=', 'timetable.pk') // Only include those with feedback
-    ->select(
-        'timetable.pk as event_id',
-        'course_master.course_name',
-        'faculty_master.full_name as faculty_name',
-        'subject_master.subject_name',
-        'timetable.subject_topic'
-    )
-     ->orderBy('timetable.pk', 'desc')
-    ->distinct() // prevent duplicates if multiple feedbacks
-    ->paginate(10);
+public function feedbackList()
+{
+    $user = auth()->user();
+    $facultyPk = $user->user_id; // same as faculty_master.pk (agar alag ho to bataana)
+// echo $facultyPk; die;
+    $query = DB::table('timetable as t')
+        ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+        ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+        ->join('subject_master as s', 't.subject_master_pk', '=', 's.pk')
+        ->whereExists(function ($q) {
+            $q->select(DB::raw(1))
+              ->from('topic_feedback as tf')
+              ->whereColumn('tf.timetable_pk', 't.pk');
+        })
+        ->select([
+            't.pk as event_id',
+            'c.course_name',
+            'f.full_name as faculty_name',
+            's.subject_name',
+            't.subject_topic',
+        ]);
 
+    // ✅ Faculty ko sirf apna data dikhana
+    if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+        $query->where('t.faculty_master', $facultyPk);
+    }
 
-     return view('admin.feedback.index', compact('events'));
+    // ✅ Admin ko sabka dikhe
+    $events = $query->orderByDesc('t.pk')->paginate(10);
+
+    return view('admin.feedback.index', compact('events'));
 }
 public function getEventFeedback($id)
 {
-    $feedbacks = DB::table('topic_feedback')
-        ->where('timetable_pk', $id)
-        ->select('rating', 'remark','presentation','content')
-        ->get();
+    $user = auth()->user();
+    $facultyPk = $user->user_id;
 
-    return response()->json($feedbacks);
+    $query = DB::table('topic_feedback as tf')
+        ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+        ->select([
+            'tf.rating',
+            'tf.remark',
+            'tf.presentation',
+            'tf.content'
+        ])
+        ->where('tf.timetable_pk', $id);
+
+    // Faculty ko sirf apna timetable ka feedback dikhana
+    if (hasRole('Faculty')) {
+        $query->where('t.faculty_master', $facultyPk);
+    }
+
+    return response()->json($query->get());
 }
 
-function studentFeedback() {
-    $student_pk = auth()->user()->id;
 
-    // Get all timetable PKs already submitted by this student
-    $submittedTimetablePks = DB::table('topic_feedback')
-        ->where('student_master_pk', $student_pk)
-        ->pluck('timetable_pk')
-        ->toArray();
-        // print_r($submittedTimetablePks);die;
+public function studentFeedback()
+{
+    try {
+        $student_pk = auth()->user()->user_id;
 
+        $query = DB::table('timetable as t')
+            ->select([
+                't.pk as timetable_pk',
+                't.subject_topic',
+                't.Ratting_checkbox',
+                't.feedback_checkbox',
+                't.Remark_checkbox',
+                't.faculty_master as faculty_pk',
+                'f.full_name as faculty_name',
+                'c.course_name',
+                'v.venue_name',
+                DB::raw('t.START_DATE as from_date'),
+                't.class_session',
+            ])
+            ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+            ->where('t.feedback_checkbox', 1)
 
-    $data = DB::table('timetable')
-        ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-        ->join('course_master', 'timetable.course_master_pk', '=', 'course_master.pk')
-        ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
+            // ✅ Hide already given feedback rows
+            ->whereNotExists(function ($sub) use ($student_pk) {
+                $sub->select(DB::raw(1))
+                    ->from('topic_feedback as tf')
+                    ->whereColumn('tf.timetable_pk', 't.pk')
+                    ->where('tf.student_master_pk', $student_pk);
+            });
+
+        // ✅ Student group mapping filter
         if (hasRole('Student-OT')) {
+            $query->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
+                  ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+                  ->where('scgm.student_master_pk', $student_pk);
+        }
 
-    $student_pk = auth()->user()->user_id;  // 🔥 FIXED
+        $data = $query->orderByDesc('t.START_DATE')->get();
 
-    $data = $data->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
-        ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
-        ->where('student_course_group_map.student_master_pk', $student_pk);
+        return view('admin.feedback.student_feedback', compact('data'));
+
+    } catch (\Throwable $e) {
+        return back()->with('error', $e->getMessage());
+    }
 }
-        // ->whereNotIn('timetable.pk', $submittedTimetablePks)
-        $data = $data->where('timetable.feedback_checkbox', 1)
-        ->select(
-            'timetable.*',
-            'faculty_master.full_name as faculty_name',
-            'course_master.course_name as course_name',
-            'venue_master.venue_name as venue_name',
-            DB::raw('timetable.START_DATE as from_date'),
-            DB::raw("CASE WHEN timetable.class_session LIKE '%-%' THEN SUBSTRING(timetable.class_session, 1, LOCATE('-', timetable.class_session) - 1) ELSE NULL END as from_time"),
-            DB::raw("CASE WHEN timetable.class_session LIKE '%-%' THEN TRIM(SUBSTRING(timetable.class_session, LOCATE('-', timetable.class_session) + 1)) ELSE NULL END as to_time")
-        )
-        ->get();
-        // print_r($data);die;
 
-    return view('admin.feedback.student_feedback', compact('data'));
-}
+
 
 public function submitFeedback(Request $request)
 {
-    // foreach ($request->timetable_pk as $i => $ttPk) {
-        
-    //     if (!empty($request->Ratting_checkbox[$i]) && $request->Ratting_checkbox[$i] == 1) {
-    //         $rules["rating.$i"] = 'required|in:1,2,3,4,5';
-    //           $rules["presentation.$i"] = 'required|in:1,2,3,4,5';
-    //             $rules["content.$i"] = 'required|in:1,2,3,4,5';
-    //     } else {
-    //         $rules["rating.$i"] = 'nullable|in:1,2,3,4,5';
-    //          $rules["presentation.$i"] = 'nullable|in:1,2,3,4,5';
-    //             $rules["content.$i"] = 'nullable|in:1,2,3,4,5';
-    //     }
-  
-    //     // Remarks required only if Remark_checkbox is 1
-    //     if (!empty($request->Remark_checkbox[$i]) && $request->Remark_checkbox[$i] == 1) {
-    //         $rules["remarks.$i"] = 'required|string|max:255';
-    //     } else {
-    //         $rules["remarks.$i"] = 'nullable|string|max:255';
-    //     }
-    // }
-
-    // $validated = $request->validate($rules);
-
     $rules = [
-        'timetable_pk' => 'required|array',
-        'faculty_pk' => 'required|array',
-        'topic_name' => 'required|array',
+        'timetable_pk' => 'required|array|min:1',
     ];
 
     foreach ($request->timetable_pk as $i => $ttPk) {
         $rules["presentation.$i"] = 'required|in:1,2,3,4,5';
         $rules["content.$i"] = 'required|in:1,2,3,4,5';
-
-        if (!empty($request->Ratting_checkbox[$i]) && $request->Ratting_checkbox[$i] == 1) {
-            $rules["rating.$i"] = 'required|in:1,2,3,4,5';
-        } else {
-            $rules["rating.$i"] = 'nullable|in:1,2,3,4,5';
-        }
-
-        if (!empty($request->Remark_checkbox[$i]) && $request->Remark_checkbox[$i] == 1) {
-            $rules["remarks.$i"] = 'required|string|max:255';
-        } else {
-            $rules["remarks.$i"] = 'nullable|string|max:255';
-        }
+        $rules["rating.$i"] = 'nullable|in:1,2,3,4,5';
+        $rules["remarks.$i"] = 'nullable|string|max:255';
     }
 
-    // 👇👇👇 User friendly attribute names 👇👇👇
-    $attributes = [];
-    foreach ($request->timetable_pk as $i => $ttPk) {
-        $topic = $request->topic_name[$i] ?? 'this topic';
-        $attributes["rating.$i"] = "rating ";
-        $attributes["presentation.$i"] = "presentation ";
-        $attributes["content.$i"] = "content ";
-        $attributes["remarks.$i"] = "remarks ";
-    }
+    $request->validate($rules);
 
-    $validated = $request->validate($rules, [], $attributes);
-
-
-//    print_r($request->all());die;
-    // Save to DB
-    $studentId = Auth::id();
+    $studentId  = auth()->user()->user_id;
     $now = now();
 
-    foreach ($request->timetable_pk as $i => $ttPk) {
-        DB::table('topic_feedback')->insert([
-            'timetable_pk' => $ttPk,
-            'student_master_pk' => $studentId,
-            'topic_name' => $request->topic_name[$i] ?? '',
-            'faculty_pk' => $request->faculty_pk[$i],
-            'presentation' => $request->presentation[$i] ?? null,
-            'content' => $request->content[$i] ?? null,
-            'remark' => $request->remarks[$i] ?? null,
-            'rating' => $request->rating[$i] ?? null,
-            'created_date' => $now,
-            'modified_date' => $now,
-        ]);
-    }
+    $insertData = [];
 
-    return redirect()->back()->with('success', 'Feedback submitted successfully!');
+    foreach ($request->timetable_pk as $i => $ttPk) {
+        $insertData[] = [
+            'timetable_pk'       => $ttPk,
+            'student_master_pk'  => $studentId,
+            'topic_name'         => $request->topic_name[$i] ?? '',
+            'faculty_pk'         => $request->faculty_pk[$i] ?? null,
+            'presentation'       => $request->presentation[$i] ?? null,
+            'content'            => $request->content[$i] ?? null,
+            'remark'             => $request->remarks[$i] ?? null,
+            'rating'             => $request->rating[$i] ?? null,
+            'created_date'       => $now,
+            'modified_date'      => $now,
+        ];
+    }
+    // print_r($insertData);die;
+
+    // ✅ Bulk insert = much faster
+    DB::table('topic_feedback')->insert($insertData);
+
+    return back()->with('success', 'Feedback submitted successfully!');
 }
 
 
