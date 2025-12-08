@@ -306,6 +306,7 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
 
         Route::get('/user_attendance', 'index')->name('user_attendance.index');
         Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('student_mark');
+        Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}/{student_pk}', 'OTmarkAttendanceView')->name('OT.student_mark.student');
 
     });
 
