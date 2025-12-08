@@ -20,7 +20,7 @@
 
                                 <!-- Add Button -->
                                 <a href="{{ route('master.course.group.type.create') }}" class="btn btn-primary">
-                                    + Add Course Group Type
+                                    <i class="material-icons menu-icon me-1">add</i> Add Course Group Type
                                 </a>
 
 

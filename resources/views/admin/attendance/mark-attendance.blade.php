@@ -1,13 +1,6 @@
 @extends('admin.layouts.master')
 
 @section('title', 'Attendance')
-@section('css')
-    <style>
-        table.table-bordered.dataTable td:nth-child(4) {
-            padding: 0 !important;
-        }
-    </style>
-@endsection
 @section('setup_content')
     <form action="{{ route('attendance.save') }}" method="post">
         @csrf
@@ -79,11 +72,134 @@
                         </div>
                     </div>
                     <hr>
-                    {!! $dataTable->table(['class' => 'table  table-bordered table-striped table-hover']) !!}
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle" id="simpleAttendanceTable">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width:50px;">
+                                        <input type="checkbox" id="selectAllAttendance" class="form-check-input" aria-label="Select all">
+                                    </th>
+                                    <th class="text-center">#</th>
+                                    <th class="text-center">OT Name</th>
+                                    <th class="text-center">OT Code</th>
+                                    <th class="text-center">Attendance</th>
+                                    <th class="text-center">MDO Duty</th>
+                                    <th class="text-center">Escort Duty</th>
+                                    <th class="text-center">Medical Exemption</th>
+                                    <th class="text-center">Other Exemption</th>
+                                    <th class="text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @php $i = 1; @endphp
+                                @if(isset($students) && count($students))
+                                    @foreach($students as $row)
+                                        @php $studentId = $row->studentsMaster->pk; @endphp
+                                        <tr>
+                                            <td class="text-center">
+                                                <input type="checkbox" class="attendance-select form-check-input" data-student-id="{{ $studentId }}" aria-label="Select student for memo">
+                                            </td>
+                                            <td class="text-center">{{ $i++ }}</td>
+                                            <td class="text-center"><label class="text-dark">{{ $row->studentsMaster->display_name }}</label></td>
+                                            <td class="text-center"><label class="text-dark">{{ $row->studentsMaster->generated_OT_code }}</label></td>
+                                            <td class="text-center">
+                                                <div class="d-inline-flex gap-3">
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="student[{{ $studentId }}]" value="1" id="student_{{ $studentId }}_1">
+                                                        <label class="form-check-label text-success" for="student_{{ $studentId }}_1">Present</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="student[{{ $studentId }}]" value="2" id="student_{{ $studentId }}_2">
+                                                        <label class="form-check-label text-warning" for="student_{{ $studentId }}_2">Late</label>
+                                                    </div>
+                                                    <div class="form-check form-check-inline">
+                                                        <input class="form-check-input" type="radio" name="student[{{ $studentId }}]" value="3" id="student_{{ $studentId }}_3">
+                                                        <label class="form-check-label text-danger" for="student_{{ $studentId }}_3">Absent</label>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="student[{{ $studentId }}]" value="4" id="student_{{ $studentId }}_4">
+                                                    <label class="form-check-label text-dark" for="student_{{ $studentId }}_4">MDO</label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="student[{{ $studentId }}]" value="5" id="student_{{ $studentId }}_5">
+                                                    <label class="form-check-label text-dark" for="student_{{ $studentId }}_5">Escort</label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="student[{{ $studentId }}]" value="6" id="student_{{ $studentId }}_6">
+                                                    <label class="form-check-label text-dark" for="student_{{ $studentId }}_6">Medical Exempted</label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="form-check form-check-inline">
+                                                    <input class="form-check-input" type="radio" name="student[{{ $studentId }}]" value="7" id="student_{{ $studentId }}_7">
+                                                    <label class="form-check-label text-dark" for="student_{{ $studentId }}_7">Other Exempted</label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <button type="button" class="btn btn-sm btn-primary send-memo-btn" data-student-id="{{ $studentId }}">Send Memo</button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td colspan="10" class="text-center text-muted">No students found.</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                        <button id="sendMemoAllBtn" type="button" class="btn btn-success mt-2" style="display:none;">Send Memo to All</button>
+                    </div>
                 </div>
             </div>
         </div>
 @endsection
-@section('scripts')
-    {!! $dataTable->scripts() !!}
+
+@section('js')
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const selectAll = document.getElementById('selectAllAttendance');
+    const memoAllBtn = document.getElementById('sendMemoAllBtn');
+    const table = document.getElementById('simpleAttendanceTable');
+
+    function updateMemoAllVisibility(){
+        const anyChecked = table.querySelectorAll('.attendance-select:checked').length > 0;
+        memoAllBtn.style.display = anyChecked ? 'inline-block' : 'none';
+    }
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function(){
+            const checked = this.checked;
+            table.querySelectorAll('.attendance-select').forEach(cb => { cb.checked = checked; });
+            updateMemoAllVisibility();
+        });
+    }
+
+    table.addEventListener('change', function(e){
+        if (e.target.classList.contains('attendance-select')){
+            updateMemoAllVisibility();
+        }
+    });
+
+    // Row Send Memo
+    table.addEventListener('click', function(e){
+        if (e.target.classList.contains('send-memo-btn')){
+            const id = e.target.getAttribute('data-student-id');
+            document.dispatchEvent(new CustomEvent('sendMemoSingle', { detail: { studentId: id } }));
+        }
+    });
+
+    // Global Send Memo to All
+    memoAllBtn.addEventListener('click', function(){
+        const ids = Array.from(table.querySelectorAll('.attendance-select:checked')).map(cb => cb.getAttribute('data-student-id'));
+        document.dispatchEvent(new CustomEvent('sendMemoBulk', { detail: { studentIds: ids } }));
+    });
+});
+</script>
 @endsection
