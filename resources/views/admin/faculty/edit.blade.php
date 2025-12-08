@@ -6,10 +6,11 @@
 
 <div class="container-fluid">
     <x-breadcrum title="Faculty" />
-    <x-session_message />
+
     <!-- start Vertical Steps Example -->
     {{-- id="facultyForm" data-store-url="{{ route('faculty.update') }}"
         data-index-url="{{ route('faculty.index') }} --}}
+
         <form class="facultyForm">
             <div class="card">
                 <div class="card-body">
@@ -115,7 +116,59 @@
 
 @section('scripts')
 <script>
+$(document).ready(function () {
+    $(document).on('click', '#saveFacultyForm', function (e) {
+        e.preventDefault();
+        var form = $('.facultyForm')[0];
+        var formData = new FormData(form);
 
+        // Validate required fields before submit
+        var requiredFields = [
+            'facultytype', 'firstName', 'middlename', 'lastname', 'fullname', 'gender', 'landline', 'mobile',
+            'country', 'state', 'district', 'city', 'email', 'residence_address', 'permanent_address', 'bankname',
+            'accountnumber', 'ifsccode', 'pannumber', 'joiningdate', 'current_sector'
+        ];
+        var missing = [];
+        requiredFields.forEach(function(field) {
+            if (!formData.get(field) || formData.get(field) === 'undefined') {
+                missing.push(field);
+            }
+        });
+        if (missing.length > 0) {
+            alert('Please fill all required fields: ' + missing.join(', '));
+            return;
+        }
 
+        $.ajax({
+            url: "{{ route('faculty.update') }}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
+            success: function(response) {
+                if (response.status) {
+                    window.location.href = "{{ route('faculty.index') }}";
+                } else {
+                    if (window.toastr) {
+                        toastr.error(response.message || 'Error updating faculty.');
+                    } else {
+                        alert(response.message || 'Error updating faculty.');
+                    }
+                }
+            },
+            error: function(xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error');
+                if (window.toastr) {
+                    toastr.error('Error: ' + msg);
+                } else {
+                    alert('Error: ' + msg);
+                }
+            }
+        });
+    });
+});
 </script>
 @endsection
