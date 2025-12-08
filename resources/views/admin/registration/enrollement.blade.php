@@ -166,7 +166,6 @@
                                                             <th>Student Name</th>
                                                             <th>OT Code</th>
                                                             <th>Service</th>
-                                                            <th width="100px">Actions</th> {{-- New column --}}
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -744,13 +743,6 @@ function updateExportUrls(courseId) {
                         '<td>' + (student.student_name || 'N/A') + '</td>' +
                         '<td>' + (student.ot_code || 'N/A') + '</td>' +
                         '<td>' + (student.service_name || 'N/A') + '</td>' +
-                        '<td>' +
-                        '<a href="' + editUrl +
-                        '" class="btn btn-sm btn-warning edit-btn" data-id="' + student.student_pk +
-                        '" title="Edit Student">' +
-                        '<i class="bi bi-pencil"></i> Edit' +
-                        '</a>' +
-                        '</td>' +
                         '</tr>';
 
                     tableBody.append(row);
