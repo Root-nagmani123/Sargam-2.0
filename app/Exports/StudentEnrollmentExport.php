@@ -45,8 +45,8 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
             $student ? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) : 'N/A',
             $student->email ?? 'N/A',
             $student->contact_no ?? 'N/A',
-            // Display OT Code instead of Course Name
             $student->generated_OT_code ?? 'N/A',
+            $student->rank ?? 'N/A',
             $enrollment->created_date ? Carbon::parse($enrollment->created_date)->format('d M Y') : 'N/A',
             $enrollment->active_inactive ? 'Active' : 'Inactive',
         ];
@@ -60,6 +60,7 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
             'Email',
             'Phone',
             'OT Code',  // Changed from 'Course' to 'OT Code'
+            'Rank',
             'Enrollment Date',
             'Status',
         ];

@@ -16,6 +16,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Exports\StudentEnrollmentExport;
 use Illuminate\Validation\Rule;
 use Mpdf\Mpdf;
+use Yajra\DataTables\Facades\DataTables;
 
 
 class EnrollementController extends Controller
@@ -282,70 +283,107 @@ class EnrollementController extends Controller
     //     ));
     // }
 
-    public function studentCourses(Request $request)
-    {
-        $courseId = $request->input('course_id');
-        $status = $request->input('status');
-        $courseStatus = $request->input('course_status', 'active'); // Default to 'active'
+ public function studentCourses(Request $request)
+{
+    $courseId = $request->input('course_id');
+    $status = $request->input('status');
+    $courseStatus = $request->input('course_status', 'active');
 
-        // Course dropdown with both active and inactive courses
-        $courses = CourseMaster::query()
-            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
-            ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
-            // 'all' will return all courses without status filter
-            ->orderBy('course_name')
-            ->pluck('course_name', 'pk');
+    // Course dropdown with both active and inactive courses
+    $courses = CourseMaster::query()
+        ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
+        ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
+        ->orderBy('course_name')
+        ->pluck('course_name', 'pk');
 
-        // Handle AJAX request for course dropdown updates only
-        if ($request->ajax() && $request->has('ajax_courses')) {
-            return response()->json([
-                'success' => true,
-                'courses' => $courses
-            ]);
-        }
-
-        // For AJAX requests, return only the table partial
-        if ($request->ajax()) {
-            // Base enrollments query
-            $enrollments = StudentMasterCourseMap::with([
-                'studentMaster.service',
-                'course'
-            ])
-                ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
-                ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
-                ->orderByDesc('created_date')
-                ->get();
-
-            // Count query
-            $baseQuery = StudentMasterCourseMap::query();
-            if ($courseId) $baseQuery->where('course_master_pk', $courseId);
-            if ($status !== null && $status !== '') $baseQuery->where('active_inactive', $status);
-
-            $filteredCount = $baseQuery->count();
-
-            return response()->json([
-                'success' => true,
-                'html' => view('admin.registration.student_courses_table', compact('enrollments'))->render(),
-                'filteredCount' => $filteredCount
-            ]);
-        }
-
-        // For initial page load - empty data
-        $enrollments = collect();
-        $filteredCount = 0;
-        $totalCount = StudentMasterCourseMap::count();
-
-        return view('admin.registration.student_courselist', compact(
-            'enrollments',
-            'courses',
-            'courseId',
-            'totalCount',
-            'filteredCount',
-            'status',
-            'courseStatus' // Pass course status to view
-        ));
+    // Handle AJAX request for course dropdown updates only
+    if ($request->ajax() && $request->has('ajax_courses')) {
+        return response()->json([
+            'success' => true,
+            'courses' => $courses
+        ]);
     }
 
+    // For AJAX requests from DataTables
+    if ($request->ajax() && $request->has('draw')) {
+        $query = StudentMasterCourseMap::with([
+            'studentMaster.service',
+            'course'
+        ])
+        ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+        ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+        ->orderByDesc('created_date');
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->addColumn('student_info', function($row) {
+                $student = $row->studentMaster;
+                return $student->display_name ?? 'N/A' . 
+                       ($student->email ? '<br><small class="text-muted">' . $student->email . '</small>' : '');
+            })
+            ->addColumn('course_name', function($row) {
+                return $row->course->course_name ?? 'N/A';
+            })
+            ->addColumn('service_name', function($row) {
+                return $row->studentMaster->service->service_name ?? 'N/A';
+            })
+            ->addColumn('ot_code', function($row) {
+                $student = $row->studentMaster;
+                return $student->generated_OT_code ?? 'N/A';
+            })
+            ->addColumn('rank', function($row) {
+                $student = $row->studentMaster;
+                return $student->rank ?? 'N/A';
+            })
+            ->addColumn('status_badge', function($row) {
+                $badge = $row->active_inactive ? 'bg-success' : 'bg-secondary';
+                $text = $row->active_inactive ? 'Active' : 'Inactive';
+                return '<span class="badge ' . $badge . '">' . $text . '</span>';
+            })
+            ->addColumn('created_date_formatted', function($row) {
+                return $row->created_date ? date('d-m-Y', strtotime($row->created_date)) : 'N/A';
+            })
+            ->addColumn('modified_date_formatted', function($row) {
+                return $row->modified_date ? date('d-m-Y', strtotime($row->modified_date)) : 'N/A';
+            })
+            ->addColumn('actions', function($row) {
+                $student = $row->studentMaster;
+                $course = $row->course;
+                $canEdit = $course && $course->active_inactive == 1 && $row->active_inactive == 1;
+                
+                if ($canEdit) {
+                    return '<a href="' . route('enrollment.edit', $student->pk) . '" 
+                            class="btn btn-sm btn-warning edit-btn" 
+                            title="Edit Enrollment">
+                            <i class="fas fa-edit me-1"></i> Edit
+                            </a>';
+                } else {
+                    if ($course && $course->active_inactive == 0) {
+                        return '<span class="badge bg-danger" title="Course is archived">Archived</span>';
+                    } elseif ($row->active_inactive == 0) {
+                        return '<span class="badge bg-secondary" title="Enrollment is inactive">Inactive</span>';
+                    } else {
+                        return '<span class="text-muted">-</span>';
+                    }
+                }
+            })
+            ->rawColumns(['student_info', 'status_badge', 'actions'])
+            ->make(true);
+    }
+
+    // For initial page load
+    $totalCount = StudentMasterCourseMap::count();
+    $filteredCount = 0;
+
+    return view('admin.registration.student_courselist', compact(
+        'courses',
+        'courseId',
+        'totalCount',
+        'filteredCount',
+        'status',
+        'courseStatus'
+    ));
+}
 
     public function StudenEnroll_export(Request $request)
     {

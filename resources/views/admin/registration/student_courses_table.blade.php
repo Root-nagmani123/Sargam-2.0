@@ -9,25 +9,29 @@
         <tr>
             <td>{{ $loop->iteration }}</td>
             <td>
-                {{ $student->name ?? 'N/A' }}
+                {{ $student->display_name ?? 'N/A' }}
                 @if($student->email)
                     <br><small class="text-muted">{{ $student->email }}</small>
                 @endif
             </td>
             <td>
                 {{ $course->course_name ?? 'N/A' }}
-                @if($course->course_short_name)
-                    <br><small class="text-muted">({{ $course->course_short_name }})</small>
-                @endif
+              
             </td>
             <td>{{ $student->service->service_name ?? 'N/A' }}</td>
             <td>
-                @if($student->ot_code)
-                    <span class="badge bg-info">{{ $student->ot_code }}</span>
+                @if($student->generated_OT_code)
+                    <span class="#">{{ $student->generated_OT_code }}</span>
                 @else
                     N/A
                 @endif
             </td>
+            <td>
+                @if($student->rank)
+                    <span class="#">{{ $student->rank }}</span>
+                @else
+                    N/A
+                @endif
             <td>
                 <span class="badge {{ $enrollment->active_inactive ? 'bg-success' : 'bg-secondary' }}">
                     {{ $enrollment->active_inactive ? 'Active' : 'Inactive' }}
