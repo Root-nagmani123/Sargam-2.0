@@ -41,11 +41,11 @@ class FacultyController extends Controller
 
         public function store(FacultyRequest $request)
     {
-echo 'add store'; exit;
-       /* Log::info('Faculty store called', [
+//echo 'add store'; exit;
+        Log::info('Faculty store called', [
             'request' => $request->all(),
             'user_id' => auth()->id()
-        ]); */
+        ]);
 
         //FacultyRequest
         try {
@@ -78,9 +78,9 @@ echo 'add store'; exit;
                 'gender' => $request->gender,
                 'landline_no' => $request->landline,
                 'mobile_no' => $request->mobile,
-                'country_master_pk' => $request->country,
-                'state_master_pk' => $request->state,
-                'state_district_mapping_pk' => $request->district,
+                'country_master_pk' => ($request->country === 'null' || $request->country === 'undefined' || $request->country === '' ? null : $request->country),
+                'state_master_pk' => ($request->state === 'null' || $request->state === 'undefined' || $request->state === '' ? null : $request->state),
+                'state_district_mapping_pk' => ($request->district === 'null' || $request->district === 'undefined' || $request->district === '' ? null : $request->district),
 
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
@@ -96,15 +96,15 @@ echo 'add store'; exit;
 
             if(!empty($request->other_city)) {
                 $otherCity = City::create([
-                    'country_master_pk' => $request->country,
-                    'state_master_pk' => $request->state,
-                    'district_master_pk' => $request->district,
+                    'country_master_pk' => ($request->country === 'null' || $request->country === 'undefined' || $request->country === '' ? null : $request->country),
+                    'state_master_pk' => ($request->state === 'null' || $request->state === 'undefined' || $request->state === '' ? null : $request->state),
+                    'district_master_pk' => ($request->district === 'null' || $request->district === 'undefined' || $request->district === '' ? null : $request->district),
                     'city_name' => $request->other_city,
                     'active_inactive' => 1
                 ]);
                 $facultyDetails['city_master_pk'] = $otherCity->pk;
             } else {
-                $facultyDetails['city_master_pk'] = $request->city;
+                $facultyDetails['city_master_pk'] = ($request->city === 'null' || $request->city === 'undefined' || $request->city === '' ? null : $request->city);
             }
 
 
@@ -232,8 +232,8 @@ echo 'add store'; exit;
             return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            dump($e->getLine());
-            dd('' . $e->getMessage());
+          //  dump($e->getLine());
+           // dd('' . $e->getMessage());
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
         }
     }
@@ -262,13 +262,10 @@ echo 'add store'; exit;
 
     public function update(Request $request)
     {
-
         /* Log::info('Faculty update called', [
             'request' => $request->all(),
             'user_id' => auth()->id()
         ]);*/
-
-        echo 'update method'; exit;
         try {
             DB::beginTransaction();
 
@@ -450,7 +447,7 @@ echo 'add store'; exit;
         } catch (\Exception $e) {
             DB::rollBack();
             dump($e);
-            dd('' . $e->getMessage());
+         //   dd('' . $e->getMessage());
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
         }
 
