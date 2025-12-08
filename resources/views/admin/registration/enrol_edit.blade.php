@@ -251,7 +251,7 @@
 
                         <!-- Read-only System Information -->
                         <div class="d-flex justify-content-end gap-2">
-                            <a href="{{ route('enrollment.create') }}" class="btn btn-secondary">Cancel</a>
+                            <a href="{{ route('student.courses') }}" class="btn btn-secondary">Cancel</a>
                             <button type="submit" class="btn btn-primary" onclick="return submitEditForm(event, this)">
                                 Update Student
                             </button>
