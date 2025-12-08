@@ -640,7 +640,7 @@ class EnrollementController extends Controller
 
             DB::commit();
 
-            return redirect()->route('enrollment.create')
+            return redirect()->route('student.courses')
                 ->with('success', 'Student information updated successfully!')
                 ->with('selected_course', session('selected_course'));
         } catch (\Exception $e) {

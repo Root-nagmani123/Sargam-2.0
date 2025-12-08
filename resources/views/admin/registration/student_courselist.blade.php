@@ -4,7 +4,7 @@
 
 @section('setup_content')
     <div class="container-fluid">   <x-breadcrum title="Course Wise OTs List" />
-
+        <x-session_message />
         {{-- Filters + Counts + Export --}}
         <div class="card mb-3 p-3" style="border-left: 4px solid #004a93;">
             <div class="row align-items-end g-3">
@@ -29,12 +29,6 @@
                                     <label class="btn btn-danger" for="course_status_inactive">
                                         <i class="fas fa-archive me-1"></i> Archive
                                     </label>
-
-                                    {{-- <input type="radio" class="btn-check" name="course_status" id="course_status_all"
-                                        value="all" {{ $courseStatus === 'all' ? 'checked' : '' }} autocomplete="off">
-                                    <label class="btn btn-outline-secondary" for="course_status_all">
-                                        <i class="fas fa-list-alt me-1"></i> All Courses
-                                    </label> --}}
                                 </div>
                             </div>
 
@@ -73,7 +67,6 @@
                     </div>
                 </div>
 
-                <!-- Export Section -->
                 <!-- Export Section -->
                 <div class="col-md-4 col-sm-12">
                     <form method="GET" action="{{ route('studentEnroll.report.export') }}" id="exportForm">
@@ -143,6 +136,7 @@
                                 <th>Status</th>
                                 <th>Created Date</th>
                                 <th>Modified Date</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="tableBody">
