@@ -346,28 +346,6 @@ h4 {
 
             <div class="card shadow-sm border-0 rounded-4 h-100">
 
-                <!-- Notice Header -->
-                <div class="card-header bg-danger text-white rounded-top-4 py-3">
-                    <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
-                        <i class="bi bi-megaphone-fill me-2"></i>
-                        Notices
-                    </h5>
-                </div>
-
-                <!-- Notice Body -->
-                <div class="card-body" style="max-height:600px; overflow-y:auto;">
-
-                    <ul style="list-style-type: disc; padding-left: 20px;">
-                        <li class="text-dark">Welcome to the Admin Dashboard! Here you can find a summary of key metrics
-                            and quick
-                            access
-                            to various administrative functions.</li>
-                        <hr class="my-2">
-                    </ul>
-
-                </div>
-
-            </div>
 
                     <div class="card shadow-sm border-0 rounded-4 h-100">
 

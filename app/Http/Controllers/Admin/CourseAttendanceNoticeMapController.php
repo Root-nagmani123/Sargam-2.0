@@ -1400,8 +1400,6 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
     )
     ->paginate(30);
 
-        //  print_r($students);die;
-
             return view('admin.courseAttendanceNoticeMap.view_all_notice_list', compact('students','courseGroup', 'group_pk', 'course_pk', 'timetable_pk'));
 } catch (\Exception $e) {
             \Log::error('Error fetching attendance data: ' . $e->getMessage());
