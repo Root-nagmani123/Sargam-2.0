@@ -39,30 +39,11 @@ class FacultyController extends Controller
         return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
     }
 
-        public function store(FacultyRequest $request)
-    {
-//echo 'add store'; exit;
-        Log::info('Faculty store called', [
-            'request' => $request->all(),
-            'user_id' => auth()->id()
-        ]);
-
-        //FacultyRequest
+       public function store(FacultyRequest $request)
+    { //FacultyRequest
         try {
-            // Validation for Certificates/Documents Upload
-            if (!is_array($request->certificate) || count($request->certificate) === 0 || empty($request->certificate[0])) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Please upload at least one certificate/document.'
-                ], 422);
-            }
-            // Validation for Joining Date
-            if (empty($request->joiningdate)) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Joining date is required.'
-                ], 422);
-            }
+
+
 
             DB::beginTransaction();
 
@@ -78,9 +59,9 @@ class FacultyController extends Controller
                 'gender' => $request->gender,
                 'landline_no' => $request->landline,
                 'mobile_no' => $request->mobile,
-                'country_master_pk' => ($request->country === 'null' || $request->country === 'undefined' || $request->country === '' ? null : $request->country),
-                'state_master_pk' => ($request->state === 'null' || $request->state === 'undefined' || $request->state === '' ? null : $request->state),
-                'state_district_mapping_pk' => ($request->district === 'null' || $request->district === 'undefined' || $request->district === '' ? null : $request->district),
+                'country_master_pk' => $request->country,
+                'state_master_pk' => $request->state,
+                'state_district_mapping_pk' => $request->district,
 
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
@@ -96,15 +77,15 @@ class FacultyController extends Controller
 
             if(!empty($request->other_city)) {
                 $otherCity = City::create([
-                    'country_master_pk' => ($request->country === 'null' || $request->country === 'undefined' || $request->country === '' ? null : $request->country),
-                    'state_master_pk' => ($request->state === 'null' || $request->state === 'undefined' || $request->state === '' ? null : $request->state),
-                    'district_master_pk' => ($request->district === 'null' || $request->district === 'undefined' || $request->district === '' ? null : $request->district),
+                    'country_master_pk' => $request->country,
+                    'state_master_pk' => $request->state,
+                    'district_master_pk' => $request->district,
                     'city_name' => $request->other_city,
                     'active_inactive' => 1
                 ]);
                 $facultyDetails['city_master_pk'] = $otherCity->pk;
             } else {
-                $facultyDetails['city_master_pk'] = ($request->city === 'null' || $request->city === 'undefined' || $request->city === '' ? null : $request->city);
+                $facultyDetails['city_master_pk'] = $request->city;
             }
 
 
@@ -153,28 +134,26 @@ class FacultyController extends Controller
 
                 $degreeDetails = [];
 
-                if (!empty($request->degree) && is_array($request->degree)) {
+                if (!empty($request->degree) && $request->degree[0] != null) {
+
                     FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->delete();
+
                     foreach ($request->degree as $key => $degree) {
-                        // Skip empty degree rows (e.g., last empty row from form)
-                        if (empty($degree) && empty($request->university_institution_name[$key]) && empty($request->year_of_passing[$key]) && empty($request->percentage_CGPA[$key]) && (empty($request->certificate) || empty($request->certificate[$key]))) {
-                            continue;
-                        }
-                        $degreeDetail = [
+
+                        $degreeDetails[] = [
                             'Degree_name' => $degree,
-                            'University_Institution_Name' => $request->university_institution_name[$key] ?? '',
-                            'Year_of_passing' => $request->year_of_passing[$key] ?? '',
-                            'Percentage_CGPA' => $request->percentage_CGPA[$key] ?? '',
+                            'University_Institution_Name' => $request->university_institution_name[$key],
+                            'Year_of_passing' => $request->year_of_passing[$key],
+                            'Percentage_CGPA' => $request->percentage_CGPA[$key],
                             'faculty_master_pk' => $faculty->pk,
                         ];
-                        if ($request->hasFile('certificate') && !empty($request->certificate[$key])) {
-                            $degreeDetail['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
+
+                        if ($request->hasFile('certificate')) {
+                            $degreeDetails[$key]['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
                         }
-                        $degreeDetails[] = $degreeDetail;
                     }
-                    if (count($degreeDetails) > 0) {
-                        FacultyQualificationMap::insert($degreeDetails);
-                    }
+
+                    FacultyQualificationMap::insert(values: $degreeDetails);
                 }
 
                 # Step : 3
@@ -218,22 +197,21 @@ class FacultyController extends Controller
                         ];
                     }
 
-                  //  print_r($expertiseDetails);die;
-                   FacultyExpertiseMap::insert($expertiseDetails);
+                    FacultyExpertiseMap::insert($expertiseDetails);
                 }
             }
             DB::commit();
-           /* return response()->json([
+            return response()->json([
                 'status' => true,
                 'message' => 'Faculty created successfully',
                 'data' => $faculty
-            ]);*/
+            ]);
 
-            return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
+            // return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-          //  dump($e->getLine());
-           // dd('' . $e->getMessage());
+            dump($e->getLine());
+            dd('' . $e->getMessage());
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
         }
     }

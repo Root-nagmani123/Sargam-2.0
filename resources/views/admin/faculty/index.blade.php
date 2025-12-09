@@ -38,8 +38,8 @@
                                     <span class="material-symbols-rounded fs-5">export_notes</span>
                                     Export Excel
                                 </a>
-                                <a href="{{ route('faculty.printBlank') }}" target="_blank" class="btn btn-success">
-									<!--<i class="material-icons">print</i>--> Print Blank Form
+                                <a href="{{ route('faculty.printBlank') }}"  class="btn btn-success">
+									<i class="material-icons">print</i> Print Blank Form
 								</a>
 
                             </div>

@@ -15,7 +15,7 @@ function education_fields() {
     }
 
     var divtest = document.createElement("div");
-    divtest.setAttribute("class", "mb-3 removeclass" + room);
+    divtest.setAttribute("class", "row degree-row mb-3 removeclass" + room);
     var rdiv = "removeclass" + room;
 
     divtest.innerHTML =
@@ -23,7 +23,7 @@ function education_fields() {
         '<div class="col-3">' +
         '<label for="degree[]" class="form-label">Degree :</label>' +
         '<div class="mb-3">' +
-        '<input type="text" class="form-control" name="degree[]" placeholder="Degree Name">' +
+        '<input type="text" class="form-control" name="degree[]" placeholder="Degree Name dk js">' +
         '<small>Bachelors, Masters, PhD</small>' +
         '</div></div>' +
 
@@ -51,6 +51,7 @@ function education_fields() {
         '<label for="certificate[]" class="form-label">Certificates/Documents Upload :</label>' +
         '<div class="mb-3">' +
         '<input type="file" name="certificate[]" placeholder="Certificates/Documents Upload" class="form-control">' +
+        '<div class="existing-certificate"></div>' +
         '</div></div>' +
 
         '<div class="col-sm-2">' +

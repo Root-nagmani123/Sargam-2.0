@@ -241,18 +241,14 @@ input.is-invalid {
                                         required="true"
                                         labelRequired="true"
                                         />-->
-						<x-select
+						    <x-select
 							name="state"
 							label="State :"
 							placeholder="State"
 							formLabelClass="form-label"
-							:options="$state"
+							:options="$state" />
 
-
-							/>
-
-
-                                </div>
+                            </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -266,14 +262,13 @@ input.is-invalid {
                                         required="true"
                                         />-->
 
-					<x-select
-						name="district"
-						label="District :"
-						placeholder="District"
-						formLabelClass="form-label"
-						:options="$district"
-
-						/>
+                                        <x-select
+                                        name="district"
+                                        label="District :"
+                                        placeholder="District"
+                                        formLabelClass="form-label"
+                                        :options="$district"
+                                        />
 
                                 </div>
                             </div>
@@ -290,14 +285,12 @@ input.is-invalid {
                                         labelRequired="true"
                                         />-->
 
-				<x-select
-                name="city"
-                label="City :"
-                placeholder="City"
-                formLabelClass="form-label"
-                :options="$city"
-
-                />
+                                        <x-select
+                                        name="city"
+                                        label="City :"
+                                        placeholder="City"
+                                        formLabelClass="form-label"
+                                        :options="$city" />
 
                                 </div>
                             </div>
@@ -324,6 +317,7 @@ input.is-invalid {
                                     placeholder="Residence Address :"
                                     formLabelClass="form-label"
                                     />
+
                                 </div>
 
                             </div>
@@ -355,7 +349,6 @@ input.is-invalid {
                                     label="Alternate Email :"
                                     placeholder="Alternate Email :"
                                     formLabelClass="form-label"
-
                                     />
 
                             </div>
@@ -407,7 +400,7 @@ input.is-invalid {
                                     <x-input
                                         name="degree[]"
                                         label="Degree :"
-                                        placeholder="Degree"
+                                        placeholder="Degree dk blade"
                                         formLabelClass="form-label"
                                         required="true"
                                         helperSmallText="Bachelors, Masters, PhD"
@@ -822,11 +815,20 @@ $(document).ready(function () {
                 if (response.status) {
                     window.location.href = "{{ route('faculty.index') }}";
                 } else {
-                    alert(response.message || 'Error saving faculty.');
+                    if (window.toastr) {
+                        toastr.error(response.message || 'Error saving faculty.');
+                    } else {
+                        alert(response.message || 'Error saving faculty.');
+                    }
                 }
             },
             error: function(xhr) {
-                alert('Error: ' + (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error'));
+                var msg = (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error');
+                if (window.toastr) {
+                    toastr.error('Error: ' + msg);
+                } else {
+                    alert('Error: ' + msg);
+                }
             }
         });
     });
@@ -1055,25 +1057,25 @@ function fillFacultyForm(faculty) {
 
     // Clear existing dynamic rows except the first template row
     $(".degree-row:gt(0)").remove();
-    $(".experience-row:gt(0)").remove();
+   // $(".experience-row:gt(0)").remove();
 
     // Add rows if needed for qualifications
     for (let i = 1; i < faculty.faculty_qualification_map.length; i++) {
         education_fields();
     }
     faculty.faculty_qualification_map.forEach(function(q, index) {
-        const row = $(".degree-row").eq(index);
-        row.find("input[name='degree[]']").val(q.Degree_name);
-        row.find("input[name='university_institution_name[]']").val(q.University_Institution_Name);
-        row.find("select[name='year_of_passing[]']").val(q.Year_of_passing).trigger('change');
-        row.find("input[name='percentage_CGPA[]']").val(q.Percentage_CGPA);
-        if (q.Certifcates_upload_path) {
-            row.find(".existing-certificate").html(`
-                <a href="storage/${q.Certifcates_upload_path}" target="_blank" class="text-primary">
-                    View Existing Certificate
-                </a>
-            `);
-        }
+    const row = $(".degree-row").eq(index);
+    row.find("input[name='degree[]']").val(q.Degree_name);
+    row.find("input[name='university_institution_name[]']").val(q.University_Institution_Name);
+    row.find("select[name='year_of_passing[]']").val(q.Year_of_passing).trigger('change');
+    row.find("input[name='percentage_CGPA[]']").val(q.Percentage_CGPA);
+    if (q.Certifcates_upload_path) {
+        row.find(".existing-certificate").html(`
+            <a href="storage/${q.Certifcates_upload_path}" target="_blank" class="text-primary">
+                View Existing Certificate
+            </a>
+        `);
+    }
     });
 
     // Add rows if needed for experience
