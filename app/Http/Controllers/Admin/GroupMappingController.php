@@ -463,19 +463,18 @@ class GroupMappingController extends Controller
     public function exportStudentList($id = null)
     {
         try {
-
-            if (!$id) {
-                return redirect()->back()->with('error', 'Group Mapping ID is required.');
+            // If ID is provided, validate it
+            if ($id) {
+                try {
+                    decrypt($id);
+                } catch (\Exception $e) {
+                    return redirect()->back()->with('error', 'Invalid Group Mapping ID.');
+                }
             }
 
             $fileName = 'group-mapping-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
 
-            decrypt($id);
-            if ($id) {
-                return Excel::download(new GroupMappingExport($id), $fileName);
-            } else {
-                return Excel::download(new GroupMappingExport, $fileName);
-            }
+            return Excel::download(new GroupMappingExport($id), $fileName);
 
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();

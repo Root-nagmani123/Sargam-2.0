@@ -81,8 +81,10 @@ class CourseController extends Controller
                 ->filter(function ($coordinator) {
                     return !is_null($coordinator->Assistant_Coordinator_name) && $coordinator->Assistant_Coordinator_name !== '';
                 })
+                ->unique('Assistant_Coordinator_name')
                 ->values();
 
+            // Get unique assistant coordinator names and their corresponding roles
             $assistant_coordinator_name = $assistantCoordinatorCollection->pluck('Assistant_Coordinator_name')->toArray();
             $assistant_coordinator_roles = $assistantCoordinatorCollection->pluck('assistant_coordinator_role')->toArray();
             $roleOptions = [
