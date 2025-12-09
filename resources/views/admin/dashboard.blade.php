@@ -301,11 +301,22 @@ h4 {
                         <div class="line w-100 my-4"></div>
 
                         <div class="content-text">
-                            <ul style="list-style-type: disc; padding-left: 20px;">
-                                <li>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                    access
-                                    to various administrative functions.</li>
-                            </ul>
+                       
+
+
+
+                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
+                                access
+                                to various administrative functions.</p>
+                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
+                                access
+                                to various administrative functions.</p>
+                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
+                                access
+                                to various administrative functions.</p>
+                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
+                                access
+                                to various administrative functions.</p>
                         </div>
                     </section>
 
@@ -358,15 +369,51 @@ h4 {
 
             </div>
 
-        </div>
-    </div>
-    <div class="row g-4">
-        <!-- LEFT SIDE: Birthday Cards -->
-        <div class="col-7">
-            <div class="card" style="border-radius:30px;">
-                <div class="card-body">
-                    <h3 class="fw-bold py-3">Today Birthday's</h3>
-                    <hr class="my-2 mb-4">
+                    <div class="card shadow-sm border-0 rounded-4 h-100">
+
+                        <!-- Notice Header -->
+                        <div class="card-header bg-danger text-white rounded-top-4 py-3">
+                            <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
+                                <i class="bi bi-megaphone-fill me-2"></i>
+                                Notices
+                            </h5>
+                        </div>
+
+                        <!-- Notice Body -->
+                        <div class="card-body" style="max-height:600px; overflow-y:auto;">
+@php $notices = get_notice_notification_by_role() @endphp 
+@foreach($notices as $notice)
+                            <div class="mb-4 pb-2 border-bottom">
+                                <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
+                                <p class="mb-1" style="font-size: 14px; line-height: 1.5; color: #333;">
+                                    {!! Str::limit($notice->description, 100) !!}
+                                </p>
+                                <small class="text-muted">Posted on: {{ date('d M, Y', strtotime($notice->created_at)) }}</small>
+                                @if($notice->document)
+                                <div class="mt-2">
+                                    <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
+                                        class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-download me-1"></i>View Attachment
+                                    </a>
+                                    </div>
+                                @endif
+
+                            </div>
+@endforeach
+                        
+
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>   
+
+            <h3 class="fw-bold py-3">Today Birthday's</h3>
+            <hr class="my-2 mb-4">
+            <div class="row g-4">
+                <!-- LEFT SIDE: Birthday Cards -->
+                <div class="col-8">
                     @if($emp_dob_data->isEmpty())
                     <p class="text-center">No Birthdays Today</p>
                     @else
