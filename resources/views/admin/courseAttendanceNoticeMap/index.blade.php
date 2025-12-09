@@ -49,6 +49,7 @@
 </style>
 <div class="container-fluid">
        <x-breadcrum title="Notice /Memo Management" />
+            <x-session_message />
 
     <!-- start Zero Configuration -->
     <div class="card" style="border-left:4px solid #004a93;">

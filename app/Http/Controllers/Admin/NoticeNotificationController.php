@@ -24,7 +24,7 @@ class NoticeNotificationController extends Controller
     public function create()
     {
         $types = ['Course notice','Office order','Personal','Office notice','Service related'];
-        $target = ['Office trainee','Staff/Faculty','Group wise'];
+        $target = ['Office trainee','Staff/Faculty','All'];
 
         return view('admin.NoticeNotification.create', compact('types','target'));
     }
@@ -58,7 +58,10 @@ public function store(Request $request)
 
     // File Upload
     if($request->hasFile('document')){
-        $data['document'] = $request->file('document')->store('notice_docs');
+        // $data['document'] = $request->file('document')->store('public/notice_docs');
+         $file = $request->file('document');
+        $path = $file->store('notice_docs', 'public');
+        $data['document'] = $path;
     }
 
     Notice::create($data);
@@ -74,7 +77,7 @@ public function store(Request $request)
         $notice = Notice::findOrFail($id);
 // print_r($notice); exit;
         $types = ['Course notice','Office order','Personal','Office notice','Service related'];
-        $target = ['Office trainee','Staff/Faculty','Group wise'];
+        $target = ['Office trainee','Staff/Faculty','All'];
 
         return view('admin.NoticeNotification.edit', compact('notice','types','target','encId'));
     }
@@ -98,7 +101,10 @@ public function store(Request $request)
     $data = $request->all();
 
     if($request->hasFile('document')){
-        $data['document'] = $request->file('document')->store('notice_docs');
+        // $data['document'] = $request->file('document')->store('public/notice_docs');
+         $file = $request->file('document');
+        $path = $file->store('notice_docs', 'public');
+        $data['document'] = $path;
     }
 
     $notice->update($data);
