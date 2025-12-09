@@ -2,7 +2,7 @@
 
 @section('title', 'Foundation Course Status | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <style>
   .card-body{
     padding: 0.5rem !important;
@@ -240,7 +240,7 @@
 
 @section('title', 'Foundation Course Status | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <style>
   .card-body {
     padding: 0.5rem !important;

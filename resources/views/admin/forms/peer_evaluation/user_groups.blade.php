@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Peer Evaluation Groups | Sargam User Panel')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <div class="card p-3" style="border-left: 4px solid #004a93;">
         <h4>All Peer Evaluation Groups</h4>

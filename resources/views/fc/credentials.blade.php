@@ -2,7 +2,7 @@
 
 @section('title', 'Registration - Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 
 <!-- Main Content Box -->
 <main style="flex:1;">

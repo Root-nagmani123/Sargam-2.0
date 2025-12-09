@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Course List')
 
-@section('content')
+@section('setup_content')
     <div class="container-fluid mt-4">
         <div class="card">
             <div class="card-body">

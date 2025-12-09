@@ -2,7 +2,7 @@
 
 @section('title', 'Medical Exception Faculty View - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <style>
     .faculty-card {
         background: #ffffff;
