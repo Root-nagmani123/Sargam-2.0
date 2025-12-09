@@ -25,6 +25,74 @@
         color: #666 !important;
         border-bottom: 2px solid #e0e0e0 !important;
     }
+    
+    .calendar-cell {
+        position: relative;
+        padding: 8px 4px;
+        vertical-align: top;
+        height: 80px;
+    }
+    
+    .calendar-cell .day-number {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+    }
+    
+    .calendar-cell.has-event {
+        background-color: #f8f9fa;
+    }
+    
+    .calendar-cell.is-selected {
+        background-color: #e7f3ff;
+        border: 2px solid #0d6efd;
+    }
+    
+    .holiday-badge {
+        font-size: 0.65rem;
+        padding: 2px 4px;
+        border-radius: 3px;
+        display: block;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+    }
+    
+    .holiday-gazetted {
+        background-color: #dc3545;
+        color: #fff;
+    }
+    
+    .holiday-restricted {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .holiday-optional {
+        background-color: #17a2b8;
+        color: #fff;
+    }
+    
+    .calendar-legend {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+        font-size: 0.85rem;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
 </style>
 
 <div class="calendar-component" data-year="{{ $year }}" data-month="{{ $month }}">
@@ -100,7 +168,15 @@ $hasEvent = array_key_exists($iso, $events);
 <td tabindex="0" role="button" class="calendar-cell {{ $isSelected ? 'is-selected' : '' }} {{ $hasEvent ? 'has-event' : '' }}" data-date="{{ $iso }}" aria-pressed="{{ $isSelected ? 'true' : 'false' }}">
 <span class="day-number">{{ $d->day }}</span>
 @if($hasEvent)
-<span class="visually-hidden">, has events</span>
+    @foreach($events[$iso] as $event)
+        @if(isset($event['type']) && $event['type'] === 'holiday')
+            <span class="holiday-badge holiday-{{ $event['holiday_type'] }}" 
+                  title="{{ $event['title'] }} - {{ $event['description'] ?? '' }}">
+                {{ Str::limit($event['title'], 15) }}
+            </span>
+        @endif
+    @endforeach
+    <span class="visually-hidden">, has events</span>
 @endif
 </td>
 @endif
@@ -109,5 +185,22 @@ $hasEvent = array_key_exists($iso, $events);
 @endfor
 </tbody>
 </table>
+</div>
+
+<!-- Legend -->
+<div class="calendar-legend">
+    <div class="legend-item">
+        <span class="legend-color" style="background-color: #D47176 
+;"></span>
+        <span>Gazetted Holiday</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-color" style="background-color: #FBC272;"></span>
+        <span>Restricted Holiday</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-color" style="background-color: #17a2b8;"></span>
+        <span>Optional Holiday</span>
+    </div>
 </div>
 </div>
