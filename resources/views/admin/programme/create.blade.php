@@ -46,7 +46,7 @@
                                 name="courseyear" 
                                 label="Course Year" 
                                 placeholder="Course Year" 
-                                value="{{ $courseMasterObj->course_year ?? '' }}"
+                                value="{{ $courseMasterObj->course_year ?? date('Y') }}"
                                 formLabelClass="form-label"
                                 min="1900"
                                 max="2100" 
@@ -80,9 +80,10 @@
                                 label="Course Coordinator" 
                                 placeholder="Course Coordinator" 
                                 formLabelClass="form-label" 
+                                formSelectClass="select2"
                                 value="{{ $coordinator_name ?? '' }}"
                                 :options="$facultyList" />
-
+                        
                         </div>
                         <div class="col-md-12 mt-4">
                             <label class="form-label">Assistant Course Coordinators</label>
@@ -93,9 +94,11 @@
                                             <div class="col-md-6">
                                                 <x-select 
                                                     name="assistantcoursecoordinator[]" 
+                                                    id="assistant_coordinator_{{ $index }}"
                                                     label="Assistant Coordinator" 
                                                     placeholder="Assistant Coordinator" 
                                                     formLabelClass="form-label" 
+                                                    formSelectClass="select2"
                                                     :options="$facultyList" 
                                                     value="{{ $coordinator }}"
                                                     required="true" />
@@ -125,6 +128,7 @@
                                                 label="Assistant Coordinator" 
                                                 placeholder="Assistant Coordinator" 
                                                 formLabelClass="form-label" 
+                                                formSelectClass="select2"
                                                 :options="$facultyList" 
                                                 required="true" />
                                         </div>

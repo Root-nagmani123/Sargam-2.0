@@ -545,14 +545,11 @@
     </script>
 
     {{-- Attendance Details Table --}}
-    <div class="card shadow-lg mb-4 border-0 rounded-4">
-        <div class="card-header bg-primary p-3 border-bottom d-flex justify-content-between align-items-center">
-            <h4 class="card-title mb-0 fw-bold d-flex align-items-center text-white">
-                <i class="bi bi-calendar-check me-2 text-primary"></i> Detailed Attendance Record
-            </h4>
-            <a href="{{ route('attendance.index') }}" class="btn btn-secondary btn-sm rounded-pill fw-semibold">
-                <i class="bi bi-arrow-left me-1"></i> Back to Summary
-            </a>
+    <div class="card shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-bottom py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0 fw-semibold">Attendance Details</h4>
+            </div>
         </div>
         <div class="card-body p-0">
             @if(count($attendanceRecords) > 0)
