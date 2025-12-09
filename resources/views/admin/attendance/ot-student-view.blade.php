@@ -355,9 +355,6 @@ button:focus-visible {
         <div class="card-header bg-white border-bottom py-3">
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="mb-0 fw-semibold">Attendance Details</h4>
-                <a href="{{ route('attendance.index') }}" class="btn btn-secondary btn-sm">
-                    Back
-                </a>
             </div>
         </div>
 

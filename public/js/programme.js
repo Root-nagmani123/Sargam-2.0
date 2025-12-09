@@ -3,20 +3,51 @@ document.addEventListener('DOMContentLoaded', function() {
     const addBtn = document.getElementById('add-coordinator');
     const coordinatorSelect = document.querySelector('select[name="coursecoordinator"]');
 
+    // Initialize Select2 for Course Coordinator dropdown with search functionality
+    if (coordinatorSelect && typeof DropdownSearch !== 'undefined') {
+        DropdownSearch.init(coordinatorSelect, {
+            placeholder: 'Search and select coordinator...',
+            allowClear: true
+        });
+    }
+
+    // Initialize Select2 for existing Assistant Coordinator dropdowns
+    if (typeof DropdownSearch !== 'undefined') {
+        const existingAssistantSelects = document.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
+        existingAssistantSelects.forEach(function(select) {
+            DropdownSearch.init(select, {
+                placeholder: 'Search and select assistant coordinator...',
+                allowClear: false
+            });
+        });
+    }
+
     if (!container || !addBtn) return;
 
     let coordinatorIndex = container.querySelectorAll('.assistant-coordinator-row').length || 1;
 
     function updateAssistantOptions() {
         const assistantSelects = container.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
-        const coordinatorValue = coordinatorSelect ? coordinatorSelect.value : '';
+        const $coordinatorSelect = $(coordinatorSelect);
+        const isCoordinatorSelect2 = typeof DropdownSearch !== 'undefined' && coordinatorSelect && $coordinatorSelect.hasClass('select2-hidden-accessible');
+        const coordinatorValue = coordinatorSelect ? (isCoordinatorSelect2 
+            ? DropdownSearch.getValue(coordinatorSelect) 
+            : coordinatorSelect.value) : '';
 
         const selectedAssistantValues = Array.from(assistantSelects)
-            .map(function(sel) { return sel.value; })
+            .map(function(sel) { 
+                const $sel = $(sel);
+                if (typeof DropdownSearch !== 'undefined' && $sel.hasClass('select2-hidden-accessible')) {
+                    return DropdownSearch.getValue(sel);
+                }
+                return sel.value; 
+            })
             .filter(function(v) { return v !== null && v !== ''; });
 
         assistantSelects.forEach(function(selectEl) {
-            const selfValue = selectEl.value;
+            const $select = $(selectEl);
+            const isSelect2 = typeof DropdownSearch !== 'undefined' && $select.hasClass('select2-hidden-accessible');
+            const selfValue = isSelect2 ? DropdownSearch.getValue(selectEl) : selectEl.value;
             const toDisable = new Set(selectedAssistantValues.filter(function(v){ return v !== selfValue; }));
             if (coordinatorValue) {
                 toDisable.add(coordinatorValue);
@@ -34,8 +65,17 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             // If current selection becomes invalid due to coordinator change, reset
-            if (selectEl.value && (selectEl.options[selectEl.selectedIndex]?.disabled || selectEl.options[selectEl.selectedIndex]?.hidden)) {
-                selectEl.value = '';
+            if (selfValue && (selectEl.options[selectEl.selectedIndex]?.disabled || selectEl.options[selectEl.selectedIndex]?.hidden)) {
+                if (isSelect2) {
+                    DropdownSearch.setValue(selectEl, '', true);
+                } else {
+                    selectEl.value = '';
+                }
+            }
+
+            // Trigger Select2 update if it's a Select2 instance
+            if (isSelect2) {
+                $select.trigger('change.select2');
             }
         });
     }
@@ -45,25 +85,76 @@ document.addEventListener('DOMContentLoaded', function() {
         const prototypeRow = container.querySelector('.assistant-coordinator-row');
         if (!prototypeRow) return;
 
+        // Destroy Select2 instances on prototype row before cloning to avoid duplicating Select2 wrapper elements
+        const prototypeAssistantSelect = prototypeRow.querySelector('select[name="assistantcoursecoordinator[]"]');
+        const prototypeRoleSelect = prototypeRow.querySelector('select[name="assistant_coordinator_role[]"]');
+        
+        let prototypeAssistantSelect2Destroyed = false;
+        let prototypeRoleSelect2Destroyed = false;
+        
+        if (typeof DropdownSearch !== 'undefined') {
+            if (prototypeAssistantSelect && $(prototypeAssistantSelect).hasClass('select2-hidden-accessible')) {
+                DropdownSearch.destroy(prototypeAssistantSelect);
+                prototypeAssistantSelect2Destroyed = true;
+            }
+            if (prototypeRoleSelect && $(prototypeRoleSelect).hasClass('select2-hidden-accessible')) {
+                DropdownSearch.destroy(prototypeRoleSelect);
+                prototypeRoleSelect2Destroyed = true;
+            }
+        }
+
+        // Clone the row (now without Select2 wrappers)
         const newRow = prototypeRow.cloneNode(true);
         newRow.setAttribute('data-index', coordinatorIndex);
+
+        // Remove any Select2 containers that might have been cloned (safety check)
+        if (typeof $ !== 'undefined') {
+            $(newRow).find('.select2-container').remove();
+            $(newRow).find('.select2-dropdown').remove();
+        }
 
         // Clear values in cloned inputs/selects
         const selects = newRow.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
         const roleSelects = newRow.querySelectorAll('select[name="assistant_coordinator_role[]"]');
-        selects.forEach(function(sel){ sel.value = ''; });
-        roleSelects.forEach(function(sel){ sel.value = ''; });
+        selects.forEach(function(sel){ 
+            sel.value = '';
+            // Remove any Select2 classes that might have been cloned
+            sel.classList.remove('select2-hidden-accessible');
+        });
+        roleSelects.forEach(function(sel){ 
+            sel.value = '';
+            sel.classList.remove('select2-hidden-accessible');
+        });
+
+        // Re-initialize Select2 on prototype row if it was destroyed
+        if (typeof DropdownSearch !== 'undefined') {
+            if (prototypeAssistantSelect2Destroyed && prototypeAssistantSelect) {
+                DropdownSearch.init(prototypeAssistantSelect, {
+                    placeholder: 'Search and select assistant coordinator...',
+                    allowClear: false
+                });
+            }
+            if (prototypeRoleSelect2Destroyed && prototypeRoleSelect) {
+                DropdownSearch.init(prototypeRoleSelect);
+            }
+        }
 
         container.appendChild(newRow);
         coordinatorIndex++;
 
-        // Initialize select2 for the new role dropdown if select2 is available
-        const newRoleSelect = newRow.querySelector('select[name="assistant_coordinator_role[]"]');
-        if (newRoleSelect && typeof $.fn.select2 !== 'undefined') {
-            $(newRoleSelect).select2({
-                dropdownParent: $(newRow).closest('.card-body, .modal-body, body'),
-                width: '100%'
+        // Initialize select2 for the new assistant coordinator dropdown using utility
+        const newAssistantSelect = newRow.querySelector('select[name="assistantcoursecoordinator[]"]');
+        if (newAssistantSelect && typeof DropdownSearch !== 'undefined') {
+            DropdownSearch.init(newAssistantSelect, {
+                placeholder: 'Search and select assistant coordinator...',
+                allowClear: false
             });
+        }
+
+        // Initialize select2 for the new role dropdown using utility
+        const newRoleSelect = newRow.querySelector('select[name="assistant_coordinator_role[]"]');
+        if (newRoleSelect && typeof DropdownSearch !== 'undefined') {
+            DropdownSearch.init(newRoleSelect);
         }
 
         updateAssistantOptions();
@@ -93,6 +184,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Handle change events for Course Coordinator (Select2 triggers native change event)
     if (coordinatorSelect) {
         coordinatorSelect.addEventListener('change', function() {
             updateAssistantOptions();
