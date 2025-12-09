@@ -2,7 +2,7 @@
 
 @section('title', 'MDO Duty Type')
 
-@section('content')
+@section('setup_content')
 
 <div class="container-fluid">
     <!-- start Vertical Steps Example -->

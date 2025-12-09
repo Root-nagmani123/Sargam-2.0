@@ -2,7 +2,7 @@
 
 @section('title', 'Memo / Notice - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Notice /Memo Admin Management" />
     <x-session_message />

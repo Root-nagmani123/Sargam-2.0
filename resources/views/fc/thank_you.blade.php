@@ -2,7 +2,7 @@
 
 @section('title', 'Thank You - Foundation Course')
 
-@section('content')
+@section('setup_content')
 <div class="container mt-5 h-100 " style="flex: 1;">
     <div class="card shadow p-4 text-center">
         <h2 class="text-success fw-bold">Thank you!</h2>
