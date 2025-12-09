@@ -141,8 +141,7 @@
     <div class="card shadow">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
-                <h4 class="card-title mb-0">Attendance Details</h4>
-                <a href="{{ route('attendance.index') }}" class="btn btn-secondary btn-sm">Back</a>
+                <h4 class="mb-0 fw-semibold">Attendance Details</h4>
             </div>
         </div>
         <div class="card-body">
