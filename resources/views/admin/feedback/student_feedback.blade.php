@@ -373,29 +373,29 @@
     </div>
     <div class="container my-5">
         <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-header text-center rounded-top-4" style="background-color: #004a93;">
-                <h4 class="mb-0 text-white">Topic Feedback Form</h4>
+            <div class="card-header text-center rounded-top-4 mb-2" style="background-color: #591512;">
+                <h4 class="mb-0 text-white" style="font-family:Inter;font-weight:700;">Pending Faculty Feedbacks</h4>
             </div>
             <form id="vertical-wizard" method="POST" action="{{ route('feedback.submit.feedback') }}">
                 @csrf
-                <div class="card-body p-4 mb-4">
+                <div class="card-body mb-4 p-0" >
                     <div class="table-responsive">
-                        <table class="table align-middle text-nowrap mb-0">
-                            <thead class="table-light">
+                        <table class="table rounded-3 overflow-hidden align-middle mb-0 table-bordered">
+                            <thead class="bg-danger text-white">
                                 <tr>
-                                    <th class="text-center">S.No.</th>
-                                    <th>Date &amp; Time</th>
-                                    <th>Topic Detail</th>
-                                    <th>Faculty Name</th>
-                                    <th>Q. How did you like the Content?</th>
-                                    <th>Q. How did you like the Presentation?</th>
-                                    <th>Remarks</th>
+                                    <th class="text-center text-white">S.No.</th>
+                                    <th class="text-center text-white">Date &amp; Time</th>
+                                    <th class="text-center text-white">Topic Detail</th>
+                                    <th class="text-center text-white">Faculty Name</th>
+                                    <th class="text-center text-white">Q. How did you like the Content?</th>
+                                    <th class="text-center text-white">Q. How did you like the Presentation?</th>
+                                    <th class="text-center text-white">Remarks</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($data as $index => $feedback)
                                 @if ($feedback->feedback_checkbox == 1)
-                                <tr>
+                                <tr class="text-center">
                                     <td class="text-center">{{ $index + 1 }}</td>
                                     <td>
                                         {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
