@@ -2,7 +2,7 @@
 
 @section('title', 'Notice Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
 
     <x-breadcrum title="Notice Conversation" />
@@ -12,12 +12,12 @@
             <div class="gap-2 text-end">
                     <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
                 </div>
-            <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
+            <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
 
             <p class="mb-1">SHOW CAUSE NOTICE</p>
-            <p><strong>Date:</strong> 22/11/2013</p>
+            <p><strong>Date:</strong> {{ \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
             <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
                 from
@@ -38,11 +38,11 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>22-11-2013</td>
+                            <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
                             <td>1</td>
-                            <td>Lorem ipsum dolor sit amet.</td>
-                            <td>Lorem, ipsum.</td>
-                            <td>06:00-07:00</td>
+                            <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
+                            <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
+                            <td>{{ $template_details->session_time ?? '06:00-07:00' }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -54,13 +54,13 @@
                     <li>Reply to this Memo online through this <a href="#">conversation</a></li>
                     <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
                 </ul>
-                <p>In absence of online explanation and your personal appearance, unilateral decision may be taken.</p>
+                <p>{!! $template_details->content ?? '' !!}</p>
             </div>
 
-            <p><strong>ALBY VARGHESE, A42</strong><br>
-                Remarks: Show Cause Notice for 22.11.13</p>
+            <p><strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
+                Remarks: Show Cause Notice for {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
 
-            <p class="text-end"><strong>Rajesh Arya</strong><br>Deputy Director Sr. & I/C Discipline 88th F.C.</p>
+            <p class="text-end"><strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}</p>
 
             <!-- Exemption Table -->
             <div class="table-responsive mb-4">
@@ -191,14 +191,14 @@
                                 </select>
                             </div>
                         </div>
-                        @if($type == 'memo')
+                        @if($type == 'memo' || $type == 'notice' )
                        
 
                         <div id="conclusion_div" style="display: none;">
                             <div class="col-6">
                                 <div class="mb-3">
                                     <label class="form-label">Conclusion Type</label>
-                                    <select class="form-select" name="conclusion_type">
+                                    <select class="form-select" name="conclusion_type" id="conclusion_type">
                                         <option value="">Select Conclusion Type</option>
                                         @foreach($memo_conclusion_master as $conclusion)
                                         <option value="{{ $conclusion->pk }}">{{ $conclusion->discussion_name }}
@@ -206,7 +206,15 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-3" id="deduction_div" style="display: none;">
+                                        <label class="form-label">Mark of Deduction</label>
+                                        <input type="number" class="form-control" name="mark_of_deduction"
+                                            placeholder="Enter number of deduction">
+                                    </div>
                             </div>
+                            
                             <div class="col-6">
 
                                 <div class="mb-3">
@@ -244,6 +252,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         var statusSelector = document.getElementById('status');
         var conclusionDiv = document.getElementById('conclusion_div');
+        var conclusionTypeSelector = document.getElementById('conclusion_type');
 
         if (statusSelector) {
             statusSelector.addEventListener('change', function() {
@@ -260,6 +269,20 @@
                 conclusionDiv.style.display = 'block';
             }
         }
+        if(conclusionTypeSelector ){
+            conclusionTypeSelector.addEventListener('change', function() {
+            var selectedOption = this.options[this.selectedIndex];
+            var discussionName = selectedOption.text;
+
+          if(discussionName === 'Marks Deduction'){
+                // If 'Others' is selected, make the conclusion remark required
+                  document.getElementById('deduction_div').style.display = 'block';
+            } else {
+                // Otherwise, remove the required attribute
+                document.getElementById('deduction_div').style.display = 'none';
+            }
+        });
+        }
 
         // Set date and time fields
         const now = new Date();
@@ -270,6 +293,8 @@
 
         document.getElementById('current_date').value = date;
         document.getElementById('current_time').value = time;
+       
     });
+
     </script>
     @endsection

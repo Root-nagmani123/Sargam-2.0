@@ -2,7 +2,7 @@
 
 @section('title', 'All FAQs - Foundation Course')
 
-@section('content')
+@section('setup_content')
     <div class="container my-5" style="flex: 1;">
         <!-- Back Button -->
         <div class="mb-4 d-flex justify-content-between align-items-center">

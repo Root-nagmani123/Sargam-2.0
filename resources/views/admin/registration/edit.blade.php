@@ -2,7 +2,7 @@
 
 @section('title', 'Edit Form - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 
     <div class="container-fluid">
         <div class="card card-body py-3">

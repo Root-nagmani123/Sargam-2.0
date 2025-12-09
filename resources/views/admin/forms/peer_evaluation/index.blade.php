@@ -1,5 +1,5 @@
 @extends('admin.layouts.master')
-@section('content')
+@section('setup_content')
     <div class="card p-3">
         <h4 class="mb-4">Peer Evaluation Form</h4>
 

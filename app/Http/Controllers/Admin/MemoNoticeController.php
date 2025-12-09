@@ -84,41 +84,50 @@ class MemoNoticeController extends Controller
     }
 
 
-    // Store new template
-    public function store(Request $request)
-    {
-        try {
-            // Validate the incoming request with exact form field names
-            $validated = $request->validate([
-                'course_master_pk' => 'nullable|integer', // Just validate it's an integer if provided
-                'title' => 'required|string|max:255',
-                'director' => 'required|string|max:255',
-                'designation' => 'required|string|max:255',
-                'content' => 'required|string',
+   public function store(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'course_master_pk' => 'nullable|integer',
+            'title' => 'required|string|max:255',
+            'director' => 'required|string|max:255',
+            'designation' => 'required|string|max:255',
+            'content' => 'required|string',
+            'memo_notice_type' => 'required|string|in:Memo,Notice',
+        ]);
 
-            ]);
+        // Prevent Duplicate Active Memo/Notice
+        $alreadyExists = MemoNoticeTemplate::where('course_master_pk', $validated['course_master_pk'])
+            ->where('memo_notice_type', $validated['memo_notice_type'])
+            ->where('active_inactive', 1)   // Only active templates count
+            ->exists();
 
-            // Create memo notice with array directly
-            MemoNoticeTemplate::create([
-                'course_master_pk' => $validated['course_master_pk'] ?: null,
-                'title' => $validated['title'],
-                'director_name' => $validated['director'],
-                'director_designation' => $validated['designation'],
-                'content' => $validated['content'],
-                'status' => 'draft',
-                'created_by' => Auth::id(),
-                'updated_by' => Auth::id(),
-            ]);
-
-            return redirect()->route('admin.memo-notice.index')
-                ->with('success', 'Memo/Notice template created successfully.');
-        } catch (\Exception $e) {
-            // Log the error for debugging
-            \Log::error('Memo Notice Creation Error: ' . $e->getMessage());
-
-            return back()->withInput()->with('error', 'Failed to create template. Please check the form and try again.');
+        if ($alreadyExists) {
+            return back()->withInput()->with('error',
+                'An active ' . $validated['memo_notice_type'] . ' already exists for this course.');
         }
+
+        MemoNoticeTemplate::create([
+            'course_master_pk' => $validated['course_master_pk'] ?: null,
+            'title' => $validated['title'],
+            'director_name' => $validated['director'],
+            'director_designation' => $validated['designation'],
+            'content' => $validated['content'],
+            'memo_notice_type' => $validated['memo_notice_type'],
+            'active_inactive' => 1,
+            'created_by' => Auth::id(),
+            'updated_by' => Auth::id(),
+        ]);
+
+        return redirect()->route('admin.memo-notice.index')
+            ->with('success', 'Template created successfully.');
     }
+    catch (\Exception $e) {
+        \Log::error('Memo Notice Creation Error: '.$e->getMessage());
+        return back()->withInput()->with('error', 'Failed to create template.');
+    }
+}
+
 
     // Show edit form
     public function edit($id)
@@ -164,6 +173,7 @@ class MemoNoticeController extends Controller
                 'director' => 'required|string|max:255', // Changed from director_name to director
                 'designation' => 'required|string|max:255', // Changed from director_designation to designation
                 'content' => 'required|string',
+                'memo_notice_type' => 'required|string|in:Memo,Notice',
             ]);
 
             // Map form fields to database columns
@@ -173,6 +183,7 @@ class MemoNoticeController extends Controller
                 'director_name' => $validated['director'], // Map 'director' to 'director_name'
                 'director_designation' => $validated['designation'], // Map 'designation' to 'director_designation'
                 'content' => $validated['content'],
+                'memo_notice_type' => $validated['memo_notice_type'],
                 'updated_by' => Auth::id()
             ];
             $template->update($updateData);
@@ -193,6 +204,9 @@ class MemoNoticeController extends Controller
     public function destroy($id)
     {
         $template = MemoNoticeTemplate::findOrFail($id);
+        if ($template->active_inactive == 1) {
+            return back()->with('error', 'Active templates cannot be deleted. Please deactivate first.');
+        }
         $template->delete();
 
         return redirect()->route('admin.memo-notice.index')
@@ -224,14 +238,43 @@ class MemoNoticeController extends Controller
     }
 
     // Change status
-    public function changeStatus($id, $status)
-    {
+   public function changeStatus($id, $status)
+{
+    try {
         $template = MemoNoticeTemplate::findOrFail($id);
+
+        $courseId = $template->course_master_pk;
+        $type = $template->memo_notice_type; // Memo or Notice
+
+        // Only if activating
+        if ($status == 1) {
+            MemoNoticeTemplate::where('course_master_pk', $courseId)
+                ->where('memo_notice_type', $type) // 🔥 Only same type deactivate
+                ->where('pk', '!=', $id)
+                ->update([
+                    'active_inactive' => 0,
+                    'updated_by' => Auth::id()
+                ]);
+        }
+
+        // Update current template
         $template->update([
-            'status' => $status,
+            'active_inactive' => $status,
             'updated_by' => Auth::id()
         ]);
 
-        return back()->with('success', 'Status updated successfully.');
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Status updated successfully.'
+        ]);
+
+    } catch (\Throwable $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Something went wrong!'
+        ], 500);
     }
+}
+
+
 }

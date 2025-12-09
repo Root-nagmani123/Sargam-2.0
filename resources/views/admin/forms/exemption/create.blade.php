@@ -2,7 +2,7 @@
 
 @section('title', 'Exemption Master - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <div class="card card-body py-3">
         <div class="row align-items-center">

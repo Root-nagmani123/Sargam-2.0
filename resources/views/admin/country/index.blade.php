@@ -2,7 +2,7 @@
 
 @section('title', 'Country List')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
