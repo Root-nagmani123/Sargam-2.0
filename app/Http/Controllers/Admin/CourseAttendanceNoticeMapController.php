@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, MemoTypeMaster};
+use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, MemoTypeMaster,Timetable};
+
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
+use App\Models\MemoNoticeTemplate;
  
 class CourseAttendanceNoticeMapController extends Controller
 {
@@ -327,20 +329,56 @@ public function conversation($id, $type)
     $memoNotice = collect(); // default empty collection
 $memo_conclusion_master = collect(); // default empty collection
     if ($type == 'notice') {
-        $memoNotice = DB::table('notice_message_student_decip_incharge as nmsdi')
-            ->leftjoin('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
-            ->leftjoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
-            ->leftjoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
-            ->where('nmsdi.student_notice_status_pk', $id)
-            ->orderBy('nmsdi.created_date', 'asc')
-            ->select(
-                'nmsdi.*',
-                'sns.pk as notice_id',
-                'sns.status as notice_status',
-                'sm.pk as student_id',
-                'sm.display_name as student_name'
-            )
-            ->get();
+        // $memoNotice = DB::table('notice_message_student_decip_incharge as nmsdi')
+        //     ->leftjoin('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
+        //     ->leftjoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+        //     ->leftjoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+        //     ->where('nmsdi.student_notice_status_pk', $id)
+        //     ->orderBy('nmsdi.created_date', 'asc')
+        //     ->select(
+        //         'nmsdi.*',
+        //         'sns.pk as notice_id',
+        //         'sns.status as notice_status',
+        //         'sm.pk as student_id',
+        //         'sm.display_name as student_name'
+        //     )
+        //     ->get();
+        $memoNotice = DB::table('notice_message_student_decip_incharge as n')
+    ->leftJoin('student_notice_status as sns', 'n.student_notice_status_pk', '=', 'sns.pk')
+    ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+    ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+    ->where('n.student_notice_status_pk', $id)
+    ->orderBy('n.created_date', 'asc')
+    ->select(
+        'n.*',
+        'sns.pk as notice_id',
+        'sns.status as notice_status',
+        'sm.pk as student_id',
+        'sm.display_name as student_name'
+    )
+    ->get();
+
+         $template_details = DB::table('student_notice_status as sns')
+    ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+    ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
+    ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
+    ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
+    ->where('sns.pk', $id)
+    ->where('mnt.memo_notice_type', 'Notice')
+    ->select(
+        't.course_master_pk',
+        't.subject_topic',
+        't.venue_id',
+        't.class_session',
+        'sm.display_name',
+        'sm.generated_OT_code'
+        ,'cm.course_name',
+        'mnt.content',
+        'mnt.director_name',
+        'mnt.director_designation'
+    )
+    ->first();
+    $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
 
     } elseif ($type == 'memo') {
         $memoNotice = DB::table('memo_message_student_decip_incharge as mmsdi')
@@ -358,6 +396,27 @@ $memo_conclusion_master = collect(); // default empty collection
             )
             ->get();
             $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
+
+             $template_details = DB::table('student_notice_status as sns')
+    ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+    ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
+    ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
+    ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
+    ->where('sns.pk', $id)
+    ->where('mnt.memo_notice_type', 'Notice')
+    ->select(
+        't.course_master_pk',
+        't.subject_topic',
+        't.venue_id',
+        't.class_session',
+        'sm.display_name',
+        'sm.generated_OT_code'
+        ,'cm.course_name',
+        'mnt.content',
+        'mnt.director_name',
+        'mnt.director_designation'
+    )
+    ->first();
           
             
     }
@@ -377,7 +436,7 @@ $memo_conclusion_master = collect(); // default empty collection
     });
 
 // print_r($memoNotice);die;
-    return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type', 'memo_conclusion_master'));
+    return view('admin.courseAttendanceNoticeMap.conversation', compact('id', 'memoNotice', 'type', 'memo_conclusion_master','template_details'));
 }
 
 function conversation_bkp($id,$type){
@@ -503,6 +562,7 @@ public function getStudentAttendanceBytopic(Request $request)
 }
 public function store_memo_notice(Request $request)
 {
+   
     $validated = $request->validate([
         'course_master_pk' => 'required|exists:course_master,pk',
         'date_memo_notice' => 'required|date',
@@ -548,6 +608,7 @@ public function store_memo_notice(Request $request)
                 'message'                    => $validated['Remark'],
                 'notice_memo'                => $validated['submission_type'],
             ];
+          
         }
     // }
     // print_r($data);die;
@@ -650,6 +711,9 @@ public function memo_notice_conversation(Request $request)
         'message' => 'required|string|max:500',
         'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:1048',
         'status' => 'required|in:1,2',
+        'mark_of_deduction' => 'nullable|string|max:100',
+        'conclusion_type' => 'nullable|exists:memo_conclusion_master,pk',
+        'conclusion_remark' => 'nullable|string|max:500',
     ]);
     if($type === 'memo') {
     $validator->sometimes('conclusion_type', 'required_if:status,2', function ($input) {
@@ -663,7 +727,7 @@ public function memo_notice_conversation(Request $request)
 
     if ($validator->fails()) {
 
-       print_r($validator->errors());die;
+    //    print_r($validator->errors());die;
 
         return redirect()->back()->withErrors($validator)->withInput();
     }
@@ -672,6 +736,7 @@ public function memo_notice_conversation(Request $request)
     $validated = $validator->validated();
 
     // File upload
+    // print_r($validated);die;
     $filePath = null;
     if ($request->hasFile('document')) {
         $file = $request->file('document');
@@ -721,9 +786,19 @@ public function memo_notice_conversation(Request $request)
                 ->update([
                     'memo_conclusion_master_pk' => $validated['conclusion_type'],
                     'conclusion_remark' => $validated['conclusion_remark'] ?? null,
+                    'mark_of_deduction' => $validated['mark_of_deduction'] ?? '',
                     'decicion_taken_by' => auth()->user()->id ?? 1,
                     'decision_date' => now(),
                     'modified_date' => now(),
+                ]);
+        }else if ($type === 'notice' && isset($validated['conclusion_type'])) {
+            // If status is not 2, still update modified_date
+            DB::table('student_memo_status')
+                ->where('pk', $validated['memo_notice_id'])
+                ->update([
+                    'memo_conclusion_master_pk' => $validated['conclusion_type'],
+                    'conclusion_remark' => $validated['conclusion_remark'] ?? null,
+                    'mark_of_deduction' => $validated['mark_of_deduction'] ?? '',
                 ]);
         }
 
@@ -1275,6 +1350,40 @@ public function store_memo_status(Request $request)
     return redirect()->back()->with('success', 'Memo saved successfully.');
   
 }
+function send_only_notice(Request $request){
+    $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
+     $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
+                        ->select('course_master.course_name', 'course_master.pk');
+                    $courseMasters->where('course_master.active_inactive', 1);
+                    $courseMasters = $courseMasters->get()->toArray();
+            $sessions = ClassSessionMaster::get();
+             $maunalSessions = Timetable::select('class_session')
+                ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
+                ->groupBy('class_session')
+                ->select('class_session')
+                ->get();
+
+$courseMasters_data = [];
+    return view('admin.courseAttendanceNoticeMap.send_only_notice', compact('courseMasters', 'sessions', 'maunalSessions','courseMasters_data'));
+
+    
+}
+function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
+    {
+        try {
+             $data =   DB::table('course_student_attendance as csa')
+                ->where('csa.course_master_pk', $course_pk)
+                ->where('csa.timetable_pk', $timetable_pk)
+                ->whereRaw("TRIM(csa.status) REGEXP '^(2|3)$'")
+                ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+                ->select('csa.*', 'sm.display_name as student_name', 'sm.pk as student_id', 'sm.generated_OT_code as generated_OT_code')
+                ->paginate(30);
+         print_r($data);die;
+} catch (\Exception $e) {
+            \Log::error('Error fetching attendance data: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
+        }
+    }
 
 
 
