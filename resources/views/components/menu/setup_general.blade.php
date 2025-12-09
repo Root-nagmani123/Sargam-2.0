@@ -74,6 +74,10 @@
                                     <span class="hide-menu">Send Memo / Notice</span>
                                 </a></li>
                             <li class="sidebar-item"><a class="sidebar-link"
+                                    href="{{ route('send.notice.management.index') }}">
+                                    <span class="hide-menu">Send Only Notice</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('admin.memo-notice.index') }}">
                                     <span class="hide-menu">Memo / Notice Template</span>
                                 </a></li>

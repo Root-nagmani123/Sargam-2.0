@@ -64,9 +64,8 @@
                             <th>#</th>
                             <th>Course</th>
                             <th>Title</th>
-                            <th>Director</th>
-                            <th>Designation</th>
-                            <th>Created</th>
+                            <th>Type</th>
+                            <th>Status</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -83,10 +82,20 @@
                                 @endif
                             </td>
                             <td>{{ $template->title }}</td>
-                            <td>{{ $template->director_name }}</td>
-                            <td>{{ $template->director_designation }}</td>
+                          <td>{{ $template->memo_notice_type }}</td>
+                            <td>
+                                <div class="form-check form-switch d-inline-block ms-2">
+                                    <input class="form-check-input status-toggle-data" 
+                                        type="checkbox"
+                                        role="switch"
+                                        data-id="{{ $template->pk }}"
+                                        data-course="{{ $template->course_master_pk }}"
+                                        data-type="{{ $template->memo_notice_type }}"
+                                        {{ $template->active_inactive == 1 ? 'checked' : '' }}>
 
-                            <td>{{ $template->created_date->format('d M Y') }}</td>
+                                </div>
+                            </td>
+
                             <td>
                                 <div class="d-flex gap-1">
                                     <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
@@ -134,3 +143,92 @@
 }
 </style>
 @endpush
+
+
+@section('scripts')
+<script>
+$(document).on('change', '.status-toggle-data', function () {
+
+    let checkbox = $(this);
+    let id = checkbox.data('id');
+    let newStatus = checkbox.is(':checked') ? 1 : 0;
+
+    // extra data
+    let courseId = checkbox.data('course');
+    let type = checkbox.data('type'); // Memo / Notice
+
+    // Old status
+    let oldStatus = newStatus === 1 ? 0 : 1;
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: newStatus == 1 
+            ? "Do you want to activate this template?" 
+            : "Do you want to deactivate this template?",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Continue',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+
+        if (!result.isConfirmed) {
+            checkbox.prop('checked', oldStatus == 1);
+            return;
+        }
+
+        checkbox.prop('disabled', true);
+
+        $.ajax({
+            url: "/admin/memo-notice/" + id + "/status/" + newStatus,
+            type: "POST",
+            data: { _token: "{{ csrf_token() }}" },
+            success: function (res) {
+
+                if (res.status === "success") {
+
+                    if (newStatus == 1) {
+                        // 🔥 Deactivate only SAME COURSE & SAME TYPE in UI
+                        $('.status-toggle-data').each(function () {
+                            let other = $(this);
+
+                            if (
+                                other.data('id') != id &&
+                                other.data('course') == courseId &&
+                                other.data('type') == type
+                            ) {
+                                other.prop('checked', false);
+                            }
+                        });
+                    }
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Status updated successfully.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                }
+
+                checkbox.prop('disabled', false);
+            },
+            error: function () {
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Something went wrong. Please try again.',
+                });
+
+                checkbox.prop('disabled', false);
+                checkbox.prop('checked', oldStatus == 1);
+            }
+        });
+
+    });
+
+});
+
+
+</script>
+@endsection

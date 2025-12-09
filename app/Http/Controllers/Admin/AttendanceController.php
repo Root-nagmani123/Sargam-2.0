@@ -57,7 +57,7 @@ class AttendanceController extends Controller
     {
         $backUrl = url()->previous();        // Full previous URL
 $segments = explode('/', trim($backUrl, '/')); // Split by '/'
-$currentPath = end($segments);   
+ $currentPath = end($segments);   
         
         try {
             $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
@@ -133,6 +133,12 @@ $currentPath = end($segments);
                 'course_pk' => $row->Programme_pk,
                 'timetable_pk' => $row->timetable_pk
             ]) . '" class="btn btn-primary btn-sm 1">Show Attendance</a>';
+        }else if($currentPath === 'send_notice'){
+            return '<a href="' . route('attendance.send_notice', [
+            'group_pk' => $row->group_pk,
+            'course_pk' => $row->Programme_pk,
+            'timetable_pk' => $row->timetable_pk
+        ]) . '" class="btn btn-primary btn-sm">Send Notice</a>';
         }else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
