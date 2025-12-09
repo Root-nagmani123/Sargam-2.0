@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <style>
-    .calendar-component thead th {
+.calendar-component thead th {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -286,14 +286,14 @@ h4 {
         </div>
 
     </div>
-    <div class="card" style="border-radius:30px;">
-        <div class="card-body">
-            <div class="row g-4">
-                <!-- LEFT CONTENT -->
-                <div class="col-lg-8">
+    <div class="row g-4 mb-4">
+        <!-- LEFT CONTENT -->
+        <div class="col-lg-7">
 
+            <div class="card" style="border-radius:30px;height:100%;max-height:600px;">
+                <div class="card-body">
                     <!-- Admin Summary -->
-                    <section aria-labelledby="admin-summary-title" class="mb-5">
+                    <section aria-labelledby="admin-summary-title" class="mb-5" style="overflow-y:auto; max-height:250px;">
                         <h2 id="admin-summary-title" style="color: #1a1a1a !important;font-size:24px;line-height:28px;">
                             Admin Summary
                         </h2>
@@ -301,23 +301,16 @@ h4 {
                         <div class="line w-100 my-4"></div>
 
                         <div class="content-text">
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
+                            <ul style="list-style-type: disc; padding-left: 20px;">
+                                <li>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
+                                    access
+                                    to various administrative functions.</li>
+                            </ul>
                         </div>
                     </section>
 
                     <!-- Campus Summary -->
-                    <section aria-labelledby="campus-summary-title">
+                    <section aria-labelledby="campus-summary-title" style="overflow-y:auto; max-height:250px;">
                         <h2 id="campus-summary-title"
                             style="color: #1a1a1a !important;font-size:24px;line-height:28px;">
                             Campus Summary
@@ -326,77 +319,54 @@ h4 {
                         <div class="line w-100 my-4"></div>
 
                         <div class="content-text">
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
+                            <ul style="list-style-type: disc; padding-left: 20px;">
+                                <li>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
+                                    access
+                                    to various administrative functions.</li>
+                            </ul>
                         </div>
                     </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT NOTICE PANEL -->
+        <div class="col-lg-5">
+
+            <div class="card shadow-sm border-0 rounded-4 h-100">
+
+                <!-- Notice Header -->
+                <div class="card-header bg-danger text-white rounded-top-4 py-3">
+                    <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
+                        <i class="bi bi-megaphone-fill me-2"></i>
+                        Notices
+                    </h5>
+                </div>
+
+                <!-- Notice Body -->
+                <div class="card-body" style="max-height:600px; overflow-y:auto;">
+
+                    <ul style="list-style-type: disc; padding-left: 20px;">
+                        <li class="text-dark">Welcome to the Admin Dashboard! Here you can find a summary of key metrics
+                            and quick
+                            access
+                            to various administrative functions.</li>
+                        <hr class="my-2">
+                    </ul>
 
                 </div>
 
-                <!-- RIGHT NOTICE PANEL -->
-                <div class="col-lg-4">
+            </div>
 
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-
-                        <!-- Notice Header -->
-                        <div class="card-header bg-danger text-white rounded-top-4 py-3">
-                            <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
-                                <i class="bi bi-megaphone-fill me-2"></i>
-                                Notices
-                            </h5>
-                        </div>
-
-                        <!-- Notice Body -->
-                        <div class="card-body" style="max-height:600px; overflow-y:auto;">
-
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>   
-
-            <h3 class="fw-bold py-3">Today Birthday's</h3>
-            <hr class="my-2 mb-4">
-            <div class="row g-4">
-                <!-- LEFT SIDE: Birthday Cards -->
-                <div class="col-8">
+        </div>
+    </div>
+    <div class="row g-4">
+        <!-- LEFT SIDE: Birthday Cards -->
+        <div class="col-7">
+            <div class="card" style="border-radius:30px;">
+                <div class="card-body">
+                    <h3 class="fw-bold py-3">Today Birthday's</h3>
+                    <hr class="my-2 mb-4">
                     @if($emp_dob_data->isEmpty())
                     <p class="text-center">No Birthdays Today</p>
                     @else
@@ -416,7 +386,8 @@ h4 {
                                     @php
                                     $photo = !empty($employee->profile_picture)
                                     ? asset('storage/' . $employee->profile_picture)
-                                    : 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+                                    :
+                                    'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
                                     @endphp
 
                                     <!-- IMAGE -->
@@ -452,13 +423,18 @@ h4 {
 
                     @endif
                 </div>
-
-                <!-- RIGHT SIDE: Calendar -->
-                <div class="col-4">
-                    <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events"
-                        theme="gov-red" />
-                </div>
             </div>
+        </div>
+
+        <!-- RIGHT SIDE: Calendar -->
+        <div class="col-5">
+           <x-calendar 
+    :year="$year" 
+    :month="$month" 
+    :selected="now()->toDateString()" 
+    :events="$events" 
+    theme="gov-red" 
+/>
 
         </div>
     </div>

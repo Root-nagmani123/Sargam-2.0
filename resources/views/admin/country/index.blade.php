@@ -4,7 +4,8 @@
 
 @section('setup_content')
 <div class="container-fluid">
-    <div class="card">
+    <x-breadcrum title="Country List" />
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <div class="row">
                 <div class="col-6">
@@ -20,6 +21,13 @@
                                 <i class="material-icons menu-icon material-symbols-rounded"
                                     style="font-size: 20px; vertical-align: middle;">add</i>
                                 Add Country
+                            </a>
+
+                            <!-- Export Button -->
+                            <a href=""
+                                class="px-3 py-2">
+                                <i class="material-icons menu-icon material-symbols-rounded"
+                                    style="font-size: 20px; vertical-align: middle;">search</i>
                             </a>
 
                         </div>

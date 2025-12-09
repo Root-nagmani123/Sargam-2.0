@@ -95,7 +95,7 @@
 
     /* Basic container */
     .calendar-component {
-        max-width: 460px;
+        max-width: 100%;
         background: #fff;
         border-radius: 12px;
         padding: 14px;
