@@ -2,7 +2,7 @@
 
 @section('title', 'Foundation Course | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <main style="flex: 1;">
         <div class="container mt-5">

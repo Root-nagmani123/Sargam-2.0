@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Preview Import')
 
-@section('content')
+@section('setup_content')
     <div class="container mt-4">
         <h4>Preview Records</h4>
 
@@ -52,7 +52,7 @@
 {{-- @extends('admin.layouts.master')
 @section('title', 'Preview & Edit Import')
 
-@section('content')
+@section('setup_content')
 <div class="container mt-4">
     <h4>Preview & Edit Records Before Import</h4>
 

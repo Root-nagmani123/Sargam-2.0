@@ -1,5 +1,5 @@
 {{-- @extends('admin.layouts.master')
-@section('content')
+@section('setup_content')
     <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4>Group Members: {{ $group->group_name }}</h4>
@@ -64,7 +64,7 @@
 @endsection --}}
 
 @extends('admin.layouts.master')
-@section('content')
+@section('setup_content')
     <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4>Group Members: {{ $group->group_name }}</h4>

@@ -2,7 +2,7 @@
 
 @section('title', 'Attendance')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <table id="attendanceTable" class="table table-bordered">
         <thead>

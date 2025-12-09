@@ -2,7 +2,7 @@
 
 @section('title', 'Faculty Notice / Memo View - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <style>
     .student-card {
         background: #ffffff;

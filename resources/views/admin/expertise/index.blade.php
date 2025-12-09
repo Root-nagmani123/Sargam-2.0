@@ -2,7 +2,7 @@
 
 @section('title', 'Area of Expertise - Sargam | Lal Bahadur')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Area of Expertise" />
     <x-session_message />

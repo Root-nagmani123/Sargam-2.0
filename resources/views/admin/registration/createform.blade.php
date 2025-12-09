@@ -4,7 +4,7 @@
 @section('css')
     <link href="{{ asset('css/forms.css') }}" rel="stylesheet">
 @endsection
-@section('content')
+@section('setup_content')
     <div class="container-fluid">
         <div class="card">
             <div class="card-body">

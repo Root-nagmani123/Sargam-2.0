@@ -2,7 +2,7 @@
 
 @section('title', 'Dashboard - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('content')
+@section('setup_content')
 <style>
     .calendar-component thead th {
     background: transparent !important;

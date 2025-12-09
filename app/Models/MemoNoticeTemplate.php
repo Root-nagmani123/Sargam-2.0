@@ -45,17 +45,17 @@ class MemoNoticeTemplate extends Model
     // Scopes
     public function scopePublished($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('active_inactive', '1');
     }
 
     public function scopeDraft($query)
     {
-        return $query->where('status', 'draft');
+        return $query->where('active_inactive', '0');
     }
 
     public function scopeArchived($query)
     {
-        return $query->where('status', 'archived');
+        return $query->where('active_inactive', '2');
     }
 
     public function scopeForCourse($query, $courseId)
