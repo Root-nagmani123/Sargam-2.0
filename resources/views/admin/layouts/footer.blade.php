@@ -25,6 +25,7 @@
   <script src="{{asset('admin_assets/libs/jquery-steps/build/jquery.steps.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/jquery-validation/dist/jquery.validate.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/select2/dist/js/select2.full.min.js')}}"></script>
+  <script src="{{asset('js/dropdown-search.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
   <script src="{{asset('admin_assets/libs/datatables.net/js/jquery.dataTables.min.js')}}"></script>
   <script src="{{asset('admin_assets/js/datatable/datatable-basic.init.js')}}"></script>

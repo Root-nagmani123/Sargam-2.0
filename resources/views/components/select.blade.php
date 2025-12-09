@@ -1,6 +1,6 @@
 
 @if($label)
-    <label class="form-label" for="{{ $name }}">{{ $label }} <span class="text-danger">{{ $labelRequired ? '*' : '' }}</span></label>
+    <label class="form-label" for="{{ $id ?? $name }}">{{ $label }} <span class="text-danger">{{ $labelRequired ? '*' : '' }}</span></label>
 @endif
 
 @php
@@ -9,7 +9,7 @@
 
 <select 
     class="{{ $formSelectClass }}"
-    id="{{ $name }}"
+    id="{{ $id ?? $name }}"
     name="{{ $name }}"
     @if($required) required @endif
     @if($multiple) multiple @endif
