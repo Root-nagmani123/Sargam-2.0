@@ -379,6 +379,11 @@ Route::prefix('admin/course-memo-decision')
         Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
 
     });
+    
+   Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
+Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
+
+
     Route::get('/user/chat', function () {
     return view('admin.courseAttendanceNoticeMap.chat');
 })->name('admin.courseAttendanceNoticeMap.chat');

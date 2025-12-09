@@ -33,16 +33,25 @@
                                 placeholder="Enter Memo / Notice Title" required>
                         </div>
 
-                        <div class="col-6">
+                        <div class="col-5">
                             <label class="form-label">Director's Name <span class="text-danger">*</span></label>
                             <input type="text" name="director" class="form-control" placeholder="Enter Director's Name"
                                 required>
                         </div>
 
-                        <div class="col-6">
+                        <div class="col-5">
                             <label class="form-label">Director's Designation <span class="text-danger">*</span></label>
                             <input type="text" name="designation" class="form-control" placeholder="Enter designation"
                                 required>
+                        </div>
+
+                        <div class="col-2">
+                            <label class="form-label">Memo / Notice Type <span class="text-danger">*</span></label>
+                            <select name="memo_notice_type" class="form-select" required>
+                                <option value="" disabled selected>Select Type</option>
+                                <option value="Memo">Memo</option>
+                                <option value="Notice">Notice</option>
+                            </select>
                         </div>
 
                         <div class="col-12">
