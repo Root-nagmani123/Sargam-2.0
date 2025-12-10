@@ -2,269 +2,259 @@
 @section('title', 'View Faculty Details')
 
 @section('setup_content')
+
 <style>
+/* ------------------------------
+   GLOBAL + GIGW COMPLIANT STYLE
+--------------------------------*/
+.page-wrapper {
+    background: #fff;
+    padding: 20px 40px;
+    font-family: "Inter", Arial, sans-serif;
+}
+
+.section-title {
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #003366;
+    font-size: 18px;
+    border-bottom: 2px solid #003366;
+    padding-bottom: 4px;
+}
+
+.label-sm {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.data-line {
+    border-bottom: 1px solid #bbb;
+    min-height: 26px;
+    padding-bottom: 2px;
+    font-size: 15px;
+}
+
+.profile-photo {
+    width: 140px;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+
+.section-block {
+    margin-bottom: 28px;
+}
+
+/* Print Optimisation */
 @media print {
-    /* Hide everything except the print area */
     body * {
-        visibility: hidden;
+        visibility: hidden !important;
     }
-
     .print-area, .print-area * {
-        visibility: visible;
+        visibility: visible !important;
     }
-
     .print-area {
         position: absolute;
         left: 0;
         top: 0;
         width: 100%;
-        background: #fff !important;
-        padding: 20px 40px;
+        padding: 0 30px;
     }
-
-    /* Keep Bootstrap grid intact */
-    .row {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        margin-right: -0.75rem !important;
-        margin-left: -0.75rem !important;
-    }
-
-    .col-md-6, .col-lg-6, .col-sm-6 {
-        flex: 0 0 50% !important;
-        max-width: 50% !important;
-        padding: 0 0.75rem !important;
-        box-sizing: border-box;
-    }
-
-    /* Optional: smaller screen columns */
-    .col-12 {
-        flex: 0 0 100% !important;
-        max-width: 100% !important;
-    }
-
-    /* Card appearance */
-    .card {
-        border: 1px solid #ddd !important;
-        box-shadow: none !important;
-        page-break-inside: avoid;
-        margin-bottom: 1.5rem;
-    }
-
-    .card-header {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color: white !important;
-    }
-
-    /* Hide unwanted UI */
-    .btn, .btn-group, .text-end, nav, header, footer {
+    .no-print {
         display: none !important;
-    }
-
-    /* Typography tweaks for printing */
-    * {
-        font-size: 13px !important;
-        line-height: 1.4 !important;
-        color: #000 !important;
-    }
-
-    /* Each section starts neatly */
-    .card.shadow-sm.mb-4 {
-        page-break-after: always;
     }
 }
 </style>
 
+<div class="container-fluid print-area">
+ <!-- ===========================================================
+                HEADER + PHOTO + NAME (LIKE ATTACHED SAMPLE)
+        ============================================================ -->
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-2 text-center">
+                <img src="{{ $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : asset('default-user.png') }}" 
+                     alt="Faculty Photo" class="profile-photo">
+            </div>
 
+            <div class="col-md-10">
+                <div class="label-sm">Full Name:</div>
+                <div class="data-line">{{ $faculty->full_name }}</div>
 
-<div class="container-fluid">
-    <div class="print-area">
-    <x-breadcrum title="Faculty Details" />
-
-    {{-- PERSONAL INFO --}}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-primary ">
-            <h5 class="mb-0 text-white">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="white"
-                    class="me-2 bi bi-person-fill" viewBox="0 0 16 16">
-                    <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1H3zm5-6a3 3 0 100-6 3 3 0 000 6z" />
-                </svg>
-                Personal Information
-            </h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <x-view-item label="Faculty Type" :value="$faculty->facultyTypeMaster->faculty_type_name" />
-                <x-view-item label="First Name" :value="$faculty->first_name" />
-                <x-view-item label="Middle Name" :value="$faculty->middle_name" />
-                <x-view-item label="Last Name" :value="$faculty->last_name" />
-                <x-view-item label="Full Name" :value="$faculty->full_name" />
-                <x-view-item label="Gender" :value="$faculty->gender" />
-                <x-view-item label="Landline Number" :value="$faculty->landline_no" />
-                <x-view-item label="Mobile Number" :value="$faculty->mobile_no" />
-                <x-view-item label="Email" :value="$faculty->email_id" />
-                <x-view-item label="Alternate Email" :value="$faculty->alternate_email_id" />
-                <x-view-item label="Country" :value="$faculty->countryMaster->country_name" />
-                <x-view-item label="State" :value="$faculty->stateMaster->state_name" />
-                <x-view-item label="District" :value="$faculty->districtMaster->district_name" />
-                <x-view-item label="City" :value="$faculty->cityMaster->city_name" />
-                @if(!empty($faculty->photo_uplode_path))
-                <br />
-                <span class="text-info text-bold">Previously Uploaded Photo</span>
-                <a href="{{ asset('storage/'.$faculty->photo_uplode_path) }}" target="_blank" class="rounded-circle"
-                    title="View Photo">
-                    <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
-                </a>
-                @endif
-                @if(!empty($faculty->Doc_uplode_path))
-                <br />
-                <span class="text-info text-bold">Previously Uploaded Document</span>
-                <a href="{{ asset('storage/'.$faculty->Doc_uplode_path) }}" target="_blank" class="rounded-circle"
-                    title="View Document">
-                    <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
-                </a>
-                @endif
+                <div class="label-sm mt-3">Faculty Type:</div>
+                <div class="data-line">{{ $faculty->facultyTypeMaster->faculty_type_name }}</div>
             </div>
         </div>
-    </div>
 
-    {{-- QUALIFICATION --}}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-success ">
-            <h5 class="mb-0 text-white">🎓 Qualification Details</h5>
+
+        <!-- ===========================================================
+                           PERSONAL INFORMATION
+        ============================================================ -->
+        <div class="section-block">
+            <div class="section-title">PERSONAL INFORMATION</div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="label-sm">Gender</div>
+                    <div class="data-line">{{ $faculty->gender }}</div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="label-sm">Mobile Number</div>
+                    <div class="data-line">{{ $faculty->mobile_no }}</div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="label-sm">Email ID</div>
+                    <div class="data-line">{{ $faculty->email_id }}</div>
+                </div>
+            </div>
+
+            <div class="label-sm mt-2">Address</div>
+            <div class="data-line mb-2">
+                {{ $faculty->countryMaster->country_name }}, 
+                {{ $faculty->stateMaster->state_name }},
+                {{ $faculty->districtMaster->district_name }},
+                {{ $faculty->cityMaster->city_name }}
+            </div>
         </div>
-        <div class="card-body">
-            @foreach ($faculty->facultyQualificationMap as $facultyQualification)
-            <div class="border rounded p-3 mb-3 bg-light">
-                <div class="row g-3">
-                    <x-view-item label="Qualification" :value="$facultyQualification->Degree_name" />
-                    <x-view-item label="Specialization" :value="$facultyQualification->Specialization" />
-                    <x-view-item label="University" :value="$facultyQualification->University_Institution_Name" />
-                    <x-view-item label="Year of Passing" :value="$facultyQualification->Year_of_passing" />
-                    <x-view-item label="Percentage/CGPA" :value="$facultyQualification->Percentage_CGPA" />
-                    @if(!empty($facultyQualification->Certifcates_upload_path))
-                    <div class="col-md-6">
-                        <a class="btn btn-primary" href="{{ asset('storage/'.$facultyQualification->Certifcates_upload_path) }}" target="_blank">
-                            View Document
-                        </a>
-                    </div>
-                    @endif
+
+
+        <!-- ===========================================================
+                           QUALIFICATION DETAILS
+        ============================================================ -->
+        <div class="section-block">
+            <div class="section-title">QUALIFICATION DETAILS</div>
+
+            @foreach($faculty->facultyQualificationMap as $q)
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="label-sm">Degree</div>
+                    <div class="data-line">{{ $q->Degree_name }}</div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="label-sm">University</div>
+                    <div class="data-line">{{ $q->University_Institution_Name }}</div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="label-sm">Passing Year</div>
+                    <div class="data-line">{{ $q->Year_of_passing }}</div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="label-sm">Percentage / CGPA</div>
+                    <div class="data-line">{{ $q->Percentage_CGPA }}</div>
                 </div>
             </div>
             @endforeach
         </div>
-    </div>
 
-    {{-- EXPERIENCE --}}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-warning ">
-            <h5 class="mb-0 text-white">💼 Experience Details</h5>
-        </div>
-        <div class="card-body">
+
+        <!-- ===========================================================
+                           EXPERIENCE DETAILS
+        ============================================================ -->
+        <div class="section-block">
+            <div class="section-title">EXPERIENCE DETAILS</div>
+
             @foreach($faculty->facultyExperienceMap as $exp)
-            <div class="border rounded p-3 mb-3 bg-light">
-                <div class="row g-3">
-                    <x-view-item label="Years of Experience" :value="$exp->Years_Of_Experience" />
-                    <x-view-item label="Area of Specialization" :value="$exp->Specialization" />
-                    <x-view-item label="Previous Institutions" :value="$exp->pre_Institutions" />
-                    <x-view-item label="Position Held" :value="$exp->Position_Held" />
-                    <x-view-item label="Duration" :value="$exp->Duration" />
-                    <x-view-item label="Nature of Work" :value="$exp->Nature_of_Work" />
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <div class="label-sm">Years of Experience</div>
+                    <div class="data-line">{{ $exp->Years_Of_Experience }}</div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="label-sm">Area of Specialisation</div>
+                    <div class="data-line">{{ $exp->Specialization }}</div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="label-sm">Institution</div>
+                    <div class="data-line">{{ $exp->pre_Institutions }}</div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="label-sm">Position Held</div>
+                    <div class="data-line">{{ $exp->Position_Held }}</div>
                 </div>
             </div>
             @endforeach
         </div>
-    </div>
 
-    {{-- BANK DETAILS --}}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-info ">
-            <h5 class="mb-0 text-white">🏦 Bank Details</h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                <x-view-item label="Bank Name" :value="$faculty->bank_name" />
-                <x-view-item label="Account Number" :value="$faculty->Account_No" />
-                <x-view-item label="IFSC Code" :value="$faculty->IFSC_Code" />
-                <x-view-item label="PAN Number" :value="$faculty->PAN_No" />
+
+        <!-- ===========================================================
+                           BANK DETAILS
+        ============================================================ -->
+        <div class="section-block">
+            <div class="section-title">BANK DETAILS</div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="label-sm">Bank Name</div>
+                    <div class="data-line">{{ $faculty->bank_name }}</div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="label-sm">Account Number</div>
+                    <div class="data-line">{{ $faculty->Account_No }}</div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="label-sm">IFSC Code</div>
+                    <div class="data-line">{{ $faculty->IFSC_Code }}</div>
+                </div>
             </div>
         </div>
-    </div>
 
-    {{-- OTHER INFO --}}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-secondary">
-            <h5 class="mb-0 text-white">📁 Other Information</h5>
-        </div>
-        <div class="card-body">
-            <div class="row g-3">
-                @if( !empty($faculty->Rech_Publi_Upload_path) )
-                <span class="text-info text-bold">Research Publications</span>
-                <a href="{{ asset('storage/'.$faculty->Rech_Publi_Upload_path) }}" target="_blank" class="rounded-circle"
-                    title="View Document">
-                    <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
-                </a>
-                @endif
 
-                @if( !empty($faculty->Professional_Memberships_doc_upload_path) )
-                <span class="text-info text-bold">Professional Memberships</span>
-                <a href="{{ asset('storage/'.$faculty->Professional_Memberships_doc_upload_path) }}" target="_blank"
-                    class="rounded-circle" title="View Document">
-                    <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
-                </a>
-                @endif
+        <!-- ===========================================================
+                           AREA OF EXPERTISE
+        ============================================================ -->
+        <div class="section-block">
+            <div class="section-title">AREA OF EXPERTISE</div>
 
-                @if( !empty($faculty->Reference_Recommendation) )
-                <br>
-                <span class="text-info text-bold">Recommendation Details</span>
-                <a href="{{ asset('storage/'.$faculty->Reference_Recommendation) }}" target="_blank" class="rounded-circle"
-                    title="View Document">
-                    <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
-                </a>
-                @endif
-                <x-view-item label="Joining Date" :value="format_date($faculty->joining_date)" />
-                <x-view-item label="Current Sector"
-                    :value="$faculty->faculty_sector == 1 ? 'Government Sector' : 'Private Sector' " />
-            </div>
-        </div>
-    </div>
-
-    {{-- EXPERTISE --}}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header bg-dark">
-            <h5 class="mb-0 text-white">🧠 Area of Expertise</h5>
-        </div>
-        <div class="card-body">
-            <div class="d-flex flex-wrap gap-2">
+            <div class="row">
                 @foreach($faculty->facultyExpertiseMap as $area)
-                <span
-                    class="badge rounded-pill bg-primary px-3 py-2">{{ $area->facultyExpertise->expertise_name }}</span>
+                <div class="col-md-3 mb-2">
+                    <div class="data-line">{{ $area->facultyExpertise->expertise_name }}</div>
+                </div>
                 @endforeach
             </div>
         </div>
-    </div>
 
-    {{-- BACK BUTTON --}}
-    <div class="text-end mt-4">
-        <a href="{{ route('faculty.index') }}" class="btn btn-secondary">
-           Back
-        </a>
-         <div class="btn-group" role="group">
-      <button type="button" class="btn btn-outline-primary" onclick="printFacultyDetails()">
-        <i class="material-icons">print</i> Print
-    </button>
+
+        <!-- ===========================================================
+                           OTHER INFORMATION
+        ============================================================ -->
+        <div class="section-block">
+            <div class="section-title">OTHER INFORMATION</div>
+
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <div class="label-sm">Joining Date</div>
+                    <div class="data-line">{{ format_date($faculty->joining_date) }}</div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="label-sm">Current Sector</div>
+                    <div class="data-line">
+                        {{ $faculty->faculty_sector == 1 ? 'Government Sector' : 'Private Sector' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ===========================================================
+                           BUTTONS
+        ============================================================ -->
+        <div class="no-print text-end mt-4">
+            <a href="{{ route('faculty.index') }}" class="btn btn-secondary">Back</a>
+            <button class="btn btn-primary" onclick="window.print()">Print</button>
+        </div>
 </div>
-    </div>
-    </div>
-</div>
+
 @endsection
-
-<script>
-function printFacultyDetails() {
-    window.print();
-}
-</script>
-
-
-

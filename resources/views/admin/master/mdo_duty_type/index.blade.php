@@ -4,6 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="MDO Duty Type"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -28,7 +29,7 @@
                     </div>
                     <hr>
 
-                    {!! $dataTable->table(['class' => 'table table-striped table-bordered']) !!}
+                    {!! $dataTable->table(['class' => 'table']) !!}
                 </div>
             </div>
         </div>

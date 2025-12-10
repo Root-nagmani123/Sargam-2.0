@@ -399,3 +399,7 @@ Route::get('/admin/peer/courses/{eventId}', [PeerEvaluationController::class, 'g
 // Enrollment edit routes
 Route::get('/enrollment/{student}/edit', [EnrollementController::class, 'edit'])->name('enrollment.edit');
 Route::post('/enrollment/{student}', [EnrollementController::class, 'update'])->name('enrollment.update');
+
+// Import to OT List
+Route::post('/student-enrollment/import-to-ot-list', [EnrollementController::class, 'import'])
+    ->name('student.enrollment.import');

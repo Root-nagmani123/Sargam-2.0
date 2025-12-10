@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent};
+use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, Holiday};
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -195,7 +195,47 @@ $events = $events
         ];
     });
 
-    return response()->json($events);
+    // Fetch holidays
+    $holidays = Holiday::active()
+        ->whereBetween('holiday_date', [$request->start, $request->end])
+        ->get()
+        ->map(function ($holiday) {
+            $backgroundColor = '';
+            $textColor = '#fff';
+            
+            switch ($holiday->holiday_type) {
+                case 'gazetted':
+                    $backgroundColor = '#dc3545'; // Red for Gazetted
+                    break;
+                case 'restricted':
+                    $backgroundColor = '#ffc107'; // Yellow/Amber for Restricted
+                    $textColor = '#000';
+                    break;
+                case 'optional':
+                    $backgroundColor = '#17a2b8'; // Info color for Optional
+                    break;
+            }
+            
+            return [
+                'id' => 'holiday_' . $holiday->id,
+                'title' => $holiday->holiday_name . ' (' . ucfirst($holiday->holiday_type) . ')',
+                'start' => $holiday->holiday_date->format('Y-m-d'),
+                'end' => $holiday->holiday_date->format('Y-m-d'),
+                'backgroundColor' => $backgroundColor,
+                'borderColor' => $backgroundColor,
+                'textColor' => $textColor,
+                'display' => 'block',
+                'type' => 'holiday',
+                'holiday_type' => $holiday->holiday_type,
+                'description' => $holiday->description,
+                'allDay' => true
+            ];
+        });
+
+    // Merge events and holidays
+    $allEvents = $events->merge($holidays);
+
+    return response()->json($allEvents);
 }
 function SingleCalendarDetails(Request $request)
 {
