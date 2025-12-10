@@ -105,7 +105,7 @@
 </style>
 
 <div class="container-fluid">
-
+<x-breadcrum title="MDO/Escort Exemption" />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
@@ -175,7 +175,7 @@
                         </div>
                     </div>
 
-                    {!! $dataTable->table(['class' => 'table table-striped table-bordered custom-mdo-table']) !!}
+                    {!! $dataTable->table(['class' => 'table custom-mdo-table']) !!}
 
                 </div>
             </div>
