@@ -357,7 +357,7 @@ Route::prefix('admin/course-memo-decision')
     ->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/conversation/{id}/{type}', 'conversation')->name('conversation');
-        Route::get('/get_conversation_model/{id}/{type}', 'get_conversation_model')->name('get_conversation_model');
+        Route::get('/get_conversation_model/{id}/{type}/{user_type}', 'get_conversation_model')->name('get_conversation_model');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/Subject-by-course', 'getSubjectByCourse')->name('getSubjectByCourse'); // <-- New AJAX route
