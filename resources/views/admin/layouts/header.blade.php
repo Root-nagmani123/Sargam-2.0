@@ -1,194 +1,58 @@
 <!-- 🌟 Header Start -->
 <style>
-/* ========================================
-   GIGW Compliant Header & Tab Styling
-   ======================================== */
-
-/* --- Navbar Base Styling --- */
+/* --- Navbar Styling --- */
 .navbar-nav .nav-link {
-    color: #1f2937;
+    color: #333;
     font-size: 0.95rem;
-    font-weight: 500;
-    transition: all 0.2s ease-in-out;
-    position: relative;
-    border-radius: 8px;
-    padding: 10px 16px !important;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    white-space: nowrap;
-    min-height: 40px;
+    transition: all 0.2s ease;
 }
 
-.navbar-nav .nav-link:hover {
-    background-color: #e8eef7;
-    color: #004a93;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.1);
-}
-
+.navbar-nav .nav-link:hover,
 .navbar-nav .nav-link:focus {
-    outline: 3px solid #004a93;
-    outline-offset: 2px;
-    background-color: #e8eef7;
+    background-color: #f2f2f2;
+    color: #000;
+    outline: none;
 }
 
-/* --- Active Tab Styling (GIGW Compliance) --- */
 .navbar-nav .nav-link.active {
-    background: linear-gradient(135deg, #af2910 0%, #af2910 100%);
-    color: #ffffff !important;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.25);
-    position: relative;
+    background-color: #B12923;
+    color: #fbf8f8 !important;
+    font-size: 16px !important;
+    line-height: 24px;
+    font-weight: 500 !important;
+    padding: 20px !important;
+    border-radius: 26px !important;
+    Width: 100% !important;
+    Height: 40px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 3px 0 3px 0 rgba(232, 191, 189, 0.8);
 }
 
-.navbar-nav .nav-link.active::after {
-    content: '';
-    position: absolute;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 24px;
-    height: 4px;
-    background: #af2910;
-    border-radius: 2px 2px 0 0;
+.btn-link {
+    text-decoration: none !important;
 }
 
-/* Icon styling */
-.navbar-nav .nav-link i {
-    font-size: 20px;
-    transition: transform 0.3s ease;
+.btn-link:hover {
+    opacity: 0.8;
 }
 
-.navbar-nav .nav-link:hover i {
-    transform: scale(1.1);
-}
-
-.navbar-nav .nav-link.active i {
-    transform: scale(1.15);
-}
-
-/* --- Navigation Container --- */
-.nav-container {
-    background: linear-gradient(180deg, #f8f9fa 0%, #f0f3f7 100%);
-    border-radius: 12px;
-    border: 1px solid #d1d5db;
-    padding: 6px 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    min-height: 56px;
-    display: flex;
-    align-items: center;
-}
-
-.nav-container .navbar-nav {
-    height: auto !important;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: #cbd5e1 #f1f5f9;
-}
-
-.nav-container .navbar-nav::-webkit-scrollbar {
-    height: 4px;
-}
-
-.nav-container .navbar-nav::-webkit-scrollbar-track {
-    background: #f1f5f9;
-    border-radius: 10px;
-}
-
-.nav-container .navbar-nav::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 10px;
-}
-
-.nav-container .navbar-nav::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-/* Dropdown Toggle Custom */
-.dropdown-toggle-custom::after {
-    display: none !important;
-}
-
-.dropdown-toggle-custom .dropdown-arrow {
-    transition: transform 0.25s ease;
-    font-size: 18px;
-}
-
-.show > .dropdown-toggle-custom .dropdown-arrow {
-    transform: rotate(180deg);
-}
-
-/* --- Dropdown Menu Enhancement --- */
-.dropdown-menu {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
-    padding: 8px !important;
-    margin-top: 8px !important;
-    animation: slideDown 0.2s ease-out;
-}
-
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
+@media (max-width: 991.98px) {
+    .navbar-nav {
+        border-radius: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+
+    .navbar-nav .nav-link {
+        width: 100%;
+        border-radius: 0.5rem;
     }
 }
 
-.dropdown-item {
-    color: #1f2937;
-    padding: 10px 12px !important;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    font-weight: 500;
-}
-
-.dropdown-item:hover {
-    background-color: #f0f3f7;
-    color: #004a93;
-    transform: translateX(4px);
-}
-
-.dropdown-item:focus {
-    background-color: #e8eef7;
-    outline: 2px solid #004a93;
-    outline-offset: -2px;
-}
-
-/* --- Search Button --- */
-.search-trigger {
-    background-color: #f3f4f6;
-    color: #4b5563;
-    border: 1px solid #e5e7eb;
-    transition: all 0.2s ease;
-    width: 40px !important;
-    height: 40px !important;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 !important;
-}
-
-.search-trigger:hover {
-    background-color: #004a93;
-    color: white;
-    border-color: #004a93;
-    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.2);
-}
-
-.search-trigger:focus {
-    outline: 3px solid #004a93;
-    outline-offset: 2px;
-}
-
-/* --- Search Box Animation --- */
+/* --- Search Animation --- */
 .search-wrapper {
     position: relative;
     display: inline-block;
@@ -201,7 +65,7 @@
     transform: translateY(-50%) scale(0.95);
     opacity: 0;
     display: none;
-    min-width: 260px;
+    min-width: 220px;
     transition: all 0.3s ease;
     z-index: 1050;
 }
@@ -213,159 +77,21 @@
 }
 
 .input-group-sm .form-control {
-    border-radius: 8px 0 0 8px;
-    border: 1px solid #e5e7eb;
-    padding: 8px 12px;
-    font-size: 0.9rem;
-}
-
-.input-group-sm .form-control:focus {
-    border-color: #004a93;
-    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1);
-    outline: none;
+    border-radius: 50rem 0 0 50rem;
 }
 
 .input-group-sm .btn {
-    border-radius: 0 8px 8px 0;
-    background-color: #004a93;
-    border-color: #004a93;
-    color: white;
+    border-radius: 0 50rem 50rem 0;
 }
-
-.input-group-sm .btn:hover {
-    background-color: #003366;
-    border-color: #003366;
-}
-
-/* Navbar overflow handling */
 #mainNavbar {
     height: auto !important;
     overflow: visible !important;
 }
-
 #mainNavbar.collapse:not(.show),
 #navbarNav.collapse:not(.show) {
     display: contents !important;
 }
 
-/* --- Right Side Actions --- */
-.navbar-action-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    border-radius: 8px;
-    transition: all 0.2s ease;
-    gap: 8px;
-}
-
-.navbar-action-item:hover {
-    background-color: #f0f3f7;
-}
-
-.navbar-action-item:focus-within {
-    outline: 2px solid #004a93;
-    outline-offset: 2px;
-}
-
-/* --- Button Styling --- */
-.btn-outline-light {
-    color: #4b5563;
-    border-color: transparent;
-    transition: all 0.2s ease;
-}
-
-.btn-outline-light:hover {
-    background-color: #f0f3f7;
-    color: #004a93;
-    border-color: #d1d5db;
-    transform: translateY(-2px);
-}
-
-.btn-outline-light:focus {
-    outline: 2px solid #004a93;
-    outline-offset: 2px;
-}
-
-/* --- Text and Labels --- */
-.text-muted {
-    color: #6b7280 !important;
-    font-size: 0.85rem;
-}
-
-/* --- Responsive Design --- */
-@media (max-width: 991.98px) {
-    .navbar-nav {
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-        gap: 4px;
-    }
-
-    .navbar-nav .nav-link {
-        width: 100%;
-        border-radius: 6px;
-    }
-
-    .nav-container {
-        border-radius: 8px;
-        padding: 4px;
-    }
-
-    .navbar-nav .nav-link.active::after {
-        bottom: 2px;
-        left: 8px;
-        width: 4px;
-        height: 24px;
-    }
-
-    .d-flex.ms-auto {
-        gap: 8px !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .navbar-nav .nav-link {
-        padding: 8px 12px !important;
-        font-size: 0.9rem;
-    }
-
-    .nav-container {
-        padding: 4px;
-    }
-
-    .search-box {
-        min-width: 200px;
-    }
-
-    .dropdown-menu {
-        min-width: 150px !important;
-    }
-}
-
-/* --- Accessibility & Focus States --- */
-.nav-link:focus-visible,
-.btn-outline-light:focus-visible,
-.search-trigger:focus-visible {
-    outline: 3px solid #004a93;
-    outline-offset: 2px;
-}
-
-/* --- Smooth Transitions --- */
-* {
-    transition-property: background-color, border-color, color, box-shadow, transform;
-    transition-duration: 0.2s;
-    transition-timing-function: ease-in-out;
-}
-
-/* --- Hover Lift Effect --- */
-.hover-lift {
-    transition: all 0.2s ease-in-out;
-}
-
-.hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
 </style>
 
 <header class="topbar">
@@ -395,93 +121,91 @@
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container -->
                     <div class="nav-container position-relative">
-                        <ul class="navbar-nav gap-2 align-items-center" role="menubar"
-                            aria-label="Main navigation tabs">
+                        <ul class="navbar-nav px-4 py-2 gap-2 align-items-center" style="border-radius: 20px; height: 60px; background: #f2f2f2; 
+                       border: 1px solid rgba(0, 0, 0, 0.05);" role="menubar"
+                            aria-label="Main navigation">
 
-                            <!-- Home Tab -->
+                            <!-- Home -->
                             <li class="nav-item" role="none">
                                 <a href="#home"
-                                    class="nav-link active rounded-lg px-3 py-2 d-flex align-items-center gap-2 fw-500"
+                                    class="nav-link active rounded-pill px-4 py-2 d-flex align-items-center gap-2"
                                     data-bs-toggle="tab" role="tab" aria-selected="true" aria-controls="home-panel"
-                                    id="home-tab"
-                                    title="Home - Dashboard and overview">
-                                    <i class="material-icons material-symbols-rounded">home</i>
-                                    <span class="d-none d-sm-inline">Home</span>
+                                    id="home-tab">
+                                    <span>Home</span>
                                 </a>
                             </li>
 
-                            <!-- Setup Tab -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-setup"
-                                    class="nav-link rounded-lg px-3 py-2 d-flex align-items-center gap-2 fw-500"
+                            <!-- Setup -->
+                           <li class="nav-item" role="none">
+                                    <a href="#tab-setup"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
-                                    id="setup-tab"
-                                    title="Setup - Configure system">
-                                    <i class="material-icons material-symbols-rounded">settings</i>
-                                    <span class="d-none d-sm-inline">
-                                        @if(hasRole('Admin') || hasRole('Training'))
-                                            Setup
-                                        @elseif(hasRole('Internal Faculty')  || hasRole('Guest Faculty') || hasRole('Student-OT'))
-                                            Academics
-                                        @else
-                                            Setup
-                                        @endif
-                                    </span>
-                                </a>
-                            </li>
+                                    id="setup-tab">
 
-                            <!-- Communications Tab -->
+                                        @if(hasRole('Admin') || hasRole('Training'))
+                                            <span>Setup</span>
+                                        @elseif(hasRole('Internal Faculty')  || hasRole('Guest Faculty') || hasRole('Student-OT'))
+                                            <span>Academics</span>
+                                        @else
+                                            <span>Setup</span>
+                                        @endif
+
+                                    </a>
+                                </li>
+
+                           
+                            <!-- Communications -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-communications"
-                                    class="nav-link rounded-lg px-3 py-2 d-flex align-items-center gap-2 fw-500"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
-                                    aria-controls="communications-panel" id="communications-tab"
-                                    title="Communications - Send messages and notices">
-                                    <i class="material-icons material-symbols-rounded">mail</i>
-                                    <span class="d-none d-sm-inline">Communications</span>
+                                    aria-controls="communications-panel" id="communications-tab">
+                                    <span>Communications</span>
                                 </a>
                             </li>
 
-                            <!-- Material Management Tab -->
+                            <!-- Academics -->
+                            <!-- <li class="nav-item" role="none">
+                                <a href="#tab-academics"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                    aria-controls="academics-panel" id="academics-tab">
+                                    <span>Academics</span>
+                                </a>
+                            </li> -->
+                           
+                            <!-- Material Management -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-material-management"
-                                    class="nav-link rounded-lg px-3 py-2 d-flex align-items-center gap-2 fw-500"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
-                                    aria-controls="material-management-panel" id="material-management-tab"
-                                    title="Material Management - Manage resources">
-                                    <i class="material-icons material-symbols-rounded">inventory</i>
-                                    <span class="d-none d-sm-inline">Materials</span>
+                                    aria-controls="material-management-panel" id="material-management-tab">
+                                    <span>Material Management</span>
                                 </a>
                             </li>
 
-                            <!-- Financial Dropdown - Enhanced with GIGW compliance -->
+                            <!-- Financial Dropdown - Enhanced -->
                             <li class="nav-item dropdown" role="none">
-                                <a class="nav-link rounded-lg px-3 py-2 d-flex align-items-center gap-2 fw-500 dropdown-toggle-custom"
+                                <a class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
                                     href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
-                                    aria-expanded="false" data-bs-toggle="dropdown"
-                                    title="Financial - Budget and accounts">
-                                    <i class="material-icons material-symbols-rounded">account_balance_wallet</i>
-                                    <span class="d-none d-sm-inline">Financial</span>
+                                    aria-expanded="false" data-bs-toggle="dropdown">
+                                    <span>Financial</span>
                                     <i class="material-icons material-symbols-rounded fs-6 dropdown-arrow transition-all"
                                         aria-hidden="true">expand_more</i>
                                 </a>
 
-                                <ul class="dropdown-menu shadow-lg border-0 rounded-lg p-2 mt-2"
-                                    style="min-width: 200px; border: 1px solid rgba(0, 0, 0, 0.08);"
+                                <ul class="dropdown-menu shadow-lg border-0 rounded-xl p-2 mt-1"
+                                    style="min-width: 180px; border: 1px solid rgba(0, 0, 0, 0.08);"
                                     aria-labelledby="financialDropdown" role="menu">
                                     <li role="none">
-                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg fw-500"
-                                            href="#" role="menuitem"
-                                            title="Budget - View and manage budget">
-                                            <i class="material-icons material-symbols-rounded" style="font-size: 18px;">account_balance</i>
+                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
+                                            href="#" role="menuitem">
                                             <span>Budget</span>
                                         </a>
                                     </li>
                                     <li role="none">
-                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg fw-500"
-                                            href="#" role="menuitem"
-                                            title="Accounts - View financial records">
-                                            <i class="material-icons material-symbols-rounded" style="font-size: 18px;">receipt_long</i>
+                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
+                                            href="#" role="menuitem">
                                             <span>Accounts</span>
                                         </a>
                                     </li>
@@ -489,11 +213,10 @@
                             </li>
 
                             <!-- Search with Enhanced UI -->
-                            <li class="nav-item ms-auto ms-md-2" role="none">
-                                <button class="nav-link search-trigger rounded-lg p-2"
-                                    aria-label="Open search" aria-expanded="false"
-                                    aria-controls="searchModal"
-                                    title="Search across system">
+                            <li class="nav-item" role="none">
+                                <button class="nav-link rounded-circle px-2 py-2 search-trigger hover-lift"
+                                    style="width: 40px; height: 40px;" aria-label="Open search" aria-expanded="false"
+                                    aria-controls="searchModal">
                                     <i class="material-icons material-symbols-rounded text-dark"
                                         style="font-size: 20px;" aria-hidden="true">search</i>
                                 </button>
@@ -502,29 +225,28 @@
                     </div>
                 </div>
 
-                <!-- Right Side Actions - Enhanced with GIGW compliance -->
-                <div class="d-flex align-items-center ms-auto gap-3" style="margin-right: 20px;">
+                <!-- Right Side Actions - Enhanced -->
+                <div class="d-flex align-items-center ms-auto gap-4" style="margin-right: 56px;">
                     <!-- Logout Button - Enhanced -->
                     <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
                         @csrf
                         <button type="submit"
-                            class="btn btn-outline-light border-0 p-2 rounded-lg hover-lift position-relative"
+                            class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
                             aria-label="Sign out from system" data-bs-toggle="tooltip" data-bs-placement="bottom"
-                            title="Sign Out"
-                            style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 22px; color: #4b5563;"
+                            title="Sign Out">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 22px; color: #475569;"
                                 aria-hidden="true">logout</i>
                             <span class="tooltip-text visually-hidden">Sign out from system</span>
                         </button>
                     </form>
 
-                    <!-- Last Login - Enhanced with better typography -->
-                    <div class="d-flex flex-column align-items-end navbar-action-item">
+                    <!-- Last Login - Enhanced -->
+                    <div class="d-flex flex-column align-items-end">
                         <div class="text-muted small d-flex align-items-center gap-1"
-                            style="font-size: 0.8rem; line-height: 1.2;">
+                            style="font-size: 11px; line-height: 14px;">
                             <i class="material-icons material-symbols-rounded" style="font-size: 14px;"
                                 aria-hidden="true">schedule</i>
-                            <span class="fw-600">Last login:</span>
+                            <span class="fw-medium">Last login:</span>
                         </div>
                         @php
                             $lastLogin = Auth::user()->last_login ?? null;
