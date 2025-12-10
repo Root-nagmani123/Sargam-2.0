@@ -423,6 +423,37 @@ public function getEventFeedback($id)
     return response()->json($query->get());
 }
 
+public function allFeedback()
+{
+    $user = auth()->user();
+    $facultyPk = $user->user_id;
+
+    $query = DB::table('topic_feedback as tf')
+        ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+        ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+        ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+        ->select([
+            't.pk as event_id',
+            'c.course_name',
+            'f.full_name as faculty_name',
+            't.subject_topic',
+            'tf.rating',
+            'tf.remark',
+            'tf.presentation',
+            'tf.content',
+            'tf.created_date'
+        ]);
+
+    // Faculty ko sirf apna feedback dikhana
+    if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+        $query->where('t.faculty_master', $facultyPk);
+    }
+
+    // Admin ko sabka dikhe
+    return response()->json($query->orderByDesc('tf.created_date')->get());
+}
+
+
 
 public function studentFeedback()
 {
