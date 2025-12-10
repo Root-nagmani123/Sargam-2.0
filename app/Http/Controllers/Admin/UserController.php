@@ -12,6 +12,7 @@ use App\Models\EmployeeMaster;
 use App\Models\EmployeeRoleMapping;
 use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
+use App\Models\Holiday;
 
 
 
@@ -32,7 +33,29 @@ class UserController extends Controller
     {
          $year = request('year', now()->year);
         $month = request('month', now()->month);
-        $events = []; // Add your events logic here if needed
+        
+        // Fetch holidays for the selected month/year
+        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
+        $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
+        
+        $holidays = Holiday::active()
+            ->whereBetween('holiday_date', [$startDate, $endDate])
+            ->get();
+        
+        // Format events array with holidays
+        $events = [];
+        foreach ($holidays as $holiday) {
+            $dateKey = $holiday->holiday_date->format('Y-m-d');
+            if (!isset($events[$dateKey])) {
+                $events[$dateKey] = [];
+            }
+            $events[$dateKey][] = [
+                'title' => $holiday->holiday_name,
+                'type' => 'holiday',
+                'holiday_type' => $holiday->holiday_type,
+                'description' => $holiday->description
+            ];
+        }
 
       $emp_dob_data = EmployeeMaster::where('status', 1)->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
         ->leftjoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')

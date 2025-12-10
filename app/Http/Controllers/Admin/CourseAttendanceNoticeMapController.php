@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, MemoTypeMaster,Timetable};
+use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, MemoTypeMaster,Timetable, CourseAttendanceNoticeMap};
 
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
@@ -1371,19 +1371,85 @@ $courseMasters_data = [];
 function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
     {
         try {
-             $data =   DB::table('course_student_attendance as csa')
-                ->where('csa.course_master_pk', $course_pk)
-                ->where('csa.timetable_pk', $timetable_pk)
-                ->whereRaw("TRIM(csa.status) REGEXP '^(2|3)$'")
-                ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
-                ->select('csa.*', 'sm.display_name as student_name', 'sm.pk as student_id', 'sm.generated_OT_code as generated_OT_code')
-                ->paginate(30);
-         print_r($data);die;
+            
+   $courseGroup = CourseGroupTimetableMapping::with([
+                'course:pk,course_name',
+                'timetable',
+                'timetable.faculty:pk,full_name',
+                'timetable.classSession:pk,start_time,end_time'
+            ])
+                ->where('group_pk', $group_pk)
+                ->where('Programme_pk', $course_pk)
+                ->where('timetable_pk', $timetable_pk)
+                ->first();
+                
+            
+
+
+
+          $students = DB::table('course_student_attendance as csa')
+    ->leftJoin('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
+    ->where('csa.course_master_pk', $course_pk)
+    ->where('csa.timetable_pk', $timetable_pk)
+    ->whereRaw("TRIM(csa.status) REGEXP '^(2|3)$'")
+    ->select(
+        'csa.*',
+        'sm.display_name',
+        'sm.pk as student_id',
+        'sm.generated_OT_code as generated_OT_code'
+    )
+    ->paginate(30);
+
+            return view('admin.courseAttendanceNoticeMap.view_all_notice_list', compact('students','courseGroup', 'group_pk', 'course_pk', 'timetable_pk'));
 } catch (\Exception $e) {
             \Log::error('Error fetching attendance data: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
         }
     }
+    function notice_direct_save(Request $request){
+       
+        try{
+    $validated = $request->validate([
+            'course_master_pk' => 'required|exists:course_master,pk',
+            'subject_master_id' => 'required|exists:subject_master,pk',
+            'topic_id' => 'required|exists:timetable,pk',
+            'venue_id' => 'required',
+            'class_session_master_pk' => 'required',
+            'faculty_master_pk' => 'required',
+            'selected_student_list' => 'required|array',
+            
+            
+        ]);
+        
+
+        
+        foreach ($validated['selected_student_list'] as $studentId) {
+            $data[] = [
+                'course_master_pk'           => $validated['course_master_pk'],
+                'student_pk'                 => $studentId,
+                'date_'                      => now()->toDateString(),
+                'subject_master_pk'          => $validated['subject_master_id'],
+                'subject_topic'              => $validated['topic_id'],
+                'venue_id'                   => $validated['venue_id'],
+                'class_session_master_pk'    => $validated['class_session_master_pk'],
+                'faculty_master_pk'          => $validated['faculty_master_pk'],
+                'course_student_attendance_pk' =>$request->input('attendance_pk_'.$studentId),
+                'notice_memo'                => 1,
+            ];
+
+    }
+    // print_r($data);die;
+   $insertdata =  DB::table('student_notice_status')->insert($data);
+   if($insertdata){
+    return redirect('admin/memo-notice-management')->with('success', 'Notice sent successfully.');
+   }
+}catch (\Exception $e) {
+            \Log::error('Error saving notice data: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while saving notice data: ' . $e->getMessage());
+        }
+       
+
+}
 
 
 

@@ -36,12 +36,14 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
     {
         $student = $enrollment->studentMaster ?? null;
         $course = $enrollment->course ?? null;
-        
+
         static $serial = 1;
         $currentSerial = $serial++;
-        
+
         return [
             $currentSerial,
+            $student->pk ?? 'N/A',
+            $course->pk ?? 'N/A',
             $student ? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) : 'N/A',
             $student->email ?? 'N/A',
             $student->contact_no ?? 'N/A',
@@ -56,6 +58,8 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
     {
         return [
             'S.No',
+            'student_master_pk',
+            'course_master_pk',
             'Student Name',
             'Email',
             'Phone',
@@ -103,7 +107,7 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
         $sheet->getStyle("A1:A{$lastRow}")
             ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            
+
         $sheet->getStyle("G1:G{$lastRow}")
             ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -117,7 +121,7 @@ class StudentEnrollmentExport implements FromCollection, WithHeadings, WithMappi
         $sheet->getStyle("B1:D{$lastRow}")
             ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_LEFT);
-            
+
         $sheet->getStyle("F1:F{$lastRow}")
             ->getAlignment()
             ->setHorizontal(Alignment::HORIZONTAL_LEFT);
