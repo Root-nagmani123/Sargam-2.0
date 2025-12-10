@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use Illuminate\Http\Request;
-use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance, Timetable, StudentMaster, MDOEscotDutyMap, StudentMedicalExemption};
+use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance, Timetable, StudentMaster, MDOEscotDutyMap, StudentMedicalExemption, StudentMasterCourseMap};
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
 use App\DataTables\StudentAttendanceListDataTable;
@@ -296,6 +296,7 @@ $currentPath = $segments[1] ?? null;
             // Get filter parameters
             $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : null;
             $filterSessionTime = $request->input('filter_session_time');
+            $filterCourse = $request->input('filter_course');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
 
             // Get sessions for filter dropdown
@@ -306,6 +307,18 @@ $currentPath = $segments[1] ?? null;
                 ->select('class_session')
                 ->get();
 
+            // Get archived courses for the student (only when in archive mode)
+            $archivedCourses = [];
+            if ($archiveMode === 'archive') {
+                $archivedCourses = CourseMaster::join('student_master_course__map', 'student_master_course__map.course_master_pk', '=', 'course_master.pk')
+                    ->where('student_master_course__map.student_master_pk', $student_pk)
+                    ->whereNotNull('course_master.end_date')
+                    ->whereDate('course_master.end_date', '<', Carbon::today())
+                    ->select('course_master.pk', 'course_master.course_name', 'course_master.end_date')
+                    ->orderBy('course_master.end_date', 'desc')
+                    ->get();
+            }
+
             // Query all course group timetable mappings for this student's course and group
             $query = CourseGroupTimetableMapping::with([
                 'course:pk,course_name,end_date',
@@ -314,9 +327,28 @@ $currentPath = $segments[1] ?? null;
                 'timetable.classSession:pk,shift_name,start_time,end_time',
                 'timetable.venue:venue_id,venue_name',
                 'timetable.faculty:pk,full_name',
-            ])
-                ->where('group_pk', $group_pk)
-                ->where('Programme_pk', $course_pk);
+            ]);
+
+            // Apply course filter if provided (only in archive mode)
+            if ($archiveMode === 'archive' && $filterCourse) {
+                $query->where('Programme_pk', $filterCourse);
+                // Also need to update group_pk based on the selected course
+                // Get the group for this student and the selected course
+                $studentGroupMap = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
+                    ->where('student_master_pk', $student_pk)
+                    ->whereHas('groupTypeMasterCourseMasterMap', function($q) use ($filterCourse) {
+                        $q->where('course_name', $filterCourse);
+                    })
+                    ->first();
+                
+                if ($studentGroupMap && $studentGroupMap->groupTypeMasterCourseMasterMap) {
+                    $query->where('group_pk', $studentGroupMap->groupTypeMasterCourseMasterMap->pk);
+                }
+            } else {
+                // Default behavior: use the original course and group
+                $query->where('group_pk', $group_pk)
+                      ->where('Programme_pk', $course_pk);
+            }
 
             // Apply archive/active filter for timetable records
             $query->whereHas('timetable', function ($q) use ($archiveMode) {
@@ -358,11 +390,15 @@ $currentPath = $segments[1] ?? null;
                 $timetableDate = optional($courseGroup->timetable)->START_DATE;
                 $timetablePk = $courseGroup->timetable_pk;
 
+                // Use the course and group from the filtered courseGroup (or fallback to original)
+                $currentCoursePk = $courseGroup->Programme_pk ?? $course_pk;
+                $currentGroupPk = $courseGroup->group_pk ?? $group_pk;
+
                 // Get attendance record
                 $attendance = CourseStudentAttendance::where([
                     ['Student_master_pk', '=', $student_pk],
-                    ['course_master_pk', '=', $course_pk],
-                    ['group_type_master_course_master_map_pk', '=', $group_pk],
+                    ['course_master_pk', '=', $currentCoursePk],
+                    ['group_type_master_course_master_map_pk', '=', $currentGroupPk],
                     ['timetable_pk', '=', $timetablePk]
                 ])->first();
 
@@ -413,7 +449,7 @@ $currentPath = $segments[1] ?? null;
                             // Get medical exemption details
                             if ($timetableDate) {
                                 $medicalExemption = StudentMedicalExemption::where([
-                                    ['course_master_pk', '=', $course_pk],
+                                    ['course_master_pk', '=', $currentCoursePk],
                                     ['student_master_pk', '=', $student_pk],
                                     ['active_inactive', '=', 1]
                                 ])
@@ -439,7 +475,7 @@ $currentPath = $segments[1] ?? null;
                                 $otherDutyType = $mdoDutyTypes['other'] ?? null;
                                 if ($otherDutyType) {
                                     $otherExemption = MDOEscotDutyMap::where([
-                                        ['course_master_pk', '=', $course_pk],
+                                        ['course_master_pk', '=', $currentCoursePk],
                                         ['mdo_duty_type_master_pk', '=', $otherDutyType],
                                         ['selected_student_list', '=', $student_pk]
                                     ])->whereDate('mdo_date', '=', $timetableDate)->first();
@@ -456,7 +492,7 @@ $currentPath = $segments[1] ?? null;
                     if ($timetableDate) {
                         // Check medical exemption
                         $medicalExemption = StudentMedicalExemption::where([
-                            ['course_master_pk', '=', $course_pk],
+                            ['course_master_pk', '=', $currentCoursePk],
                             ['student_master_pk', '=', $student_pk],
                             ['active_inactive', '=', 1]
                         ])
@@ -478,7 +514,7 @@ $currentPath = $segments[1] ?? null;
                             // Check MDO
                             if (!empty($mdoDutyTypes['mdo'])) {
                                 $mdoDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $course_pk],
+                                    ['course_master_pk', '=', $currentCoursePk],
                                     ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
@@ -492,7 +528,7 @@ $currentPath = $segments[1] ?? null;
                             // Check Escort
                             if (!$record['duty_type'] && !empty($mdoDutyTypes['escort'])) {
                                 $escortDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $course_pk],
+                                    ['course_master_pk', '=', $currentCoursePk],
                                     ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
@@ -506,7 +542,7 @@ $currentPath = $segments[1] ?? null;
                             // Check Other
                             if (!$record['duty_type'] && !empty($mdoDutyTypes['other'])) {
                                 $otherDuty = MDOEscotDutyMap::where([
-                                    ['course_master_pk', '=', $course_pk],
+                                    ['course_master_pk', '=', $currentCoursePk],
                                     ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
@@ -532,6 +568,8 @@ $currentPath = $segments[1] ?? null;
                 'maunalSessions',
                 'filterDate',
                 'filterSessionTime',
+                'filterCourse',
+                'archivedCourses',
                 'archiveMode',
                 'group_pk',
                 'course_pk',

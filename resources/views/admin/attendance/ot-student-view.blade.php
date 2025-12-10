@@ -446,14 +446,33 @@
                 <hr class="my-4">
 
                 <div class="row g-4">
-                    <div class="col-lg-5 col-md-6">
+                    {{-- Course Filter - Only show in Archive mode --}}
+                    @if(($archiveMode ?? 'active') === 'archive')
+                    <div class="col-lg-4 col-md-6">
+                        <label for="filter_course" class="form-label fw-semibold">
+                            <i class="bi bi-book me-1 text-primary"></i> Course:
+                        </label>
+                        <select class="form-select form-select-lg select2" id="filter_course"
+                            name="filter_course" aria-label="Filter by Course">
+                            <option value="">-- Select Course --</option>
+                            @foreach($archivedCourses as $archivedCourse)
+                            <option value="{{ $archivedCourse->pk }}"
+                                {{ $filterCourse == $archivedCourse->pk ? 'selected' : '' }}>
+                                {{ $archivedCourse->course_name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+                    
+                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
                         <label for="filter_date" class="form-label fw-semibold">
                             <i class="bi bi-calendar-date me-1 text-primary"></i> Date:
                         </label>
                         <input type="date" class="form-control form-control-lg" id="filter_date" name="filter_date"
                             value="{{ $filterDate ?? '' }}" aria-label="Filter by Date">
                     </div>
-                    <div class="col-lg-5 col-md-6">
+                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
                         <label for="filter_session_time" class="form-label fw-semibold">
                             <i class="bi bi-clock-history me-1 text-primary"></i> Session Time:
                         </label>
@@ -521,6 +540,16 @@
             document.getElementById('filter_date').value = '';
             const sessionSelect = document.getElementById('filter_session_time');
             sessionSelect.value = ''; // Set to the default 'Select Session Time' option
+            
+            // Clear course filter if it exists (only in archive mode)
+            const courseSelect = document.getElementById('filter_course');
+            if (courseSelect) {
+                courseSelect.value = '';
+                // If select2 is initialized, trigger change
+                if ($.fn.select2 && $(courseSelect).hasClass('select2-hidden-accessible')) {
+                    $(courseSelect).val('').trigger('change');
+                }
+            }
 
             // Re-apply the current archive mode for context
             archiveModeInput.value = '{{ $archiveMode ?? '
@@ -725,7 +754,7 @@ $(document).ready(function() {
 
     // Auto-submit form when filters change
     let filterTimeout;
-    $('#filter_date, #filter_session_time').on('change', function() {
+    $('#filter_date, #filter_session_time, #filter_course').on('change', function() {
         clearTimeout(filterTimeout);
         filterTimeout = setTimeout(function() {
             $('#filterForm').submit();
@@ -738,6 +767,14 @@ $(document).ready(function() {
         $('#filter_session_time').val('').trigger('change');
         if ($.fn.select2) {
             $('#filter_session_time').select2('val', '');
+        }
+        // Clear course filter if it exists (only in archive mode)
+        const courseSelect = $('#filter_course');
+        if (courseSelect.length) {
+            courseSelect.val('').trigger('change');
+            if ($.fn.select2 && courseSelect.hasClass('select2-hidden-accessible')) {
+                courseSelect.select2('val', '');
+            }
         }
         // Reset to active mode
         setActiveButton($('#filterActive'));
