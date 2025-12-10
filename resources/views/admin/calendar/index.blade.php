@@ -171,22 +171,24 @@
                 <div class="modal-header bg-primary text-white">
                     <div class="d-flex flex-column w-100">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="modal-title h5 mb-0" id="eventModalTitle">Add Calendar Event</h2>
-                            <button type="button" 
-                                    class="btn-close btn-close-white" 
-                                    data-bs-dismiss="modal" 
-                                    aria-label="Close"></button>
-                        </div>
-                        <div class="mt-2 d-flex align-items-center">
+                            <h2 class="modal-title h5 mb-0 text-white" id="eventModalTitle">Add Calendar Event</h2> &nbsp;&nbsp;&nbsp;&nbsp;
                             <label for="start_datetime" class="form-label text-white me-2 mb-0">
                                 <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>Date:
                             </label>
                             <input type="date" 
                                    name="start_datetime" 
                                    id="start_datetime" 
-                                   class="form-control form-control-sm w-auto" 
+                                   class="form-control form-control-sm w-auto text-white" 
                                    required
                                    aria-required="true">
+                            <button type="button" 
+                                    class="btn-close btn-close-white" 
+                                    data-bs-dismiss="modal" 
+                                    aria-label="Close"></button>
+                                    
+                        </div>
+                        <div class="mt-2 d-flex align-items-center">
+                            
                         </div>
                     </div>
                 </div>
