@@ -17,34 +17,12 @@
         <section class="calendar-controls mb-4" aria-label="Calendar view controls">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <!-- View Toggle Buttons -->
-                <div class="btn-group" role="group" aria-label="Calendar view options">
-                    <button type="button" 
-                            class="btn btn-outline-primary btn-sm active" 
-                            id="btnMonthView"
-                            aria-pressed="true"
-                            data-view="month">
-                        <i class="bi bi-calendar-month me-1" aria-hidden="true"></i> Month
-                    </button>
-                    <button type="button" 
-                            class="btn btn-outline-primary btn-sm" 
-                            id="btnWeekView"
-                            aria-pressed="false"
-                            data-view="week">
-                        <i class="bi bi-calendar-week me-1" aria-hidden="true"></i> Week
-                    </button>
-                    <button type="button" 
-                            class="btn btn-outline-primary btn-sm" 
-                            id="btnDayView"
-                            aria-pressed="false"
-                            data-view="day">
-                        <i class="bi bi-calendar-day me-1" aria-hidden="true"></i> Day
-                    </button>
+                <div class="btn-group text-end" role="group" aria-label="Calendar view options">
                     <button type="button" 
                             class="btn btn-outline-primary btn-sm" 
                             id="btnListView"
                             aria-pressed="false"
-                            data-view="list">
-                        <i class="bi bi-list-ul me-1" aria-hidden="true"></i> List
+                            data-view="list">List
                     </button>
                 </div>
 
@@ -85,14 +63,38 @@
                                         <h1 class="institution-name hindi-text mb-1 text-primary-dark">
                                             लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी
                                         </h1>
-                                        <h2 class="institution-name english-text mb-1 text-primary">
+                                        <h2 class="institution-name english-text mb-1" style="font-weight: 600; color: #af2910;">
                                             Lal Bahadur Shastri National Academy of Administration
                                         </h2>
                                         <p class="text-muted mb-0">Weekly Timetable</p>
                                     </div>
                                     <div class="col-md-2 text-center text-md-end">
-                                        <p class="text-muted mb-1">Week</p>
-                                        <p class="week-number text-primary fw-bold fs-2 mb-0" id="currentWeek">19</p>
+                                        <div class="d-flex flex-column align-items-center gap-2">
+                                            <div class="btn-group" role="group" aria-label="Week navigation">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-primary" 
+                                                        id="prevWeekBtn"
+                                                        aria-label="Previous week">
+                                                    <i class="material-symbols-rounded" aria-hidden="true">navigate_before</i>
+                                                </button>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-primary" 
+                                                        id="currentWeekBtn"
+                                                        aria-label="Current week">
+                                                    <i class="material-symbols-rounded" aria-hidden="true">today</i>
+                                                </button>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-outline-primary" 
+                                                        id="nextWeekBtn"
+                                                        aria-label="Next week">
+                                                    <i class="material-symbols-rounded" aria-hidden="true">navigate_next</i>
+                                                </button>
+                                            </div>
+                                            <div>
+                                                <p class="text-muted mb-1">Week</p>
+                                                <p class="week-number text-primary fw-bold fs-2 mb-0" id="currentWeek">19</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -100,34 +102,34 @@
                             <!-- Timetable -->
                             <div class="timetable-container border rounded-3 overflow-hidden">
                                 <div class="table-responsive" role="region" aria-label="Weekly timetable">
-                                    <table class="table table-bordered mb-0 timetable-grid" 
+                                    <table class="table" 
                                            id="timetableTable"
                                            aria-describedby="timetableDescription">
                                         <caption class="visually-hidden" id="timetableDescription">
                                             Weekly academic timetable showing events for Monday through Friday
                                         </caption>
-                                        <thead class="table-light">
+                                        <thead>
                                             <tr>
                                                 <th scope="col" class="time-column">Time</th>
                                                 <th scope="col">
                                                     Monday<br>
-                                                    <small class="text-muted">Nov 30</small>
+                                                    <small>Nov 30</small>
                                                 </th>
                                                 <th scope="col">
                                                     Tuesday<br>
-                                                    <small class="text-muted">Dec 1</small>
+                                                    <small>Dec 1</small>
                                                 </th>
                                                 <th scope="col">
                                                     Wednesday<br>
-                                                    <small class="text-muted">Dec 2</small>
+                                                    <small>Dec 2</small>
                                                 </th>
                                                 <th scope="col">
                                                     Thursday<br>
-                                                    <small class="text-muted">Dec 3</small>
+                                                    <small>Dec 3</small>
                                                 </th>
                                                 <th scope="col">
                                                     Friday<br>
-                                                    <small class="text-muted">Dec 4</small>
+                                                    <small>Dec 4</small>
                                                 </th>
                                             </tr>
                                         </thead>
@@ -632,6 +634,7 @@
 .timetable-grid .time-column {
     min-width: 120px;
     font-weight: 600;
+    color: var(--secondary-color);
 }
 
 /* Institution name styling */
@@ -711,6 +714,45 @@
         transition: none;
     }
 }
+
+/* FullCalendar "+ more" text styling */
+.fc-daygrid-day-more-link {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    background-color: var(--primary-color) !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 0.375rem !important;
+    display: inline-block !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    background: linear-gradient(135deg, var(--primary-color), #0066cc) !important;
+}
+
+.fc-daygrid-day-more-link:hover {
+    background: linear-gradient(135deg, var(--primary-dark), #004a93) !important;
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.4) !important;
+    color: #ffffff !important;
+}
+
+/* Fallback for other FullCalendar versions */
+.fc-more-link {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    background-color: var(--primary-color) !important;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 0.375rem !important;
+    display: inline-block !important;
+    transition: all 0.2s ease !important;
+}
+
+.fc-more-link:hover {
+    background-color: var(--primary-dark) !important;
+    transform: scale(1.08);
+    color: #ffffff !important;
+}
 </style>
 
 <!-- Modern JavaScript with improved accessibility -->
@@ -742,6 +784,7 @@ class CalendarManager {
         this.calendar = null;
         this.currentEventId = null;
         this.selectedGroupNames = 'ALL';
+        this.listViewWeekOffset = 0; // Track week offset for list view
         this.init();
     }
 
@@ -750,6 +793,8 @@ class CalendarManager {
         this.bindEvents();
         this.setupAccessibility();
         this.validateDates();
+        this.updateCurrentWeek();
+        this.observeMoreLinksChanges();
     }
 
     initFullCalendar() {
@@ -780,6 +825,62 @@ class CalendarManager {
         });
         
         this.calendar.render();
+        this.styleMoreLinks();
+    }
+
+    styleMoreLinks() {
+        // Style all "+ more" links
+        const moreLinks = document.querySelectorAll('.fc-daygrid-day-more-link, .fc-more-link, .fc-daygrid-day-frame a[data-date]');
+        moreLinks.forEach(link => {
+            if (link.textContent.includes('+')) {
+                link.style.fontSize = '1.25rem';
+                link.style.fontWeight = '700';
+                link.style.color = '#ffffff';
+                link.style.backgroundColor = '#004a93';
+                link.style.padding = '0.5rem 0.75rem';
+                link.style.borderRadius = '0.375rem';
+                link.style.display = 'inline-block';
+                link.style.textDecoration = 'none';
+                link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
+                link.style.transition = 'all 0.2s ease';
+                
+                link.addEventListener('mouseenter', () => {
+                    link.style.background = 'linear-gradient(135deg, #003366, #004a93)';
+                    link.style.transform = 'scale(1.08)';
+                    link.style.boxShadow = '0 4px 12px rgba(0, 74, 147, 0.4)';
+                });
+                
+                link.addEventListener('mouseleave', () => {
+                    link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
+                    link.style.transform = 'scale(1)';
+                    link.style.boxShadow = 'none';
+                });
+            }
+        });
+    }
+
+    observeMoreLinksChanges() {
+        const calendarEl = document.getElementById('calendar');
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.addedNodes.length) {
+                    // Check if any added node contains "+ more" links
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1) { // Element node
+                            if (node.textContent && node.textContent.includes('+')) {
+                                this.styleMoreLinks();
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        observer.observe(calendarEl, {
+            childList: true,
+            subtree: true,
+            characterData: false
+        });
     }
 
     renderEventContent(arg) {
@@ -910,6 +1011,11 @@ class CalendarManager {
         document.querySelectorAll('[data-view]').forEach(btn => {
             btn.addEventListener('click', (e) => this.toggleView(e.target));
         });
+
+        // Week navigation buttons (List View)
+        document.getElementById('prevWeekBtn')?.addEventListener('click', () => this.navigateWeek(-1));
+        document.getElementById('nextWeekBtn')?.addEventListener('click', () => this.navigateWeek(1));
+        document.getElementById('currentWeekBtn')?.addEventListener('click', () => this.navigateWeek(0));
         
         // Form submission
         document.getElementById('eventForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
@@ -967,6 +1073,8 @@ class CalendarManager {
             calendarEl.style.display = '';
             listViewEl.classList.add('d-none');
             this.calendar.changeView(this.getCalendarView(view));
+            // Style "+ more" links after view change
+            setTimeout(() => this.styleMoreLinks(), 100);
         }
     }
 
@@ -1419,15 +1527,126 @@ class CalendarManager {
         }
     }
 
+    navigateWeek(offset) {
+        if (offset === 0) {
+            // Reset to current week
+            this.listViewWeekOffset = 0;
+        } else {
+            // Navigate forward or backward
+            this.listViewWeekOffset += offset;
+        }
+        
+        // Reload the list view with the new week
+        this.loadListView();
+    }
+
+    getEventsForWeek(events, weekOffset) {
+        // Calculate the start date of the week based on offset
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        
+        // Create new date to avoid mutation
+        const weekStart = new Date(today.getFullYear(), today.getMonth(), diff);
+        
+        // Apply week offset
+        weekStart.setDate(weekStart.getDate() + (weekOffset * 7));
+        
+        // Set week end (Friday)
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday
+        
+        // Filter events that fall within this week
+        return events.filter(event => {
+            const eventDate = new Date(event.start);
+            const eventDay = eventDate.getDate();
+            const eventMonth = eventDate.getMonth();
+            const eventYear = eventDate.getFullYear();
+            
+            const startDay = weekStart.getDate();
+            const startMonth = weekStart.getMonth();
+            const startYear = weekStart.getFullYear();
+            
+            const endDay = weekEnd.getDate();
+            const endMonth = weekEnd.getMonth();
+            const endYear = weekEnd.getFullYear();
+            
+            // Compare dates properly
+            const eventDateObj = new Date(eventYear, eventMonth, eventDay);
+            const startDateObj = new Date(startYear, startMonth, startDay);
+            const endDateObj = new Date(endYear, endMonth, endDay);
+            
+            return eventDateObj >= startDateObj && eventDateObj <= endDateObj;
+        });
+    }
+
     async loadListView() {
         try {
             const response = await fetch(CalendarConfig.api.events);
             const events = await response.json();
             
-            this.renderListView(events);
+            // Calculate week start date based on offset
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            // Monday = 1, Sunday = 0
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const weekStart = new Date(today.getFullYear(), today.getMonth(), diff);
+            weekStart.setDate(weekStart.getDate() + (this.listViewWeekOffset * 7));
+            
+            // Update week display in header (use same calculation as updateCurrentWeek)
+            const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+            const jan4 = new Date(date.getFullYear(), 0, 4);
+            const monday = new Date(jan4);
+            monday.setDate(monday.getDate() - monday.getDay() + 1);
+            const timeDiff = date - monday;
+            const weekDiff = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000));
+            const weekNum = weekDiff + 1;
+            
+            const weekElement = document.getElementById('currentWeek');
+            if (weekElement) {
+                weekElement.textContent = weekNum;
+            }
+            
+            // Update table header with week dates
+            this.updateTableHeader(weekStart);
+            
+            // Debug: Log the week being displayed
+            console.log('List view - Week offset:', this.listViewWeekOffset);
+            console.log('Week start:', weekStart);
+            console.log('Total events:', events.length);
+            
+            // Filter and render events
+            const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
+            console.log('Filtered events for this week:', filteredEvents.length);
+            this.renderListView(filteredEvents);
         } catch (error) {
             console.error('Error loading list view:', error);
         }
+    }
+
+    updateTableHeader(weekStart) {
+        // Get the table and its header
+        const table = document.getElementById('timetableTable');
+        if (!table) {
+            console.warn('Table #timetableTable not found');
+            return;
+        }
+        
+        const thead = table.querySelector('thead tr');
+        if (!thead) {
+            console.warn('Table header not found');
+            return;
+        }
+        
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const headers = thead.querySelectorAll('th:not(.time-column)');
+        
+        headers.forEach((header, index) => {
+            const date = new Date(weekStart);
+            date.setDate(date.getDate() + index);
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            header.innerHTML = `${days[index]}<br><small class="text-muted">${dateStr}</small>`;
+        });
     }
 
     renderListView(events) {
@@ -1523,6 +1742,30 @@ class CalendarManager {
         }
         
         return `${String(hours).padStart(2, '0')}:${minutes}`;
+    }
+
+    updateCurrentWeek() {
+        // Calculate ISO week number for current date
+        const today = new Date();
+        const date = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        // January 4th is always in week 1 (ISO 8601 standard)
+        const jan4 = new Date(date.getFullYear(), 0, 4);
+        
+        // Calculate the Monday of week containing Jan 4
+        const monday = new Date(jan4);
+        monday.setDate(monday.getDate() - monday.getDay() + 1);
+        
+        // Calculate difference in milliseconds and convert to weeks
+        const timeDiff = date - monday;
+        const weekDiff = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000));
+        const weekNum = weekDiff + 1;
+        
+        // Update the week number display
+        const weekElement = document.getElementById('currentWeek');
+        if (weekElement) {
+            weekElement.textContent = weekNum;
+        }
     }
 
     showNotification(message, type = 'info') {

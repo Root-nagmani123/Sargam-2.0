@@ -168,7 +168,7 @@ class FacultyDataTable extends DataTable
                 ->searchable(false)
                 ->orderable(false),
             Column::make('full_name')
-                ->title('Full Name')
+                ->title('Faculty Name')
                 ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
