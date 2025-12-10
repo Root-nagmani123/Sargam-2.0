@@ -530,6 +530,20 @@
                                 <span id="eventfaculty" class="ms-1"></span>
                             </div>
                         </div>
+                          <div class="col-md-6">
+                            <div class="d`etail-item">
+                                <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
+                                <strong>Session:</strong>
+                                <span id="eventclasssession" class="ms-1"></span>
+                            </div>
+                        </div>
+                          <div class="col-md-6">
+                            <div class="d`etail-item">
+                                <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
+                                <strong>Group name:</strong>
+                                <span id="eventgroupname" class="ms-1"></span>
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div class="detail-item">
                                 <i class="bi bi-geo-alt-fill text-primary me-2" aria-hidden="true"></i>
@@ -855,6 +869,9 @@ class CalendarManager {
             });
         document.getElementById('eventfaculty').textContent = data.faculty_name || '';
         document.getElementById('eventVanue').textContent = data.venue_name || '';
+        document.getElementById('eventVanue').textContent = data.venue_name || '';
+        document.getElementById('eventclasssession').textContent = data.class_session || '';
+        document.getElementById('eventgroupname').textContent = data.group_name || '';
         
         // Set edit/delete button data
         const editBtn = document.getElementById('editEventBtn');
@@ -1606,6 +1623,25 @@ liveRegion.setAttribute('aria-live', 'polite');
 liveRegion.setAttribute('aria-atomic', 'true');
 liveRegion.className = 'visually-hidden';
 document.body.appendChild(liveRegion);
+
+document.addEventListener('DOMContentLoaded', function () {
+    new Choices('#faculty', {
+        searchEnabled: true,
+        removeItemButton: false,
+        itemSelectText: '',
+        placeholder: true,
+        searchPlaceholderValue: 'Search...',
+        shouldSort: false
+    });
+    new Choices('#vanue', {
+        searchEnabled: true,
+        removeItemButton: false,
+        itemSelectText: '',
+        placeholder: true,
+        searchPlaceholderValue: 'Search...',
+        shouldSort: false
+    });
+});
 </script>
 
 @endsection
