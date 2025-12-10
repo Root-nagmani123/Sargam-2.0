@@ -38,25 +38,25 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
+                                <div class="collapse show" id="generalMasterMenu">
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('Venue-Master.index') }}">
+                                            <span class="hide-menu">Venue
+                                                Master</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.class.session.index') }}">
+                                            <span class="hide-menu">Class
+                                                Session</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('stream.index') }}">
+                                            <span class="hide-menu">Stream</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('section.index') }}">
+                                            <span class="hide-menu">Section</span>
+                                        </a></li>
+                                </div>
                             </li>
-                            <ul class="collapse show" id="generalMasterMenu">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('Venue-Master.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Venue
-                                            Master</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.class.session.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Class
-                                            Session</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('stream.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Stream</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('section.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Section</span>
-                                    </a></li>
-                            </ul>
 
                             <!-- HOSTEL -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2 d-none" style="background: #4077ad;
@@ -71,37 +71,37 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
+                                <div class="collapse" id="hostelMenu">
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.hostel.building.index') }}">
+                                            <span class="hide-menu">Building Master</span>
+                                        </a></li>
+                                    {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
+                                    <span class="hide-menu">Hostel
+                                        Room</span>
+                                    </a></li> --}}
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.hostel.floor.index') }}">
+                                            <span class="hide-menu">
+                                                Floor</span>
+                                        </a></li>
+                                    {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+                                    <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span
+                                        class="hide-menu">Hostel
+                                        Floor Mapping</span>
+                                    </a></li> --}}
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('hostel.building.floor.room.map.index') }}">
+                                            <span class="hide-menu">Building
+                                                Floor Room Mapping</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('hostel.building.map.assign.student') }}">
+                                            <span class="hide-menu">Assign
+                                                Hostel</span>
+                                        </a></li>
+                                </div>
                             </li>
-                            <div class="collapse" id="hostelMenu">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.hostel.building.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Building Master</span>
-                                    </a></li>
-                                {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
-                                <span class="hide-menu">Hostel
-                                    Room</span>
-                                </a></li> --}}
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.hostel.floor.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">
-                                            Floor</span>
-                                    </a></li>
-                                {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
-                                <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span
-                                    class="hide-menu">Hostel
-                                    Floor Mapping</span>
-                                </a></li> --}}
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('hostel.building.floor.room.map.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Building
-                                            Floor Room Mapping</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('hostel.building.map.assign.student') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Assign
-                                            Hostel</span>
-                                    </a></li>
-                            </div>
 
                             <!-- ADDRESS -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
@@ -116,25 +116,25 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
+                                <div class="collapse" id="addressMenu">
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.country.index') }}">
+                                            <span class="hide-menu">Country</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.state.index') }}">
+                                            <span class="hide-menu">State</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.district.index') }}">
+                                            <span class="hide-menu">District</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.city.index') }}">
+                                            <span class="hide-menu">City</span>
+                                        </a></li>
+                                </div>
                             </li>
-                            <div class="collapse" id="addressMenu">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.country.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Country</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.state.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">State</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.district.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">District</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.city.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">City</span>
-                                    </a></li>
-                            </div>
                         </ul>
                         @endif
 

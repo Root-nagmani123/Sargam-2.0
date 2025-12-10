@@ -38948,15 +38948,9 @@ fieldset:disabled .btn {
     margin-left: calc(80px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
-    border-radius: 30px;
-    background: #f2f2f2;
-    min-height: calc(100vh - 102px);
-}
-@media (max-width: 480px) {
-    .body-wrapper {
-        margin-left: 0px;
-        margin-right: 0px;
-    }
+    border-radius: 20px;
+    background: #f5f9ff;
+    min-height: calc(100% - 102px);
 }
 
 .container-fluid,

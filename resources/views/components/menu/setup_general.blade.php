@@ -81,19 +81,17 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
+                                <ul class="collapse list-unstyled ps-3" id="userFeedbackCollapse">
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('feedback.get.feedbackList') }}">
+                                            <span class="hide-menu">Feedback</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('feedback.get.studentFeedback') }}">
+                                            <span class="hide-menu">Student Feedback</span>
+                                        </a></li>
+                                </ul>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="userFeedbackCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('feedback.get.feedbackList') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Feedback History</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('feedback.get.studentFeedback') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Session Feedback</span>
-                                    </a></li>
-
-                            </ul>
-                           
                             <li class="sidebar-item" style="background: #4077ad;
                                     border-radius: 30px 0px 0px 30px;
                                     width: 100%;
@@ -106,17 +104,16 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
+                                <ul class="collapse list-unstyled ps-3" id="subjectCollapse">
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
+                                            <span class="hide-menu">Subject Master</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('subject-module.index') }}">
+                                            <span class="hide-menu">Subject Module Master</span>
+                                        </a></li>
+                                </ul>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="subjectCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Subject Master</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('subject-module.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Subject Module Master</span>
-                                    </a></li>
-                            </ul>
-                             @endif
                             @endif
                         
 

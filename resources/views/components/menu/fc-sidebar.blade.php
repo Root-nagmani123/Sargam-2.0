@@ -27,26 +27,26 @@
                     <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
                         style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapseGeneral">
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
+
+                            <span class="hide-menu">User Landing Page (User)</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.frontpage') }}">
+
+                            <span class="hide-menu">Landing Page (Admin)</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.path.page') }}">
+                            <span class="hide-menu">Path Page (Admin)</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseGeneral">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
-
-                        <span class="hide-menu small small-sm-normal text-nowrap">User Landing Page (User)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.frontpage') }}">
-
-                        <span class="hide-menu small small-sm-normal text-nowrap">Landing Page (Admin)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.path.page') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Path Page (Admin)</span>
-                    </a>
-                </li>
-            </ul>
 
             <!-- ======= REGISTRATION MANAGEMENT ======= -->
             <li class="sidebar-item mt-2"
@@ -62,20 +62,20 @@
                     <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
                         style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapseRegistration">
+                    <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
+                        <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
+                            href="{{ route('forms.index') }}">
+                            <span class="hide-menu">Registration Forms</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
+                            <span class="hide-menu">Registration Master</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseRegistration">
-                <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
-                    <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
-                        href="{{ route('forms.index') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Registration Forms</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Registration Master</span>
-                    </a>
-                </li>
-            </ul>
 
             <!-- ======= EXEMPTION ======= -->
             <li class="sidebar-item mt-2"
@@ -90,19 +90,19 @@
                     <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
                         style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapseExemption">
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
+                            <span class="hide-menu">Exemption Categories (Master)</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('exemptions.datalist') }}">
+                            <span class="hide-menu">Applications (Registration & Exemption)</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseExemption">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Exemption Categories (Master)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('exemptions.datalist') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Applications (Registration & Exemption)</span>
-                    </a>
-                </li>
-            </ul>
 
             <!-- ======= DATABASE TOOLS ======= -->
             <li class="sidebar-item mt-2"
@@ -117,8 +117,7 @@
                     <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
                         style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
-            </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseDatabase">
+                <ul class="collapse list-unstyled ps-3" id="collapseDatabase">
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="{{ route('admin.column.form') }}">
                         <span class="hide-menu small small-sm-normal text-nowrap">Manage DB Columns</span>
@@ -146,7 +145,8 @@
                         <span class="hide-menu small small-sm-normal text-nowrap">Course wise OT's List</span>
                     </a>
                 </li>
-            </ul>
+                </ul>
+            </li>
 
             <!-- ======= DOCUMENTS ======= -->
             <li class="sidebar-item mt-2"
@@ -162,19 +162,19 @@
                     <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
                         style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapseDocuments">
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('fc.joining.index', ['formId' => 30]) }}">
+                            <span class="hide-menu">Joining Documents (User)</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.joining-documents.index', ['formId' => 30]) }}">
+                            <span class="hide-menu">Report (Admin Only)</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseDocuments">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('fc.joining.index', ['formId' => 30]) }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Joining Documents (User)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.joining-documents.index', ['formId' => 30]) }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Report (Admin Only)</span>
-                    </a>
-                </li>
-            </ul>
 
             <!-- ======= PEER EVALUATION ======= -->
             <li class="sidebar-item mt-2"
@@ -190,46 +190,15 @@
                     <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
                         style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapsePeerEvaluation">
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.peer.index') }}">
+                            <span class="hide-menu">Peer Evaluation (Admin Panel)</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapsePeerEvaluation">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.peer.index') }}">
-                        <span class="hide-menu small small-sm-normal text-nowrap">Peer Evaluation (Admin Panel)</span>
-                    </a>
-                </li>
-            </ul>
-        @endif
-
-    </ul>
-</nav>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Handle toggle icon rotation for all collapsible sections
-        const collapseElements = document.querySelectorAll('.collapse');
-
-        collapseElements.forEach(function(collapseEl) {
-            collapseEl.addEventListener('show.bs.collapse', function() {
-                const trigger = document.querySelector(
-                    `[href="#${this.id}"], [data-bs-target="#${this.id}"]`);
-                if (trigger) {
-                    const icon = trigger.querySelector('.toggle-icon');
-                    if (icon) {
-                        icon.textContent = 'keyboard_arrow_down';
-                    }
-                }
-            });
-
-            collapseEl.addEventListener('hide.bs.collapse', function() {
-                const trigger = document.querySelector(
-                    `[href="#${this.id}"], [data-bs-target="#${this.id}"]`);
-                if (trigger) {
-                    const icon = trigger.querySelector('.toggle-icon');
-                    if (icon) {
-                        icon.textContent = 'keyboard_arrow_right';
-                    }
-                }
-            });
-        });
-    });
-</script>
+            @endif
+           
+        </ul>
+    </nav>
