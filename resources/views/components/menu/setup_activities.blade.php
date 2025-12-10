@@ -71,32 +71,32 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
+                                <ul class="collapse list-unstyled ps-3" id="employeeCollapse">
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('member.index') }}">
+                                                <span class="hide-menu">Employee Master</span>
+                                            </a></li>
+                                        <li class="sidebar-item"><a class="sidebar-link"
+                                                href="{{ route('master.employee.type.index') }}">
+                                                <span class="hide-menu">Employee Type</span>
+                                            </a></li>
+                                        <li class="sidebar-item"><a class="sidebar-link"
+                                                href="{{ route('master.employee.group.index') }}">
+                                                <span class="hide-menu">Employee Group</span>
+                                            </a></li>
+                                        <li class="sidebar-item"><a class="sidebar-link"
+                                                href="{{ route('master.department.master.index') }}">
+                                                <span class="hide-menu">Department Master</span>
+                                            </a></li>
+                                        <li class="sidebar-item"><a class="sidebar-link"
+                                                href="{{ route('master.designation.index') }}">
+                                                <span class="hide-menu">Designation Master</span>
+                                            </a></li>
+                                        <li class="sidebar-item"><a class="sidebar-link"
+                                                href="{{ route('master.caste.category.index') }}">
+                                                <span class="hide-menu">Caste Category</span>
+                                            </a></li>
+                                </ul>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="employeeCollapse">
-                               <li class="sidebar-item"><a class="sidebar-link" href="{{ route('member.index') }}">
-                                            <span class="hide-menu">Employee Master</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.employee.type.index') }}">
-                                            <span class="hide-menu">Employee Type</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.employee.group.index') }}">
-                                            <span class="hide-menu">Employee Group</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.department.master.index') }}">
-                                            <span class="hide-menu">Department Master</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.designation.index') }}">
-                                            <span class="hide-menu">Designation Master</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('master.caste.category.index') }}">
-                                            <span class="hide-menu">Caste Category</span>
-                                        </a></li>
-                            </ul>
 
                             {{-- FACULTY --}}
 
@@ -112,20 +112,20 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
+                                <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.faculty.expertise.index') }}">
+                                            <span class="hide-menu">Faculty Expertise</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('master.faculty.type.master.index') }}">
+                                            <span class="hide-menu">Faculty Type</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.index') }}">
+                                            <span class="hide-menu">Faculty</span>
+                                        </a></li>
+                                </ul>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.faculty.expertise.index') }}">
-                                        <span class="hide-menu">Faculty Expertise</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.faculty.type.master.index') }}">
-                                        <span class="hide-menu">Faculty Type</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.index') }}">
-                                        <span class="hide-menu">Faculty</span>
-                                    </a></li>
-                            </ul>
 
                             {{-- USER MANAGEMENT --}}
                             <li class="sidebar-item" style="background: #4077ad;
@@ -140,26 +140,26 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
-                            </li>
-                            <ul class="collapse list-unstyled ps-3" id="userManagementCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.roles.index') }}">
-                                        <span class="hide-menu">Roles</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.users.index') }}">
-                                        <span class="hide-menu">User Permissions</span>
-                                    </a></li>
+                                <ul class="collapse list-unstyled ps-3" id="userManagementCollapse">
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('admin.roles.index') }}">
+                                            <span class="hide-menu">Roles</span>
+                                        </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('admin.users.index') }}">
+                                            <span class="hide-menu">User Permissions</span>
+                                        </a></li>
 
-                                {{-- <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.permissions.index') }}">
-                                <span class="hide-menu">Permissions</span>
-                                </a></li> --}}
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.notice.index') }}">
-                                        <span class="hide-menu">Notice Notifications</span>
-                                    </a></li>
-                            </ul>
+                                    {{-- <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('admin.permissions.index') }}">
+                                    <span class="hide-menu">Permissions</span>
+                                    </a></li> --}}
+                                    <li class="sidebar-item"><a class="sidebar-link"
+                                            href="{{ route('admin.notice.index') }}">
+                                            <span class="hide-menu">Notice Notifications</span>
+                                        </a></li>
+                                </ul>
+                            </li>
                             
                             @endif
 

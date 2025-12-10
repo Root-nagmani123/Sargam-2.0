@@ -40,26 +40,26 @@
                     <i class="material-icons menu-icon material-symbols-rounded"
                         style="font-size: 24px;">keyboard_arrow_down</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapseGeneral">
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
+
+                            <span class="hide-menu">User Landing Page (User)</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.frontpage') }}">
+
+                            <span class="hide-menu">Landing Page (Admin)</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.path.page') }}">
+                            <span class="hide-menu">Path Page (Admin)</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseGeneral">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
-
-                        <span class="hide-menu">User Landing Page (User)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.frontpage') }}">
-
-                        <span class="hide-menu">Landing Page (Admin)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.path.page') }}">
-                        <span class="hide-menu">Path Page (Admin)</span>
-                    </a>
-                </li>
-            </ul>
 
             <!-- ======= REGISTRATION MANAGEMENT ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -74,20 +74,20 @@
                     <i class="material-icons menu-icon material-symbols-rounded"
                         style="font-size: 24px;">keyboard_arrow_down</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapseRegistration">
+                    <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
+                        <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
+                            href="{{ route('forms.index') }}">
+                            <span class="hide-menu">Registration Forms</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
+                            <span class="hide-menu">Registration Master</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseRegistration">
-                <li class="sidebar-item {{ request()->routeIs('forms.*') ? 'active' : '' }}">
-                    <a class="sidebar-link {{ request()->routeIs('forms.*') ? 'active' : '' }}"
-                        href="{{ route('forms.index') }}">
-                        <span class="hide-menu">Registration Forms</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.registration.index') }}">
-                        <span class="hide-menu">Registration Master</span>
-                    </a>
-                </li>
-            </ul>
 
             <!-- ======= EXEMPTION ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -101,19 +101,19 @@
                     <i class="material-icons menu-icon material-symbols-rounded"
                         style="font-size: 24px;">keyboard_arrow_down</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapseExemption">
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
+                            <span class="hide-menu">Exemption Categories (Master)</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('exemptions.datalist') }}">
+                            <span class="hide-menu">Applications (Registration & Exemption)</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseExemption">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.exemptionIndex') }}">
-                        <span class="hide-menu">Exemption Categories (Master)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('exemptions.datalist') }}">
-                        <span class="hide-menu">Applications (Registration & Exemption)</span>
-                    </a>
-                </li>
-            </ul>
 
             <!-- ======= DATABASE TOOLS ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -127,8 +127,7 @@
                     <i class="material-icons menu-icon material-symbols-rounded"
                         style="font-size: 24px;">keyboard_arrow_down</i>
                 </a>
-            </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseDatabase">
+                <ul class="collapse list-unstyled ps-3" id="collapseDatabase">
                 <li class="sidebar-item">
                     <a class="sidebar-link" href="{{ route('admin.column.form') }}">
                         <span class="hide-menu">Manage DB Columns</span>
@@ -156,7 +155,8 @@
                         <span class="hide-menu">Course wise OT's List</span>
                     </a>
                 </li>
-            </ul>
+                </ul>
+            </li>
 
             <!-- ======= DOCUMENTS ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -170,19 +170,19 @@
                     <i class="material-icons menu-icon material-symbols-rounded"
                         style="font-size: 24px;">keyboard_arrow_down</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapseDocuments">
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('fc.joining.index', ['formId' => 30]) }}">
+                            <span class="hide-menu">Joining Documents (User)</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.joining-documents.index', ['formId' => 30]) }}">
+                            <span class="hide-menu">Report (Admin Only)</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapseDocuments">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('fc.joining.index', ['formId' => 30]) }}">
-                        <span class="hide-menu">Joining Documents (User)</span>
-                    </a>
-                </li>
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.joining-documents.index', ['formId' => 30]) }}">
-                        <span class="hide-menu">Report (Admin Only)</span>
-                    </a>
-                </li>
-            </ul>
 
             <!-- ======= PEER EVALUATION ======= -->
             <li class="sidebar-item mt-2" style="background: #4077ad;
@@ -197,14 +197,14 @@
                     <i class="material-icons menu-icon material-symbols-rounded"
                         style="font-size: 24px;">keyboard_arrow_down</i>
                 </a>
+                <ul class="collapse list-unstyled ps-3" id="collapsePeerEvaluation">
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="{{ route('admin.peer.index') }}">
+                            <span class="hide-menu">Peer Evaluation (Admin Panel)</span>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <ul class="collapse list-unstyled ps-3" id="collapsePeerEvaluation">
-                <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('admin.peer.index') }}">
-                        <span class="hide-menu">Peer Evaluation (Admin Panel)</span>
-                    </a>
-                </li>
-            </ul>
             @endif
            
         </ul>

@@ -355,6 +355,7 @@
 
     @include('admin.layouts.footer')
     <script src="{{ asset('js/forms.js') }}"></script>
+    <script src="{{ asset('admin_assets/js/sidebar-enhanced.js') }}"></script>
     @stack('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {
