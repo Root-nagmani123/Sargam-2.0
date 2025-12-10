@@ -181,17 +181,58 @@ $events = $events
 
     // Assign random color to each event
     $events = $events->map(function ($event) use ($colors) {
+        // Parse start and end times from class_session if it contains time range
+        $startDateTime = $event->START_DATE;
+        $endDateTime = $event->END_DATE;
+        $allDay = false;
+        
+        // Check if class_session exists and contains a time range with dash
+        if (!empty($event->class_session) && strpos($event->class_session, '-') !== false) {
+            $timeRange = trim($event->class_session);
+            $parts = explode('-', $timeRange);
+            
+            if (count($parts) === 2) {
+                $startTime = trim($parts[0]);
+                $endTime = trim($parts[1]);
+                
+                // Try to parse times
+                $startTimestamp = strtotime($startTime);
+                $endTimestamp = strtotime($endTime);
+                
+                if ($startTimestamp !== false && $endTimestamp !== false) {
+                    $startTime24 = date('H:i', $startTimestamp);
+                    $endTime24 = date('H:i', $endTimestamp);
+                    
+                    // Append time to date (ISO 8601 format)
+                    $startDateTime = $event->START_DATE . 'T' . $startTime24 . ':00';
+                    $endDateTime = $event->END_DATE . 'T' . $endTime24 . ':00';
+                    $allDay = false;
+                } else {
+                    // If time parsing failed, treat as all-day
+                    $allDay = true;
+                }
+            } else {
+                $allDay = true;
+            }
+        } else {
+            // No time information, treat as all-day
+            $allDay = true;
+        }
+        
         return [
             'id' => $event->pk,
             'title' => $event->subject_topic,
-            'start' => $event->START_DATE,
-            'end'   => $event->END_DATE,
+            'start' => $startDateTime,
+            'end'   => $endDateTime,
             'vanue'   => $event->venue_name,
             'faculty_name'   => $event->faculty_name,
             'backgroundColor' => $colors[array_rand($colors)],  // background color for event
             'borderColor' => $colors[array_rand($colors)],  // border color for event
             'textColor' => '#fff',  // Text color for event (White text on colored background)
-       'display' => 'block',
+            'allDay' => $allDay,
+            'display' => 'block',
+            // Debug info - class_session value stored in database
+            'class_session_debug' => $event->class_session,
         ];
     });
 

@@ -4,6 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="Faculty Type" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -35,7 +36,7 @@
                                 <!-- start row -->
                                 <tr>
                                     <th>S.No.</th>
-                                    <th>Full Name</th>
+                                    <th>Faculty Type</th>
                                     <th>Short Name</th>
                                     <th>Status</th>
                                     <th>Action</th>

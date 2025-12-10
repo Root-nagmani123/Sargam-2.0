@@ -96,8 +96,8 @@ class CasteCategoryMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('Seat_name')->title('Seat Name')->orderable(false)->addClass('text-center'),
-            Column::make('Seat_name_hindi')->title('Seat Name (Hindi)')->orderable(false)->addClass('text-center'),
+            Column::make('Seat_name')->title('Category/Caste name')->orderable(false)->addClass('text-center'),
+            Column::make('Seat_name_hindi')->title('Category/Caste name (Hindi)')->orderable(false)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];

@@ -1,123 +1,215 @@
-{{-- also add search functionality using ajax --}}
-{{-- <form id="studentListForm" method="GET" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="search" class="form-control" placeholder="Search by name or email" value="{{ request('search') }}">
-        <button type="submit" class="btn btn-primary">Search</button>
-    </div>
-</form> --}}
-{{-- <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
-    <div class="text-muted mb-2">
-        <strong>Group Name:</strong> {{ $group->name ?? 'N/A' }} |
-        <strong>Group Code:</strong> {{ $group->code ?? 'N/A' }}
-    </div>
-</div> --}}
-@if(!empty($groupName) || !empty($facilityName) || !empty($courseName))
-    <div class="row mb-3">
-        <div class="col-md-4">
-            <strong>Course Name:</strong>
-            <span class="text-muted">{{ $courseName ?? 'N/A' }}</span>
-        </div>
-        <div class="col-md-4">
-            <strong>Group Name:</strong>
-            <span class="text-muted">{{ $groupName ?? 'N/A' }}</span>
-        </div>
-        <div class="col-md-4">
-            <strong>Facility:</strong>
-            <span class="text-muted">{{ $facilityName ?? 'N/A' }}</span>
-        </div>
-    </div>
-@endif
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body pb-2">
 
-<div class="student-table-wrapper">
-<table class="table table-bordered table-hover align-middle mb-0">
-    <thead>
-        <tr>
-            <th scope="col" style="width: 45px;">
-                <div class="form-check mb-0">
-                    <input type="checkbox" class="form-check-input" id="selectAllOts">
+        {{-- Search with AJAX --}}
+        <!-- <div class="row g-3 align-items-center mb-3">
+            <div class="col-md-6">
+                <label for="studentSearch" class="form-label fw-semibold">Search Students</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light">
+                        <i class="material-icons material-symbols-rounded">search</i>
+                    </span>
+                    <input type="text" id="studentSearch" class="form-control"
+                        placeholder="Search by name, email or contact">
                 </div>
-            </th>
-            <th>#</th>
-            <th>Display Name</th>
-            <th>Email</th>
-            <th>Contact No</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @forelse($students as $index => $studentMap)
-            @php
-                $student = $studentMap->studentsMaster;
-            @endphp
-            <tr>
-                <td>
-                    @if($student && $student->pk)
-                        <div class="form-check mb-0">
-                            <input
-                                type="checkbox"
-                                class="form-check-input student-select"
-                                value="{{ encrypt($student->pk) }}"
-                                data-email="{{ $student->email }}"
-                                data-phone="{{ $student->contact_no }}"
-                                data-name="{{ $student->display_name }}"
-                            >
-                        </div>
-                    @endif
-                </td>
-                <td>{{ $loop->iteration + ($students->currentPage() - 1) * $students->perPage() }}</td>
-                <td>{{ $student->display_name ?? 'N/A' }}</td>
-                <td>{{ $student->email ?? 'N/A' }}</td>
-                <td>{{ $student->contact_no ?? 'N/A' }}</td>
-                <td class="student-actions text-center">
-                    @if($student && $student->pk)
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Student Actions">
-                            <button
-                                type="button"
-                                class="btn btn-soft-primary student-action-btn edit-student student-action-tooltip"
-                                data-student-id="{{ encrypt($student->pk) }}"
-                                data-name="{{ e($student->display_name ?? '') }}"
-                                data-email="{{ e($student->email ?? '') }}"
-                                data-contact="{{ e($student->contact_no ?? '') }}"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="Edit student details"
-                            >
-                                <i class="bi bi-pencil-square"></i> Edit
-                            </button>
-                            <button
-                                type="button"
-                                class="btn btn-soft-danger student-action-btn delete-student student-action-tooltip"
-                                data-mapping-id="{{ encrypt($studentMap->pk) }}"
-                                data-name="{{ e($student->display_name ?? 'this student') }}"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="Remove from this group"
-                            >
-                                <i class="bi bi-trash"></i> Delete
-                            </button>
-                        </div>
-                    @endif
-                </td>
-            </tr>
-        @empty
-            <tr>
-                <td colspan="6" class="text-center text-muted">No students found.</td>
-            </tr>
-        @endforelse
-    </tbody>
-</table>
-</div>
+                <small class="text-muted">Search updates dynamically (AJAX enabled).</small>
+            </div>
+        </div> -->
 
-<div class="d-flex justify-content-between align-items-center flex-wrap mt-3">
-    <div class="text-muted mb-2">
-        <strong>Total Students:</strong> {{ $students->total() }} |
-        <strong>Page:</strong> {{ $students->currentPage() }} of {{ $students->lastPage() }} |
-        <strong>Per Page:</strong> {{ $students->perPage() }}
-    </div>
-    
-    <div class="student-list-pagination">
-        {!! $students->links('pagination::bootstrap-5') !!}
-    </div>
-</div>
+        {{-- Group Info --}}
+        @if(!empty($groupName) || !empty($facilityName) || !empty($courseName))
+        <div class="bg-light p-3 rounded-3 border mb-3">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <strong>Course Name:</strong>
+                    <span class="text-muted">{{ $courseName ?? 'N/A' }}</span>
+                </div>
+                <div class="col-md-4">
+                    <strong>Group Name:</strong>
+                    <span class="text-muted">{{ $groupName ?? 'N/A' }}</span>
+                </div>
+                <div class="col-md-4">
+                    <strong>Facility:</strong>
+                    <span class="text-muted">{{ $facilityName ?? 'N/A' }}</span>
+                </div>
+            </div>
+        </div>
+        @endif
+        <div class="table-responsive student-table-wrapper">
+            <table class="table table-hover align-middle text-nowrap modern-table">
+                <thead>
+                    <tr>
+                        <th style="width: 45px;">
+                            <div class="form-check m-0">
+                                <input type="checkbox" class="form-check-input" id="selectAllOts"
+                                    aria-label="Select all students">
+                            </div>
+                        </th>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Contact No</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
 
-<input type="hidden" id="groupMappingEncryptedId" value="{{ encrypt($groupMappingPk) }}">
+                <tbody>
+                    @forelse($students as $index => $studentMap)
+                    @php $student = $studentMap->studentsMaster; @endphp
+
+                    <tr>
+                        <td>
+                            @if($student && $student->pk)
+                            <div class="form-check m-0">
+                                <input type="checkbox" class="form-check-input student-select"
+                                    value="{{ encrypt($student->pk) }}" data-email="{{ $student->email }}"
+                                    data-phone="{{ $student->contact_no }}" data-name="{{ $student->display_name }}"
+                                    aria-label="Select {{ $student->display_name }}">
+                            </div>
+                            @endif
+                        </td>
+
+                        <td>{{ $loop->iteration + ($students->currentPage() - 1) * $students->perPage() }}</td>
+                        <td class="fw-semibold">{{ $student->display_name ?? 'N/A' }}</td>
+                        <td>{{ $student->email ?? 'N/A' }}</td>
+                        <td>{{ $student->contact_no ?? 'N/A' }}</td>
+
+                        <td class="text-center">
+                            @if($student && $student->pk)
+                            <div class="btn-group gap-2" role="group" aria-label="Student Actions">
+
+                                <button type="button"
+                                    class="btn btn-outline-primary btn-sm rounded-pill px-3 edit-student"
+                                    data-student-id="{{ encrypt($student->pk) }}"
+                                    data-name="{{ e($student->display_name) }}" data-email="{{ e($student->email) }}"
+                                    data-contact="{{ e($student->contact_no) }}" title="Edit student details">
+                                    <i class="material-icons material-symbols-rounded me-1">edit</i> Edit
+                                </button>
+
+                                <button type="button"
+                                    class="btn btn-outline-danger btn-sm rounded-pill px-3 delete-student"
+                                    data-mapping-id="{{ encrypt($studentMap->pk) }}"
+                                    data-name="{{ e($student->display_name ?? 'this student') }}"
+                                    title="Remove from group">
+                                    <i class="material-icons material-symbols-rounded me-1">delete</i> Remove
+                                </button>
+
+                            </div>
+                            @endif
+                        </td>
+                    </tr>
+
+                    @empty
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            No students found.
+                        </td>
+                    </tr>
+                    @endforelse
+                </tbody>
+
+            </table>
+        </div>
+        <div class="d-flex justify-content-between align-items-center flex-wrap mt-3">
+            <div class="text-muted small mb-2">
+                <strong>Total Students:</strong> {{ $students->total() }} |
+                <strong>Page:</strong> {{ $students->currentPage() }} of {{ $students->lastPage() }} |
+                <strong>Per Page:</strong> {{ $students->perPage() }}
+            </div>
+
+            <div class="student-list-pagination">
+                {!! $students->links('pagination::bootstrap-5') !!}
+            </div>
+        </div>
+        <style>
+        .modern-table th,
+        .modern-table td {
+            padding: 0.75rem 1rem;
+        }
+
+        .sticky-header {
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .btn-outline-primary,
+        .btn-outline-danger {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .student-table-wrapper {
+            border-radius: 8px;
+            overflow-x: auto;
+            overflow-y: visible;
+            border: 1px solid #e6e6e6;
+            max-width: 100%;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f7faff;
+        }
+
+        .input-group-text {
+            border-right: none;
+        }
+
+        #studentSearch {
+            border-left: none;
+        }
+
+        /* Responsive table styles */
+        @media (max-width: 768px) {
+            .modern-table {
+                font-size: 0.875rem;
+            }
+
+            .modern-table th,
+            .modern-table td {
+                padding: 0.5rem;
+                white-space: nowrap;
+            }
+
+            .btn-group {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .btn-sm {
+                font-size: 0.75rem;
+                padding: 0.25rem 0.5rem;
+            }
+
+            .material-icons.material-symbols-rounded {
+                font-size: 16px;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .modern-table th:first-child,
+            .modern-table td:first-child {
+                position: sticky;
+                left: 0;
+                background: white;
+                z-index: 1;
+            }
+
+            .modern-table thead th {
+                position: sticky;
+                top: 0;
+                background: #f8f9fa;
+                z-index: 2;
+            }
+
+            .modern-table thead th:first-child {
+                z-index: 3;
+            }
+        }
+        </style>

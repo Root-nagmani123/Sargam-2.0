@@ -28,7 +28,7 @@
 
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <strong>Major Subject:</strong>
+                            <strong>Course Name:</strong>
                             <span class="text-primary">
                                 {{ optional($courseGroup->course)->course_name }}
                             </span>
@@ -46,11 +46,16 @@
                             <span class="text-primary">{{ optional($courseGroup->timetable)->faculty->full_name ?? '' }}</span>
                         </div>
                         <div class="col-md-3">
-                            <strong>Topic Date:</strong>
-                            <span class="text-primary">
-                                {{ optional($courseGroup->timetable)->START_DATE ?? 'N/A' }}
-                            </span>
-                        </div>
+    <strong>Topic Date:</strong>
+    <span class="text-primary">
+        @if(!empty(optional($courseGroup->timetable)->START_DATE))
+            {{ \Carbon\Carbon::parse($courseGroup->timetable->START_DATE)->format('d-m-Y') }}
+        @else
+            N/A
+        @endif
+    </span>
+</div>
+
                         <div class="col-md-3">
                             <strong>Session Time:</strong>
                             <span class="text-primary">
