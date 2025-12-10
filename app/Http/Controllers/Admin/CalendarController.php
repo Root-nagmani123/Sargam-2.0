@@ -20,13 +20,14 @@ class CalendarController extends Controller
         // print_r(auth()->user());die;
        
         
-        $courseMaster = CourseMaster::where('active_inactive', '1')
+        $courseMaster = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now())
             ->select('pk', 'course_name')
             ->get();
     
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
             ->select('pk', 'faculty_type', 'full_name')
+            ->orderby('full_name', 'ASC')
             ->get();
     
         $subjects = SubjectModuleMaster::where('active_inactive', 1)
@@ -36,6 +37,7 @@ class CalendarController extends Controller
     
         $venueMaster = VenueMaster::where('active_inactive', 1)
             ->select('venue_id', 'venue_name')
+            ->orderby('venue_name', 'ASC')
             ->get(); 
     
         $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
@@ -288,13 +290,19 @@ function SingleCalendarDetails(Request $request)
         ->where('timetable.pk', $eventId)
         ->select(
             'timetable.pk',
+            'timetable.class_session',
             'timetable.subject_topic',
             'timetable.START_DATE',
             'timetable.END_DATE',
             'faculty_master.full_name as faculty_name',
-            'venue_master.venue_name as venue_name'
+            'venue_master.venue_name as venue_name',
+            'timetable.group_name'
         )
         ->first();
+$groupIds = json_decode($event->group_name, true);
+        $groupNames = DB::table('group_type_master_course_master_map')
+    ->whereIn('pk', $groupIds)
+    ->pluck('group_name');
 
     if ($event) {
          return response()->json([
@@ -304,6 +312,8 @@ function SingleCalendarDetails(Request $request)
         // 'end' => $event->END_DATE,
         'faculty_name' => $event->faculty_name ?? '',
             'venue_name' => $event->venue_name ?? '',
+            'class_session' => $event->class_session ?? '',
+            'group_name' => $groupNames ?? '',
     ]);
     } else {
         return response()->json(['error' => 'Event not found'], 404);

@@ -703,6 +703,9 @@ textarea:focus {
                             <i class="bi bi-person-fill me-2 text-primary"></i>Faculty: <b><span id="eventfaculty"></span></b>
                         </div>
                         <div class="col-md-6 mb-2">
+                            <i class="bi bi-person-fill me-2 text-primary"></i>Session: <b><span id="eventclasssession"></span></b>
+                        </div>
+                        <div class="col-md-6 mb-2">
                             <i class="bi bi-geo-alt-fill me-2 text-primary"></i>Venue: <b><span id="eventVanue"></span></b>
                         </div>
                     </div>
@@ -1154,6 +1157,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     $('#eventDate').html(
                         `<b>Date:</b> ${startDate}`);
                     $('#eventfaculty').text(data.faculty_name ?? '');
+                    $('#eventclasssession').text(data.class_session ?? '');
                     $('#eventVanue').text(data.venue_name ?? '');
                     $('#editEventBtn').attr('data-id', data.id);
                     $('#deleteEventBtn').attr('data-id', data.id);
