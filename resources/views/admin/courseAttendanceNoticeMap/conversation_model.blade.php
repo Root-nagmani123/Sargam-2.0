@@ -28,8 +28,10 @@
                 @csrf
     <div class="input-group">
         <input type="hidden" name="memo_notice_id" id="memo_notice_id" value="{{ $id }}">
+        <input type="hidden" name="user_type" id="type" value="{{ $user_type }}">
+        <input type="hidden" name="type" id="type" value="{{ $type }}">
 
-        @if ($type == 'student')
+        @if ($user_type == 'student')
            <input type="hidden" name="created_by" value="{{ $conversations[0]->student_id ?? '' }}">
            <input type="hidden" name="role_type" value="s">
         @else
