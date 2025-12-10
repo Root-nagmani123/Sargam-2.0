@@ -855,7 +855,7 @@ public function memo_notice_conversation_bkp(Request $request)
 
     // Insert into your table
    $data = DB::table('memo_message_student_decip_incharge')->insert([
-        'student_notice_status_pk' => $validated['memo_notice_id'],
+        'student_memo_status_pk' => $validated['memo_notice_id'],
         'student_decip_incharge_msg' => $validated['message'],
         'doc_upload' => $filePath,
         'role_type' => 'f',
@@ -920,28 +920,32 @@ public function noticedeleteMessage($id,$type)
     }
     public function user()
 {
-    $notices = DB::table('student_notice_status')
-        ->leftJoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk')
-        ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')  
-        ->leftJoin('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk')          
-        ->select(
-            'student_notice_status.pk as notice_id',
-            'student_notice_status.student_pk',
-            'student_notice_status.course_master_pk',
-            'student_notice_status.date_',
-            'student_notice_status.subject_master_pk',
-            'student_notice_status.subject_topic',
-            'student_notice_status.venue_id',
-            'student_notice_status.class_session_master_pk',
-            'student_notice_status.faculty_master_pk',
-            'student_notice_status.message',
-            'student_notice_status.notice_memo',
-            'student_notice_status.status',
-            'sm.display_name as student_name',
-            'sm.pk as student_id',
-            't.subject_topic as topic_name'
-        )
-        ->get();
+     
+    $notices = DB::table('student_notice_status');
+      if(hasRole('Student-OT')){
+        $notices->where('student_notice_status.student_pk', auth()->user()->user_id);
+    }
+    $notices->leftJoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', 'csa.pk');
+    $notices->leftJoin('student_master as sm', 'csa.Student_master_pk', 'sm.pk');
+    $notices->leftJoin('timetable as t', 'student_notice_status.subject_topic', 't.pk');
+    $notices->select(
+        'student_notice_status.pk as notice_id',
+        'student_notice_status.student_pk',
+        'student_notice_status.course_master_pk',
+        'student_notice_status.date_',
+        'student_notice_status.subject_master_pk',
+        'student_notice_status.subject_topic',
+        'student_notice_status.venue_id',
+        'student_notice_status.class_session_master_pk',
+        'student_notice_status.faculty_master_pk',
+        'student_notice_status.message',
+        'student_notice_status.notice_memo',
+        'student_notice_status.status',
+        'sm.display_name as student_name',
+        'sm.pk as student_id',
+        't.subject_topic as topic_name'
+    );
+    $notices = $notices->get();
 
     $memos = collect();
 
@@ -1141,7 +1145,69 @@ public function memo_notice_conversation_student_bkp(Request $request){
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
 }
-public function get_conversation_model($id,$type, Request $request)
+public function get_conversation_model($id, $type, $user_type, Request $request)
+{
+    // If type invalid → default notice
+    if (!in_array($type, ['memo', 'notice'])) {
+        $type = 'notice';
+    }
+
+    if ($type == 'memo') {
+        $conversations = DB::table('memo_message_student_decip_incharge as mmsdi')
+            ->join('student_memo_status as sms', 'mmsdi.student_memo_status_pk', '=', 'sms.pk')
+            ->join('student_master as sm', 'sms.student_pk', '=', 'sm.pk')
+            ->where('mmsdi.student_memo_status_pk', $id)
+            ->orderBy('mmsdi.created_date', 'asc')
+            ->select(
+                'mmsdi.*',
+                'sms.pk as notice_id',
+                'sms.communication_status as notice_status',
+                'sm.pk as student_id',
+                'sm.display_name as student_name'
+            )
+            ->get();
+            // print_r($conversations);die;
+
+    } else {
+        $conversations = DB::table('notice_message_student_decip_incharge as nmsdi')
+            ->join('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
+            ->join('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+            ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+            ->where('nmsdi.student_notice_status_pk', $id)
+            ->orderBy('nmsdi.created_date', 'asc')
+            ->select(
+                'nmsdi.*',
+                'sns.pk as notice_id',
+                'sns.status as notice_status',
+                'sm.pk as student_id',
+                'sm.display_name as student_name'
+            )
+            ->get();
+    }
+
+    // Common mapper
+    $conversations = $conversations->map(function ($item) {
+        if ($item->role_type == 'f') {
+            $user = DB::table('users')->find($item->created_by);
+            $item->display_name = $user->name ?? 'Admin';
+            $item->user_type = 'admin';
+
+        } elseif ($item->role_type == 's') {
+            $student = DB::table('student_master')->where('pk', $item->created_by)->first();
+            $item->display_name = $student->display_name ?? 'Student';
+            $item->user_type = 'student';
+
+        } else {
+            $item->display_name = 'Unknown';
+            $item->user_type = 'unknown';
+        }
+        return $item;
+    });
+
+    return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id','user_type'));
+}
+
+public function get_conversation_model_bkp($id,$type, Request $request)
 {
     // $conversations = DB::table('notice_message_student_decip_incharge')
     //     ->where('student_notice_status_pk', $id)
@@ -1184,7 +1250,7 @@ public function memo_notice_conversation_model(Request $request){
    
    
      $validated = $request->validate([
-        'memo_notice_id' => 'required|exists:student_notice_status,pk',
+        'memo_notice_id' => 'required',
         
         'student_decip_incharge_msg' => 'required|string|max:500',
         'created_by' => 'required',
@@ -1198,6 +1264,21 @@ public function memo_notice_conversation_model(Request $request){
         $filePath = $file->store('notice_documents', 'public'); // stored in /storage/app/public/notice_documents
     }
 
+    if($request->type == 'memo'){
+$data = DB::table('memo_message_student_decip_incharge')->insert([
+        'student_memo_status_pk' => $validated['memo_notice_id'],
+        'student_decip_incharge_msg' => $validated['student_decip_incharge_msg'],
+         'doc_upload' => $filePath,
+        'role_type' => $request->role_type, // 'f' for admin, 's' for student
+        'created_by' => $validated['created_by'], // Replace with correct user ID
+         ]);
+          if ($data) {
+        return redirect()->back()->with('success', 'Memo msg created successfully.');
+
+        } else {
+        return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
+    }
+    }else if($request->type == 'notice'){
     // Insert into your table
    $data = DB::table('notice_message_student_decip_incharge')->insert([
         'student_notice_status_pk' => $validated['memo_notice_id'],
@@ -1213,6 +1294,7 @@ public function memo_notice_conversation_model(Request $request){
         } else {
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
+}
 
 }
    public function getMemoData_bkp(Request $request)

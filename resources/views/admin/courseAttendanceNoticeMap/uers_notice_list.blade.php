@@ -81,8 +81,8 @@
                                     </a>
 
                                     <a href="javascript:void(0)" class="view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" data-type="student"
-                                        data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}"
+                                        data-bs-target="#chatOffcanvas" @if ($memo->notice_memo == '1')data-type="notice" data-id="{{ $memo->notice_id }}"@elseif($memo->notice_memo == '2') data-type="memo" data-id="{{ $memo->memo_id }}" @endif
+                                         data-topic="{{ $memo->topic_name }}"
                                         data-bs-toggle="tooltip" title="Quick View">
                                         <i class="material-icons menu-icon material-symbols-rounded"
                                             style="font-size: 24px;">visibility</i>
@@ -155,13 +155,14 @@ $(document).ready(function() {
         let topic = $(this).data('topic');
         let type = $(this).data('type');
         $('#userType').val(type);
+        let user_type = 'student';
 
         $('#conversationTopic').text(topic);
         $('#conversationTopic').text(topic);
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
-            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type,
+            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type + '/' + user_type,
 
             type: 'GET',
             success: function(res) {
