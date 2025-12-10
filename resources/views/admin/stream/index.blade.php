@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-
+<x-breadcrum title="Stream" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
@@ -32,13 +32,13 @@
                     <div class="table-responsive">
 
                         <table class="table">
-                            <thead>
+                            <thead class="table-light">
                                 <!-- start row -->
                                 <tr>
-                                    <th>S.No.</th>
-                                    <th>Stream Name</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
+                                    <th style="background-color: #af2910; font-weight: 600;">S.No.</th>
+                                    <th style="background-color: #af2910; font-weight: 600;">Stream Name</th>
+                                    <th style="background-color: #af2910; font-weight: 600;">Status</th>
+                                    <th style="background-color: #af2910; font-weight: 600;">Action</th>
 
                                 </tr>
                                 <!-- end row -->

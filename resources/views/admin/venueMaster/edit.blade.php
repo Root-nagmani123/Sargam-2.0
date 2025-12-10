@@ -6,6 +6,7 @@
 
 <div class="container-fluid">
     <!-- start Vertical Steps Example -->
+    <x-breadcrum title="Edit Venue Master" />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4 class="card-title mb-3">Edit Venue-Master</h4>
