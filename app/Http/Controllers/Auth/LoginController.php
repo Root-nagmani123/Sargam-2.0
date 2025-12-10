@@ -32,7 +32,7 @@ class LoginController extends Controller
      *
      * @var string
      */
-    protected $redirectTo = '/dashboard#home';
+    protected $redirectTo = '/dashboard';
 
     public function username()
     {

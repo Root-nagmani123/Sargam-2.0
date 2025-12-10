@@ -4,16 +4,126 @@
 
 @section('setup_content')
 <style>
-.chat-body {
-    height: 400px;
-    overflow-y: auto;
-    background-color: #f8f9fa;
-    padding: 1rem;
-    border-radius: 0.5rem;
+/* GIGW Color Palette */
+:root {
+    --gigw-primary: #004a93;
+    --gigw-primary-dark: #003366;
+    --gigw-secondary: #0066cc;
+    --gigw-light-bg: #f8f9fa;
+    --gigw-border: #dee2e6;
+    --gigw-text-muted: #6c757d;
+    --gigw-success: #198754;
+    --gigw-white: #ffffff;
 }
 
+/* Enhanced Offcanvas */
+.offcanvas {
+    width: 480px !important;
+    max-width: 90vw;
+    box-shadow: -4px 0 20px rgba(0, 74, 147, 0.15);
+}
+
+.offcanvas-header {
+    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
+    color: var(--gigw-white);
+    padding: 1.5rem;
+    border-bottom: 3px solid var(--gigw-primary-dark);
+    min-height: 80px;
+}
+
+.offcanvas-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: 0.3px;
+    margin-bottom: 0.25rem;
+    color: var(--gigw-white);
+}
+
+#type_side_menu {
+    font-size: 0.875rem;
+    font-weight: 500;
+    opacity: 0.95;
+    margin: 0;
+    color: var(--gigw-white);
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    display: inline-block;
+}
+
+.offcanvas .btn-close {
+    background-color: rgba(255, 255, 255, 0.3);
+    opacity: 1;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.offcanvas .btn-close:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+}
+
+.offcanvas .btn-close:focus {
+    outline: 3px solid var(--gigw-white);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+.offcanvas-body {
+    padding: 1.5rem;
+    background-color: #fafbfc;
+}
+
+/* Enhanced Chat Body */
+.chat-body {
+    height: 480px;
+    overflow-y: auto;
+    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--gigw-border);
+    box-shadow: inset 0 2px 8px rgba(0, 74, 147, 0.05);
+    scroll-behavior: smooth;
+}
+
+.chat-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.chat-body::-webkit-scrollbar-thumb {
+    background: var(--gigw-primary);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.chat-body::-webkit-scrollbar-thumb:hover {
+    background: var(--gigw-primary-dark);
+}
+
+/* Enhanced Chat Messages */
 .chat-message {
-    margin-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    animation: slideIn 0.3s ease;
+    clear: both;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .chat-message.user {
@@ -22,29 +132,87 @@
 
 .chat-message .message {
     display: inline-block;
-    padding: 0.5rem 0.75rem;
-    border-radius: 1rem;
-    max-width: 75%;
+    padding: 0.75rem 1rem;
+    border-radius: 1.25rem;
+    max-width: 80%;
+    word-wrap: break-word;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.chat-message .message:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .chat-message.bot .message {
-    background-color: #e9ecef;
+    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+    color: #212529;
+    border: 1px solid #dee2e6;
+    border-left: 4px solid var(--gigw-primary);
 }
 
 .chat-message.user .message {
-    background-color: #0d6efd;
-    color: white;
+    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
+    color: var(--gigw-white);
+    border: none;
 }
 
+/* Loading State */
+.chat-body .text-muted {
+    color: var(--gigw-text-muted) !important;
+    font-style: italic;
+    padding: 2rem;
+    text-align: center;
+}
+
+/* Accessibility Enhancements */
+.offcanvas:focus-visible {
+    outline: 3px solid var(--gigw-primary);
+    outline-offset: 2px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .offcanvas {
+        width: 100% !important;
+    }
+    
+    .offcanvas-header {
+        padding: 1rem;
+        min-height: 70px;
+    }
+    
+    .offcanvas-title {
+        font-size: 1.1rem;
+    }
+    
+    .chat-body {
+        height: calc(100vh - 250px);
+        padding: 1rem;
+    }
+    
+    .chat-message .message {
+        max-width: 85%;
+        font-size: 0.9rem;
+    }
+}
+
+/* Sticky Table Status */
 .table .sticky-status {
     position: sticky;
     right: 0;
     background: #fff;
-    /* Solid background */
     z-index: 10;
-    /* Above other cells */
     box-shadow: -4px 0 6px rgba(0, 0, 0, 0.08);
-    /* Subtle shadow */
+}
+
+/* WCAG 2.1 AA Compliance */
+.offcanvas * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 </style>
 <div class="container-fluid">
@@ -75,7 +243,7 @@
             </div>
             <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
             <div class="row">
-                <div class="col-4">
+                <div class="col-3">
                     <div class="mb-3">
                         <label for="program_name" class="form-label">Program Name</label>
                         <select class="form-select" id="program_name" name="program_name">
@@ -86,7 +254,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
                     <div class="mb-3">
                         <label for="type" class="form-label">Type (Notice / Memo)</label>
                         <select class="form-select" id="type" name="type">
@@ -96,7 +264,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
                     <div class="mb-3">
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status">
@@ -106,12 +274,18 @@
                         </select>
                     </div>
                 </div>
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                       <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
+                    </div>
+                </div>
             </div>
             </form>
             <hr>
             <div class="table-responsive">
-                <table class="table text-nowrap" style="border-radius: 10px; overflow: hidden; width: 100%;">
-                    <thead style="background-color: #af2910;">
+                <table class="table text-nowrap">
+                    <thead>
                         <!-- start row -->
                         <tr>
                             <th class="col">S.No.</th>
@@ -166,7 +340,7 @@
                             </td>
 
                             <!-- Date -->
-                            <td>{{ $memo->date_ }}</td>
+                            <td class="1">{{ date('d-m-Y', strtotime($memo->date_)) }}</td>
 
                             <!-- Topic -->
                             <td>{{ $memo->topic_name }}</td>
@@ -307,18 +481,36 @@
     </div>
     <!-- end Zero Configuration -->
     <!-- memo generation modal -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
+    <!-- Enhanced Offcanvas with GIGW Guidelines -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic" role="dialog">
         <div class="offcanvas-header">
-            <h4 class="offcanvas-title" id="conversationTopic">Conversation</h4>
-            <h5 id="type_side_menu">Loading...</h5>
-            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            <div class="d-flex flex-column w-100">
+                <h4 class="offcanvas-title mb-2" id="conversationTopic">
+                    <i class="material-symbols-rounded me-2" style="vertical-align: middle; font-size: 24px;">forum</i>
+                    Conversation
+                </h4>
+                <h5 id="type_side_menu">Loading...</h5>
+            </div>
+            <button type="button" 
+                    class="btn-close" 
+                    data-bs-dismiss="offcanvas" 
+                    aria-label="Close conversation panel"
+                    title="Close">
+            </button>
         </div>
-        <input type="hidden" id="userType" value="">
+        <input type="hidden" id="userType" value="" aria-hidden="true">
 
         <div class="offcanvas-body d-flex flex-column">
-            <!-- Chat Body -->
-            <div class="chat-body flex-grow-1 mb-3" id="chatBody">
-                <p class="text-muted text-center">Loading conversation...</p>
+            <!-- Chat Body with Enhanced Styling -->
+            <div class="chat-body flex-grow-1" id="chatBody" role="log" aria-live="polite" aria-label="Conversation messages">
+                <div class="d-flex align-items-center justify-content-center h-100">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                            <span class="visually-hidden">Loading conversation...</span>
+                        </div>
+                        <p class="text-muted">Loading conversation...</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
