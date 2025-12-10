@@ -243,7 +243,7 @@
             </div>
             <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
             <div class="row">
-                <div class="col-4">
+                <div class="col-3">
                     <div class="mb-3">
                         <label for="program_name" class="form-label">Program Name</label>
                         <select class="form-select" id="program_name" name="program_name">
@@ -254,7 +254,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
                     <div class="mb-3">
                         <label for="type" class="form-label">Type (Notice / Memo)</label>
                         <select class="form-select" id="type" name="type">
@@ -264,7 +264,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-4">
+                <div class="col-3">
                     <div class="mb-3">
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status">
@@ -272,6 +272,12 @@
                             <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
                             <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
                         </select>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                       <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
                     </div>
                 </div>
             </div>
@@ -334,7 +340,7 @@
                             </td>
 
                             <!-- Date -->
-                            <td>{{ $memo->date_ }}</td>
+                            <td class="1">{{ date('d-m-Y', strtotime($memo->date_)) }}</td>
 
                             <!-- Topic -->
                             <td>{{ $memo->topic_name }}</td>

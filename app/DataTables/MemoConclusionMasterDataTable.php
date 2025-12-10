@@ -116,7 +116,7 @@ class MemoConclusionMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('discussion_name')->title('Discussion Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('discussion_name')->title('Conclusion name')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('pt_discusion')->title('PT Discussion')->addClass('text-center')->orderable(false)->searchable(true),
             Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
