@@ -871,12 +871,35 @@ $(document).ready(function () {
         });
     }
 });
+
+
 $(document).ready(function () {
 
     let $input = $('#firstName');
     let $suggestionBox = $('#suggestionList');
 
-	  $('#suggestionList').hide();
+	  //$('#suggestionList').hide();
+
+ // Hide suggestions when typing
+$input.on("keydown", function () {
+    setTimeout(function () {
+        $suggestionBox.hide();
+    }, 100);
+});
+
+// Hide suggestions when mouse leaves or user tabs to next input
+$input.on("blur", function () {
+    setTimeout(function () {
+        $suggestionBox.hide();
+    }, 200);
+});
+
+// Hide when mouse leaves suggestion dropdown
+$suggestionBox.on("mouseleave", function () {
+    setTimeout(function () {
+        $suggestionBox.hide();
+    }, 200);
+});
 
 
 
@@ -1128,6 +1151,10 @@ function fillFacultyForm(faculty) {
     let fullname = $(this).data('fullname');
 
     $('#firstName').val(fullname);
+
+
+
+
     $('#suggestionList').hide();
 
     // GET full faculty details
