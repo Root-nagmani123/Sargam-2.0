@@ -23,6 +23,39 @@ use App\Imports\CourseWiseOTImport;
 
 class EnrollementController extends Controller
 {
+    /**
+     * Check if a student has an active course (end_date has not expired)
+     * 
+     * @param int $studentId
+     * @return array|null Returns array with course info if active course exists, null otherwise
+     */
+    private function hasActiveCourse($studentId)
+    {
+        $currentDate = now()->toDateString();
+        
+        $activeEnrollment = StudentMasterCourseMap::with('course')
+            ->where('student_master_pk', $studentId)
+            ->where('active_inactive', 1)
+            ->whereHas('course', function ($query) use ($currentDate) {
+                $query->where(function ($q) use ($currentDate) {
+                    // Course is active if end_date is null or end_date >= current date
+                    $q->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $currentDate);
+                });
+            })
+            ->first();
+        
+        if ($activeEnrollment && $activeEnrollment->course) {
+            return [
+                'course_pk' => $activeEnrollment->course->pk,
+                'course_name' => $activeEnrollment->course->course_name,
+                'end_date' => $activeEnrollment->course->end_date,
+            ];
+        }
+        
+        return null;
+    }
+
     public function create()
     {
         $currentDate = now()->toDateString();
@@ -119,6 +152,32 @@ class EnrollementController extends Controller
             return back()->withErrors(['selected_students' => 'No valid students selected for enrollment.']);
         }
 
+        // Validate: Check if any student has an active course (end_date not expired)
+        $currentDate = now()->toDateString();
+        $studentsWithActiveCourses = [];
+        
+        foreach ($studentIds as $studentId) {
+            $activeCourse = $this->hasActiveCourse($studentId);
+            
+            if ($activeCourse) {
+                // Get student name for error message
+                $student = StudentMaster::find($studentId);
+                $studentName = $student ? trim($student->first_name . ' ' . $student->last_name) : "Student ID: {$studentId}";
+                
+                $endDateFormatted = $activeCourse['end_date'] 
+                    ? date('d-m-Y', strtotime($activeCourse['end_date'])) 
+                    : 'No end date';
+                
+                $studentsWithActiveCourses[] = "{$studentName} is already enrolled in active course '{$activeCourse['course_name']}' (End Date: {$endDateFormatted})";
+            }
+        }
+
+        // If any students have active courses, prevent enrollment
+        if (!empty($studentsWithActiveCourses)) {
+            $errorMessage = "Cannot enroll students. The following students already have active courses:\n" . implode("\n", $studentsWithActiveCourses);
+            return back()->withErrors(['error' => $errorMessage]);
+        }
+
         DB::beginTransaction();
         try {
             $now = now();
@@ -201,8 +260,17 @@ class EnrollementController extends Controller
 
             $students = $query->get();
 
+            // Filter out students who have active courses (end_date not expired)
+            $currentDate = now()->toDateString();
+            $filteredStudents = $students->filter(function ($student) use ($currentDate) {
+                // Check if this student has an active course
+                $activeCourse = $this->hasActiveCourse($student->student_pk);
+                // Only include students who don't have active courses
+                return $activeCourse === null;
+            });
+
             // Transform students to include edit URLs
-            $transformedStudents = $students->map(function ($student) {
+            $transformedStudents = $filteredStudents->map(function ($student) {
                 return [
                     'student_pk' => $student->student_pk,
                     'student_name' => $student->student_name,
