@@ -17,6 +17,8 @@ use App\Exports\StudentEnrollmentExport;
 use Illuminate\Validation\Rule;
 use Mpdf\Mpdf;
 use Yajra\DataTables\Facades\DataTables;
+use App\Imports\CourseWiseOTImport;
+
 
 
 class EnrollementController extends Controller
@@ -283,107 +285,107 @@ class EnrollementController extends Controller
     //     ));
     // }
 
- public function studentCourses(Request $request)
-{
-    $courseId = $request->input('course_id');
-    $status = $request->input('status');
-    $courseStatus = $request->input('course_status', 'active');
+    public function studentCourses(Request $request)
+    {
+        $courseId = $request->input('course_id');
+        $status = $request->input('status');
+        $courseStatus = $request->input('course_status', 'active');
 
-    // Course dropdown with both active and inactive courses
-    $courses = CourseMaster::query()
-        ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
-        ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
-        ->orderBy('course_name')
-        ->pluck('course_name', 'pk');
+        // Course dropdown with both active and inactive courses
+        $courses = CourseMaster::query()
+            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
+            ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
 
-    // Handle AJAX request for course dropdown updates only
-    if ($request->ajax() && $request->has('ajax_courses')) {
-        return response()->json([
-            'success' => true,
-            'courses' => $courses
-        ]);
-    }
+        // Handle AJAX request for course dropdown updates only
+        if ($request->ajax() && $request->has('ajax_courses')) {
+            return response()->json([
+                'success' => true,
+                'courses' => $courses
+            ]);
+        }
 
-    // For AJAX requests from DataTables
-    if ($request->ajax() && $request->has('draw')) {
-        $query = StudentMasterCourseMap::with([
-            'studentMaster.service',
-            'course'
-        ])
-        ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
-        ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
-        ->orderByDesc('created_date');
+        // For AJAX requests from DataTables
+        if ($request->ajax() && $request->has('draw')) {
+            $query = StudentMasterCourseMap::with([
+                'studentMaster.service',
+                'course'
+            ])
+                ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+                ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+                ->orderByDesc('created_date');
 
-        return DataTables::of($query)
-            ->addIndexColumn()
-            ->addColumn('student_info', function($row) {
-                $student = $row->studentMaster;
-                return $student->display_name ?? 'N/A' . 
-                       ($student->email ? '<br><small class="text-muted">' . $student->email . '</small>' : '');
-            })
-            ->addColumn('course_name', function($row) {
-                return $row->course->course_name ?? 'N/A';
-            })
-            ->addColumn('service_name', function($row) {
-                return $row->studentMaster->service->service_name ?? 'N/A';
-            })
-            ->addColumn('ot_code', function($row) {
-                $student = $row->studentMaster;
-                return $student->generated_OT_code ?? 'N/A';
-            })
-            ->addColumn('rank', function($row) {
-                $student = $row->studentMaster;
-                return $student->rank ?? 'N/A';
-            })
-            ->addColumn('status_badge', function($row) {
-                $badge = $row->active_inactive ? 'bg-success' : 'bg-secondary';
-                $text = $row->active_inactive ? 'Active' : 'Inactive';
-                return '<span class="badge ' . $badge . '">' . $text . '</span>';
-            })
-            ->addColumn('created_date_formatted', function($row) {
-                return $row->created_date ? date('d-m-Y', strtotime($row->created_date)) : 'N/A';
-            })
-            ->addColumn('modified_date_formatted', function($row) {
-                return $row->modified_date ? date('d-m-Y', strtotime($row->modified_date)) : 'N/A';
-            })
-            ->addColumn('actions', function($row) {
-                $student = $row->studentMaster;
-                $course = $row->course;
-                $canEdit = $course && $course->active_inactive == 1 && $row->active_inactive == 1;
-                
-                if ($canEdit) {
-                    return '<a href="' . route('enrollment.edit', $student->pk) . '" 
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('student_info', function ($row) {
+                    $student = $row->studentMaster;
+                    return $student->display_name ?? 'N/A' .
+                        ($student->email ? '<br><small class="text-muted">' . $student->email . '</small>' : '');
+                })
+                ->addColumn('course_name', function ($row) {
+                    return $row->course->course_name ?? 'N/A';
+                })
+                ->addColumn('service_name', function ($row) {
+                    return $row->studentMaster->service->service_name ?? 'N/A';
+                })
+                ->addColumn('ot_code', function ($row) {
+                    $student = $row->studentMaster;
+                    return $student->generated_OT_code ?? 'N/A';
+                })
+                ->addColumn('rank', function ($row) {
+                    $student = $row->studentMaster;
+                    return $student->rank ?? 'N/A';
+                })
+                ->addColumn('status_badge', function ($row) {
+                    $badge = $row->active_inactive ? 'bg-success' : 'bg-secondary';
+                    $text = $row->active_inactive ? 'Active' : 'Inactive';
+                    return '<span class="badge ' . $badge . '">' . $text . '</span>';
+                })
+                ->addColumn('created_date_formatted', function ($row) {
+                    return $row->created_date ? date('d-m-Y', strtotime($row->created_date)) : 'N/A';
+                })
+                ->addColumn('modified_date_formatted', function ($row) {
+                    return $row->modified_date ? date('d-m-Y', strtotime($row->modified_date)) : 'N/A';
+                })
+                ->addColumn('actions', function ($row) {
+                    $student = $row->studentMaster;
+                    $course = $row->course;
+                    $canEdit = $course && $course->active_inactive == 1 && $row->active_inactive == 1;
+
+                    if ($canEdit) {
+                        return '<a href="' . route('enrollment.edit', $student->pk) . '" 
                             class="btn btn-sm btn-warning edit-btn" 
                             title="Edit Enrollment">
                             <i class="fas fa-edit me-1"></i> Edit
                             </a>';
-                } else {
-                    if ($course && $course->active_inactive == 0) {
-                        return '<span class="badge bg-danger" title="Course is archived">Archived</span>';
-                    } elseif ($row->active_inactive == 0) {
-                        return '<span class="badge bg-secondary" title="Enrollment is inactive">Inactive</span>';
                     } else {
-                        return '<span class="text-muted">-</span>';
+                        if ($course && $course->active_inactive == 0) {
+                            return '<span class="badge bg-danger" title="Course is archived">Archived</span>';
+                        } elseif ($row->active_inactive == 0) {
+                            return '<span class="badge bg-secondary" title="Enrollment is inactive">Inactive</span>';
+                        } else {
+                            return '<span class="text-muted">-</span>';
+                        }
                     }
-                }
-            })
-            ->rawColumns(['student_info', 'status_badge', 'actions'])
-            ->make(true);
+                })
+                ->rawColumns(['student_info', 'status_badge', 'actions'])
+                ->make(true);
+        }
+
+        // For initial page load
+        $totalCount = StudentMasterCourseMap::count();
+        $filteredCount = 0;
+
+        return view('admin.registration.student_courselist', compact(
+            'courses',
+            'courseId',
+            'totalCount',
+            'filteredCount',
+            'status',
+            'courseStatus'
+        ));
     }
-
-    // For initial page load
-    $totalCount = StudentMasterCourseMap::count();
-    $filteredCount = 0;
-
-    return view('admin.registration.student_courselist', compact(
-        'courses',
-        'courseId',
-        'totalCount',
-        'filteredCount',
-        'status',
-        'courseStatus'
-    ));
-}
 
     public function StudenEnroll_export(Request $request)
     {
@@ -689,4 +691,53 @@ class EnrollementController extends Controller
                 ->with('error', 'Update failed: ' . $e->getMessage());
         }
     }
+
+
+
+public function import(Request $request)
+{
+    $request->validate([
+        'import_file' => 'required|mimes:xlsx,xls,csv|max:5120'
+    ]);
+
+    try {
+        $import = new CourseWiseOTImport();
+        
+        Excel::import($import, $request->file('import_file'));
+        
+        $importedCount = $import->getImportedCount();
+        $updatedCount = $import->getUpdatedCount();
+        $skippedCount = $import->getSkippedCount();
+        $errors = $import->getErrors();
+        
+        $message = "";
+        
+        if ($importedCount > 0) {
+            $message .= "✅ Created {$importedCount} new records in course_wise_ot_list. ";
+        }
+        
+        if ($updatedCount > 0) {
+            $message .= "🔄 Updated {$updatedCount} existing records. ";
+        }
+        
+        if ($skippedCount > 0) {
+            $message .= "⏭️ Skipped {$skippedCount} records (duplicates or errors). ";
+        }
+        
+        if (!empty($errors)) {
+            $message .= "❌ " . count($errors) . " errors occurred.";
+            
+            // Store errors in session for display
+            session()->flash('import_errors', $errors);
+            
+            return back()->with('warning', trim($message));
+        } else {
+            return back()->with('success', trim($message));
+        }
+
+    } catch (\Exception $e) {
+        \Log::error('Import Controller Error: ' . $e->getMessage());
+        return back()->with('error', 'Import failed: ' . $e->getMessage());
+    }
+}
 }
