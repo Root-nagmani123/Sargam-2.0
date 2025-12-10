@@ -2,13 +2,13 @@
 
 @extends('admin.layouts.master')
 
-@section('title', 'Councillor Group - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
 <div class="container-fluid">
     <!-- Page Header with ARIA landmark -->
     <header aria-label="Page header">
-        <x-breadcrum title="Academic Calendar" />
+        <x-breadcrum title="Academic TimeTable" />
     </header>
 
     <!-- Main Content Area -->
