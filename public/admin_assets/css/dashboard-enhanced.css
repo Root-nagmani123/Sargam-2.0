@@ -1,0 +1,615 @@
+/*!
+ * Enhanced Dashboard Styles
+ * GIGW-Compliant (Government of India Web Guidelines)
+ * Modern UX/UI Design System
+ */
+
+/* ========================================
+   CSS VARIABLES - Design Tokens
+   ======================================== */
+:root {
+    /* Brand Colors */
+    --primary-color: #004a93;
+    --primary-light: #1565c0;
+    --primary-dark: #003366;
+    --secondary-color: #dc3545;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    
+    /* Text Colors - WCAG 2.1 AA Compliant */
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-muted: #6c757d;
+    --text-light: #9e9e9e;
+    
+    /* Background Colors */
+    --bg-white: #ffffff;
+    --bg-light: #f8f9fa;
+    --bg-lighter: #fafbfc;
+    --border-color: #dee2e6;
+    
+    /* Shadows - Elevation System */
+    --shadow-xs: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+    --shadow-lg: 0 8px 24px rgba(0,0,0,0.16);
+    --shadow-xl: 0 12px 32px rgba(0,0,0,0.20);
+    
+    /* Transitions */
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-base: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --radius-full: 9999px;
+    
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+}
+
+/* ========================================
+   MODERN STAT CARDS
+   ======================================== */
+.stat-card-modern {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-base);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.stat-card-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, var(--info-color) 100%);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card-modern:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.stat-card-modern:hover::before {
+    transform: scaleX(1);
+}
+
+.stat-card-modern::after {
+    content: '';
+    position: absolute;
+    bottom: -50px;
+    right: -50px;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(0,74,147,0.05) 0%, transparent 70%);
+    transition: var(--transition-slow);
+}
+
+.stat-card-modern:hover::after {
+    bottom: -20px;
+    right: -20px;
+    transform: scale(1.2);
+}
+
+.stat-card-icon-modern {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-base);
+    margin-bottom: var(--spacing-md);
+    transition: var(--transition-base);
+    position: relative;
+    z-index: 1;
+}
+
+.stat-card-modern:hover .stat-card-icon-modern {
+    transform: scale(1.15) rotate(-5deg);
+}
+
+.stat-card-icon-modern img {
+    width: 36px;
+    height: 36px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    transition: var(--transition-base);
+}
+
+.stat-card-modern:hover .stat-card-icon-modern img {
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+.stat-card-label-modern {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.4;
+}
+
+.stat-card-value-modern {
+    font-size: 2.25rem;
+    font-weight: 900;
+    color: var(--text-primary);
+    line-height: 1;
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+/* Icon Background Colors */
+.icon-bg-blue {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.icon-bg-green {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
+.icon-bg-yellow {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+}
+
+.icon-bg-purple {
+    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+}
+
+/* ========================================
+   ENHANCED CONTENT CARDS
+   ======================================== */
+.content-card-modern {
+    background: var(--bg-white);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    transition: var(--transition-base);
+    overflow: hidden;
+}
+
+.content-card-modern:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.content-card-header-modern {
+    padding: var(--spacing-lg);
+    border-bottom: 2px solid var(--border-color);
+    background: linear-gradient(180deg, var(--bg-lighter) 0%, var(--bg-white) 100%);
+}
+
+.content-card-header-modern h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.content-card-header-modern h2::before {
+    content: '';
+    width: 4px;
+    height: 28px;
+    background: linear-gradient(180deg, var(--primary-color) 0%, var(--info-color) 100%);
+    border-radius: var(--radius-full);
+}
+
+.content-card-body-modern {
+    padding: var(--spacing-lg);
+    max-height: 600px;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar */
+.content-card-body-modern::-webkit-scrollbar {
+    width: 10px;
+}
+
+.content-card-body-modern::-webkit-scrollbar-track {
+    background: var(--bg-light);
+    border-radius: var(--radius-sm);
+}
+
+.content-card-body-modern::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #c1c1c1 0%, #a8a8a8 100%);
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--bg-light);
+    transition: var(--transition-base);
+}
+
+.content-card-body-modern::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #a8a8a8 0%, #909090 100%);
+}
+
+/* ========================================
+   NOTICE BOARD - Modern Design
+   ======================================== */
+.notice-card-modern {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    transition: var(--transition-base);
+    border: 1px solid var(--border-color);
+    height: 100%;
+}
+
+.notice-header-modern {
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #c82333 100%);
+    color: white;
+    padding: var(--spacing-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+.notice-header-modern::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.notice-header-modern h5 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: white !important;
+    position: relative;
+    z-index: 1;
+}
+
+.notice-badge {
+    background: rgba(255,255,255,0.25);
+    color: white;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.notice-item-modern {
+    padding: var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition-base);
+    position: relative;
+    cursor: pointer;
+}
+
+.notice-item-modern:last-child {
+    border-bottom: none;
+}
+
+.notice-item-modern::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary-color);
+    transform: scaleY(0);
+    transition: var(--transition-base);
+}
+
+.notice-item-modern:hover {
+    background: var(--bg-lighter);
+    padding-left: calc(var(--spacing-lg) + 8px);
+}
+
+.notice-item-modern:hover::before {
+    transform: scaleY(1);
+}
+
+.notice-title-modern {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.4;
+}
+
+.notice-description-modern {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.notice-meta-modern {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.notice-date-modern {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.notice-attachment-btn {
+    font-size: 0.8125rem;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: var(--transition-base);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.notice-attachment-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    color: white;
+}
+
+/* ========================================
+   BIRTHDAY CARDS - Enhanced Design
+   ======================================== */
+.birthday-card-modern {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-base);
+    border: 2px solid transparent;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.birthday-card-modern::before {
+    content: '🎂';
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: 4rem;
+    opacity: 0.08;
+    transform: rotate(15deg);
+    transition: var(--transition-base);
+}
+
+.birthday-card-modern:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-color);
+}
+
+.birthday-card-modern:hover::before {
+    transform: rotate(25deg) scale(1.2);
+    opacity: 0.12;
+}
+
+.birthday-photo-modern {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid white;
+    box-shadow: var(--shadow-md);
+    transition: var(--transition-base);
+}
+
+.birthday-card-modern:hover .birthday-photo-modern {
+    transform: scale(1.05);
+    box-shadow: var(--shadow-lg);
+}
+
+.birthday-name-modern {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.birthday-designation-modern {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.birthday-contact-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--border-color);
+}
+
+.birthday-contact-modern span {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.birthday-contact-modern span::before {
+    content: '•';
+    color: var(--primary-color);
+    font-weight: 900;
+}
+
+/* ========================================
+   SECTION HEADERS
+   ======================================== */
+.section-header-modern {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 3px solid var(--border-color);
+    position: relative;
+}
+
+.section-header-modern::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 0;
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, var(--info-color) 100%);
+    border-radius: var(--radius-full);
+}
+
+.section-header-modern h3 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.section-badge {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 6px 16px;
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-sm);
+}
+
+/* ========================================
+   DIVIDER LINE - Enhanced
+   ======================================== */
+.divider-modern {
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, var(--border-color) 20%, var(--border-color) 80%, transparent 100%);
+    margin: var(--spacing-lg) 0;
+    border-radius: var(--radius-full);
+}
+
+/* ========================================
+   RESPONSIVE UTILITIES
+   ======================================== */
+@media (max-width: 768px) {
+    .stat-card-modern {
+        padding: var(--spacing-md);
+    }
+    
+    .stat-card-value-modern {
+        font-size: 1.75rem;
+    }
+    
+    .stat-card-icon-modern {
+        width: 48px;
+        height: 48px;
+    }
+    
+    .birthday-photo-modern {
+        width: 60px;
+        height: 60px;
+    }
+}
+
+/* ========================================
+   ACCESSIBILITY ENHANCEMENTS (GIGW)
+   ======================================== */
+
+/* Skip to main content link */
+.skip-to-main {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--primary-color);
+    color: white;
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 0 0 var(--radius-sm) 0;
+    z-index: 9999;
+}
+
+.skip-to-main:focus {
+    top: 0;
+}
+
+/* High contrast focus states */
+*:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 6px rgba(0, 74, 147, 0.15);
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .stat-card-modern,
+    .content-card-modern,
+    .notice-card-modern,
+    .birthday-card-modern {
+        border-width: 3px;
+        border-color: var(--text-primary);
+    }
+}
+
+/* ========================================
+   PRINT STYLES
+   ======================================== */
+@media print {
+    .stat-card-modern,
+    .content-card-modern,
+    .notice-card-modern,
+    .birthday-card-modern {
+        box-shadow: none !important;
+        border: 1px solid var(--text-primary);
+        page-break-inside: avoid;
+    }
+}

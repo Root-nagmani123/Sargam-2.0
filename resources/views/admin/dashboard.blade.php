@@ -4,42 +4,112 @@
 
 @section('content')
 <style>
+/* ========================================
+   GIGW-COMPLIANT DASHBOARD STYLES
+   Following Government of India Web Guidelines
+   ======================================== */
+
+/* ACCESSIBILITY & TYPOGRAPHY - GIGW Compliant */
+:root {
+    --primary-color: #004a93;
+    --secondary-color: #dc3545;
+    --success-color: #28a745;
+    --warning-color: #ffc107;
+    --info-color: #17a2b8;
+    --text-primary: #1a1a1a;
+    --text-secondary: #4a4a4a;
+    --text-muted: #6c757d;
+    --border-color: #dee2e6;
+    --bg-light: #f8f9fa;
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+    --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --border-radius-base: 12px;
+    --border-radius-lg: 16px;
+}
+
+/* GIGW: Minimum 4.5:1 contrast ratio for text */
 .calendar-component thead th {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+    color: var(--text-primary);
+    font-weight: 600;
 }
 
 .line {
     height: 2px;
-    background: #b3b3b3b3;
+    background: linear-gradient(90deg, #e0e0e0 0%, #d0d0d0 100%);
+    border-radius: 2px;
 }
 
 .content-text p {
     font-size: 1rem;
-    line-height: 1.6;
-    color: #333;
+    line-height: 1.75;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    letter-spacing: 0.02em;
 }
 
-/* Smooth scrolling for Notice panel */
+/* SMOOTH SCROLLING - Enhanced UX */
 .card-body {
     scrollbar-width: thin;
     scrollbar-color: #c1c1c1 transparent;
+    scroll-behavior: smooth;
 }
 
 .card-body::-webkit-scrollbar {
-    width: 6px;
+    width: 8px;
 }
 
-.card-body::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
+.card-body::-webkit-scrollbar-track {
+    background: transparent;
     border-radius: 4px;
 }
 
-/* High contrast (GIGW) */
+.card-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #c1c1c1 0%, #a8a8a8 100%);
+    border-radius: 4px;
+    transition: var(--transition-base);
+}
+
+.card-body::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #a8a8a8 0%, #909090 100%);
+}
+
+/* HIGH CONTRAST FOR ACCESSIBILITY (GIGW Standard) */
+h1,
 h2,
-h4 {
-    color: #1a1a1a !important;
+h3,
+h4,
+h5,
+h6 {
+    color: var(--text-primary) !important;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+}
+
+h3 {
+    font-size: 1.25rem;
+    line-height: 1.4;
+}
+
+/* FOCUS STATES - WCAG 2.1 Compliant */
+a:focus,
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+[tabindex]:focus {
+    outline: 3px solid #004a93;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.15);
 }
 </style>
 <style>
@@ -186,95 +256,50 @@ h4 {
     <div class="row mb-3">
         <div class="col-9">
             <div class="container my-4">
-                <div class="row g-3 mb-3">
-                    <!-- Total Students -->
+                <div class="row g-4 mb-4">
+                    <!-- Total Active Courses -->
                     <div class="col-md-3">
-                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #ECEDF8;">
-                            <div class="row">
-                                <div class="col-3 d-flex align-items-center justify-content-center">
-                                    <!-- <i class="material-icons menu-icon material-symbols-rounded text-primary my-filled-icon"
-                                        style="font-size: 30px;">groups_2</i> -->
-                                    <img src="{{ asset('images/groups.svg') }}" alt="Total Students"
-                                        style="width:30px;">
-                                </div>
-                                <div class="col-9">
-                                    <h6 class="text-muted mb-1">Total Active Courses</h6>
-                                    <div class="d-flex align-items-center gap-2">
-
-                                        <h3 class="m-0 fw-bold">{{ $totalActiveCourses }}</h3>
-                                    </div>
-                                    <!-- <p class="text-primary small mt-2 fw-semibold">+12% from last month</p> -->
-                                </div>
+                        <div class="stat-card-modern">
+                            <div class="stat-card-icon-modern icon-bg-blue">
+                                <img src="{{ asset('images/groups.svg') }}" alt="Total Active Courses Icon">
                             </div>
-
+                            <div class="stat-card-label-modern">Total Active Courses</div>
+                            <h3 class="stat-card-value-modern">{{ $totalActiveCourses }}</h3>
                         </div>
                     </div>
 
-                    <!-- Active Teachers -->
+                    <!-- Upcoming Courses -->
                     <div class="col-md-3">
-                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #EBF5E8;">
-                            <div class="row">
-                                <div class="col-3 d-flex align-items-center justify-content-center">
-                                    <!-- <i class="material-icons menu-icon material-symbols-rounded text-success my-filled-icon"
-                                        style="font-size: 30px;">groups_2</i> -->
-                                    <img src="{{ asset('images/teachers.svg') }}" alt="Total Students"
-                                        style="width:30px;">
-                                </div>
-                                <div class="col-9">
-                                    <h6 class="text-muted mb-1">Upcoming Courses</h6>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <h3 class="m-0 fw-bold">{{ $upcomingCourses }}</h3>
-                                    </div>
-                                    <!-- <p class="text-success small mt-2 fw-semibold">+3% from last month</p> -->
-                                </div>
+                        <div class="stat-card-modern">
+                            <div class="stat-card-icon-modern icon-bg-green">
+                                <img src="{{ asset('images/teachers.svg') }}" alt="Upcoming Courses Icon">
                             </div>
-
+                            <div class="stat-card-label-modern">Upcoming Courses</div>
+                            <h3 class="stat-card-value-modern">{{ $upcomingCourses }}</h3>
                         </div>
                     </div>
 
-                    <!-- Total Classes -->
+                    <!-- Total Guest Faculty -->
                     <div class="col-md-3">
-                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #FEF5E7;">
-                            <div class="row">
-                                <div class="col-3 d-flex align-items-center justify-content-center">
-                                    <!-- <i class="material-icons menu-icon material-symbols-rounded text-warning"
-                                                    style="font-size: 30px;">school</i> -->
-                                    <img src="{{ asset('images/classes.svg') }}" alt="Total Guest faculty"
-                                        style="width:30px;">
-                                </div>
-                                <div class="col-9">
-                                    <h6 class="text-muted mb-1">Total Guest faculty</h6>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <h3 class="m-0 fw-bold">{{ $total_guest_faculty }}</h3>
-                                    </div>
-                                    <!-- <p class="text-warning small mt-2 fw-semibold">+2 new classes</p> -->
-                                </div>
+                        <div class="stat-card-modern">
+                            <div class="stat-card-icon-modern icon-bg-yellow">
+                                <img src="{{ asset('images/classes.svg') }}" alt="Total Guest Faculty Icon">
                             </div>
-
+                            <div class="stat-card-label-modern">Total Guest Faculty</div>
+                            <h3 class="stat-card-value-modern">{{ $total_guest_faculty }}</h3>
                         </div>
                     </div>
 
-                    <!-- Attendance Rate -->
+                    <!-- Total Inhouse Faculty -->
                     <div class="col-md-3">
-                        <div class="p-3 rounded-4 shadow-sm h-100" style="background: #ECEDF8;">
-                            <div class="row">
-                                <div class="col-3 d-flex align-items-center justify-content-center">
-                                    <!-- <i class="material-icons menu-icon material-symbols-rounded text-purple"
-                                        style="font-size: 30px;">groups_2</i> -->
-                                    <img src="{{ asset('images/attendance.svg') }}" alt="Total Inhouse faculty"
-                                        style="width:30px;">
-                                </div>
-                                <div class="col-9">
-                                    <h6 class="text-muted mb-1">Total Inhouse Faculty</h6>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <h3 class="m-0 fw-bold">{{ $total_internal_faculty }}</h3>
-                                    </div>
-                                    <!-- <p class="text-primary small mt-2 fw-semibold">+2.1% improvement</p> -->
-                                </div>
+                        <div class="stat-card-modern">
+                            <div class="stat-card-icon-modern icon-bg-purple">
+                                <img src="{{ asset('images/attendance.svg') }}" alt="Total Inhouse Faculty Icon">
                             </div>
+                            <div class="stat-card-label-modern">Total Inhouse Faculty</div>
+                            <h3 class="stat-card-value-modern">{{ $total_internal_faculty }}</h3>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -289,19 +314,22 @@ h4 {
     <div class="row g-4 mb-4">
         <!-- LEFT CONTENT -->
         <div class="col-lg-7">
-
-            <div class="card" style="border-radius:30px;height:100%;max-height:600px;">
-                <div class="card-body">
+            <div class="content-card-modern" style="max-height:650px;">
+                <div class="content-card-header-modern">
+                    <h2>Admin & Campus Summary</h2>
+                </div>
+                <div class="content-card-body-modern">
                     <!-- Admin Summary -->
-                    <section aria-labelledby="admin-summary-title" class="mb-5" style="overflow-y:auto; max-height:250px;">
-                        <h2 id="admin-summary-title" style="color: #1a1a1a !important;font-size:24px;line-height:28px;">
+                    <section aria-labelledby="admin-summary-title" class="mb-5">
+                        <h3 id="admin-summary-title" class="section-header-modern"
+                            style="font-size:1.25rem;line-height:1.4;">
                             Admin Summary
-                        </h2>
+                        </h3>
 
-                        <div class="line w-100 my-4"></div>
+                        <div class="divider-modern"></div>
 
                         <div class="content-text">
-                       
+
 
 
 
@@ -345,197 +373,192 @@ h4 {
         <div class="col-lg-5">
 
             <div class="card shadow-sm border-0 rounded-4 h-100">
-
-
-                    <div class="card shadow-sm border-0 rounded-4 h-100">
-
-                        <!-- Notice Header -->
-                        <div class="card-header bg-danger text-white rounded-top-4 py-3">
-                            <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
-                                <i class="bi bi-megaphone-fill me-2"></i>
-                                Notices
-                            </h5>
-                        </div>
-
-                        <!-- Notice Body -->
-                        <div class="card-body" style="max-height:600px; overflow-y:auto;">
-@php $notices = get_notice_notification_by_role() @endphp 
-@foreach($notices as $notice)
-                            <div class="mb-4 pb-2 border-bottom">
-                                <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
-                                <p class="mb-1" style="font-size: 14px; line-height: 1.5; color: #333;">
-                                    {!! Str::limit($notice->description, 100) !!}
-                                </p>
-                                <small class="text-muted">Posted on: {{ date('d M, Y', strtotime($notice->created_at)) }}</small>
-                                @if($notice->document)
-                                <div class="mt-2">
-                                    <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
-                                        class="btn btn-sm btn-outline-primary">
-                                        <i class="bi bi-download me-1"></i>View Attachment
-                                    </a>
-                                    </div>
-                                @endif
-
-                            </div>
-@endforeach
-                        
-
-                        </div>
-
+ <!-- Notice Header -->
+                    <div class="card-header bg-danger text-white rounded-top-4 py-3">
+                        <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
+                            <i class="bi bi-megaphone-fill me-2"></i>
+                            Notices
+                        </h5>
                     </div>
 
-                </div>
-            </div>   
-
-            <h3 class="fw-bold py-3">Today Birthday's</h3>
-            <hr class="my-2 mb-4">
-            <div class="row g-4">
-                <!-- LEFT SIDE: Birthday Cards -->
-                <div class="col-8">
-                    @if($emp_dob_data->isEmpty())
-                    <p class="text-center">No Birthdays Today</p>
-                    @else
-
-                    <div class="row g-4">
-                        @php
-                        $colors = ['#ebf5e8', '#fef5e7', '#ccdbe9', '#ecedf8', '#f8e7e8', '#f2f2f2'];
-                        @endphp
-
-                        @foreach($emp_dob_data as $employee)
-                        <div class="col-6 mb-4">
-                            <div class="birthday-card"
-                                style="background: {{ $colors[$loop->index % count($colors)] }};">
-
-                                <div class="d-flex align-items-center gap-3">
-
-                                    @php
-                                    $photo = !empty($employee->profile_picture)
-                                    ? asset('storage/' . $employee->profile_picture)
-                                    :
-                                    'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-                                    @endphp
-
-                                    <!-- IMAGE -->
-                                    <img src="{{ $photo }}" class="birthday-photo" alt="">
-
-                                    <!-- NAME + DESIGNATION -->
-                                    <div class="flex-grow-1">
-                                        <h5 class="emp-name">
-                                            {{ strtoupper($employee->first_name) }}
-                                            {{ strtoupper($employee->last_name) }}
-                                        </h5>
-
-                                        <p class="emp-desg">
-                                            {{ strtoupper($employee->designation_name) }}
-                                        </p>
-                                    </div>
-
-                                </div>
-
-                                <!-- BOTTOM DETAILS -->
-                                <div class="mt-2 ps-2">
-                                    <p class="emp-email">{{ $employee->email }}</p>
-                                    <p class="emp-phone">{{ $employee->mobile }}</p>
-                                </div>
-
+                    <!-- Notice Body -->
+                    <div class="card-body" style="max-height:600px; overflow-y:auto;">
+                        @php $notices = get_notice_notification_by_role() @endphp
+                        @foreach($notices as $notice)
+                        <div class="mb-4 pb-2 border-bottom">
+                            <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
+                            <p class="mb-1" style="font-size: 14px; line-height: 1.5; color: #333;">
+                                {!! Str::limit($notice->description, 100) !!}
+                            </p>
+                            <small class="text-muted">Posted on:
+                                {{ date('d M, Y', strtotime($notice->created_at)) }}</small>
+                            @if($notice->document)
+                            <div class="mt-2">
+                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
+                                    class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download me-1"></i>View Attachment
+                                </a>
                             </div>
+                            @endif
+
                         </div>
-
-
-
                         @endforeach
+
+
                     </div>
 
-                    @endif
-                </div>
             </div>
         </div>
 
-        <!-- RIGHT SIDE: Calendar -->
-        <div class="col-5">
-           <x-calendar 
-    :year="$year" 
-    :month="$month" 
-    :selected="now()->toDateString()" 
-    :events="$events" 
-    theme="gov-red" 
-/>
+        <h3 class="fw-bold">Today Birthday's</h3>
+        <hr class="my-2">
+        <div class="row g-4">
+            <!-- LEFT SIDE: Birthday Cards -->
+            <div class="col-7">
+                <div class="card">
+                    <div class="card-body">
+                        @if($emp_dob_data->isEmpty())
+                        <p class="text-center">No Birthdays Today</p>
+                        @else
 
+                        <div class="row g-4">
+                            @php
+                            $colors = ['#ebf5e8', '#fef5e7', '#ccdbe9', '#ecedf8', '#f8e7e8', '#f2f2f2'];
+                            @endphp
+
+                            @foreach($emp_dob_data as $employee)
+                            <div class="col-6 mb-4">
+                                <div class="birthday-card"
+                                    style="background: {{ $colors[$loop->index % count($colors)] }};">
+
+                                    <div class="d-flex align-items-center gap-3">
+
+                                        @php
+                                        $photo = !empty($employee->profile_picture)
+                                        ? asset('storage/' . $employee->profile_picture)
+                                        :
+                                        'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+                                        @endphp
+
+                                        <!-- IMAGE -->
+                                        <img src="{{ $photo }}" class="birthday-photo" alt="">
+
+                                        <!-- NAME + DESIGNATION -->
+                                        <div class="flex-grow-1">
+                                            <h5 class="emp-name">
+                                                {{ strtoupper($employee->first_name) }}
+                                                {{ strtoupper($employee->last_name) }}
+                                            </h5>
+
+                                            <p class="emp-desg">
+                                                {{ strtoupper($employee->designation_name) }}
+                                            </p>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- BOTTOM DETAILS -->
+                                    <div class="mt-2 ps-2">
+                                        <p class="emp-email">{{ $employee->email }}</p>
+                                        <p class="emp-phone">{{ $employee->mobile }}</p>
+                                    </div>
+
+                                </div>
+                            </div>
+
+
+
+                            @endforeach
+                        </div>
+
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <!-- RIGHT SIDE: Calendar -->
+            <div class="col-5">
+                <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events"
+                    theme="gov-red" />
+
+            </div>
         </div>
     </div>
 
 
-
-    @push('scripts')
-    <script>
-    // Lightweight calendar interactions (vanilla JS)
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.calendar-component').forEach(function(comp) {
-            const yearSel = comp.querySelector('.calendar-year');
-            const monthSel = comp.querySelector('.calendar-month');
-            const cells = comp.querySelectorAll('.calendar-cell');
+</div>
 
 
-            // Click a date -> emit custom event
-            comp.addEventListener('click', function(e) {
-                const td = e.target.closest('.calendar-cell');
-                if (!td) return;
-                const prev = comp.querySelector('.calendar-cell.is-selected');
-                if (prev) prev.classList.remove('is-selected');
-                td.classList.add('is-selected');
+
+@push('scripts')
+<script>
+// Lightweight calendar interactions (vanilla JS)
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.calendar-component').forEach(function(comp) {
+        const yearSel = comp.querySelector('.calendar-year');
+        const monthSel = comp.querySelector('.calendar-month');
+        const cells = comp.querySelectorAll('.calendar-cell');
 
 
-                const date = td.dataset.date;
-                comp.dispatchEvent(new CustomEvent('dateSelected', {
-                    detail: {
-                        date
-                    }
-                }));
-            });
+        // Click a date -> emit custom event
+        comp.addEventListener('click', function(e) {
+            const td = e.target.closest('.calendar-cell');
+            if (!td) return;
+            const prev = comp.querySelector('.calendar-cell.is-selected');
+            if (prev) prev.classList.remove('is-selected');
+            td.classList.add('is-selected');
 
 
-            // keyboard support for cells
-            cells.forEach(function(cell) {
-                cell.addEventListener('keydown', function(ev) {
-                    if (ev.key === 'Enter' || ev.key === ' ') {
-                        ev.preventDefault();
-                        cell.click();
-                    }
-                    // Arrow navigation (left/right/up/down)
-                    const idx = Array.prototype.indexOf.call(cells, cell);
-                    let targetIdx = null;
-                    if (ev.key === 'ArrowLeft') targetIdx = idx - 1;
-                    if (ev.key === 'ArrowRight') targetIdx = idx + 1;
-                    if (ev.key === 'ArrowUp') targetIdx = idx - 7;
-                    if (ev.key === 'ArrowDown') targetIdx = idx + 7;
-                    if (targetIdx !== null && cells[targetIdx]) {
-                        cells[targetIdx].focus();
-                        ev.preventDefault();
-                    }
-                });
-            });
+            const date = td.dataset.date;
+            comp.dispatchEvent(new CustomEvent('dateSelected', {
+                detail: {
+                    date
+                }
+            }));
+        });
 
 
-            // Change month/year -> navigate by query params (simple behavior)
-            yearSel.addEventListener('change', function() {
-                const y = this.value;
-                const m = monthSel.value;
-                const url = new URL(window.location.href);
-                url.searchParams.set('year', y);
-                url.searchParams.set('month', m);
-                window.location.href = url.toString();
-            });
-            monthSel.addEventListener('change', function() {
-                const y = yearSel.value;
-                const m = this.value;
-                const url = new URL(window.location.href);
-                url.searchParams.set('year', y);
-                url.searchParams.set('month', m);
-                window.location.href = url.toString();
+        // keyboard support for cells
+        cells.forEach(function(cell) {
+            cell.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Enter' || ev.key === ' ') {
+                    ev.preventDefault();
+                    cell.click();
+                }
+                // Arrow navigation (left/right/up/down)
+                const idx = Array.prototype.indexOf.call(cells, cell);
+                let targetIdx = null;
+                if (ev.key === 'ArrowLeft') targetIdx = idx - 1;
+                if (ev.key === 'ArrowRight') targetIdx = idx + 1;
+                if (ev.key === 'ArrowUp') targetIdx = idx - 7;
+                if (ev.key === 'ArrowDown') targetIdx = idx + 7;
+                if (targetIdx !== null && cells[targetIdx]) {
+                    cells[targetIdx].focus();
+                    ev.preventDefault();
+                }
             });
         });
-    });
-    </script>
 
-    @endpush
-    @endsection
+
+        // Change month/year -> navigate by query params (simple behavior)
+        yearSel.addEventListener('change', function() {
+            const y = this.value;
+            const m = monthSel.value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('year', y);
+            url.searchParams.set('month', m);
+            window.location.href = url.toString();
+        });
+        monthSel.addEventListener('change', function() {
+            const y = yearSel.value;
+            const m = this.value;
+            const url = new URL(window.location.href);
+            url.searchParams.set('year', y);
+            url.searchParams.set('month', m);
+            window.location.href = url.toString();
+        });
+    });
+});
+</script>
+
+@endpush
+@endsection
