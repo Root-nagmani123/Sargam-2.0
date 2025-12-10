@@ -186,14 +186,30 @@
                                     </span>
                                     @endif
                                     @endif
+                                    @php 
+                                    $role = session()->get('role_name');
+                                    @endphp
 
                                     <!-- Admin Offcanvas -->
+                                     @if($memo->type_notice_memo == 'Notice')
                                     <button type="button"
                                         class="btn btn-sm btn-outline-secondary d-flex align-items-center view-conversation"
-                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="admin"
+                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="notice" 
                                         data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
-                                        <i class="bi bi-chat me-1"></i> View
+                                        <i class="bi bi-chat me-1"></i> View {{ $role }}
                                     </button>
+                                    @elseif($memo->type_notice_memo == 'Memo')
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary d-flex align-items-center view-conversation"
+                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="memo"
+                                        data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}">
+                                        <i class="bi bi-chat me-1"></i> View {{ $role }}
+                                    </button>
+                                    @else
+                                    <span class="text-muted small d-flex align-items-center">
+                                        <i class="bi bi-chat-slash me-1"></i> No Conversation
+                                    </span>
+                                    @endif
 
                                     @if($memo->type_notice_memo == 'Notice')
                                     <button class="btn btn-sm btn-outline-secondary" disabled>
@@ -293,7 +309,8 @@
     <!-- memo generation modal -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas">
         <div class="offcanvas-header">
-            <h5 class="offcanvas-title" id="conversationTopic">Conversation</h5>
+            <h4 class="offcanvas-title" id="conversationTopic">Conversation</h4>
+            <h5 id="type_side_menu">Loading...</h5>
             <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
         </div>
         <input type="hidden" id="userType" value="">
@@ -464,12 +481,14 @@ $(document).ready(function() {
         let topic = $(this).data('topic');
         let type = $(this).data('type');
         $('#userType').val(type);
+        let user_type = 'admin';
 
-        $('#conversationTopic').text(topic);
+        $('#conversationTopic').text("Topic: " + topic);
+        $('#type_side_menu').text(type);
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
-            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type,
+            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type + '/' + user_type,
             type: 'GET',
             success: function(res) {
                 $('#chatBody').html(res);
