@@ -3,298 +3,405 @@
 @section('title', 'Notice Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
-<div class="container-fluid">
+<style>
+/* Container */
+.messages {
+    padding: 10px;
+}
 
+/* Common bubble styling */
+.message-row {
+    display: flex;
+    align-items: flex-end;
+}
+
+.message-bubble {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    position: relative;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Student (left - grey bubble like WhatsApp incoming) */
+.from-student .message-bubble {
+    background: #ffffff;
+    border: 1px solid #ececec;
+    border-top-left-radius: 0;
+    color: #222;
+}
+
+/* Staff (right - green bubble like WhatsApp outgoing) */
+.from-staff {
+    justify-content: flex-end;
+}
+
+.from-staff .message-bubble {
+    background: #d9fdd3;
+    border-top-right-radius: 0;
+    color: #222;
+}
+
+/* Meta text (name + timestamp) */
+.message-meta {
+    font-size: 11px;
+    color: #888;
+}
+
+/* Avatar circle */
+.avatar-circle {
+    width: 32px;
+    height: 32px;
+    background: #004a93;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* Spacing */
+.message-row {
+    margin-bottom: 12px;
+}
+
+.message-text {
+    white-space: pre-wrap;
+}
+
+/* Attachment link */
+.message-attachment a {
+    font-size: 13px;
+    color: #0b67c2;
+}
+</style>
+
+<div class="container-fluid px-3 px-md-4" id="notice-conversation-page">
     <x-breadcrum title="Notice Conversation" />
     <x-session_message />
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-            <div class="gap-2 text-end">
-                    <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
+
+    <main class="mx-auto" aria-labelledby="page-title">
+
+        <article class="card shadow-sm mb-4" style="border-left:4px solid #004a93;">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-end mb-2">
+                    <a href="{{ route('memo.notice.management.index') }}"
+                        class="btn btn-outline-secondary btn-sm">Back</a>
                 </div>
-            <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
-            <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
-            <hr>
 
-            <p class="mb-1">SHOW CAUSE NOTICE</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::now()->format('d/m/Y') }} </p>
+                <!-- Letter Header -->
+                <header class="text-center mb-3">
+                    <h1 id="page-title" class="h5 fw-bold mb-1">{{ $template_details->course_name ?? 'Course Name' }}
+                    </h1>
+                    <p class="mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                    <hr class="my-3" />
+                </header>
 
-            <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
-                from
-                following session(s)...</p>
+                <!-- Notice body (semantic) -->
+                <section aria-labelledby="notice-heading" class="mb-3">
+                    <h2 id="notice-heading" class="visually-hidden">Show Cause Notice</h2>
 
-            <div class="table-responsive mb-3">
-                <table class="table table-bordered text-center">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th>No. of Session(s)</th>
-                            <th>Topics</th>
-                            <th>
-                                Venue
-                            </th>
-                            <th>Session(s)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
-                            <td>1</td>
-                            <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
-                            <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
-                            <td>{{ $template_details->session_time ?? '06:00-07:00' }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                    <p class="mb-1 text-uppercase small fw-semibold">SHOW CAUSE NOTICE</p>
+                    <p class="mb-1"><strong>Date:</strong> {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
 
-            <div class="mb-4">
-                <p class="fw-bold">You are advised to do the following:</p>
-                <ul>
-                    <li>Reply to this Memo online through this <a href="#">conversation</a></li>
-                    <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
-                </ul>
-                <p>{!! $template_details->content ?? '' !!}</p>
-            </div>
+                    <p>It has been brought to the notice of the undersigned that you were absent without prior
+                        authorization
+                        from following session(s)...</p>
 
-            <p><strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: Show Cause Notice for {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
+                    <!-- Session summary (presented as accessible table) -->
+                    <div class="table-responsive mb-3" role="region" aria-label="Session details">
+                        <table class="table table-bordered text-center">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Date</th>
+                                    <th scope="col">No. of Session(s)</th>
+                                    <th scope="col">Topics</th>
+                                    <th scope="col">Venue</th>
+                                    <th scope="col">Session(s)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
+                                    <td>1</td>
+                                    <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
+                                    <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
+                                    <td>{{ $template_details->session_time ?? '06:00-07:00' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
 
-            <p class="text-end"><strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}</p>
+                    <div class="mb-4">
+                        <p class="fw-bold">You are advised to do the following:</p>
+                        <ul>
+                            <li>Reply to this Memo online through this <a href="#conversation"
+                                    class="link-primary">conversation</a></li>
+                            <li>Appear in person before the undersigned at 1800 hrs on next working day</li>
+                        </ul>
 
-            <!-- Exemption Table -->
-            <div class="table-responsive mb-4">
-                <table class="table table-bordered text-center">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Total Exemption Have</th>
-                            <th>Total Exemption Taken</th>
-                            <th>MOD on SAT / SUN</th>
-                            <th>Exemption Balance (if any)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>3</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>3</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                        <div class="notice-content">{!! $template_details->content ?? '' !!}</div>
+                    </div>
 
-            <!-- Conversation Section -->
-            <h6 class="fw-bold">Conversation</h6>
-            <div class="table-responsive mb-4">
-                <table class="table table-bordered">
-                    <thead class="table-light text-center">
-                        <tr>
-                            <th>Name</th>
-                            <th>Conversation</th>
-                            <th>Date & Time</th>
-                            <th>Delete</th>
-                            <th>Document</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($memoNotice as $row)
-                        <tr>
-                            <td class="{{ $loop->first ? ' ' : '' }}">
-                                {{ $row->display_name ?? 'N/A' }}
-                            </td>
+                    <p><strong>{{ $template_details->display_name ?? 'Student Name' }},
+                            {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
+                        Remarks: Show Cause Notice for {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
 
-                            <td class="{{ $loop->first ? '' : '' }}">
-                                {{ $row->student_decip_incharge_msg }}
-                            </td>
+                    <p class="text-end">
+                        <strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}
+                    </p>
+                </section>
 
-                            <td>
+                <!-- Exemption Summary -->
+                <section aria-labelledby="exemption-heading" class="mb-4">
+                    <h3 id="exemption-heading" class="visually-hidden">Exemption summary</h3>
+                    <div class="row gx-2 gy-2 align-items-stretch">
+                        <div class="col-6 col-md-3">
+                            <div class="p-2 border rounded text-center" role="group" aria-label="Total exemption have">
+                                <p class="mb-0 small text-muted">Total Exemption Have</p>
+                                <p class="h5 mb-0">3</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2 border rounded text-center">
+                                <p class="mb-0 small text-muted">Total Exemption Taken</p>
+                                <p class="h5 mb-0">0</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2 border rounded text-center">
+                                <p class="mb-0 small text-muted">MOD on SAT / SUN</p>
+                                <p class="h5 mb-0">0</p>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-2 border rounded text-center bg-light">
+                                <p class="mb-0 small text-muted">Exemption Balance (if any)</p>
+                                <p class="h5 mb-0">3</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Conversation area -->
+                <section id="conversation" aria-labelledby="conversation-heading">
+                    <h2 id="conversation-heading" class="h6 fw-bold mb-3">Conversation</h2>
+                    <hr class="my-2">
+                    @forelse($memoNotice as $row)
+                    @php
+                    // Determine if this message is from the current user (staff/faculty)
+                    $isSender = $row->role_type === 'f'; // 'f' = faculty/staff, 's' = student
+                    $fromClass = $isSender ? 'from-staff' : 'from-student';
+                    @endphp
+
+                    <div class="message-row {{ $fromClass }}" data-msg-id="{{ $row->pk }}">
+
+                        @if($isSender)
+                        <!-- Student -->
+                        <div class="avatar me-2"><span class="avatar-circle">S</span></div>
+                        <div class="message-bubble">
+                            <div class="message-meta">
+                                {{ $row->display_name ?? 'Student' }} •
                                 {{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}
-                            </td>
-
-                            <td>
-                                {{-- Add delete button here if needed --}}
-                                @if($row->notice_status == 1)
-                                <form
-                                    action="{{ route('memo.notice.management.noticedeleteMessage', ['id' => $row->pk, 'type' =>  $type ]) }}"
-                                    method="POST" onsubmit="return confirm('Are you sure?')">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button class="btn btn-sm btn-danger">Delete</button>
-                                </form>
-                                @else
-                                <span class="text-muted">N/A</span>
-                                @endif
-                            </td>
-
-                            <td>
-                                @if ($row->doc_upload)
-                                <a href="{{ asset('storage/' . $row->doc_upload) }}" target="_blank">View</a>
-                                @else
-                                ---
-                                @endif
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">No conversation found.</td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-
-                </table>
-            </div>
-
-            <!-- Reply Form -->
-            @if($memoNotice->isEmpty() || $memoNotice->first()->notice_status == 1)
-            <div class="border p-3 bg-light rounded">
-                <form id="memo_notice_conversation" method="POST" enctype="multipart/form-data"
-                    action="{{ route('memo.notice.management.memo_notice_conversation') }}">
-                    @csrf
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <input type="hidden" name="type" value="{{ $type }}">
-                            <input type="hidden" name="memo_notice_id" value="{{ $id }}">
-                            <label class="form-label">Select Date</label>
-                            <input type="date" class="form-control" id="current_date" name="date" readonly>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Select Time</label>
-                            <input type="time" class="form-control" id="current_time" name="time" readonly>
-                        </div>
-
-                        <div class="col-12">
-                            <div class="mb-3">
-                                <label class="form-label">Message <span class="text-muted">*</span></label>
-                                <textarea class="form-control" rows="4" name="message"
-                                    placeholder="Type your message here..."></textarea>
                             </div>
+                            <div class="message-text mt-1">{{ $row->student_decip_incharge_msg }}</div>
+
+                            @if($row->doc_upload)
+                            <div class="message-attachment mt-2">
+                                <a href="{{ asset('storage/' . $row->doc_upload) }}" target="_blank">Attachment
+                                    (View)</a>
+                            </div>
+                            @endif
                         </div>
 
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label class="form-label">Upload Document (if any)</label>
-                                <input type="file" class="form-control" name="document">
-                                <small class="text-muted">Less than 1 MB type (jpg,jpeg,png,pdf)</small>
-
-
+                        @else
+                        <!-- Staff -->
+                        <div class="message-bubble">
+                            <div class="message-meta text-end">
+                                {{ $row->display_name ?? 'Staff' }} •
+                                {{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}
                             </div>
+                            <div class="message-text mt-1 text-end">{{ $row->student_decip_incharge_msg }}</div>
+
+                            @if($row->doc_upload)
+                            <div class="message-attachment mt-2 text-end">
+                                <a href="{{ asset('storage/' . $row->doc_upload) }}" target="_blank">Attachment
+                                    (View)</a>
+                            </div>
+                            @endif
                         </div>
+                        @endif
 
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" name="status" id="status">
-                                    <option value="1">OPEN</option>
-                                    <option value="2">CLOSED</option>
-                                </select>
-                            </div>
-                        </div>
-                        @if($type == 'memo' || $type == 'notice' )
-                       
-
-                        <div id="conclusion_div" style="display: none;">
-                            <div class="col-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Conclusion Type</label>
-                                    <select class="form-select" name="conclusion_type" id="conclusion_type">
-                                        <option value="">Select Conclusion Type</option>
-                                        @foreach($memo_conclusion_master as $conclusion)
-                                        <option value="{{ $conclusion->pk }}">{{ $conclusion->discussion_name }}
-                                        </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="mb-3" id="deduction_div" style="display: none;">
-                                        <label class="form-label">Mark of Deduction</label>
-                                        <input type="number" class="form-control" name="mark_of_deduction"
-                                            placeholder="Enter number of deduction">
-                                    </div>
-                            </div>
-                            
-                            <div class="col-6">
-
-                                <div class="mb-3">
-                                    <label class="form-label">Conclusion Remark</label>
-                                    <textarea class="form-control" rows="4" name="conclusion_remark"
-                                        placeholder="Type your conclusion message here..."></textarea>
-                                    <small class="text-muted">This will be sent to the student as a conclusion of the
-                                        memo.</small>
-                                </div>
-                            </div>
-                        </div>
                     </div>
-
-                    @endif
-
-
-                    <hr>
-                    <div class="gap-2 text-end">
-                        <button type="submit" class="btn btn-primary">Send</button>
-                        <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
+                    @empty
+                    <div class="alert alert-info mt-4" role="status">
+                        <i class="material-icons material-symbols-rounded me-2" style="vertical-align: middle;">info</i>
+                        <span>No conversation messages available yet.</span>
                     </div>
-                </form>
-                @endif
-                @if( isset($memoNotice->first()->notice_status) && $memoNotice->first()->notice_status == 2 )
-                <div class="alert alert-warning mt-3">
-                    <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
-                    @endif
-                </div>
+                    @endforelse
+
+                </section>
+
+
             </div>
-        </div>
-    </div>
-    @endsection
-    @section('scripts')
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var statusSelector = document.getElementById('status');
-        var conclusionDiv = document.getElementById('conclusion_div');
-        var conclusionTypeSelector = document.getElementById('conclusion_type');
+        </article>
 
-        if (statusSelector) {
-            statusSelector.addEventListener('change', function() {
-                // Show or hide the conclusion section based on the selected status
-                if (this.value == '2') {
-                    conclusionDiv.style.display = 'block';
-                } else {
-                    conclusionDiv.style.display = 'none';
-                }
-            });
+    </main>
 
-            // Default check on page load
-            if (statusSelector.value == '2') {
+</div>
+
+
+@section('styles')
+<style>
+/* GIGW: high contrast and readable font sizes; avoid brand-only colors for text */
+#notice-conversation-page {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* Message styles - accessible chat bubbles */
+.messages .message-row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.messages .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #e9eef8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.messages .avatar .avatar-circle {
+    font-size: 0.875rem;
+}
+
+.message-bubble {
+    max-width: 75%;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 0.6rem;
+}
+
+.message-text {
+    color: #222;
+    line-height: 1.35;
+}
+
+.message-meta {
+    color: #6c757d;
+}
+
+/* Alignment classes */
+.from-staff {
+    justify-content: flex-end;
+}
+
+.from-staff .message-bubble {
+    background: #e8f0ff;
+}
+
+.from-student {
+    justify-content: flex-start;
+}
+
+/* Attachment link focus for keyboard users */
+.message-attachment a:focus,
+.message-attachment a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive tweaks */
+@media (max-width:576px) {
+    .message-bubble {
+        max-width: 100%;
+    }
+}
+
+/* Visible focus outlines (GIGW keyboard) */
+:focus {
+    outline: 3px solid #ffd54f;
+    outline-offset: 2px;
+}
+
+/* Notice closed banner styling */
+.notice-closed {
+    background: #fff3cd;
+    border: 1px solid #ffeeba;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    color: #856404;
+}
+</style>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // status -> conclusion toggle for accessibility
+    var statusSelector = document.getElementById('status');
+    var conclusionDiv = document.getElementById('conclusion_div');
+    var conclusionTypeSelector = document.getElementById('conclusion_type');
+    var deductionDiv = document.getElementById('deduction_div');
+
+    if (statusSelector) {
+        statusSelector.addEventListener('change', function() {
+            if (this.value === '2') {
                 conclusionDiv.style.display = 'block';
-            }
-        }
-        if(conclusionTypeSelector ){
-            conclusionTypeSelector.addEventListener('change', function() {
-            var selectedOption = this.options[this.selectedIndex];
-            var discussionName = selectedOption.text;
-
-          if(discussionName === 'Marks Deduction'){
-                // If 'Others' is selected, make the conclusion remark required
-                  document.getElementById('deduction_div').style.display = 'block';
+                conclusionDiv.setAttribute('aria-hidden', 'false');
             } else {
-                // Otherwise, remove the required attribute
-                document.getElementById('deduction_div').style.display = 'none';
+                conclusionDiv.style.display = 'none';
+                conclusionDiv.setAttribute('aria-hidden', 'true');
             }
         });
+
+        // default check on load
+        if (statusSelector.value === '2') {
+            conclusionDiv.style.display = 'block';
         }
+    }
 
-        // Set date and time fields
-        const now = new Date();
-        const date = now.toISOString().split('T')[0];
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const time = `${hours}:${minutes}`;
+    if (conclusionTypeSelector) {
+        conclusionTypeSelector.addEventListener('change', function() {
+            var optionText = this.options[this.selectedIndex].text;
+            if (optionText.trim().toLowerCase() === 'marks deduction') {
+                deductionDiv.style.display = 'block';
+                deductionDiv.setAttribute('aria-hidden', 'false');
+            } else {
+                deductionDiv.style.display = 'none';
+                deductionDiv.setAttribute('aria-hidden', 'true');
+            }
+        });
+    }
 
-        document.getElementById('current_date').value = date;
-        document.getElementById('current_time').value = time;
-       
-    });
+    // set readonly date and time
+    const now = new Date();
+    const date = now.toISOString().split('T')[0];
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const time = `${hours}:${minutes}`;
+    var dateEl = document.getElementById('current_date');
+    var timeEl = document.getElementById('current_time');
+    if (dateEl) dateEl.value = date;
+    if (timeEl) timeEl.value = time;
 
-    </script>
-    @endsection
+    // Ensure messages container is scrolled to bottom
+    var messages = document.getElementById('messages');
+    if (messages) {
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    // Keyboard accessibility: focus new messages container when tabbed to
+});
+</script>
+@endsection
+
+@endsection
