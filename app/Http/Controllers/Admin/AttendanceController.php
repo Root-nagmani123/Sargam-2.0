@@ -20,8 +20,19 @@ class AttendanceController extends Controller
                 $studentPk = auth()->user()->user_id;
                 
                 // Get the first course group mapping for this student
+                $currentDate = Carbon::today();
                 $studentGroupMap = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
                     ->where('student_master_pk', $studentPk)
+                    ->whereHas('groupTypeMasterCourseMasterMap', function ($q) use ($currentDate) {
+                        $q->whereHas('courseGroup', function ($query) use ($currentDate) {
+                            $query->where('active_inactive', 1)
+                                ->where(function ($q) use ($currentDate) {
+                                    // Course is active if end_date is null or end_date >= current date
+                                    $q->whereNull('end_date')
+                                        ->orWhere('end_date', '>=', $currentDate);
+                                });
+                        });
+                    })
                     ->first();
                 
                 if ($studentGroupMap && $studentGroupMap->groupTypeMasterCourseMasterMap) {
@@ -180,7 +191,14 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
         ]) . '" class="btn btn-primary btn-sm">Send Notice</a>';
-        }else{
+        }else if(hasRole('Training') || hasRole('Staff') || hasRole('Admin')){
+             return '<a href="' . route('attendance.mark', [
+            'group_pk' => $row->group_pk,
+            'course_pk' => $row->Programme_pk,
+            'timetable_pk' => $row->timetable_pk
+        ]) . '" class="btn btn-primary btn-sm">Mark Attendance</a>';
+        }
+        else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
