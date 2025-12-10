@@ -10,6 +10,7 @@
 <!-- Core Css -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <link rel="stylesheet" href="{{asset('css/custom.css')}}">
+<link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
 
 <link rel="stylesheet" href="{{asset('admin_assets/libs/datatables.net-bs5/css/dataTables.bootstrap5.min.css')}}">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
