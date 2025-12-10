@@ -505,7 +505,7 @@ input.is-invalid {
                                     <x-input
                                         name="specialization[]"
                                         label="Area of Specialization :"
-                                        placeholder="Area of Specialization"
+                                        placeholder="Area of Specialization blade file"
                                         formLabelClass="form-label"
                                         required="true"
                                         labelRequired="true"
@@ -787,8 +787,8 @@ $(document).ready(function () {
 
         // Validate required fields before submit
         var requiredFields = [
-            'facultytype', 'firstName', 'middlename', 'lastname', 'fullname', 'gender', 'landline', 'mobile',
-            'country', 'state', 'district', 'city', 'email', 'residence_address', 'permanent_address', 'bankname',
+            'facultytype', 'firstName', 'lastname', 'gender', 'landline', 'mobile',
+            'country', 'state', 'district', 'city', 'email', 'bankname',
             'accountnumber', 'ifsccode', 'pannumber', 'joiningdate', 'current_sector'
         ];
         var missing = [];
@@ -871,12 +871,35 @@ $(document).ready(function () {
         });
     }
 });
+
+
 $(document).ready(function () {
 
     let $input = $('#firstName');
     let $suggestionBox = $('#suggestionList');
 
-	  $('#suggestionList').hide();
+	  //$('#suggestionList').hide();
+
+ // Hide suggestions when typing
+$input.on("keydown", function () {
+    setTimeout(function () {
+        $suggestionBox.hide();
+    }, 100);
+});
+
+// Hide suggestions when mouse leaves or user tabs to next input
+$input.on("blur", function () {
+    setTimeout(function () {
+        $suggestionBox.hide();
+    }, 200);
+});
+
+// Hide when mouse leaves suggestion dropdown
+$suggestionBox.on("mouseleave", function () {
+    setTimeout(function () {
+        $suggestionBox.hide();
+    }, 200);
+});
 
 
 
@@ -1128,6 +1151,10 @@ function fillFacultyForm(faculty) {
     let fullname = $(this).data('fullname');
 
     $('#firstName').val(fullname);
+
+
+
+
     $('#suggestionList').hide();
 
     // GET full faculty details
