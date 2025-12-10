@@ -585,6 +585,11 @@
     // Setup for Password and Confirm Password fields
     setupPasswordToggle('togglePassword1', 'passwordInput');
     setupPasswordToggle('togglePassword2', 'confirmPasswordInput');
+    
+    // Set fresh login flag when form is submitted
+    document.querySelector('form').addEventListener('submit', function() {
+        sessionStorage.setItem('fresh_login', 'true');
+    });
     </script>
 </body>
 

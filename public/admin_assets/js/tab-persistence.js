@@ -13,8 +13,22 @@
 
     /**
      * Force activate only the Home tab in the HEADER navigation
+     * BUT: Only on fresh login, not on regular navigation
      */
     function forceActivateHomeTab() {
+        // Check if this is a fresh login or just regular navigation
+        const isFromLogin = sessionStorage.getItem('fresh_login');
+        
+        if (!isFromLogin) {
+            console.log('Not from login - skipping force home activation');
+            // Clear the flag for next time
+            sessionStorage.removeItem('fresh_login');
+            return; // Don't force home tab on regular navigation
+        }
+        
+        console.log('Fresh login detected - activating home tab');
+        sessionStorage.removeItem('fresh_login'); // Clear the flag
+        
         // Wait for DOM to be ready
         setTimeout(function() {
             // Only target the header nav tabs (navbar-nav), not content tabs
@@ -36,7 +50,8 @@
                 console.log('Home tab link activated in header');
             }
 
-            // Now handle the content tabs - activate the main home tab pane
+            // Now handle BOTH content tab systems properly
+            // 1. Body wrapper tabs (main content area)
             const bodyWrapper = document.querySelector('.body-wrapper');
             if (bodyWrapper) {
                 const contentTabPanes = bodyWrapper.querySelectorAll('.tab-pane');
@@ -45,10 +60,29 @@
                 });
 
                 // Activate home content pane
-                const homeContentPane = bodyWrapper.querySelector('#home.tab-pane, .tab-pane#home');
+                const homeContentPane = bodyWrapper.querySelector('#home.tab-pane');
                 if (homeContentPane) {
                     homeContentPane.classList.add('show', 'active');
-                    console.log('Home content pane activated');
+                    console.log('Home content pane activated in body wrapper');
+                }
+            }
+
+            // 2. Sidebar tabs (sidebar menu sections) - ALSO activate home
+            const leftSidebar = document.querySelector('.left-sidebar');
+            if (leftSidebar) {
+                const sidebarTabContent = leftSidebar.querySelector('.tab-content');
+                if (sidebarTabContent) {
+                    const sidebarTabPanes = sidebarTabContent.querySelectorAll('.tab-pane');
+                    sidebarTabPanes.forEach(function(pane) {
+                        pane.classList.remove('show', 'active');
+                    });
+
+                    // Activate home sidebar pane
+                    const homeSidebarPane = sidebarTabContent.querySelector('#home.tab-pane');
+                    if (homeSidebarPane) {
+                        homeSidebarPane.classList.add('show', 'active');
+                        console.log('Home sidebar pane activated');
+                    }
                 }
             }
 
