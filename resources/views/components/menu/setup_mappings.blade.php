@@ -1,22 +1,15 @@
-<nav class="sidebar-nav d-block" id="menu-right-setup-mini-7">
-    <div style="display: flex; flex-direction: column; height: 100%;">
-        <!-- Profile (Fixed) -->
-        <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
-            @include('components.profile')
+<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-setup-mini-7" data-simplebar="init">
+    <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
+        <div class="simplebar-height-auto-observer-wrapper">
+            <div class="simplebar-height-auto-observer"></div>
         </div>
-        
-        <!-- Menu Items (Scrollable) -->
-        <div class="simplebar-scrollable-y" data-simplebar="init" style="flex: 1; overflow: hidden;">
-            <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
-                <div class="simplebar-height-auto-observer-wrapper">
-                    <div class="simplebar-height-auto-observer"></div>
-                </div>
-                <div class="simplebar-mask">
-                    <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
-                        <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
-                            style="height: 100%; overflow: hidden scroll;">
-                            <div class="simplebar-content" style="padding: 0px 0px 20px 24px;">
-                                <ul class="sidebar-menu" id="sidebarnav">
+        <div class="simplebar-mask">
+            <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
+                <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
+                    style="height: 100%; overflow: hidden scroll;">
+                    <div class="simplebar-content" style="padding: 0px 0px 20px 24px;">
+                        <ul class="sidebar-menu" id="sidebarnav">
+                            @include('components.profile')
                           
                             <li class="nav-section" role="listitem">
                             @if(hasRole('Admin') || hasRole('Training'))
