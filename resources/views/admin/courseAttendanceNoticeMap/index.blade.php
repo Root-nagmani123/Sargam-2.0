@@ -366,19 +366,19 @@
 
                                     <!-- Admin Offcanvas -->
                                      @if($memo->type_notice_memo == 'Notice')
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-secondary d-flex align-items-center view-conversation"
+                                    <a
+                                        class="text-primary d-flex align-items-center view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="notice" 
                                         data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
-                                        <i class="bi bi-chat me-1"></i> View {{ $role }}
-                                    </button>
+                                        <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
+                                    </a>
                                     @elseif($memo->type_notice_memo == 'Memo')
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-secondary d-flex align-items-center view-conversation"
+                                    <a
+                                        class="text-primary d-flex align-items-center view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="memo"
                                         data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}">
-                                        <i class="bi bi-chat me-1"></i> View {{ $role }}
-                                    </button>
+                                        <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
+                                    </a>
                                     @else
                                     <span class="text-muted small d-flex align-items-center">
                                         <i class="bi bi-chat-slash me-1"></i> No Conversation
