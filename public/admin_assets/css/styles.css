@@ -20432,6 +20432,7 @@ progress {
 
 .table>thead {
     vertical-align: bottom;
+    background-color: #af2910;
 }
 
 .table-group-divider {
@@ -39491,8 +39492,7 @@ pre.code-view code.hljs {
     margin: 10px 0;
     padding: 0 16px;
     font-size: 14px;
-    color: rgb(51, 51, 51);
-    font-weight: 500;
+    color: var(--bs-muted);
 }
 
 .topbar>.navbar>.navbar-nav>.nav-item>.tab-item>.active {
@@ -48159,6 +48159,8 @@ body .ql-toolbar.ql-snow {
 }
 
 .calendar-container {
+    padding: 30px 30px;
+    background-color: var(--bs-primary);
     border-radius: 8px;
     border: 1px solid #e0e6ed;
 }
