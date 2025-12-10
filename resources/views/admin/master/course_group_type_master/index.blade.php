@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-
+    <x-breadcrum title="Course Group Type"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -29,14 +29,14 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table table-bordered text-nowrap align-middle datatables">
-                            <thead style="background-color: #af2910; color: #ffffff;">
+                        <table class="table">
+                            <thead>
                                 <!-- start row -->
                                 <tr>
                                     <th>S.No.</th>
                                     <th>Type Name</th>
-                                    <th>Action</th>
                                     <th>Status</th>
+                                    <th>Action</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -47,28 +47,6 @@
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $courseGroupType->type_name ?? 'N/A' }}</td>
                                     <td>
-                                        <a href="{{ route('master.course.group.type.edit', 
-                                                    ['id' => encrypt(value: $courseGroupType->pk)]) }}"><i
-                                                class="material-icons menu-icon material-symbols-rounded"
-                                                style="font-size: 24px;">edit</i></a>
-                                        <form
-                                            title="{{ $courseGroupType->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                            action="{{ route('master.course.group.type.delete', 
-                                                    ['id' => encrypt($courseGroupType->pk)]) }}" method="POST"
-                                            class="d-inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <a href="javascript:void(0)" onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }"
-                                                {{ $courseGroupType->active_inactive == 1 ? 'disabled' : '' }}>
-                                                <i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">delete</i>
-                                            </a>
-                                        </form>
-                                    </td>
-                                    <td>
                                         <div class="form-check form-switch d-inline-block">
                                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                                 data-table="course_group_type_master" data-column="active_inactive"
@@ -76,6 +54,51 @@
                                                 {{ $courseGroupType->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <a class="text-dark" href="#" role="button"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="material-icons menu-icon">more_horiz</i>
+                                            </a>
+
+                                            <ul class="dropdown-menu dropdown-menu-end">
+
+                                                <!-- Edit -->
+                                                <li>
+                                                    <a class="dropdown-item"
+                                                        href="{{ route('master.course.group.type.edit', ['id' => encrypt($courseGroupType->pk)]) }}">
+                                                        <i class="material-icons material-symbols-rounded me-2"
+                                                            style="font-size: 18px;">edit</i>
+                                                        Edit
+                                                    </a>
+                                                </li>
+
+                                                <!-- Delete -->
+                                                <li>
+                                                    <form
+                                                        action="{{ route('master.course.group.type.delete', ['id' => encrypt($courseGroupType->pk)]) }}"
+                                                        method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+
+                                                        <button class="dropdown-item text-danger"
+                                                            {{ $courseGroupType->active_inactive == 1 ? 'disabled' : '' }}
+                                                            onclick="event.preventDefault();
+                            if(this.hasAttribute('disabled')) return;
+                            if(confirm('Are you sure you want to delete this record?')) {
+                                this.closest('form').submit();
+                            }">
+                                                            <i class="material-icons material-symbols-rounded me-2"
+                                                                style="font-size: 18px;">delete</i>
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                </li>
+
+                                            </ul>
+                                        </div>
+                                    </td>
+
                                 </tr>
                                 @endforeach
                                 @else

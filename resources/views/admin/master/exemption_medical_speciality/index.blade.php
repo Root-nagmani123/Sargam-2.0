@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-
+    <x-breadcrum title="Exemption Medical Speciality Master"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -25,8 +25,8 @@
                     <div class="table-responsive">
 
                         <div class="table-responsive">
-                            <table class="table table-bordered" style="width: 100%;">
-                                <thead style="background-color: #af2910;">
+                            <table class="table">
+                                <thead>
                                     <tr>
                                         <th class="col">#</th>
                                         <th class="col">Speciality Name</th>
@@ -50,29 +50,56 @@
                                                     {{ $speciality->active_inactive == 1 ? 'checked' : '' }}>
                                             </div>
                                         </td>
-
                                         <td>
-                                            <a href="{{ route('master.exemption.medical.speciality.edit', 
-                                                    ['id' => encrypt(value: $speciality->pk)]) }}"><i
-                                                class="material-icons menu-icon material-symbols-rounded"
-                                                style="font-size: 24px;">edit</i></a>
-                                            <form
-                                                title="{{ $speciality->active_inactive == 1 ? 'Cannot delete active course group type' : 'Delete' }}"
-                                                action="{{ route('master.exemption.medical.speciality.delete', 
-                                                    ['id' => encrypt($speciality->pk)]) }}" method="POST"
-                                                class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-                                                <a href="javascript:void(0)" onclick="event.preventDefault(); 
-                                                        if(confirm('Are you sure you want to delete this record?')) {
-                                                            this.closest('form').submit();
-                                                        }" {{ $speciality->active_inactive == 1 ? 'disabled' : '' }}>
-                                                    <i
-                                                class="material-icons menu-icon material-symbols-rounded"
-                                                style="font-size: 24px;">delete</i>
+                                            <div class="dropdown">
+                                                <a
+                                                    data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="material-icons menu-icon">more_horiz</i>
                                                 </a>
-                                            </form>
+
+                                                <ul class="dropdown-menu dropdown-menu-end">
+
+                                                    <!-- Edit -->
+                                                    <li>
+                                                        <a class="dropdown-item"
+                                                            href="{{ route('master.exemption.medical.speciality.edit', ['id' => encrypt($speciality->pk)]) }}">
+                                                            <i class="material-icons material-symbols-rounded me-2"
+                                                                style="font-size: 18px;">edit</i>
+                                                            Edit
+                                                        </a>
+                                                    </li>
+
+                                                    <!-- Delete -->
+                                                    <li>
+                                                        @if($speciality->active_inactive == 1)
+                                                        <button class="dropdown-item text-muted" disabled
+                                                            title="Cannot delete active record">
+                                                            <i class="material-icons material-symbols-rounded me-2"
+                                                                style="font-size: 18px;">delete</i>
+                                                            Delete (Disabled)
+                                                        </button>
+                                                        @else
+                                                        <form action="{{ route('master.exemption.medical.speciality.delete', 
+                                        ['id' => encrypt($speciality->pk)]) }}" method="POST" class="d-inline">
+                                                            @csrf
+                                                            @method('DELETE')
+
+                                                            <button class="dropdown-item text-danger" onclick="event.preventDefault();
+                                if(confirm('Are you sure you want to delete this record?')) {
+                                    this.closest('form').submit();
+                                }">
+                                                                <i class="material-icons material-symbols-rounded me-2"
+                                                                    style="font-size: 18px;">delete</i>
+                                                                Delete
+                                                            </button>
+                                                        </form>
+                                                        @endif
+                                                    </li>
+
+                                                </ul>
+                                            </div>
                                         </td>
+
                                     </tr>
                                     @empty
                                     <tr>
@@ -86,7 +113,8 @@
                         <!-- Pagination -->
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <div>
-                                Showing {{ $specialities->firstItem() ?? 0 }} to {{ $specialities->lastItem() ?? 0 }} of {{ $specialities->total() }} entries
+                                Showing {{ $specialities->firstItem() ?? 0 }} to {{ $specialities->lastItem() ?? 0 }} of
+                                {{ $specialities->total() }} entries
                             </div>
                             <div>
                                 {{ $specialities->links('pagination::bootstrap-5') }}

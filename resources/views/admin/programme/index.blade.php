@@ -47,7 +47,7 @@
 }
 </style>
 <div class="container-fluid">
-    <x-breadcrum title="Course module" />
+    <x-breadcrum title="Course Master" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
