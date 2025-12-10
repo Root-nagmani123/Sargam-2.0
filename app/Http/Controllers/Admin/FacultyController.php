@@ -463,7 +463,7 @@ class FacultyController extends Controller
             'facultyTypeMaster:pk,faculty_type_name',
             'facultyExpertiseMap.facultyExpertise:pk,expertise_name',
             'facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
-            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
+            'facultyExperienceMap:pk,Years_Of_Experience,Specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
             'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path'
         ])->find(decrypt($id));
 
@@ -557,7 +557,7 @@ class FacultyController extends Controller
             'districtMaster:pk,district_name',
             'facultyTypeMaster:pk,faculty_type_name',
             'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path',
-            'facultyExperienceMap:pk,Years_Of_Experience,specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
+            'facultyExperienceMap:pk,Years_Of_Experience,Specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
             'facultyExpertiseMap.facultyExpertise:pk,expertise_name','facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
 
 				])->find($id);

@@ -505,7 +505,7 @@ input.is-invalid {
                                     <x-input
                                         name="specialization[]"
                                         label="Area of Specialization :"
-                                        placeholder="Area of Specialization"
+                                        placeholder="Area of Specialization blade file"
                                         formLabelClass="form-label"
                                         required="true"
                                         labelRequired="true"
@@ -787,8 +787,8 @@ $(document).ready(function () {
 
         // Validate required fields before submit
         var requiredFields = [
-            'facultytype', 'firstName', 'middlename', 'lastname', 'fullname', 'gender', 'landline', 'mobile',
-            'country', 'state', 'district', 'city', 'email', 'residence_address', 'permanent_address', 'bankname',
+            'facultytype', 'firstName', 'lastname', 'gender', 'landline', 'mobile',
+            'country', 'state', 'district', 'city', 'email', 'bankname',
             'accountnumber', 'ifsccode', 'pannumber', 'joiningdate', 'current_sector'
         ];
         var missing = [];
