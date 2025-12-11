@@ -6,9 +6,8 @@
          class="img-fluid rounded-circle w-100 h-100 object-fit-cover shadow-sm">
 </div>
  
-
-                <h5 class="fw-bold mb-0">{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</h5>
-                <p class="text-primary small mb-0 mt-2 fw-bold"  >
+               <h5 class="fw-bold mb-0 text-dark">{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</h5>
+                <p class="text-secondary small mb-0 text-dark"><p class="text-secondary small mb-0 text-dark">
             
                     @php
                         $roles = session('user_roles', []);
@@ -28,6 +27,7 @@
                     {{ !empty($roles) ? implode(', ', $roles) : 'No role assigned' }}
 
                     </p>
-                    <a href="" class="text-danger fw-semibold">Edit Profile</a> | <a href="" class="text-danger fw-semibold">Change Password</a>
+
+                   <a href="" class="text-danger fw-bold">Edit Profile</a> | <a href="#" class="text-danger fw-bold">Change Password</a>
             </div>
             <hr class="my-2">

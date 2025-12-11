@@ -10,11 +10,12 @@
                             id="headerCollapse" aria-label="Toggle sidebar navigation"
                             aria-expanded="true" aria-controls="sidebarContent" data-bs-toggle="tooltip"
                             data-bs-placement="right">
-                            <i class="material-icons material-symbols-rounded text-white transition-all"
-                                style="font-size: 24px; transition: transform 0.3s ease;"
-                                aria-hidden="true">
-                                keyboard_arrow_left
-                            </i>
+                             <!-- Improved Icon with Animation Class -->
+                                            <i class="material-icons material-symbols-rounded text-white transition-all"
+                                                style="font-size: 30px; transition: transform 0.3s ease;"
+                                                aria-hidden="true">
+                                                keyboard_double_arrow_left
+                                            </i>
                             <span class="visually-hidden">Toggle sidebar navigation</span>
                         </button>
                         <h2 class="section-title text-white m-0"
