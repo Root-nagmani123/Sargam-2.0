@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\FacultyRequest;
 use App\Http\Requests\FacultyUpdateRequest;
-use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificationMap, FacultyExperienceMap, FacultyExpertiseMaster, FacultyExpertiseMap, FacultyTypeMaster};
+use App\Models\{Country, State, City, District, FacultyMaster, FacultyQualificationMap, FacultyExperienceMap, FacultyExpertiseMaster, FacultyExpertiseMap, FacultyTypeMaster, MDOEscotDutyMap, StudentMaster, MDODutyTypeMaster};
 use App\DataTables\FacultyDataTable;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
@@ -224,6 +224,42 @@ class FacultyController extends Controller
         if (!$faculty) {
             return redirect()->route('faculty.index')->with('error', 'Faculty not found');
         }
+        
+        // Check if user is a student and verify authorization
+        $user = Auth::user();
+        $userCategory = DB::table('user_credentials')
+            ->where('pk', $user->pk)
+            ->value('user_category');
+        
+        // If user is a student, check if they have access to edit this faculty
+        if ($userCategory === 'S') {
+            $userId = DB::table('user_credentials')
+                ->where('pk', $user->pk)
+                ->where('user_category', 'S')
+                ->value('user_id');
+            
+            if (!$userId) {
+                return redirect()->back()->with('error', 'Access Denied. Student record not found.');
+            }
+            
+            // Get escort duty type ID
+            $escortDutyTypeId = MDOEscotDutyMap::getMdoDutyTypes()['escort'] ?? null;
+            
+            if (!$escortDutyTypeId) {
+                return redirect()->back()->with('error', 'Access Denied. Escort duty type not found.');
+            }
+            
+            // Check if this faculty is assigned to the student in an escort duty
+            $hasAccess = MDOEscotDutyMap::where('selected_student_list', $userId)
+                ->where('faculty_master_pk', $faculty->pk)
+                ->where('mdo_duty_type_master_pk', $escortDutyTypeId)
+                ->exists();
+            
+            if (!$hasAccess) {
+                return redirect()->back()->with('error', 'Access Denied. You can only edit faculty assigned to you in escort duties.');
+            }
+        }
+        
         $faculties  = FacultyExpertiseMaster::where('active_inactive', 1)->pluck('expertise_name', 'pk')->toArray();
         $country    = Country::pluck('country_name', 'pk')->toArray();
         $state      = State::pluck('state_name', 'pk')->toArray();
