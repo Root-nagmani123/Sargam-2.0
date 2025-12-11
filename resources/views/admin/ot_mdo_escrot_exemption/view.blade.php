@@ -154,8 +154,9 @@
                                 </div>
 
                                 <!-- Right: Accessible Edit Button -->
+                                @if(strtolower($duty['duty_type']) == 'escort' && !empty($duty['faculty_master_pk']))
                                 <div class="col-md-6 text-md-end mt-2 mt-md-0">
-                                    <a href="#"
+                                    <a href="{{ route('faculty.edit', ['id' => encrypt($duty['faculty_master_pk'])]) }}"
                                         class="btn btn-outline-primary btn-sm px-3 py-2"
                                         style="border-radius: 8px; border-color:#004a93; color:#004a93;"
                                         aria-label="Edit Faculty Details">
@@ -166,6 +167,7 @@
                                         <span class="fw-semibold">Edit Faculty Details</span>
                                     </a>
                                 </div>
+                                @endif
 
                             </div>
 

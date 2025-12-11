@@ -88,6 +88,7 @@ class OTMDOEscrotExemptionController extends Controller
                     'course' => $course->course_name,
                     'duty_type' => $dutyTypeName,
                     'faculty' => $facultyName,
+                    'faculty_master_pk' => $dutyMap->faculty_master_pk,
                     'description' => $dutyMap->Remark ?? 'N/A',
                     'time' => ($dutyMap->Time_from ?? 'N/A') . ' - ' . ($dutyMap->Time_to ?? 'N/A'),
                 ];
