@@ -30,4 +30,8 @@ class NoticeNotification extends Model
     {
         return $this->belongsTo(\App\Models\UserCredential::class, 'created_by', 'pk');
     }
+    public function course()
+    {
+        return $this->belongsTo(\App\Models\CourseMaster::class, 'course_master_pk', 'pk');
+    }
 }

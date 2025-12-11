@@ -1040,6 +1040,7 @@ class CalendarManager {
         // Dynamic field dependencies
         document.getElementById('Course_name').addEventListener('change', () => this.loadGroupTypes());
         document.getElementById('subject_module').addEventListener('change', () => this.loadSubjectNames());
+        document.getElementById('subject_name').addEventListener('change', () => this.loadSubjectNames_data());
         document.getElementById('faculty').addEventListener('change', () => this.updateFacultyType());
         document.getElementById('faculty_type').addEventListener('change', () => this.updateCheckboxState());
         
@@ -1193,8 +1194,23 @@ class CalendarManager {
             console.error('Error loading subject names:', error);
         }
     }
+    async loadSubjectNames_data() {
+        const moduleId = document.getElementById('subject_name').value;
+        if (!moduleId) return;
+        
+        try {
+            const response = await fetch(`${CalendarConfig.api.subjectNames}?data_id=${moduleId}`);
+            const data = await response.json();
+            
+            this.populateSubjectNames(data);
+        } catch (error) {
+            console.error('Error loading subject names:', error);
+        }
+    }
+    
 
     populateSubjectNames(subjects) {
+        console.log('Subjects:', subjects);
         const select = document.getElementById('subject_name');
         select.innerHTML = '<option value="">Select Subject Name</option>';
         
@@ -1369,7 +1385,7 @@ class CalendarManager {
         
         // Required fields validation
         const requiredFields = [
-            'Course_name', 'subject_module', 'subject_name', 'topic',
+            'Course_name', 'subject_module','group_type','type_names', 'subject_name', 'topic',
             'faculty', 'faculty_type', 'vanue', 'start_datetime'
         ];
         
@@ -1866,25 +1882,5 @@ liveRegion.setAttribute('aria-live', 'polite');
 liveRegion.setAttribute('aria-atomic', 'true');
 liveRegion.className = 'visually-hidden';
 document.body.appendChild(liveRegion);
-
-document.addEventListener('DOMContentLoaded', function () {
-    new Choices('#faculty', {
-        searchEnabled: true,
-        removeItemButton: false,
-        itemSelectText: '',
-        placeholder: true,
-        searchPlaceholderValue: 'Search...',
-        shouldSort: false
-    });
-    new Choices('#vanue', {
-        searchEnabled: true,
-        removeItemButton: false,
-        itemSelectText: '',
-        placeholder: true,
-        searchPlaceholderValue: 'Search...',
-        shouldSort: false
-    });
-});
 </script>
-
 @endsection
