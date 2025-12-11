@@ -14,11 +14,33 @@ use Auth;
 class NoticeNotificationController extends Controller
 {
     // Notice List Page
-    public function index()
-    {
-        $notices = Notice::orderBy('pk','DESC')->paginate(10);
-        return view('admin.NoticeNotification.index', compact('notices'));
+   public function index(Request $request)
+{
+    $types = ['Course notice','Office order','Personal','Office notice','Service related'];
+    $query = Notice::with(['course','user'])->orderBy('pk','DESC');
+
+    // 🔍 Filters
+    if ($request->notice_type) {
+        $query->where('notice_type', $request->notice_type);
     }
+
+    if ($request->course_id) {
+        $query->where('course_id', $request->course_id);
+    }
+
+    if ($request->status != "") {
+        $query->where('active_inactive', $request->status);
+    }
+
+    // Pagination with filters
+    $notices = $query->paginate(10)->appends($request->all());
+
+    // Courses dropdown
+    $courses = CourseMaster::select('pk','course_name')->where('active_inactive', 1)->where('end_date', '>=', now())->get();
+
+    return view('admin.NoticeNotification.index', compact('notices','courses','types'));
+}
+
 
     // Create Page
     public function create()
