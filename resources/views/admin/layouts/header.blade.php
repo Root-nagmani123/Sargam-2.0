@@ -92,6 +92,17 @@
     display: contents !important;
 }
 
+/* Notification Badge */
+.notification-badge {
+    font-size: 10px;
+    padding: 2px 6px;
+    min-width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 </style>
 
 <header class="topbar">
@@ -227,6 +238,69 @@
 
                 <!-- Right Side Actions - Enhanced -->
                 <div class="d-flex align-items-center ms-auto gap-4" style="margin-right: 56px;">
+                    <!-- Notification Icon -->
+                    <div class="dropdown position-relative">
+                        <button type="button"
+                            class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
+                            id="notificationDropdown"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            aria-label="Notifications"
+                            data-bs-placement="bottom"
+                            title="Notifications">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 22px; color: #475569;"
+                                aria-hidden="true">notifications</i>
+                            @php
+                                $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+                            @endphp
+                            @if($unreadCount > 0)
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;">
+                                    {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                                </span>
+                            @endif
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-xl p-2" 
+                            style="min-width: 350px; max-height: 400px; overflow-y: auto;"
+                            aria-labelledby="notificationDropdown">
+                            <li class="dropdown-header d-flex justify-content-between align-items-center px-3 py-2">
+                                <span class="fw-semibold">Notifications</span>
+                                @if($unreadCount > 0)
+                                    <button type="button" class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">
+                                        Mark all as read
+                                    </button>
+                                @endif
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <div id="notificationList">
+                                @php
+                                    $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, true);
+                                @endphp
+                                @if($notifications->count() > 0)
+                                    @foreach($notifications as $notification)
+                                        <li>
+                                            <a class="dropdown-item px-3 py-2 rounded-lg {{ $notification->is_read ? '' : 'bg-light' }}" 
+                                               href="javascript:void(0)" 
+                                               onclick="markAsRead({{ $notification->pk }})">
+                                                <div class="d-flex flex-column">
+                                                    <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}</div>
+                                                    <div class="text-muted small mt-1">{{ Str::limit($notification->message ?? '', 50) }}</div>
+                                                    <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
+                                                        {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                @else
+                                    <li class="px-3 py-4 text-center text-muted">
+                                        <i class="material-icons material-symbols-rounded" style="font-size: 48px; opacity: 0.3;">notifications_none</i>
+                                        <div class="mt-2">No notifications</div>
+                                    </li>
+                                @endif
+                            </div>
+                        </ul>
+                    </div>
+
                     <!-- Logout Button - Enhanced -->
                     <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
                         @csrf
@@ -329,6 +403,41 @@
                     });
                 });
             });
+
+            // Notification functions
+            function markAsRead(notificationId) {
+                fetch('/admin/notifications/mark-read/' + notificationId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+
+            function markAllAsRead() {
+                fetch('/admin/notifications/mark-all-read', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
             </script>
         </nav>
     </div>

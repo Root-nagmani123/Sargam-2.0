@@ -146,5 +146,17 @@ if (!function_exists('get_notice_notification_by_role')) {
 
 }
 
+/**
+ * Get NotificationService instance
+ * 
+ * @return \App\Services\NotificationService
+ */
+if (!function_exists('notification')) {
+    function notification()
+    {
+        return app(\App\Services\NotificationService::class);
+    }
+}
+
 
 
