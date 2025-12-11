@@ -400,7 +400,7 @@ input.is-invalid {
                                     <x-input
                                         name="degree[]"
                                         label="Degree :"
-                                        placeholder="Degree dk blade"
+                                        placeholder="Degree Name"
                                         formLabelClass="form-label"
                                         required="true"
                                         helperSmallText="Bachelors, Masters, PhD"
@@ -880,27 +880,26 @@ $(document).ready(function () {
 
 	  //$('#suggestionList').hide();
 
- // Hide suggestions when typing
-$input.on("keydown", function () {
-    setTimeout(function () {
-        $suggestionBox.hide();
-    }, 100);
-});
+    // Hide suggestions when typing
+        $input.on("keydown", function () {
+            setTimeout(function () {
+                $suggestionBox.hide();
+            }, 100);
+        });
 
-// Hide suggestions when mouse leaves or user tabs to next input
-$input.on("blur", function () {
-    setTimeout(function () {
-        $suggestionBox.hide();
-    }, 200);
-});
-
-// Hide when mouse leaves suggestion dropdown
-$suggestionBox.on("mouseleave", function () {
+    // Hide suggestions when mouse leaves or user tabs to next input
+    $input.on("blur", function () {
     setTimeout(function () {
         $suggestionBox.hide();
     }, 200);
-});
+    });
 
+    // Hide when mouse leaves suggestion dropdown
+    $suggestionBox.on("mouseleave", function () {
+    setTimeout(function () {
+        $suggestionBox.hide();
+    }, 200);
+    });
 
 
     // =============================
@@ -1001,21 +1000,7 @@ $suggestionBox.on("mouseleave", function () {
 
 function fillFacultyForm(faculty) {
 
-    // Loop through all keys returned from server
-   /* Object.keys(faculty).forEach(function (key) {
-
-        // Select input/select/textarea using ID
-        let field = $('.facultyForm #' + key);
-
-        // If field exists, fill value
-        if (field.length > 0) {
-            field.val(faculty[key]).trigger("change");
-        }
-    });*/
-
-
-
-			//Personal Information
+    		//Personal Information
 
 			// Auto-fill name
 
@@ -1035,7 +1020,7 @@ function fillFacultyForm(faculty) {
 
             $("select[name='gender']").val(faculty.gender);
 
-         // --- COUNTRY ---
+// --- COUNTRY ---
 
     $("select[name='country']").val(faculty.country_master.pk);
 
@@ -1057,9 +1042,6 @@ function fillFacultyForm(faculty) {
 
 
 	$("input[name='permanent_address']").val(faculty.Permanent_Address);
-
-
-
 
 
 	if (faculty.photo_uplode_path) {
@@ -1151,9 +1133,6 @@ function fillFacultyForm(faculty) {
     let fullname = $(this).data('fullname');
 
     $('#firstName').val(fullname);
-
-
-
 
     $('#suggestionList').hide();
 

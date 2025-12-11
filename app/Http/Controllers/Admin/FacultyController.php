@@ -298,7 +298,7 @@ class FacultyController extends Controller
                 'country_master_pk' => $request->country,
                 'state_master_pk'   => $request->state,
                 'state_district_mapping_pk' => $request->district,
-                // 'city_master_pk'        => $request->city,
+                'city_master_pk'        => $request->city,
                 'email_id'              => $request->email,
                 'alternate_email_id'    => $request->alternativeEmail,
                 'residence_address'     => $request->residence_address,
@@ -357,6 +357,7 @@ class FacultyController extends Controller
             if (!$faculty) {
                 return redirect()->route('faculty.index')->with('error', 'Faculty not found');
             }
+            print_r($facultyDetails);die;
             $faculty->update($facultyDetails);
 
             $this->generateFacultyCode($faculty, $request->facultyType);
@@ -399,7 +400,7 @@ class FacultyController extends Controller
                             $degreeDetails[$key]['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
                         }
                     }
-
+//print_r($degreeDetails); die;
                     FacultyQualificationMap::insert($degreeDetails);
                 }
 
@@ -422,7 +423,7 @@ class FacultyController extends Controller
                             'faculty_master_pk' => $faculty->pk
                         ];
                     }
-
+//print_r($experienceDetails); die;
                     FacultyExperienceMap::insert($experienceDetails);
                 }
 
@@ -446,7 +447,7 @@ class FacultyController extends Controller
                             'updated_date' => now(),
                         ];
                     }
-
+//print_r($expertiseDetails); die;
                     FacultyExpertiseMap::insert($expertiseDetails);
                 }
             }

@@ -23,7 +23,7 @@ function education_fields() {
         '<div class="col-3">' +
         '<label for="degree[]" class="form-label">Degree :</label>' +
         '<div class="mb-3">' +
-        '<input type="text" class="form-control" name="degree[]" placeholder="Degree Name dk js">' +
+        '<input type="text" class="form-control" name="degree[]" placeholder="Degree Name">' +
         '<small>Bachelors, Masters, PhD</small>' +
         '</div></div>' +
 
