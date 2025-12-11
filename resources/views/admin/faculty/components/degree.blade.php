@@ -16,7 +16,7 @@
                 <div class="col-3">
                     <x-input name="university_institution_name[]" label="University/Institution Name :"
                         placeholder="University/Institution Name" formLabelClass="form-label"
-                        value="{{ $qualification->university_institution_name }}" />
+                        value="{{ $qualification->University_Institution_Name }}" />
                 </div>
 
                 <div class="col-3">
