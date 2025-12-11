@@ -29,9 +29,9 @@
 
                                             <!-- Improved Icon with Animation Class -->
                                             <i class="material-icons material-symbols-rounded text-white transition-all"
-                                                style="font-size: 24px; transition: transform 0.3s ease;"
+                                                style="font-size: 30px; transition: transform 0.3s ease;"
                                                 aria-hidden="true">
-                                                keyboard_arrow_left
+                                                keyboard_double_arrow_left
                                             </i>
 
                                             <!-- Screen Reader Only Text -->

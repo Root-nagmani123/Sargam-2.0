@@ -9,16 +9,39 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 0px 0px 20px 24px;">
                         <ul class="sidebar-menu" id="sidebarnav">
+<<<<<<< HEAD
                           
+=======
+>>>>>>> 0da5e950 (ui fixes)
                             <li class="nav-section" role="listitem">
-                            @if(hasRole('Admin') || hasRole('Training'))
+                                @if(hasRole('Admin') || hasRole('Training'))
 
                                 <!-- Main Container with Improved Layout -->
                                 <div class="d-flex align-items-center justify-content-between w-100">
 
                                     <!-- Left Side: Collapse Button with Enhanced Accessibility -->
                                     <div class="d-flex align-items-center">
+<<<<<<< HEAD
                                         
+=======
+                                        <!-- Collapse Button with ARIA labels and better focus management -->
+                                        <button
+                                            class="nav-link sidebartoggler d-flex align-items-center justify-content-center p-2 me-2"
+                                            id="headerCollapse" aria-label="Toggle sidebar navigation"
+                                            aria-expanded="true" aria-controls="sidebarContent" data-bs-toggle="tooltip"
+                                            data-bs-placement="right">
+
+                                            <!-- Improved Icon with Animation Class -->
+                                            <i class="material-icons material-symbols-rounded text-white transition-all"
+                                                style="font-size: 30px; transition: transform 0.3s ease;"
+                                                aria-hidden="true">
+                                                keyboard_double_arrow_left
+                                            </i>
+
+                                            <!-- Screen Reader Only Text -->
+                                            <span class="visually-hidden">Toggle sidebar navigation</span>
+                                        </button>
+>>>>>>> 0da5e950 (ui fixes)
 
                                         <!-- Section Title with Proper Semantic Markup -->
                                         <h2 class="section-title text-white m-0"
@@ -41,7 +64,7 @@
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <div class="collapse show" id="generalMasterMenu">
+                            <ul class="collapse show" id="generalMasterMenu">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('Venue-Master.index') }}">
                                         <span class="hide-menu">Venue
@@ -58,7 +81,7 @@
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('section.index') }}">
                                         <span class="hide-menu">Section</span>
                                     </a></li>
-                            </div>
+                            </ul>
 
                             <!-- HOSTEL -->
                             <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
@@ -138,8 +161,8 @@
                                     </a></li>
                             </div>
                         </ul>
-                    @endif
-                     
+                        @endif
+
                     </div>
                 </div>
             </div>

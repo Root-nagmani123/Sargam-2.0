@@ -11,7 +11,7 @@
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer"></div>
                             </div>
-                           
+
                             <div class="simplebar-mask">
                                 <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
@@ -21,16 +21,16 @@
                             @include('components.profile')
                              <!-- Collapse Button with ARIA labels and better focus management -->
                              <div class="brand-logo d-flex align-items-center justify-content-end" style="margin-right: 0.5rem;">
-    <a class="nav-link sidebartoggler" 
-       id="headerCollapse" 
+    <a class="nav-link sidebartoggler"
+       id="headerCollapse"
        href="javascript:void(0)"
-       data-bs-toggle="tooltip" 
+       data-bs-toggle="tooltip"
        data-bs-custom-class="custom-tooltip"
-       data-bs-placement="right" 
+       data-bs-placement="right"
        data-bs-title="Collapse/Expand Menu Bar"
        aria-label="Toggle menu">
-       
-        <i id="sidebarToggleIcon" 
+
+        <i id="sidebarToggleIcon"
            class="material-icons menu-icon material-symbols-rounded text-primary"
            style="font-size: 40px;">
             keyboard_double_arrow_left
@@ -38,6 +38,8 @@
 
     </a>
 </div>
+=======
+@include('components.profile')
                                             <li class="mini-nav-item" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -159,7 +161,7 @@
                                     </div>
                                 </div>
                             </div>
-                          
+
                             <div class="simplebar-placeholder" style="width: 80px; height: 537px;"></div>
                         </div>
                         <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
@@ -223,7 +225,7 @@ function collapseAllMenus() {
         } else {
             collapse.classList.remove('show');
         }
-        
+
         // Update the toggle button arrow
         const collapseId = collapse.id;
         const toggleBtn = document.querySelector(`[href="#${collapseId}"], [data-bs-target="#${collapseId}"]`);
@@ -242,14 +244,14 @@ function collapseAllMenus() {
 document.addEventListener('DOMContentLoaded', function() {
     const setupTab = document.getElementById('tab-setup');
     if (!setupTab) return;
-    
+
     // Add accordion behavior to collapsible menus
     const collapseElements = setupTab.querySelectorAll('.sidebar-item [data-bs-toggle="collapse"]');
     collapseElements.forEach(trigger => {
         trigger.addEventListener('click', function(e) {
             const targetId = this.getAttribute('href') || this.getAttribute('data-bs-target');
             const targetCollapse = document.querySelector(targetId);
-            
+
             // Find all collapse elements in the same parent container
             const parentNav = this.closest('.sidebar-nav');
             if (parentNav) {
@@ -263,7 +265,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             }
-            
+
             // Rotate arrow icon
             const icon = this.querySelector('.material-icons');
             if (icon) {
