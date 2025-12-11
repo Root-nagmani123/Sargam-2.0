@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <div class="card">
         <div class="card-header">
-            Notice notification List
+           <h4 class="card-title mb-0"> Notice notification List</h4>
             <a href="{{ route('admin.notice.create') }}" class="btn btn-success btn-sm float-end">Add Notice</a>
         </div>
         @if ($errors->any())
@@ -27,6 +27,53 @@
 
         <div id="status-msg"></div>
 
+<form method="GET" action="{{ route('admin.notice.index') }}" class="mb-3">
+
+    <div class="row">
+
+        <div class="col-md-3">
+            <label>Notice Type</label>
+            <select name="notice_type" class="form-control" onchange="this.form.submit()">
+                <option value="">All</option>
+                @foreach($types as $type)
+                    <option value="{{ $type }}" {{ request('notice_type') == $type ? 'selected' : '' }}>
+                        {{ $type }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label>Course</label>
+            <select name="course_id" class="form-control" onchange="this.form.submit()">
+                <option value="">All</option>
+                @foreach($courses as $c)
+                    <option value="{{ $c->id }}" {{ request('course_id') == $c->id ? 'selected' : '' }}>
+                        {{ $c->course_name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label>Status</label>
+            <select name="status" class="form-control" onchange="this.form.submit()">
+                <option value="">All</option>
+                <option value="1" {{ request('status') == "1" ? 'selected' : '' }}>Active</option>
+                <option value="0" {{ request('status') == "0" ? 'selected' : '' }}>Inactive</option>
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label>&nbsp;</label>
+            <a href="{{ route('admin.notice.index') }}" class="btn btn-secondary form-control">
+                Reset
+            </a>
+        </div>
+
+    </div>
+
+</form>
 
         <div class="card-body">
 
@@ -36,6 +83,7 @@
                         <th>S.N.</th>
                         <th>Notice Title</th>
                         <th>Notice Type</th>
+                        <th>Course Name</th>
                         <th>Created By</th>
                         <th>Created Date</th>
                         <th>Display Date</th>
@@ -53,6 +101,7 @@
                         <td>{{ $index + $notices->firstItem() }}</td>
                         <td>{{ $n->notice_title }}</td>
                         <td>{{ $n->notice_type }}</td>
+                        <td>{{ $n->course->course_name ?? 'N/A' }}</td>
                         <td>{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
                         <td>{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}</td>
 

@@ -9,7 +9,7 @@
     <x-session_message />
 
     <div class="card">
-        <div class="card-header">Edit Notice notification</div>
+        <h4 class="card-title mb-0">Edit Notice notification</h4>
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul>
