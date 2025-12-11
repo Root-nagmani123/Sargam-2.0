@@ -1,22 +1,15 @@
-<nav class="sidebar-nav" id="menu-right-setup-mini-5">
-    <div style="display: flex; flex-direction: column; height: 100%;">
-        <!-- Profile (Fixed) -->
-        <div style="padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); flex-shrink: 0;">
-            @include('components.profile')
+<nav class="sidebar-nav simplebar-scrollable-y" id="menu-right-setup-mini-5" data-simplebar="init">
+    <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
+        <div class="simplebar-height-auto-observer-wrapper">
+            <div class="simplebar-height-auto-observer"></div>
         </div>
-        
-        <!-- Menu Items (Scrollable) -->
-        <div class="simplebar-scrollable-y" data-simplebar="init" style="flex: 1; overflow: hidden;">
-            <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
-                <div class="simplebar-height-auto-observer-wrapper">
-                    <div class="simplebar-height-auto-observer"></div>
-                </div>
-                <div class="simplebar-mask">
-                    <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
-                        <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
-                            style="height: 100%; overflow: hidden scroll;">
-                            <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
-                                <ul class="sidebar-menu" id="sidebarnav">
+        <div class="simplebar-mask">
+            <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
+                <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
+                    style="height: 100%; overflow: hidden scroll;">
+                    <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
+                        <ul class="sidebar-menu" id="sidebarnav">
+                            @include('components.profile')
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
@@ -54,6 +47,15 @@
                                     </div>
 
                                     <!-- Right Side: Collapse All Button -->
+                                    <button 
+                                        class="btn btn-sm btn-link text-white p-1 collapse-all-btn" 
+                                        onclick="collapseAllMenus()"
+                                        data-bs-toggle="tooltip"
+                                        data-bs-placement="left"
+                                        title="Collapse All Menus"
+                                        style="font-size: 12px; text-decoration: none;">
+                                        <i class="material-icons material-symbols-rounded" style="font-size: 20px;">unfold_less</i>
+                                    </button>
                                 </div>
                             </li>
 
@@ -70,10 +72,6 @@
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('memo.notice.management.index') }}">
                                     <span class="hide-menu">Send Memo / Notice</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('send.notice.management.index') }}">
-                                    <span class="hide-menu">Send Only Notice</span>
                                 </a></li>
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('admin.memo-notice.index') }}">
@@ -93,17 +91,18 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
-                                <ul class="collapse list-unstyled ps-3" id="userFeedbackCollapse">
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('feedback.get.feedbackList') }}">
-                                            <span class="hide-menu">Feedback</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('feedback.get.studentFeedback') }}">
-                                            <span class="hide-menu">Student Feedback</span>
-                                        </a></li>
-                                </ul>
                             </li>
+                            <ul class="collapse list-unstyled ps-3" id="userFeedbackCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.feedbackList') }}">
+                                        <span class="hide-menu">Feedback</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.studentFeedback') }}">
+                                        <span class="hide-menu">Student Feedback</span>
+                                    </a></li>
+
+                            </ul>
                             <li class="sidebar-item" style="background: #4077ad;
                                     border-radius: 30px 0px 0px 30px;
                                     width: 100%;
@@ -116,33 +115,31 @@
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
-                                <ul class="collapse list-unstyled ps-3" id="subjectCollapse">
-                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
-                                            <span class="hide-menu">Subject Master</span>
-                                        </a></li>
-                                    <li class="sidebar-item"><a class="sidebar-link"
-                                            href="{{ route('subject-module.index') }}">
-                                            <span class="hide-menu">Subject Module Master</span>
-                                        </a></li>
-                                </ul>
                             </li>
+                            <ul class="collapse list-unstyled ps-3" id="subjectCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
+                                        <span class="hide-menu">Subject Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('subject-module.index') }}">
+                                        <span class="hide-menu">Subject Module Master</span>
+                                    </a></li>
+                            </ul>
                             @endif
                         
 
-                                </ul>
-                            </div>
-                        </div>
+                        </ul>
                     </div>
                 </div>
-                <div class="simplebar-placeholder" style="width: 240px; height: 864px;"></div>
             </div>
-            <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
-                <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
-            </div>
-            <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
-                <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);">
-                </div>
-            </div>
+        </div>
+        <div class="simplebar-placeholder" style="width: 240px; height: 864px;"></div>
+    </div>
+    <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
+        <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
+    </div>
+    <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
+        <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);">
         </div>
     </div>
 </nav>
