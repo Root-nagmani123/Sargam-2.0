@@ -516,4 +516,18 @@ Route::middleware(['auth'])->group(function(){
     Route::get('/faculty_dashboard', function () {
     return view('faculty.dashboard');
 })->name('faculty.dashboard');
+
+    // Notification Routes
+    Route::prefix('admin/notifications')->name('admin.notifications.')->group(function () {
+        Route::post('/mark-read/{id}', function ($id) {
+            $result = notification()->markAsRead($id);
+            return response()->json(['success' => $result]);
+        })->name('mark-read');
+        
+        Route::post('/mark-all-read', function () {
+            $userId = Auth::user()->user_id ?? 0;
+            $count = notification()->markAllAsRead($userId);
+            return response()->json(['success' => true, 'count' => $count]);
+        })->name('mark-all-read');
+    });
 });

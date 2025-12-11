@@ -1,0 +1,266 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Notification;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class NotificationService
+{
+    /**
+     * Create a new notification
+     * 
+     * @param int $receiverUserId The user_id of the receiver (Faculty/Student)
+     * @param string $type Notification type (mdo, memo, course, notice, etc.)
+     * @param string $moduleName Module name (Duty, Memo, Course, Notice, etc.)
+     * @param int $referencePk Reference primary key (duty_pk, memo_pk, course_pk, etc.)
+     * @param string $title Notification title
+     * @param string $message Notification message
+     * @param int|null $senderUserId Optional sender user_id (defaults to current logged-in user)
+     * @return Notification
+     */
+    public function create(
+        int $receiverUserId,
+        string $type,
+        string $moduleName,
+        int $referencePk,
+        string $title,
+        string $message,
+        ?int $senderUserId = null
+    ): Notification {
+        $senderUserId = $senderUserId ?? (Auth::user() ? Auth::user()->user_id : null);
+
+        return Notification::create([
+            'sender_user_id' => $senderUserId,
+            'receiver_user_id' => $receiverUserId,
+            'type' => $type,
+            'module_name' => $moduleName,
+            'reference_pk' => $referencePk,
+            'title' => $title,
+            'message' => $message,
+            'is_read' => 0,
+            'created_at' => now(),
+        ]);
+    }
+
+    /**
+     * Create multiple notifications for multiple receivers
+     * 
+     * @param array $receiverUserIds Array of receiver user_ids
+     * @param string $type Notification type
+     * @param string $moduleName Module name
+     * @param int $referencePk Reference primary key
+     * @param string $title Notification title
+     * @param string $message Notification message
+     * @param int|null $senderUserId Optional sender user_id
+     * @return int Number of notifications created
+     */
+    public function createMultiple(
+        array $receiverUserIds,
+        string $type,
+        string $moduleName,
+        int $referencePk,
+        string $title,
+        string $message,
+        ?int $senderUserId = null
+    ): int {
+        $senderUserId = $senderUserId ?? (Auth::user() ? Auth::user()->user_id : null);
+        $notifications = [];
+        $now = now();
+
+        foreach ($receiverUserIds as $receiverUserId) {
+            $notifications[] = [
+                'sender_user_id' => $senderUserId,
+                'receiver_user_id' => $receiverUserId,
+                'type' => $type,
+                'module_name' => $moduleName,
+                'reference_pk' => $referencePk,
+                'title' => $title,
+                'message' => $message,
+                'is_read' => 0,
+                'created_at' => $now,
+            ];
+        }
+
+        return DB::table('notifications')->insert($notifications) ? count($notifications) : 0;
+    }
+
+    /**
+     * Mark notification as read
+     * 
+     * @param int $notificationPk Notification primary key
+     * @return bool
+     */
+    public function markAsRead(int $notificationPk): bool
+    {
+        return Notification::where('pk', $notificationPk)
+            ->update(['is_read' => 1]) > 0;
+    }
+
+    /**
+     * Mark multiple notifications as read
+     * 
+     * @param array $notificationPks Array of notification primary keys
+     * @return int Number of notifications marked as read
+     */
+    public function markMultipleAsRead(array $notificationPks): int
+    {
+        return Notification::whereIn('pk', $notificationPks)
+            ->update(['is_read' => 1]);
+    }
+
+    /**
+     * Mark all notifications as read for a specific user
+     * 
+     * @param int $userId User ID
+     * @return int Number of notifications marked as read
+     */
+    public function markAllAsRead(int $userId): int
+    {
+        return Notification::where('receiver_user_id', $userId)
+            ->where('is_read', 0)
+            ->update(['is_read' => 1]);
+    }
+
+    /**
+     * Get unread notifications for a user
+     * 
+     * @param int $userId User ID
+     * @param int|null $limit Optional limit
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getUnreadNotifications(int $userId, ?int $limit = null)
+    {
+        $query = Notification::where('receiver_user_id', $userId)
+            ->where('is_read', 0)
+            ->orderBy('created_at', 'desc');
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Get all notifications for a user
+     * 
+     * @param int $userId User ID
+     * @param int|null $limit Optional limit
+     * @param bool $unreadOnly If true, only return unread notifications
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getNotifications(int $userId, ?int $limit = null, bool $unreadOnly = false)
+    {
+        $query = Notification::where('receiver_user_id', $userId);
+
+        if ($unreadOnly) {
+            $query->where('is_read', 0);
+        }
+
+        $query->orderBy('created_at', 'desc');
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Get unread notification count for a user
+     * 
+     * @param int $userId User ID
+     * @return int
+     */
+    public function getUnreadCount(int $userId): int
+    {
+        return Notification::where('receiver_user_id', $userId)
+            ->where('is_read', 0)
+            ->count();
+    }
+
+    /**
+     * Get notifications by type
+     * 
+     * @param int $userId User ID
+     * @param string $type Notification type
+     * @param int|null $limit Optional limit
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getNotificationsByType(int $userId, string $type, ?int $limit = null)
+    {
+        $query = Notification::where('receiver_user_id', $userId)
+            ->where('type', $type)
+            ->orderBy('created_at', 'desc');
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Get notifications by module
+     * 
+     * @param int $userId User ID
+     * @param string $moduleName Module name
+     * @param int|null $limit Optional limit
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getNotificationsByModule(int $userId, string $moduleName, ?int $limit = null)
+    {
+        $query = Notification::where('receiver_user_id', $userId)
+            ->where('module_name', $moduleName)
+            ->orderBy('created_at', 'desc');
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Delete a notification
+     * 
+     * @param int $notificationPk Notification primary key
+     * @return bool
+     */
+    public function delete(int $notificationPk): bool
+    {
+        return Notification::where('pk', $notificationPk)->delete() > 0;
+    }
+
+    /**
+     * Delete notifications by reference
+     * 
+     * @param string $type Notification type
+     * @param int $referencePk Reference primary key
+     * @return int Number of notifications deleted
+     */
+    public function deleteByReference(string $type, int $referencePk): int
+    {
+        return Notification::where('type', $type)
+            ->where('reference_pk', $referencePk)
+            ->delete();
+    }
+
+    /**
+     * Delete old read notifications (cleanup)
+     * 
+     * @param int $daysOld Number of days old (default: 30)
+     * @return int Number of notifications deleted
+     */
+    public function deleteOldReadNotifications(int $daysOld = 30): int
+    {
+        $cutoffDate = now()->subDays($daysOld);
+
+        return Notification::where('is_read', 1)
+            ->where('created_at', '<', $cutoffDate)
+            ->delete();
+    }
+}
+
