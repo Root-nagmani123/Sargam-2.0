@@ -230,7 +230,7 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
         Route::get('/single-calendar-details', [CalendarController::class, 'SingleCalendarDetails'])->name('event.Singlecalendar-details');
 
         Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
-        Route::put('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
+        Route::post('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
         Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
 
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');

@@ -7,6 +7,11 @@
 
     <x-breadcrum title="Notice Conversation" />
     <x-session_message />
+    @if(session('error') == 'document_error')
+    <div class="alert alert-danger">
+        {{ 'The document size exceeds the maximum limit of 1 MB or invalid file type. Please upload a valid document.' }}
+    </div>
+    @endif
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <div class="gap-2 text-end">
@@ -175,7 +180,7 @@
                         <div class="col-6">
                             <div class="mb-3">
                                 <label class="form-label">Upload Document (if any)</label>
-                                <input type="file" class="form-control" name="document">
+                                <input type="file" class="form-control" name="document" accept=".jpg,.jpeg,.png,.pdf">
                                 <small class="text-muted">Less than 1 MB type (jpg,jpeg,png,pdf)</small>
 
 

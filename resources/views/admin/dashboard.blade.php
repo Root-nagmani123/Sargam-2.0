@@ -385,6 +385,7 @@ textarea:focus,
                     <div class="card-body" style="max-height:600px; overflow-y:auto;">
                         @php $notices = get_notice_notification_by_role() @endphp
                         @foreach($notices as $notice)
+                        @php //print_r($notice); @endphp
                         <div class="mb-4 pb-2 border-bottom">
                             <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
                             <p class="mb-1" style="font-size: 14px; line-height: 1.5; color: #333;">
@@ -399,6 +400,9 @@ textarea:focus,
                                     <i class="bi bi-download me-1"></i>View Attachment
                                 </a>
                             </div>
+                            @endif
+                            @if($notice->description != '')
+                            {!! $notice->description !!}
                             @endif
 
                         </div>
