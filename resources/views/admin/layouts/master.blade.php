@@ -442,6 +442,26 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("main-wrapper"); // your main sidebar wrapper
+    const toggleBtn = document.getElementById("headerCollapse");
+    const icon = document.getElementById("sidebarToggleIcon");
+
+    toggleBtn.addEventListener("click", function () {
+
+        // Toggle the sidebar class (you already have this class in your template)
+        sidebar.classList.toggle("mini-sidebar");
+
+        // Change icon according to sidebar state
+        if (sidebar.classList.contains("mini-sidebar")) {
+            icon.textContent = "keyboard_double_arrow_right";  // expand icon
+        } else {
+            icon.textContent = "keyboard_double_arrow_left";   // collapse icon
+        }
+    });
+});
+</script>
 
 </body>
 
