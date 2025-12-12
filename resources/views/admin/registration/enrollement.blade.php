@@ -156,7 +156,7 @@
                                         </div>
                                         <div class="card-body">
                                             <div class="table-responsive">
-                                                <table class="table table-bordered table-hover" id="studentTable">
+                                                <table class="table" id="studentTable">
                                                     <thead>
                                                         <tr>
                                                             <th width="50px">

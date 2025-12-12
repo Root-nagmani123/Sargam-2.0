@@ -214,6 +214,126 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+/* Chat Row Layout */
+.chat-row {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.chat-row.right {
+    justify-content: flex-end;
+}
+
+.chat-row.left {
+    justify-content: flex-start;
+}
+
+/* Message Bubble */
+.chat-bubble {
+    max-width: 80%;
+    background: #f4f5f7;
+    padding: 12px 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e2e2;
+}
+
+.chat-row.right .chat-bubble {
+    background: #e7f1ff;
+    border-color: #c9ddff;
+}
+
+/* Header */
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.chat-sender {
+    color: #003e7e;
+    font-weight: 600;
+}
+
+.chat-time {
+    font-size: 11px;
+    color: #6c757d;
+}
+
+/* Message Text */
+.chat-text {
+    margin: 0;
+    font-size: 14px;
+    color: #222;
+    line-height: 1.4;
+}
+
+/* Attachments */
+.chat-attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 14px;
+    color: #004a93;
+    text-decoration: none;
+}
+
+.chat-attachment:hover {
+    text-decoration: underline;
+}
+
+/* Footer Input */
+.chat-footer {
+    background: #fff;
+}
+
+.chat-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.attachment-btn {
+    cursor: pointer;
+    color: #004a93;
+    font-size: 22px;
+}
+
+.chat-textarea {
+    resize: none;
+    height: 40px;
+    font-size: 14px;
+}
+
+.chat-send-btn {
+    height: 40px;
+    padding: 0 20px;
+}
+
+/* Scrollable message area */
+#chatBody {
+    padding-bottom: 20px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #b3b3b3 #efefef;
+}
+
+#chatBody::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chatBody::-webkit-scrollbar-thumb {
+    background: #b3b3b3;
+    border-radius: 4px;
+}
+
+/* Accessibility: Focus outline */
+*:focus-visible {
+    outline: 3px solid #004a93 !important;
+    border-radius: 4px;
+}
+
 </style>
 <div class="container-fluid">
        <x-breadcrum title="Notice /Memo Management" />
@@ -480,7 +600,7 @@
         </div>
     </div>
     <!-- end Zero Configuration -->
-    <!-- memo generation modal -->
+   
     <!-- Enhanced Offcanvas with GIGW Guidelines -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic" role="dialog">
         <div class="offcanvas-header">
@@ -514,6 +634,7 @@
             </div>
         </div>
     </div>
+     <!-- memo generation modal -->
     <div class="modal fade" id="memo_generate" tabindex="-1" aria-labelledby="memo_generateLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
             <div class="modal-content">
