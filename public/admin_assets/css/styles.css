@@ -38927,7 +38927,6 @@ fieldset:disabled .btn {
 .page-wrapper {
     transition: 0.2s ease-in;
     overflow-x: hidden;
-    width: 100%;
 }
 
 .page-wrapper .container-fluid,
