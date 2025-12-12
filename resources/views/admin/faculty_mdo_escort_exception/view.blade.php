@@ -254,8 +254,8 @@
                                     
                                     @if($course['student_duties'] && count($course['student_duties']) > 0)
                                         <div class="table-responsive">
-                                            <table class="table table-bordered table-hover">
-                                                <thead class="table-light">
+                                            <table class="table">
+                                                <thead>
                                                     <tr>
                                                         <th>Student Name</th>
                                                         <th>OT Code</th>

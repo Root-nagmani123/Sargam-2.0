@@ -126,8 +126,8 @@
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container -->
                     <div class="nav-container position-relative">
-                        <ul class="navbar-nav px-4 py-2 gap-2 align-items-center" style="border-radius: 20px; height: 60px; background: #f2f2f2; 
-                       border: 1px solid rgba(0, 0, 0, 0.05);" role="menubar"
+                        <ul class="navbar-nav px-4 py-2 gap-2 align-items-center" style="border-radius: 20px; height: 50px; background: #f2f2f2; 
+                       border: 1px solid rgba(0, 0, 0, 0.05);padding:10px;" role="menubar"
                             aria-label="Main navigation">
 
                             <!-- Home -->

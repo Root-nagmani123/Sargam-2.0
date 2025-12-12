@@ -1,9 +1,11 @@
-<div class="text-center mb-3">
+<div class="text-center mb-3 mt-2">
                 <div class="mx-auto mb-1" style="width:170px; height:170px;">
-                    
-                    <img src="{{ get_profile_pic() }}" alt="User Photo"
-                        class="img-fluid rounded-circle w-100 h-100 object-fit-cover shadow-sm" style="margin-top:-16px;">
-                </div>  
+    <img src="{{ get_profile_pic() }}"
+         onerror="this.src='{{ asset('images/dummypic.jpeg') }}';"
+         alt="User Photo"
+         class="img-fluid rounded-circle w-100 h-100 object-fit-cover shadow-sm">
+</div>
+ 
 
                 <h5 class="fw-bold mb-0">{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</h5>
                 <p class="text-primary small mb-0 mt-2 fw-bold"  >
