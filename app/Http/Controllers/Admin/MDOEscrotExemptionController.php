@@ -115,11 +115,7 @@ class MDOEscrotExemptionController extends Controller
                 where('course_master_pk', $course->pk)
                 ->whereDate('mdo_date', $request->selectedDate)
                 ->pluck('selected_student_list')->toArray();
-                
-
                 // dd($alreadyAssignedStudents);
-
-                
                 $students = [];
                 $students = $course->studentMasterCourseMap->map(function ($student) {
                     $studentMaster = StudentMaster::where('pk', $student['student_master_pk'])->first();
