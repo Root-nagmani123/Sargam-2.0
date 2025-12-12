@@ -18,6 +18,7 @@ use Illuminate\Validation\Rule;
 use Mpdf\Mpdf;
 use Yajra\DataTables\Facades\DataTables;
 use App\Imports\CourseWiseOTImport;
+use App\Models\CourseWiseOTList;
 
 
 
@@ -32,7 +33,7 @@ class EnrollementController extends Controller
     private function hasActiveCourse($studentId)
     {
         $currentDate = now()->toDateString();
-        
+
         $activeEnrollment = StudentMasterCourseMap::with('course')
             ->where('student_master_pk', $studentId)
             ->where('active_inactive', 1)
@@ -44,7 +45,7 @@ class EnrollementController extends Controller
                 });
             })
             ->first();
-        
+
         if ($activeEnrollment && $activeEnrollment->course) {
             return [
                 'course_pk' => $activeEnrollment->course->pk,
@@ -52,7 +53,7 @@ class EnrollementController extends Controller
                 'end_date' => $activeEnrollment->course->end_date,
             ];
         }
-        
+
         return null;
     }
 
@@ -63,7 +64,6 @@ class EnrollementController extends Controller
         // Get courses that are active AND valid (ongoing or upcoming)
         $courses = CourseMaster::where('active_inactive', 1)
             ->where(function ($q) use ($currentDate) {
-
                 // Ongoing courses
                 $q->where(function ($ongoing) use ($currentDate) {
                     $ongoing->where('start_year', '<=', $currentDate)
@@ -72,26 +72,38 @@ class EnrollementController extends Controller
                                 ->orWhere('end_date', '>=', $currentDate);
                         });
                 })
-
-                    // OR upcoming courses (start_year in future)
+                    // OR upcoming courses
                     ->orWhere('start_year', '>', $currentDate);
             })
             ->orderBy('course_name')
-            ->get(['pk', 'course_name']);
+            ->get(['pk', 'course_name', 'couse_short_name']);
 
-        // Get previous courses from student course map with course details
-        $previousCourses = StudentMasterCourseMap::with('course')
-            ->get()
-            ->unique('course_master_pk');
+        $previousCoursePksQuery = StudentMasterCourseMap::query()
+            ->whereNotNull('course_master_pk')
+            ->select('course_master_pk')
+            ->distinct();
 
-        // Get services (unchanged)
-        $services = ServiceMaster::all();
+        if (auth()->check() && !empty(auth()->user()->student_master_pk)) {
+            $studentId = auth()->user()->student_master_pk;
+            $previousCoursePksQuery->where('student_master_pk', $studentId);
+        }
+
+        $previousCoursePks = $previousCoursePksQuery->pluck('course_master_pk')->toArray();
+
+        // Fetch course master rows for those pks (so blade has course->course_name etc)
+        $previousCourses = CourseMaster::whereIn('pk', $previousCoursePks)
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name', 'couse_short_name']);
+
+        // Get services
+        $services = ServiceMaster::all(['pk', 'service_name']);
 
         return view(
             'admin.registration.enrollement',
             compact('courses', 'previousCourses', 'services')
         );
     }
+
 
 
     // public function store(Request $request)
@@ -155,19 +167,19 @@ class EnrollementController extends Controller
         // Validate: Check if any student has an active course (end_date not expired)
         $currentDate = now()->toDateString();
         $studentsWithActiveCourses = [];
-        
+
         foreach ($studentIds as $studentId) {
             $activeCourse = $this->hasActiveCourse($studentId);
-            
+
             if ($activeCourse) {
                 // Get student name for error message
                 $student = StudentMaster::find($studentId);
                 $studentName = $student ? trim($student->first_name . ' ' . $student->last_name) : "Student ID: {$studentId}";
-                
-                $endDateFormatted = $activeCourse['end_date'] 
-                    ? date('d-m-Y', strtotime($activeCourse['end_date'])) 
+
+                $endDateFormatted = $activeCourse['end_date']
+                    ? date('d-m-Y', strtotime($activeCourse['end_date']))
                     : 'No end date';
-                
+
                 $studentsWithActiveCourses[] = "{$studentName} is already enrolled in active course '{$activeCourse['course_name']}' (End Date: {$endDateFormatted})";
             }
         }
@@ -221,82 +233,77 @@ class EnrollementController extends Controller
         }
     }
 
-    public function filterStudents(Request $request)
-    {
-        try {
-            $previousCourses = $request->input('previous_courses', []);
-            $services = $request->input('services', []);
-
-            if (empty($previousCourses)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Please select at least one previous course'
-                ]);
-            }
-
-            // Query with proper relationships
-            $query = DB::table('student_master_course__map as smcm')
-                ->join('student_master as sm', 'smcm.student_master_pk', '=', 'sm.pk')
-                ->join('course_master as cm', 'smcm.course_master_pk', '=', 'cm.pk')
-                ->leftJoin('service_master as svm', 'sm.service_master_pk', '=', 'svm.pk')
-                ->whereIn('smcm.course_master_pk', $previousCourses)
-                ->select(
-                    'sm.pk as student_pk',
-                    'cm.pk as course_pk',
-                    'sm.first_name',
-                    'sm.middle_name',
-                    'sm.last_name',
-                    DB::raw("CONCAT(sm.first_name, ' ', COALESCE(sm.middle_name, ''), ' ', sm.last_name) as student_name"),
-                    'sm.generated_OT_code as ot_code',
-                    'cm.course_name',
-                    'svm.service_name'
-                )
-                ->distinct();
-
-            // Filter by services if provided
-            if (!empty($services)) {
-                $query->whereIn('sm.service_master_pk', $services);
-            }
-
-            $students = $query->get();
-
-            // Filter out students who have active courses (end_date not expired)
-            $currentDate = now()->toDateString();
-            $filteredStudents = $students->filter(function ($student) use ($currentDate) {
-                // Check if this student has an active course
-                $activeCourse = $this->hasActiveCourse($student->student_pk);
-                // Only include students who don't have active courses
-                return $activeCourse === null;
-            });
-
-            // Transform students to include edit URLs
-            $transformedStudents = $filteredStudents->map(function ($student) {
-                return [
-                    'student_pk' => $student->student_pk,
-                    'student_name' => $student->student_name,
-                    'first_name' => $student->first_name,
-                    'middle_name' => $student->middle_name,
-                    'last_name' => $student->last_name,
-                    'ot_code' => $student->ot_code,
-                    'course_name' => $student->course_name,
-                    'service_name' => $student->service_name,
-                    'edit_url' => route('enrollment.edit', $student->student_pk) // This is the key!
-                ];
-            });
-
-            return response()->json([
-                'success' => true,
-                'students' => $transformedStudents
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Error filtering students: ' . $e->getMessage());
-
+   public function filterStudents(Request $request)
+{
+    try {
+        $previousCourses = $request->input('previous_courses', []);
+        $services = $request->input('services', []);
+        
+        if (empty($previousCourses)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error filtering students: ' . $e->getMessage()
+                'message' => 'Please select at least one previous course'
             ]);
         }
+
+        // Get students from selected previous courses
+        $query = DB::table('student_master_course__map as smcm')
+            ->join('student_master as sm', 'smcm.student_master_pk', '=', 'sm.pk')
+            ->join('course_master as cm', 'smcm.course_master_pk', '=', 'cm.pk')
+            ->leftJoin('service_master as svm', 'sm.service_master_pk', '=', 'svm.pk')
+            ->whereIn('smcm.course_master_pk', $previousCourses)
+            ->where('sm.active_inactive', 1) // Only active students
+            ->select(
+                'sm.pk as student_pk',
+                'cm.pk as course_pk',
+                'sm.first_name',
+                'sm.middle_name',
+                'sm.last_name',
+                DB::raw("CONCAT(sm.first_name, ' ', COALESCE(sm.middle_name, ''), ' ', sm.last_name) as student_name"),
+                'sm.generated_OT_code as ot_code',
+                'cm.course_name',
+                'svm.service_name',
+                'smcm.active_inactive as enrollment_status'
+            )
+            ->distinct();
+
+        // Filter by services if provided
+        if (!empty($services)) {
+            $query->whereIn('sm.service_master_pk', $services);
+        }
+
+        $students = $query->get();
+        
+        // Transform immediately without filtering by active course
+        $transformedStudents = $students->map(function ($student) {
+            return [
+                'student_pk' => $student->student_pk,
+                'student_name' => $student->student_name,
+                'first_name' => $student->first_name,
+                'middle_name' => $student->middle_name,
+                'last_name' => $student->last_name,
+                'ot_code' => $student->ot_code,
+                'course_name' => $student->course_name,
+                'service_name' => $student->service_name,
+                'edit_url' => route('enrollment.edit', $student->student_pk)
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'students' => $transformedStudents,
+            'total_count' => $students->count()
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Error filtering students: ' . $e->getMessage());
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error filtering students: ' . $e->getMessage()
+        ]);
     }
+}
 
     /**
      * Student–Course list (simple listing with pk values)
@@ -690,122 +697,123 @@ class EnrollementController extends Controller
     /**
      * Update student information.
      */
-    public function update(Request $request, $studentId)
-    {
-        try {
-            DB::beginTransaction();
-
-            // Find student
-            $student = StudentMaster::findOrFail($studentId);
-
-            // Get old values for finding in fc_registration_master
-            $oldUserId = $student->user_id;
-            $oldEmail = $student->email;
-
-            // Define validation rules for fields present in BOTH tables
-            $commonRules = [
-                'display_name' => 'nullable|string|max:100',
-                'first_name' => 'required|string|max:100',
-                'middle_name' => 'nullable|string|max:100',
-                'last_name' => 'required|string|max:100',
-                'email' => 'required|email|max:75|unique:student_master,email,' . $studentId . ',pk',
-                'contact_no' => 'required|string|max:15',
-                'service_master_pk' => 'required|exists:service_master,pk',
-                'web_auth' => 'nullable|string|max:100',
-                'dob' => 'nullable|date',
-                'exam_year' => 'nullable|string|max:4',
-                'rank' => 'nullable|string|max:11',
-                'user_id' => 'required|string|max:45|unique:student_master,user_id,' . $studentId . ',pk',
-            ];
-
-            // Validate
-            $validatedData = $request->validate($commonRules);
-
-            // Update student_master
-            $student->update($validatedData);
-
-            // Update fc_registration_master (try multiple ways to find record)
-            $fcUpdated = false;
-
-            // Try to find record in fc_registration_master
-            $fcRecord = FcRegistrationMaster::where('pk', $studentId)
-                ->orWhere('user_id', $oldUserId)
-                ->orWhere('email', $oldEmail)
-                ->first();
-
-            if ($fcRecord) {
-                $fcRecord->update($validatedData);
-                $fcUpdated = true;
-            } else {
-                // Create new record if not found
-                // $fcRecord = FcRegistrationMaster::create(array_merge(
-                //     ['pk' => $studentId],
-                //     $validatedData,
-                //     ['created_date' => now()]
-                // ));
-                $fcUpdated = true;
-            }
-
-            DB::commit();
-
-            return redirect()->route('student.courses')
-                ->with('success', 'Student information updated successfully!')
-                ->with('selected_course', session('selected_course'));
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return back()
-                ->withInput()
-                ->with('error', 'Update failed: ' . $e->getMessage());
-        }
-    }
-
-
-
-public function import(Request $request)
+   public function update(Request $request, $studentId)
 {
-    $request->validate([
-        'import_file' => 'required|mimes:xlsx,xls,csv|max:5120'
-    ]);
-
     try {
-        $import = new CourseWiseOTImport();
-        
-        Excel::import($import, $request->file('import_file'));
-        
-        $importedCount = $import->getImportedCount();
-        $updatedCount = $import->getUpdatedCount();
-        $skippedCount = $import->getSkippedCount();
-        $errors = $import->getErrors();
-        
-        $message = "";
-        
-        if ($importedCount > 0) {
-            $message .= "✅ Created {$importedCount} new records in course_wise_ot_list. ";
+        DB::beginTransaction();
+
+        // Find student
+        $student = StudentMaster::findOrFail($studentId);
+
+        // Old values for locating fc_registration_master
+        $oldUserId = $student->user_id;
+        $oldEmail  = $student->email;
+
+        // Validation rules for all 3 tables
+        $rules = [
+            'display_name' => 'nullable|string|max:100',
+            'first_name'   => 'required|string|max:100',
+            'middle_name'  => 'nullable|string|max:100',
+            'last_name'    => 'required|string|max:100',
+            'email'        => 'required|email|max:75|unique:student_master,email,' . $studentId . ',pk',
+            'contact_no'   => 'required|string|max:15',
+            'service_master_pk' => 'required|exists:service_master,pk',
+            'web_auth'     => 'nullable|string|max:100',
+            'dob'          => 'nullable|date',
+            'exam_year'    => 'nullable|string|max:4',
+            'rank'         => 'nullable|string|max:11',
+            'user_id'      => 'required|string|max:45|unique:student_master,user_id,' . $studentId . ',pk',
+
+            'generated_OT_code' => 'nullable|string|max:50',
+        ];
+
+        $validated = $request->validate($rules);
+
+     
+        $student->update($validated);
+
+      
+        $fc = FcRegistrationMaster::where('pk', $studentId)
+            ->orWhere('user_id', $oldUserId)
+            ->orWhere('email', $oldEmail)
+            ->first();
+
+        if ($fc) {
+            $fc->update($validated);
         }
-        
-        if ($updatedCount > 0) {
-            $message .= "🔄 Updated {$updatedCount} existing records. ";
-        }
-        
-        if ($skippedCount > 0) {
-            $message .= "⏭️ Skipped {$skippedCount} records (duplicates or errors). ";
-        }
-        
-        if (!empty($errors)) {
-            $message .= "❌ " . count($errors) . " errors occurred.";
-            
-            // Store errors in session for display
-            session()->flash('import_errors', $errors);
-            
-            return back()->with('warning', trim($message));
-        } else {
-            return back()->with('success', trim($message));
-        }
+
+        // ---------------------------------------------------
+        // 3) Update course_wise_ot_list
+        // ---------------------------------------------------
+        CourseWiseOTList::where('student_master_pk', $studentId)
+            ->update([
+                'generated_ot_code' => $validated['generated_OT_code']
+            ]);
+
+        DB::commit();
+
+        return redirect()->route('student.courses')
+            ->with('success', 'Student updated successfully — OT Code synced everywhere!')
+            ->with('selected_course', session('selected_course'));
 
     } catch (\Exception $e) {
-        \Log::error('Import Controller Error: ' . $e->getMessage());
-        return back()->with('error', 'Import failed: ' . $e->getMessage());
+        DB::rollBack();
+
+        return back()->withInput()->with('error', 'Update failed: ' . $e->getMessage());
     }
 }
+
+
+
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'import_file' => 'required|mimes:xlsx,xls,csv|max:5120'
+        ]);
+
+        try {
+            $import = new CourseWiseOTImport();
+
+            Excel::import($import, $request->file('import_file'));
+
+            $importedCount = $import->getImportedCount();
+            $updatedCount = $import->getUpdatedCount();
+            $skippedCount = $import->getSkippedCount();
+            $studentUpdatedCount = $import->getStudentUpdatedCount(); // Add this line
+            $errors = $import->getErrors();
+
+            $message = "";
+
+            if ($importedCount > 0) {
+                $message .= "✅ Created {$importedCount} new records in course_wise_ot_list. ";
+            }
+
+            if ($updatedCount > 0) {
+                $message .= "🔄 Updated {$updatedCount} existing records. ";
+            }
+
+            if ($studentUpdatedCount > 0) {
+                $message .= "👨‍🎓 Updated OT codes for {$studentUpdatedCount} students. ";
+            }
+
+            if ($skippedCount > 0) {
+                $message .= "⏭️ Skipped {$skippedCount} records (duplicates or errors). ";
+            }
+
+            if (!empty($errors)) {
+                $message .= "❌ " . count($errors) . " errors occurred.";
+
+                // Store errors in session for display
+                session()->flash('import_errors', $errors);
+
+                return back()->with('warning', trim($message));
+            } else {
+                return back()->with('success', trim($message));
+            }
+        } catch (\Exception $e) {
+            \Log::error('Import Controller Error: ' . $e->getMessage());
+            return back()->with('error', 'Import failed: ' . $e->getMessage());
+        }
+    }
 }

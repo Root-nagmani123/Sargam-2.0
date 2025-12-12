@@ -6,250 +6,338 @@ use App\Models\CourseWiseOTList;
 use App\Models\StudentMaster;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\WithValidation;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-
-
-class CourseWiseOTImport implements ToCollection, WithHeadingRow, WithValidation
+class CourseWiseOTImport implements ToCollection, WithHeadingRow
 {
     private $importedCount = 0;
     private $errors = [];
     private $updatedCount = 0;
     private $skippedCount = 0;
+    private $studentUpdatedCount = 0; // Track student updates
+    private $batchSize = 1000;
+    private $columnMap = [];
+    private $existingStudents = [];
+    private $existingOTRecords = [];
+    private $studentsToUpdate = []; // Store student updates
 
     public function collection(Collection $rows)
     {
+        $startTime = microtime(true);
+        
+        // Normalize column names
+        $this->mapColumns($rows->first());
+        
+        Log::info("Starting OT Import with " . $rows->count() . " rows");
+        
         DB::beginTransaction();
         
         try {
-            foreach ($rows as $index => $row) {
-                $rowNumber = $index + 2; // +2 because of header row and 0-index
-                
-                // Extract values directly from row array
-                $rowArray = $row->toArray();
-                
-                // Debug: Log the actual column names
-                if ($index === 0) {
-                    \Log::info("Excel columns found:", array_keys($rowArray));
-                }
-                
-                // Find student_master_pk - try different possible column names
-                $studentMasterPk = $this->findValue($rowArray, [
-                    'student_master_pk',
-                    'studentmasterpk',
-                    'student master pk',
-                    'student_pk',
-                    'studentpk'
-                ]);
-                
-                // Find course_master_pk
-                $courseMasterPk = $this->findValue($rowArray, [
-                    'course_master_pk',
-                    'coursemasterpk',
-                    'course master pk',
-                    'course_pk',
-                    'coursepk'
-                ]);
-                
-                // Find OT Code - Excel shows "OT Code"
-                $otCode = $this->findValue($rowArray, [
-                    'OT Code',
-                    'OTCode',
-                    'otcode',
-                    'ot_code',
-                    'generated_ot_code',
-                    'ot'
-                ]);
-                
-                \Log::info("Row {$rowNumber} values:", [
-                    'student_master_pk' => $studentMasterPk,
-                    'course_master_pk' => $courseMasterPk,
-                    'ot_code' => $otCode
-                ]);
-                
-                // Validate required fields
-                if (empty($studentMasterPk)) {
-                    $this->errors[] = "Row {$rowNumber}: Student Master PK not found. Available columns: " . implode(', ', array_keys($rowArray));
-                    $this->skippedCount++;
-                    continue;
-                }
-                
-                if (empty($courseMasterPk)) {
-                    $this->errors[] = "Row {$rowNumber}: Course Master PK not found";
-                    $this->skippedCount++;
-                    continue;
-                }
-                
-                if (empty($otCode)) {
-                    $this->errors[] = "Row {$rowNumber}: OT Code not found";
-                    $this->skippedCount++;
-                    continue;
-                }
-                
-                // Convert to integers
-                $studentMasterPk = (int) $studentMasterPk;
-                $courseMasterPk = (int) $courseMasterPk;
-                
-                // Validate that student exists
-                $studentExists = StudentMaster::where('pk', $studentMasterPk)->exists();
-                if (!$studentExists) {
-                    $this->errors[] = "Row {$rowNumber}: Student with PK {$studentMasterPk} does not exist in student_master table";
-                    $this->skippedCount++;
-                    continue;
-                }
-                
-                // Process the import
-                $result = $this->processImport($studentMasterPk, $courseMasterPk, $otCode);
-                
-                if ($result === 'created') {
-                    $this->importedCount++;
-                } elseif ($result === 'updated') {
-                    $this->updatedCount++;
-                } elseif ($result === 'duplicate') {
-                    $this->skippedCount++;
-                } else {
-                    $this->errors[] = "Row {$rowNumber}: Failed to process";
-                    $this->skippedCount++;
-                }
-            }
+            // Preload all student IDs from the import file
+            $this->preloadStudentExistence($rows);
+            
+            // Preload existing OT records
+            $this->preloadExistingOTRecords($rows);
+            
+            // Process in batches
+            $rows->chunk($this->batchSize)->each(function ($chunk) {
+                $this->processBatch($chunk);
+            });
+            
+            // Update student_master table with OT codes
+            $this->updateStudentMaster();
             
             DB::commit();
+            
+            $executionTime = microtime(true) - $startTime;
+            Log::info("Import completed in {$executionTime} seconds", [
+                'imported' => $this->importedCount,
+                'updated' => $this->updatedCount,
+                'student_updated' => $this->studentUpdatedCount,
+                'skipped' => $this->skippedCount,
+                'errors' => count($this->errors)
+            ]);
             
         } catch (\Exception $e) {
             DB::rollBack();
             $this->errors[] = "Import failed: " . $e->getMessage();
-            \Log::error('Import Error: ' . $e->getMessage(), [
+            Log::error('Import Error: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
         }
     }
 
     /**
-     * Process import for a single row
+     * Map and normalize column names
      */
-    private function processImport($studentMasterPk, $courseMasterPk, $otCode)
+    private function mapColumns($firstRow)
     {
-        // Check if exact same record already exists
-        $existingRecord = CourseWiseOTList::where([
-            'student_master_pk' => $studentMasterPk,
-            'course_master_pk' => $courseMasterPk,
-            'generated_ot_code' => $otCode
-        ])->first();
-
-        if ($existingRecord) {
-            // Record already exists with same OT code
-            $existingRecord->active_inactive = 1; // Ensure active
-            $existingRecord->updated_date = now();
-            $existingRecord->save();
-            return 'duplicate';
+        $rowArray = $firstRow->toArray();
+        
+        $columnPatterns = [
+            'student_master_pk' => ['student_master_pk', 'studentmasterpk', 'student master pk', 'student_pk', 'studentpk', 'student id', 'studentid'],
+            'course_master_pk' => ['course_master_pk', 'coursemasterpk', 'course master pk', 'course_pk', 'coursepk', 'course id', 'courseid'],
+            'generated_ot_code' => ['ot code', 'otcode', 'ot_code', 'generated_ot_code', 'ot', 'otp code', 'otpcode'],
+        ];
+        
+        foreach ($columnPatterns as $standardName => $possibleNames) {
+            foreach ($possibleNames as $possibleName) {
+                if (isset($rowArray[$possibleName])) {
+                    $this->columnMap[$standardName] = $possibleName;
+                    break;
+                }
+                
+                // Case-insensitive matching
+                foreach (array_keys($rowArray) as $actualCol) {
+                    if (strtolower(str_replace([' ', '_', '-'], '', $actualCol)) === 
+                        strtolower(str_replace([' ', '_', '-'], '', $possibleName))) {
+                        $this->columnMap[$standardName] = $actualCol;
+                        break 2;
+                    }
+                }
+            }
+            
+            if (!isset($this->columnMap[$standardName])) {
+                throw new \Exception("Required column '$standardName' not found. Available columns: " . 
+                    implode(', ', array_keys($rowArray)));
+            }
         }
-
-        // Check if record exists with different OT code
-        $existingDifferentOT = CourseWiseOTList::where([
-            'student_master_pk' => $studentMasterPk,
-            'course_master_pk' => $courseMasterPk
-        ])->first();
-
-        if ($existingDifferentOT) {
-            // Update existing record with new OT code
-            $existingDifferentOT->generated_ot_code = $otCode;
-            $existingDifferentOT->active_inactive = 1;
-            $existingDifferentOT->updated_date = now();
-            $existingDifferentOT->save();
-            return 'updated';
-        }
-
-        // Create new record
-        CourseWiseOTList::create([
-            'student_master_pk' => $studentMasterPk,
-            'course_master_pk' => $courseMasterPk,
-            'generated_ot_code' => $otCode,
-            'active_inactive' => 1,
-            'created_date' => now(),
-            'updated_date' => now(),
-        ]);
-
-        return 'created';
     }
 
     /**
-     * Helper to find value by trying multiple column names
+     * Preload student existence
      */
-    private function findValue($rowArray, $possibleKeys)
+    private function preloadStudentExistence(Collection $rows)
     {
-        foreach ($possibleKeys as $key) {
-            // Try exact match
-            if (isset($rowArray[$key])) {
-                return $rowArray[$key];
+        $studentIds = [];
+        
+        foreach ($rows as $row) {
+            $studentMasterPk = $this->getValue($row, 'student_master_pk');
+            if ($studentMasterPk && is_numeric($studentMasterPk)) {
+                $studentIds[] = (int) $studentMasterPk;
             }
+        }
+        
+        $studentIds = array_unique($studentIds);
+        
+        if (empty($studentIds)) {
+            throw new \Exception("No valid student IDs found");
+        }
+        
+        $existingStudents = StudentMaster::whereIn('pk', $studentIds)
+            ->pluck('pk')
+            ->toArray();
+        
+        $this->existingStudents = array_fill_keys($existingStudents, true);
+    }
+
+    /**
+     * Preload existing OT records
+     */
+    private function preloadExistingOTRecords(Collection $rows)
+    {
+        $studentIds = [];
+        
+        foreach ($rows as $row) {
+            $studentMasterPk = $this->getValue($row, 'student_master_pk');
+            if ($studentMasterPk && is_numeric($studentMasterPk)) {
+                $studentIds[] = (int) $studentMasterPk;
+            }
+        }
+        
+        $studentIds = array_unique($studentIds);
+        
+        $existingRecords = CourseWiseOTList::whereIn('student_master_pk', $studentIds)
+            ->get(['pk', 'student_master_pk', 'course_master_pk', 'generated_ot_code', 'active_inactive'])
+            ->groupBy('student_master_pk')
+            ->map(function ($records) {
+                return $records->keyBy('course_master_pk');
+            })
+            ->toArray();
+        
+        $this->existingOTRecords = $existingRecords;
+    }
+
+    /**
+     * Process batch
+     */
+    private function processBatch(Collection $batch)
+    {
+        $now = now();
+        $toInsert = [];
+        $toUpdate = [];
+        $batchStudentUpdates = []; // Track student updates in this batch
+        
+        foreach ($batch as $index => $row) {
+            $rowNumber = $index + 2;
             
-            // Try case-insensitive match
-            foreach ($rowArray as $actualKey => $value) {
-                $normalizedActual = Str::lower(str_replace([' ', '_', '-', '.'], '', $actualKey));
-                $normalizedKey = Str::lower(str_replace([' ', '_', '-', '.'], '', $key));
+            try {
+                $studentMasterPk = $this->getValue($row, 'student_master_pk');
+                $courseMasterPk = $this->getValue($row, 'course_master_pk');
+                $otCode = $this->getValue($row, 'generated_ot_code');
                 
-                if ($normalizedActual === $normalizedKey) {
-                    return $value;
+                // Validation
+                if (empty($studentMasterPk) || !is_numeric($studentMasterPk)) {
+                    $this->errors[] = "Row {$rowNumber}: Invalid Student PK";
+                    $this->skippedCount++;
+                    continue;
+                }
+                
+                if (empty($courseMasterPk) || !is_numeric($courseMasterPk)) {
+                    $this->errors[] = "Row {$rowNumber}: Invalid Course PK";
+                    $this->skippedCount++;
+                    continue;
+                }
+                
+                if (empty($otCode)) {
+                    $this->errors[] = "Row {$rowNumber}: OT Code required";
+                    $this->skippedCount++;
+                    continue;
+                }
+                
+                $studentMasterPk = (int) $studentMasterPk;
+                $courseMasterPk = (int) $courseMasterPk;
+                
+                // Check student exists
+                if (!isset($this->existingStudents[$studentMasterPk])) {
+                    $this->errors[] = "Row {$rowNumber}: Student PK {$studentMasterPk} not found";
+                    $this->skippedCount++;
+                    continue;
+                }
+                
+                // Check for duplicate in batch
+                $batchKey = "{$studentMasterPk}-{$courseMasterPk}";
+                if (isset($batchStudentUpdates[$batchKey])) {
+                    $this->errors[] = "Row {$rowNumber}: Duplicate student-course in file";
+                    $this->skippedCount++;
+                    continue;
+                }
+                
+                // Store student update (we'll update student_master later)
+                $batchStudentUpdates[$batchKey] = [
+                    'student_id' => $studentMasterPk,
+                    'ot_code' => $otCode
+                ];
+                
+                // Check if record exists in database
+                if (isset($this->existingOTRecords[$studentMasterPk][$courseMasterPk])) {
+                    $existingRecord = $this->existingOTRecords[$studentMasterPk][$courseMasterPk];
+                    
+                    // Update if OT code changed or status inactive
+                    if ($existingRecord['generated_ot_code'] !== $otCode || $existingRecord['active_inactive'] != 1) {
+                        $toUpdate[$existingRecord['pk']] = [
+                            'generated_ot_code' => $otCode,
+                            'active_inactive' => 1,
+                            // 'updated_date' => $now
+                        ];
+                        $this->updatedCount++;
+                    } else {
+                        $this->skippedCount++; // No change needed
+                    }
+                } else {
+                    // New record
+                    $toInsert[] = [
+                        'student_master_pk' => $studentMasterPk,
+                        'course_master_pk' => $courseMasterPk,
+                        'generated_ot_code' => $otCode,
+                        'active_inactive' => 1,
+                        'created_date' => $now,
+                        // 'updated_date' => $now,
+                    ];
+                    $this->importedCount++;
+                }
+                
+            } catch (\Exception $e) {
+                $this->errors[] = "Row {$rowNumber}: " . $e->getMessage();
+                $this->skippedCount++;
+            }
+        }
+        
+        // Bulk operations
+        if (!empty($toInsert)) {
+            CourseWiseOTList::insert($toInsert);
+        }
+        
+        if (!empty($toUpdate)) {
+            foreach ($toUpdate as $id => $data) {
+                CourseWiseOTList::where('pk', $id)->update($data);
+            }
+        }
+        
+        // Store student updates for later processing
+        foreach ($batchStudentUpdates as $update) {
+            $this->studentsToUpdate[$update['student_id']] = $update['ot_code'];
+        }
+    }
+
+    /**
+     * Update student_master table with OT codes
+     */
+    private function updateStudentMaster()
+    {
+        if (empty($this->studentsToUpdate)) {
+            return;
+        }
+        
+        $now = now();
+        $updatedCount = 0;
+        
+        // Update in chunks to avoid query length issues
+        foreach (array_chunk($this->studentsToUpdate, 100, true) as $chunk) {
+            foreach ($chunk as $studentId => $otCode) {
+                try {
+                    $updated = StudentMaster::where('pk', $studentId)
+                        ->update([
+                            'generated_OT_code' => $otCode,
+                            // 'updated_date' => $now
+                        ]);
+                    
+                    if ($updated) {
+                        $updatedCount++;
+                    }
+                } catch (\Exception $e) {
+                    $this->errors[] = "Failed to update student {$studentId}: " . $e->getMessage();
                 }
             }
         }
         
-        return null;
+        $this->studentUpdatedCount = $updatedCount;
+        Log::info("Updated {$updatedCount} students with OT codes");
     }
 
     /**
-     * Validation rules
+     * Get value from row
      */
-    public function rules(): array
+    private function getValue($row, $columnName)
     {
-        return [
-            'student_master_pk' => 'required|integer',
-            'course_master_pk' => 'required|integer',
-            'ot_code' => 'required|string|max:20',
-        ];
+        if (!isset($this->columnMap[$columnName])) {
+            return null;
+        }
+        
+        $mappedColumn = $this->columnMap[$columnName];
+        $value = $row[$mappedColumn] ?? null;
+        
+        // Trim and clean the value
+        if (is_string($value)) {
+            $value = trim($value);
+            if ($value === '') {
+                return null;
+            }
+        }
+        
+        return $value;
     }
 
-    /**
-     * Custom validation messages
-     */
-    public function customValidationMessages()
-    {
-        return [
-            'student_master_pk.required' => 'Student Master PK is required',
-            'course_master_pk.required' => 'Course Master PK is required',
-            'ot_code.required' => 'OT Code is required',
-            'ot_code.max' => 'OT Code must not exceed 20 characters',
-        ];
-    }
-
-    /**
-     * Get import results
-     */
-    public function getErrors()
-    {
-        return $this->errors;
-    }
-
-    public function getImportedCount()
-    {
-        return $this->importedCount;
-    }
-
-    public function getUpdatedCount()
-    {
-        return $this->updatedCount;
-    }
-
-    public function getSkippedCount()
-    {
-        return $this->skippedCount;
-    }
-
-    public function getTotalProcessed()
-    {
-        return $this->importedCount + $this->updatedCount + $this->skippedCount;
+    // Getter methods
+    public function getErrors() { return $this->errors; }
+    public function getImportedCount() { return $this->importedCount; }
+    public function getUpdatedCount() { return $this->updatedCount; }
+    public function getSkippedCount() { return $this->skippedCount; }
+    public function getStudentUpdatedCount() { return $this->studentUpdatedCount; } // Add this method
+    public function getTotalProcessed() { 
+        return $this->importedCount + $this->updatedCount + $this->skippedCount; 
     }
 }
