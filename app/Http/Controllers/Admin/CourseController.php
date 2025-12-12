@@ -58,7 +58,9 @@ class CourseController extends Controller
         $facultyList = FacultyMaster::pluck('full_name', 'pk')->toArray();
         $roleOptions = [
             'Leave' => 'Leave',
-            'Memo' => 'Memo'
+            'Memo' => 'Memo',
+            'Discipline' => 'Discipline',
+            'Club Society' => 'Club Society'
         ];
         return view('admin.programme.create', compact('facultyList', 'roleOptions'));
     }
@@ -89,7 +91,9 @@ class CourseController extends Controller
             $assistant_coordinator_roles = $assistantCoordinatorCollection->pluck('assistant_coordinator_role')->toArray();
             $roleOptions = [
                 'Leave' => 'Leave',
-                'Memo' => 'Memo'
+                'Memo' => 'Memo',
+                'Discipline' => 'Discipline',
+                'Club Society' => 'Club Society'
             ];
             
             return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions'));
