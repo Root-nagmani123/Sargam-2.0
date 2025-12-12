@@ -1018,10 +1018,12 @@ class CalendarManager {
     }
 
     setFormDate(date) {
-        const formattedDate = date.toISOString().split('T')[0];
-        document.getElementById('start_datetime').value = formattedDate;
-        document.getElementById('start_datetime').setAttribute('readonly', 'true');
-    }
+    const formattedDate = date.toLocaleDateString('en-CA');
+    console.log('Selected date for form:', formattedDate);
+    document.getElementById('start_datetime').value = formattedDate;
+    document.getElementById('start_datetime').setAttribute('readonly', 'true');
+}
+
 
     bindEvents() {
         // View toggle buttons
@@ -1301,7 +1303,7 @@ class CalendarManager {
 
     validateDates() {
         const dateInput = document.getElementById('start_datetime');
-        dateInput.setAttribute('min', CalendarConfig.minDate);
+        // dateInput.setAttribute('min', CalendarConfig.minDate);
         
         // Add real-time validation
         dateInput.addEventListener('change', function() {
@@ -1310,8 +1312,8 @@ class CalendarManager {
             today.setHours(0, 0, 0, 0);
             
             if (selectedDate < today) {
-                this.setCustomValidity('Date cannot be in the past');
-                this.reportValidity();
+                // this.setCustomValidity('Date cannot be in the past');
+                // this.reportValidity();
             } else {
                 this.setCustomValidity('');
             }

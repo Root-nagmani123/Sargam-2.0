@@ -55,6 +55,7 @@ class NoticeNotificationController extends Controller
    // Insert
 public function store(Request $request)
 {
+   
     $request->validate([
         'notice_title'      => 'required|string|max:255',
         'description'       => 'required|string',
@@ -74,7 +75,16 @@ public function store(Request $request)
         'document.max'              => 'File size must not exceed 2 MB.',
         'target_audience.required'  => 'Please select target audience.',
     ]);
+if($request->has('course_master_pk')){
+    $request->validate([
+        'course_master_pk'  => 'required|exists:course_master,pk',
+    ], [
+        'course_master_pk.required' => 'Please select a valid course.',
+        'course_master_pk.exists'   => 'Selected course does not exist.',
+    ]);
 
+}
+//  print_r($request->all()); exit;
     $data = $request->all();
     $data['created_by'] = Auth::id();
 
@@ -116,6 +126,15 @@ public function store(Request $request)
         'document'          => 'nullable|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
         'target_audience'   => 'required|string',
     ]);
+    if($request->has('course_master_pk')){
+    $request->validate([
+        'course_master_pk'  => 'required|exists:course_master,pk',
+    ], [
+        'course_master_pk.required' => 'Please select a valid course.',
+        'course_master_pk.exists'   => 'Selected course does not exist.',
+    ]);
+
+}
 
     $id = Crypt::decrypt($encId);
     $notice = Notice::findOrFail($id);

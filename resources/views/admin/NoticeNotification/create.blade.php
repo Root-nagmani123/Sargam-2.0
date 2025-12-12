@@ -29,12 +29,12 @@
 
                 <div class="mb-3">
                     <label>Notice Title <span class="text-danger">*</span></label>
-                    <input type="text" name="notice_title" class="form-control">
+                    <input type="text" name="notice_title" class="form-control" value="{{ old('notice_title') }}">
                 </div>
 
                 <div class="mb-3">
                     <label>Description <span class="text-danger">*</span></label>
-                    <textarea id="editor" name="description" class="form-control"></textarea>
+                    <textarea id="editor" name="description" class="form-control">{{ old('description') }}</textarea>
                 </div>
 
                 <div class="mb-3">
@@ -42,19 +42,19 @@
                     <select name="notice_type" class="form-control">
                         <option value="">Select Notice Type</option>
                         @foreach($types as $t)
-                        <option value="{{ $t }}">{{ $t }}</option>
+                        <option value="{{ $t }}" {{ old('notice_type') == $t ? 'selected' : '' }}>{{ $t }}</option>
                         @endforeach
                     </select>
                 </div>
 
                 <div class="mb-3">
                     <label>Display Date <span class="text-danger">*</span></label>
-                   <input type="date" name="display_date" class="form-control">
+                   <input type="date" name="display_date" class="form-control" value="{{ old('display_date') }}">
                  </div>
 
                 <div class="mb-3">
                     <label>Expiry Date <span class="text-danger">*</span></label>
-                    <input type="date" name="expiry_date" class="form-control" >
+                    <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
                 </div>
     
                 <div class="mb-3">
@@ -67,13 +67,13 @@
                     <select name="target_audience" id="targetAudience" class="form-control">
                         <option value="">Select Target Audience</option>
                         @foreach($target as $t)
-                        <option value="{{ $t }}">{{ $t }}</option>
+                        <option value="{{ $t }}" {{ old('target_audience') == $t ? 'selected' : '' }}>{{ $t }}</option>
                         @endforeach
                     </select>
                 </div>
                  <div class="mb-3 d-none" id="courseBox">
                     <label>Select Course</label>
-                    <select name="course_master_pk" id="courseSelect" class="form-control">
+                    <select name="course_master_pk" id="courseSelect" class="form-control" >
                         <option value="">Select Course</option>
                     </select>
                 </div>
