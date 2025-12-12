@@ -48,7 +48,7 @@
             <select name="course_id" class="form-control" onchange="this.form.submit()">
                 <option value="">All</option>
                 @foreach($courses as $c)
-                    <option value="{{ $c->id }}" {{ request('course_id') == $c->id ? 'selected' : '' }}>
+                    <option value="{{ $c->id }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
                         {{ $c->course_name }}
                     </option>
                 @endforeach

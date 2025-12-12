@@ -153,7 +153,7 @@
                     <div class="col-6">
                         <div class="mb-3">
                             <label class="form-label">Upload Document (if any)</label>
-                            <input type="file" class="form-control" name="document">
+                            <input type="file" class="form-control" name="document" accept=".jpg,.jpeg,.png,.pdf">
                             <small class="text-muted">Less than 1 MB type (jpg,jpeg,png,pdf)</small>
                         </div>
                     </div>
