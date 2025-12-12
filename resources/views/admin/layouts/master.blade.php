@@ -304,6 +304,46 @@
     opacity: 1;
     padding: .375rem .75rem;
 }
+.alphabet-loader {
+    position: fixed;
+    inset: 0;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.alphabet-loader .letters {
+    display: flex;
+    gap: 8px;
+}
+
+.alphabet-loader .letters span {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    color: #004a93;
+    opacity: 0.2;
+    animation: pulseText 1.2s infinite ease-in-out;
+}
+
+.alphabet-loader .letters span:nth-child(1) { animation-delay: 0s; }
+.alphabet-loader .letters span:nth-child(2) { animation-delay: 0.1s; }
+.alphabet-loader .letters span:nth-child(3) { animation-delay: 0.2s; }
+.alphabet-loader .letters span:nth-child(4) { animation-delay: 0.3s; }
+.alphabet-loader .letters span:nth-child(5) { animation-delay: 0.4s; }
+.alphabet-loader .letters span:nth-child(6) { animation-delay: 0.5s; }
+.alphabet-loader .letters span:nth-child(7) { animation-delay: 0.6s; }
+.alphabet-loader .letters span:nth-child(8) { animation-delay: 0.7s; }
+.alphabet-loader .letters span:nth-child(9) { animation-delay: 0.8s; }
+.alphabet-loader .letters span:nth-child(10) { animation-delay: 0.9s; }
+
+@keyframes pulseText {
+    0% { opacity: 0.2; transform: translateY(0); }
+    50% { opacity: 1; transform: translateY(-6px); }
+    100% { opacity: 0.2; transform: translateY(0); }
+}
 
 
     </style>
@@ -312,10 +352,21 @@
 
 <body>
     <!-- Preloader -->
-    <div class="preloader">
-        <img src="{{ asset('admin_assets/images/logos/favicon.ico') }}" alt="loader" class="lds-ripple img-fluid">
+<div class="alphabet-loader" id="alphabetLoader">
+    <div class="letters">
+        <span>S</span>
+        <span>A</span>
+        <span>R</span>
+        <span>G</span>
+        <span>A</span>
+        <span>M</span>
+        <span>&nbsp;</span>
+        <span>2</span>
+        <span>.</span>
+        <span>0</span>
     </div>
-    <div class="loading d-none" id="ajaxLoader">Loading&#8230;</div>
+</div>
+
     <div id="main-wrapper">
         @include('admin.layouts.sidebar')
         <div class="page-wrapper">
@@ -382,6 +433,16 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+<script>
+    window.addEventListener('load', function () {
+        const loader = document.getElementById('alphabetLoader');
+        if (loader) {
+            loader.style.opacity = "0";
+            setTimeout(() => loader.style.display = "none", 300);
+        }
+    });
+</script>
+
 </body>
 
 </html>

@@ -48165,7 +48165,7 @@ body .ql-toolbar.ql-snow {
 }
 
 .calendar-container {
-    padding: 30px 30px;
+    padding: 10px;
     background-color: var(--bs-primary);
     border-radius: 8px;
     border: 1px solid #e0e6ed;

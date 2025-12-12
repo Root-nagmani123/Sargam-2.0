@@ -22,15 +22,6 @@
                             FC Registration
                         </h2>
                     </div>
-                    <button 
-                        class="btn btn-sm btn-link text-white p-1 collapse-all-btn" 
-                        onclick="collapseAllMenus()"
-                        data-bs-toggle="tooltip"
-                        data-bs-placement="left"
-                        title="Collapse All Menus"
-                        style="font-size: 12px; text-decoration: none;">
-                        <i class="material-icons material-symbols-rounded" style="font-size: 20px;">unfold_less</i>
-                    </button>
                 </div>
             </li>
 
