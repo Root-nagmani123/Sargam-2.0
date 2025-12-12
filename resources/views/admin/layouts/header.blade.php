@@ -11,14 +11,7 @@
 .navbar-nav .nav-link:focus {
     background-color: #f2f2f2;
     color: #000;
-    outline: 2px solid #004a93; /* GIGW: Clear focus indication */
-    outline-offset: 2px;
-}
-
-/* Center Align the Items in the Navbar */
-.navbar-nav {
-    justify-content: center;
-    width: 100%;
+    outline: none;
 }
 
 .navbar-nav .nav-link.active {
@@ -102,7 +95,9 @@
 </style>
 
 <header class="topbar">
-  <nav class="navbar navbar-expand-lg p-0" style="flex-wrap: wrap;">
+
+    <div class="with-vertical">
+        <nav class="navbar navbar-expand-lg p-0">
             <ul class="navbar-nav">
                 <li class="nav-item d-flex d-xl-none">
                     <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
@@ -112,84 +107,91 @@
                 </li>
             </ul>
 
-            <!-- Mobile Logo -->
-            <div class="d-block d-lg-none py-9 py-xl-0 ms-2">
+            <div class="d-block d-lg-none py-9 py-xl-0">
                 <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo">
             </div>
 
-            <!-- Mobile Menu Toggle -->
             <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
                 data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
                 aria-label="Toggle navigation">
                 <iconify-icon icon="solar:menu-dots-bold-duotone" class="fs-6"></iconify-icon>
             </a>
 
-            <!-- Main Collapse Container -->
             <div class="collapse navbar-collapse" id="navbarNav">
-
-                <!-- ABSOLUTE CENTERED NAV TABS -->
-                <div class="main-navbar-wrapper position-absolute top-50 start-50 translate-middle">
+                <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
+                    <!-- Enhanced Navigation Container -->
                     <div class="nav-container position-relative">
-                        <ul class="navbar-nav px-4 py-2 gap-2 align-items-center" style="border-radius: 20px; height: 50px; background: #f2f2f2;
-                       border: 1px solid rgba(0, 0, 0, 0.05);padding:10px;" role="menubar"
+                        <ul class="navbar-nav px-4 py-2 gap-2 align-items-center" style="border-radius: 20px; height: 60px; background: #f2f2f2; 
+                       border: 1px solid rgba(0, 0, 0, 0.05);" role="menubar"
                             aria-label="Main navigation">
 
                             <!-- Home -->
                             <li class="nav-item" role="none">
                                 <a href="#home"
-                                   class="nav-link active rounded-pill px-4 py-2 d-flex align-items-center gap-2"
-                                   data-bs-toggle="tab" role="tab" aria-selected="true"
-                                   aria-controls="home-panel" id="home-tab">
+                                    class="nav-link active rounded-pill px-4 py-2 d-flex align-items-center gap-2"
+                                    data-bs-toggle="tab" role="tab" aria-selected="true" aria-controls="home-panel"
+                                    id="home-tab">
                                     <span>Home</span>
                                 </a>
                             </li>
 
-                            <!-- Setup / Academics Based on Role -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-setup"
-                                   class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
-                                   data-bs-toggle="tab" role="tab" aria-selected="false"
-                                   aria-controls="setup-panel" id="setup-tab">
+                            <!-- Setup -->
+                           <li class="nav-item" role="none">
+                                    <a href="#tab-setup"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
+                                    id="setup-tab">
 
-                                    @if(hasRole('Admin') || hasRole('Training'))
-                                        <span>Setup</span>
-                                    @elseif(hasRole('Internal Faculty')  || hasRole('Guest Faculty') || hasRole('Student-OT'))
-                                        <span>Academics</span>
-                                    @else
-                                        <span>Setup</span>
-                                    @endif
+                                        @if(hasRole('Admin') || hasRole('Training'))
+                                            <span>Setup</span>
+                                        @elseif(hasRole('Internal Faculty')  || hasRole('Guest Faculty') || hasRole('Student-OT'))
+                                            <span>Academics</span>
+                                        @else
+                                            <span>Setup</span>
+                                        @endif
 
-                                </a>
-                            </li>
+                                    </a>
+                                </li>
 
+                           
                             <!-- Communications -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-communications"
-                                   class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
-                                   data-bs-toggle="tab" role="tab" aria-selected="false"
-                                   aria-controls="communications-panel" id="communications-tab">
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                    aria-controls="communications-panel" id="communications-tab">
                                     <span>Communications</span>
                                 </a>
                             </li>
 
+                            <!-- Academics -->
+                            <!-- <li class="nav-item" role="none">
+                                <a href="#tab-academics"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                    aria-controls="academics-panel" id="academics-tab">
+                                    <span>Academics</span>
+                                </a>
+                            </li> -->
+                           
                             <!-- Material Management -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-material-management"
-                                   class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
-                                   data-bs-toggle="tab" role="tab" aria-selected="false"
-                                   aria-controls="material-management-panel" id="material-management-tab">
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                    aria-controls="material-management-panel" id="material-management-tab">
                                     <span>Material Management</span>
                                 </a>
                             </li>
 
-                            <!-- Financial Dropdown -->
+                            <!-- Financial Dropdown - Enhanced -->
                             <li class="nav-item dropdown" role="none">
                                 <a class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
-                                   href="#" id="financialDropdown" role="menuitem"
-                                   aria-haspopup="true" aria-expanded="false" data-bs-toggle="dropdown">
+                                    href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
+                                    aria-expanded="false" data-bs-toggle="dropdown">
                                     <span>Financial</span>
                                     <i class="material-icons material-symbols-rounded fs-6 dropdown-arrow transition-all"
-                                       aria-hidden="true">expand_more</i>
+                                        aria-hidden="true">expand_more</i>
                                 </a>
 
                                 <ul class="dropdown-menu shadow-lg border-0 rounded-xl p-2 mt-1"
@@ -197,58 +199,55 @@
                                     aria-labelledby="financialDropdown" role="menu">
                                     <li role="none">
                                         <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                           href="#" role="menuitem">
+                                            href="#" role="menuitem">
                                             <span>Budget</span>
                                         </a>
                                     </li>
                                     <li role="none">
                                         <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
-                                           href="#" role="menuitem">
+                                            href="#" role="menuitem">
                                             <span>Accounts</span>
                                         </a>
                                     </li>
                                 </ul>
                             </li>
 
-                            <!-- Search -->
+                            <!-- Search with Enhanced UI -->
                             <li class="nav-item" role="none">
                                 <button class="nav-link rounded-circle px-2 py-2 search-trigger hover-lift"
-                                        style="width: 40px; height: 40px;" aria-label="Open search"
-                                        aria-expanded="false" aria-controls="searchModal">
+                                    style="width: 40px; height: 40px;" aria-label="Open search" aria-expanded="false"
+                                    aria-controls="searchModal">
                                     <i class="material-icons material-symbols-rounded text-dark"
-                                       style="font-size: 20px;" aria-hidden="true">search</i>
+                                        style="font-size: 20px;" aria-hidden="true">search</i>
                                 </button>
                             </li>
-
                         </ul>
                     </div>
                 </div>
-                <!-- END CENTERED NAV -->
 
-                <!-- RIGHT SECTION -->
+                <!-- Right Side Actions - Enhanced -->
                 <div class="d-flex align-items-center ms-auto gap-4" style="margin-right: 56px;">
-
-                    <!-- Logout -->
-                    <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline">
+                    <!-- Logout Button - Enhanced -->
+                    <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
                         @csrf
                         <button type="submit"
-                                class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
-                                aria-label="Sign out" data-bs-toggle="tooltip" data-bs-placement="bottom"
-                                title="Sign Out">
-                            <i class="material-icons material-symbols-rounded"
-                               style="font-size: 22px; color: #475569;">logout</i>
+                            class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
+                            aria-label="Sign out from system" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                            title="Sign Out">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 22px; color: #475569;"
+                                aria-hidden="true">logout</i>
+                            <span class="tooltip-text visually-hidden">Sign out from system</span>
                         </button>
                     </form>
 
-                    <!-- Last Login -->
+                    <!-- Last Login - Enhanced -->
                     <div class="d-flex flex-column align-items-end">
-
                         <div class="text-muted small d-flex align-items-center gap-1"
-                             style="font-size: 11px; line-height: 14px;">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 14px;">schedule</i>
+                            style="font-size: 11px; line-height: 14px;">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 14px;"
+                                aria-hidden="true">schedule</i>
                             <span class="fw-medium">Last login:</span>
                         </div>
-
                         @php
                             $lastLogin = Auth::user()->last_login ?? null;
                             if ($lastLogin) {
@@ -260,38 +259,15 @@
                                 $isoDate = '';
                             }
                         @endphp
-
                         <time id="myTime" datetime="{{ $isoDate }}" class="text-dark fw-semibold"
-                              style="font-size: 13px; line-height: 16px;" aria-live="polite">
+                            style="font-size: 13px; line-height: 16px;" aria-live="polite">
                             {{ $formattedDate }}
                         </time>
-
                     </div>
                 </div>
-
             </div>
-        </nav>
-    </div>
-</header>
 
-<!-- CSS REQUIRED FOR PERFECT CENTER ALIGNMENT -->
-<style>
-    .main-navbar-wrapper {
-        transform: translate(-50%, -50%);
-        white-space: nowrap;
-        z-index: 10;
-    }
-
-    .main-navbar-wrapper .nav-container {
-        display: inline-flex;
-    }
-</style>
-
-
-
-
-<!-- 🧠 Search Toggle Script -->
- <script>
+            <script>
             document.addEventListener('DOMContentLoaded', function() {
                 // Time format is already set in PHP, no need to override
 
@@ -355,6 +331,7 @@
             });
             </script>
         </nav>
+    </div>
 </header>
 
 
@@ -448,7 +425,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Current path:', currentPath);
 
         // Setup routes - CHECK FIRST (more specific)
-        if (currentPath.includes('/admin/setup') ||
+        if (currentPath.includes('/admin/setup') || 
             currentPath.includes('/admin/caste') ||
             currentPath.includes('/admin/category') ||
             currentPath.includes('/admin/religion') ||
