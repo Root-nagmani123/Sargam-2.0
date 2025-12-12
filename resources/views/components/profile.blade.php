@@ -1,3 +1,22 @@
+<!-- Collapse Button with ARIA labels and better focus management -->
+                             <div class="d-flex align-items-center justify-content-end" style="margin-right: 0.5rem;">
+    <a class="nav-link sidebartoggler" 
+       id="headerCollapse" 
+       href="javascript:void(0)"
+       data-bs-toggle="tooltip" 
+       data-bs-custom-class="custom-tooltip"
+       data-bs-placement="right" 
+       data-bs-title="Collapse/Expand Menu Bar"
+       aria-label="Toggle menu">
+       
+        <i id="sidebarToggleIcon" 
+           class="material-icons menu-icon material-symbols-rounded text-primary"
+           style="font-size: 40px;">
+            keyboard_double_arrow_left
+        </i>
+
+    </a>
+</div>
 <div class="text-center mb-3 mt-2">
                 <div class="mx-auto mb-1" style="width:170px; height:170px;">
     <img src="{{ get_profile_pic() }}"

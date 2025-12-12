@@ -428,69 +428,190 @@ h3.fw-bold {
     font-size: 1.8rem !important;
     font-weight: 800 !important;
 }
+
+/* --- Modern Stat Card Enhancements --- */
+.stat-card-modern {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.stat-card-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.stat-card-modern:hover::before {
+    left: 100%;
+}
+
+/* Icon Background Colors with Gradients */
+.icon-bg-blue {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.icon-bg-green {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
+.icon-bg-yellow {
+    background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
+}
+
+.icon-bg-purple {
+    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+}
+
+/* Stat Card Label */
+.stat-card-label-modern {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+/* Add subtle pulse animation to stat values */
+@keyframes pulseValue {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.stat-card-modern:hover .stat-card-value-modern {
+    animation: pulseValue 0.6s ease;
+    color: var(--primary-color);
+}
+/* Modern card style matching the reference image */
+.stat-card.clean-style {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: #ffffff;
+    padding: 20px 22px;
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+
+.stat-card.clean-style:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+}
+
+/* Icon container */
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-icon img {
+    width: 28px;
+    height: 28px;
+}
+
+/* Colors */
+.icon-blue { background: #e5edff; }
+.icon-green { background: #e6f7ec; }
+.icon-yellow { background: #fff4e2; }
+.icon-purple { background: #f1ebff; }
+
+/* Texts */
+.stat-label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #4a4a4a;
+}
+
+.stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #000;
+    margin-top: 3px;
+}
+
+.stat-change {
+    font-size: 13px;
+    margin-top: 3px;
+}
+table>thead{
+    background-color:#ffffff !important;
+}
+
 </style>
 
 
 <div class="container-fluid p-0">
 
-    <div class="row mb-3">
-        <div class="col-9">
-            <div class="container my-4">
-                <div class="row g-4 mb-4">
-                    <!-- Total Active Courses -->
-                    <div class="col-md-3">
-                        <div class="stat-card-modern">
-                            <div class="stat-card-icon-modern icon-bg-blue">
-                                <img src="{{ asset('images/groups.svg') }}" alt="Total Active Courses Icon">
-                            </div>
-                            <div class="stat-card-label-modern">Total Active Courses</div>
-                            <h3 class="stat-card-value-modern">{{ $totalActiveCourses }}</h3>
-                        </div>
-                    </div>
+<div class="row g-4 mb-4">
 
-                    <!-- Upcoming Courses -->
-                    <div class="col-md-3">
-                        <div class="stat-card-modern">
-                            <div class="stat-card-icon-modern icon-bg-green">
-                                <img src="{{ asset('images/teachers.svg') }}" alt="Upcoming Courses Icon">
-                            </div>
-                            <div class="stat-card-label-modern">Upcoming Courses</div>
-                            <h3 class="stat-card-value-modern">{{ $upcomingCourses }}</h3>
-                        </div>
-                    </div>
-
-                    <!-- Total Guest Faculty -->
-                    <div class="col-md-3">
-                        <div class="stat-card-modern">
-                            <div class="stat-card-icon-modern icon-bg-yellow">
-                                <img src="{{ asset('images/classes.svg') }}" alt="Total Guest Faculty Icon">
-                            </div>
-                            <div class="stat-card-label-modern">Total Guest Faculty</div>
-                            <h3 class="stat-card-value-modern">{{ $total_guest_faculty }}</h3>
-                        </div>
-                    </div>
-
-                    <!-- Total Inhouse Faculty -->
-                    <div class="col-md-3">
-                        <div class="stat-card-modern">
-                            <div class="stat-card-icon-modern icon-bg-purple">
-                                <img src="{{ asset('images/attendance.svg') }}" alt="Total Inhouse Faculty Icon">
-                            </div>
-                            <div class="stat-card-label-modern">Total Inhouse Faculty</div>
-                            <h3 class="stat-card-value-modern">{{ $total_internal_faculty }}</h3>
-                        </div>
-                    </div>
-                </div>
+    <!-- Total Active Courses -->
+    <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="stat-card clean-style">
+            <div class="stat-icon icon-blue">
+                <img src="{{ asset('images/groups.svg') }}" alt="">
+            </div>
+            <div>
+                <div class="stat-label">Total Active Courses</div>
+                <div class="stat-value">{{ $totalActiveCourses }}</div>
+                <div class="stat-change text-primary">+12% from last month</div>
             </div>
         </div>
-        <div class="col-3 text-end">
-            <x-dropdown label="Select Teacher" :items="['Amit', 'Rohan', 'Shreya']" />
-            <x-dropdown label="Select Teacher" :items="['Amit', 'Rohan', 'Shreya']" />
-            <x-dropdown label="Select Teacher" :items="['Amit', 'Rohan', 'Shreya']" />
-
-        </div>
-
     </div>
+
+    <!-- Upcoming Courses -->
+    <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="stat-card clean-style">
+            <div class="stat-icon icon-green">
+                <img src="{{ asset('images/teachers.svg') }}" alt="">
+            </div>
+            <div>
+                <div class="stat-label">Upcoming Courses</div>
+                <div class="stat-value">{{ $upcomingCourses }}</div>
+                <div class="stat-change text-success">+3% from last month</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Guest Faculty -->
+    <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="stat-card clean-style">
+            <div class="stat-icon icon-yellow">
+                <img src="{{ asset('images/classes.svg') }}" alt="">
+            </div>
+            <div>
+                <div class="stat-label">Total Guest Faculty</div>
+                <div class="stat-value">{{ $total_guest_faculty }}</div>
+                <div class="stat-change text-warning">+2 new</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Inhouse Faculty -->
+    <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="stat-card clean-style">
+            <div class="stat-icon icon-purple">
+                <img src="{{ asset('images/attendance.svg') }}" alt="">
+            </div>
+            <div>
+                <div class="stat-label">Total Inhouse Faculty</div>
+                <div class="stat-value">{{ $total_internal_faculty }}</div>
+                <div class="stat-change text-info">+2.1% improvement</div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
     <div class="row g-4 mb-4">
         <!-- LEFT CONTENT -->
         <div class="col-lg-7">
