@@ -24,14 +24,14 @@
                     <hr>
                     <div class="table-responsive">
 
-                        <table class="table table-bordered text-nowrap align-middle dataTable">
-                            <thead style="background-color: #af2910;">
+                        <table class="table">
+                            <thead>
                                 <!-- start row -->
                                 <tr>
                                     <th class="col text-center">S.No.</th>
                                     <th class="col text-center">Stream Name</th>
-                                    <th class="col text-center">Action</th>
                                     <th class="col text-center">Status</th>
+                                    <th class="col text-center">Action</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -42,36 +42,6 @@
                                     <td class="text-center">
                                         {{ $module->module_name }}
                                     </td>
-                                      <td class="text-center">
-                                        <div class="d-flex justify-content-center align-items-center gap-2">
-                                            <a href="{{ route('subject-module.edit', $module->pk) }}">
-                                                <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">edit</i>
-                                            </a>
-                                            <div class="delete-icon-container" data-item-id="{{ $module->pk }}" data-delete-url="{{ route('subject-module.destroy', $module->pk) }}">
-                                                @if($module->active_inactive == 1)
-                                                    <span class="delete-icon-disabled" title="Cannot delete active Subject module">
-                                                        <i class="material-icons menu-icon material-symbols-rounded"
-                                                            style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
-                                                    </span>
-                                                @else
-                                                    <form action="{{ route('subject-module.destroy', $module->pk) }}"
-                                                        method="POST" class="m-0 delete-form"
-                                                        data-status="{{ $module->active_inactive }}">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <a href="javascript:void(0)" onclick="event.preventDefault();
-                                                        if(confirm('Are you sure you want to delete this Subject modules?')) {
-                                                            this.closest('form').submit();
-                                                        }">
-                                                            <i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">delete</i>
-                                                        </a>
-                                                    </form>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </td>
                                     <td class="text-center">
                                         <div class="form-check form-switch m-auto d-flex justify-content-center align-items-center">
                                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
@@ -80,8 +50,51 @@
                                                 {{ $module->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
-                                  
+                                    <td class="text-center">
+    <div class="dropdown">
+        <a href="#" data-bs-toggle="dropdown"
+                aria-expanded="false">
+            <i class="material-icons material-symbols-rounded" style="font-size: 24px;">more_horiz</i>
+        </a>
 
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+
+            {{-- Edit --}}
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-2"
+                   href="{{ route('subject-module.edit', $module->pk) }}">
+                    <i class="material-icons material-symbols-rounded" style="font-size: 20px;">edit</i>
+                    Edit
+                </a>
+            </li>
+
+            {{-- Delete --}}
+            @if($module->active_inactive == 1)
+                <li>
+                    <span class="dropdown-item text-muted d-flex align-items-center gap-2"
+                          style="cursor: not-allowed;">
+                        <i class="material-icons material-symbols-rounded" style="font-size: 20px;">delete</i>
+                        Cannot delete (active)
+                    </span>
+                </li>
+            @else
+                <li>
+                    <form action="{{ route('subject-module.destroy', $module->pk) }}" method="POST"
+                          onsubmit="return confirm('Are you sure you want to delete this Subject Module?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                                class="dropdown-item text-danger d-flex align-items-center gap-2">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 20px;">delete</i>
+                            Delete
+                        </button>
+                    </form>
+                </li>
+            @endif
+
+        </ul>
+    </div>
+</td>
                                 </tr>
                                 @endforeach
                             </tbody>

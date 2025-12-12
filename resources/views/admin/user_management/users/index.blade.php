@@ -31,7 +31,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        {{ $dataTable->table(['class' => 'table w-100']) }}
+                        {{ $dataTable->table(['class' => 'table']) }}
                     </div>
             </div>
         </div>

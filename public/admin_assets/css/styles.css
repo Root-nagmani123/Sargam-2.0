@@ -39081,7 +39081,7 @@ pre.code-view code.hljs {
     background: #ECEDF8;
     width: 230px;
     margin-top: 71.5px;
-    padding:5px;
+    padding: 5px;
     border-radius: 0px 15px 0px 0px;
 }
 
@@ -39117,6 +39117,7 @@ pre.code-view code.hljs {
 .side-mini-panel .mini-nav .mini-nav-item.selected>a .material-icons {
     color: #004a93;
 }
+
 .side-mini-panel .mini-nav .mini-nav-item.selected>a .mini-nav-title {
     font-size: 16px;
     font-weight: 600;
@@ -39136,7 +39137,7 @@ pre.code-view code.hljs {
     top: 0;
     border-radius: 12px;
     z-index: 1;
-    color:#004a93;
+    color: #004a93;
 }
 
 .side-mini-panel .mini-nav .mini-nav-item.selected>span:before {
@@ -39150,19 +39151,17 @@ pre.code-view code.hljs {
 .side-mini-panel .sidebarmenu .sidebar-nav {
     position: absolute;
     top: 72px;
-    left: 230px;
+    left: 220px;
     width: 260px;
     height: calc(100vh - 72px);
 
     /* SVG background panel */
-    background-image: url("../images/menu_panel.svg");
-    background-repeat: no-repeat;
-    background-size: cover;
-    margin-top: 40px;
-    filter: drop-shadow(-1px -2px 7px rgba(0,0,0,0.2));
-    display: none; 
-    padding: 20px 0px 24px 20px; 
-    z-index: 98; 
+    background: #004384;
+    margin-top: 0px;
+    filter: drop-shadow(-1px -2px 7px rgba(0, 0, 0, 0.2));
+    display: none;
+    padding: 20px 0px 24px 20px;
+    z-index: 98;
     border-radius: 0 20px 20px 0;
 }
 
@@ -39203,7 +39202,8 @@ pre.code-view code.hljs {
     font-weight: 600;
     white-space: normal;
     color: #ffffff;
-    border-radius: 30px;       /* keep shape always round */
+    border-radius: 30px;
+    /* keep shape always round */
     background: transparent;
     transition: 0.25s ease-in-out;
     margin-bottom: 10px;
@@ -39213,10 +39213,12 @@ pre.code-view code.hljs {
 .sidebar-nav ul .sidebar-item .sidebar-link:hover {
     background-color: #4077ad;
     color: #fff;
-    padding-left: 20px;        /* smooth slide effect */
+    padding-left: 20px;
+    /* smooth slide effect */
     box-shadow: -2px 3px rgba(255, 255, 255, 0.1);
     width: 100%;
-    border-radius:30px 0 0 30px; /* keep shape always round */
+    border-radius: 30px 0 0 30px;
+    /* keep shape always round */
     transition: all 0.3s ease-in-out;
 }
 

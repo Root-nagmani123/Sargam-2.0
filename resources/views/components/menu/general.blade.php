@@ -9,7 +9,6 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 24px 20px;">
                         <ul class="sidebar-menu" id="sidebarnav">
-                            @include('components.profile')
                             {{-- GENERAL --}}
                             
                         <!-- Faculty Dashboard Route -->

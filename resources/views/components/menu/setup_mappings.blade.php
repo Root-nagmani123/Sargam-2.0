@@ -9,7 +9,6 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 0px 0px 20px 24px;">
                         <ul class="sidebar-menu" id="sidebarnav">
-                            @include('components.profile')
                           
                             <li class="nav-section" role="listitem">
                             @if(hasRole('Admin') || hasRole('Training'))

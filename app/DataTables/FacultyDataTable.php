@@ -28,9 +28,9 @@ class FacultyDataTable extends DataTable
             ->addColumn('faculty_type', function($row) {
 
                 return match((int)$row->faculty_type) {
-                    1 => '<span class="badge bg-success">Internal</span>',
-                    2 => '<span class="badge bg-warning">Guest</span>',
-                    3 => '<span class="badge bg-info">Research</span>',
+                    1 => '<span class="badge bg-success-subtle text-success">Internal</span>',
+                    2 => '<span class="badge bg-warning-subtle text-warning">Guest</span>',
+                    3 => '<span class="badge bg-info-subtle text-info">Research</span>',
                     default => null,
                 };
             })
@@ -48,9 +48,9 @@ class FacultyDataTable extends DataTable
                 $sector = empty($sector) ? 1 : (int)$sector;
 
                 return match($sector) {
-                    1 => '<span class="badge bg-success">Government</span>',
-                    2 => '<span class="badge bg-danger">Private</span>',
-                    default => '<span class="badge bg-success">Government</span>',
+                    1 => '<span class="badge bg-success-subtle text-success">Government</span>',
+                    2 => '<span class="badge bg-danger-subtle text-danger">Private</span>',
+                    default => '<span class="badge bg-success-subtle text-success">Government</span>',
                 };
 
             })
