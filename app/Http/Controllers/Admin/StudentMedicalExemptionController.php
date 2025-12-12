@@ -10,6 +10,8 @@ use App\Models\StudentMaster;
 use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
 use App\Models\EmployeeMaster;
+use App\Models\StudentCourseGroupMap;
+use App\Models\GroupTypeMasterCourseMasterMap;
 use App\Exports\StudentMedicalExemptionExport;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -222,11 +224,16 @@ public function update(Request $request, $id)
     public function getStudentsByCourse(Request $request)
     {
         $courseId = $request->input('course_id');
-        $students = DB::table('student_master_course__map')
-            ->join('student_master', 'student_master_course__map.student_master_pk', '=', 'student_master.pk')
-            ->where('student_master_course__map.course_master_pk', $courseId)
+        
+        // Get students from Course Group Mapping (Phase-1 mapped students)
+        // Join: StudentCourseGroupMap -> GroupTypeMasterCourseMasterMap -> Course
+        $students = DB::table('student_course_group_map')
+            ->join('group_type_master_course_master_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'group_type_master_course_master_map.pk')
+            ->join('student_master', 'student_course_group_map.student_master_pk', '=', 'student_master.pk')
+            ->where('group_type_master_course_master_map.course_name', $courseId)
             ->where('student_master.status', '1')
             ->select('student_master.pk', 'student_master.generated_OT_code', 'student_master.display_name')
+            ->distinct()
             ->orderBy('student_master.display_name', 'asc')
             ->get();
        
