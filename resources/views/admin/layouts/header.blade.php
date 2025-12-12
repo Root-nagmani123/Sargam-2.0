@@ -11,7 +11,14 @@
 .navbar-nav .nav-link:focus {
     background-color: #f2f2f2;
     color: #000;
-    outline: none;
+    outline: 2px solid #004a93; /* GIGW: Clear focus indication */
+    outline-offset: 2px;
+}
+
+/* Center Align the Items in the Navbar */
+.navbar-nav {
+    justify-content: center;
+    width: 100%;
 }
 
 .navbar-nav .nav-link.active {
@@ -95,9 +102,7 @@
 </style>
 
 <header class="topbar">
-
-    <div class="with-vertical">
-        <nav class="navbar navbar-expand-lg p-0">
+  <nav class="navbar navbar-expand-lg p-0" style="flex-wrap: wrap;">
             <ul class="navbar-nav">
                 <li class="nav-item d-flex d-xl-none">
                     <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
@@ -163,16 +168,6 @@
                                     <span>Communications</span>
                                 </a>
                             </li>
-
-                            <!-- Academics -->
-                            <!-- <li class="nav-item" role="none">
-                                <a href="#tab-academics"
-                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
-                                    data-bs-toggle="tab" role="tab" aria-selected="false"
-                                    aria-controls="academics-panel" id="academics-tab">
-                                    <span>Academics</span>
-                                </a>
-                            </li> -->
                            
                             <!-- Material Management -->
                             <li class="nav-item" role="none">
@@ -331,7 +326,6 @@
             });
             </script>
         </nav>
-    </div>
 </header>
 
 

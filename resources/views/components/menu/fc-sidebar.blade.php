@@ -1,7 +1,5 @@
 <nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-3" data-simplebar="">
         <ul class="sidebar-menu" id="sidebarnav">
-            @include('components.profile')
-
             <!-- Section Header -->
              @if(hasRole('Admin') || hasRole('Training'))
             <li class="nav-section" role="listitem">

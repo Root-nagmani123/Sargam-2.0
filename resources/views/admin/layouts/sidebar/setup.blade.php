@@ -18,6 +18,7 @@
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
 
+                            @include('components.profile')
                                             <li class="mini-nav-item" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -124,7 +125,7 @@
                                                          <i class="material-icons menu-icon material-symbols-rounded"
                                                              style="font-size: 32px;">note_add</i>
                                                          <span
-                                                             class="mini-nav-title fs-4 fw-bold text-dark text-wrap">FC
+                                                             class="mini-nav-title fs-4 text-dark text-wrap">FC
                                                              Registration</span>
                                                      </div>
 

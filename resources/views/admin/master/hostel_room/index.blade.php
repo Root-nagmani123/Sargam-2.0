@@ -24,7 +24,7 @@
                         </div>
                     </div>
                     <hr>
-                    {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}
+                    {{ $dataTable->table(['class' => 'table']) }}
                 </div>
             </div>
         </div>

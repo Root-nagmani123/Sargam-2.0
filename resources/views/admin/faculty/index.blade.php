@@ -47,7 +47,7 @@
                     </div>
 
                     <hr>
-                    {!! $dataTable->table(['class' => 'table w-100']) !!}
+                    {!! $dataTable->table(['class' => 'table']) !!}
                 </div>
             </div>
         </div>

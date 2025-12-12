@@ -326,7 +326,11 @@
                 <div class="tab-content" id="mainNavbarContent">
                     <!-- Home Tab -->
                     <div class="tab-pane fade show active" id="home" role="tabpanel">
-                        @yield('content')
+                        <div class="d-flex justify-content-center w-100">
+                            <div class="container-fluid" style="max-width: 1400px;">
+                                @yield('content')
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Setup Tab -->

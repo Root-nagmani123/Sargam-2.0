@@ -4,6 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
+    <x-breadcrum title="Employee Type Master" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -21,7 +22,7 @@
                 </div>
                 <hr>
                 <div class="table-responsive">
-                    {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}
+                    {{ $dataTable->table(['class' => 'table']) }}
                 </div>
                 
             </div>

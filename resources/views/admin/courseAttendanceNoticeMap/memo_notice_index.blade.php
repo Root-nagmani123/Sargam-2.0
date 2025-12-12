@@ -95,23 +95,34 @@
 
                                 </div>
                             </td>
+<td>
+    <div class="dropdown">
+        <a href="#" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="material-icons material-icons-rounded fs-5">more_horiz</i>
+        </a>
 
-                            <td>
-                                <div class="d-flex gap-1">
-                                    <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
-                                        class="btn btn-sm btn-primary py-0 px-2">
-                                        Edit
-                                    </a>
-                                    <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}" method="POST"
-                                        class="d-inline"
-                                        onsubmit="return confirm('Are you sure you want to delete this template?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-danger py-0 px-2">
-                                            Delete
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+            <li>
+                <a class="dropdown-item"
+                   href="{{ route('admin.memo-notice.edit', $template->pk) }}">
+                    Edit
+                </a>
+            </li>
+
+            <li>
+                <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
+                      method="POST"
+                      onsubmit="return confirm('Are you sure you want to delete this template?')">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="dropdown-item text-danger">
+                        Delete
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
+</td>
+
                         </tr>
                         @endforeach
                     </tbody>

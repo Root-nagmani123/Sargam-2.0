@@ -22,7 +22,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        {{ $dataTable->table(['class' => 'table table-striped table-bordered']) }}
+                        {{ $dataTable->table(['class' => 'table']) }}
                     </div>
                 </div>
             </div>

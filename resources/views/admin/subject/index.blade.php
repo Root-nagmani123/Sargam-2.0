@@ -24,14 +24,14 @@
             <hr>
             <div class="table-responsive">
 
-                <table class="table table-bordered text-nowrap">
-                    <thead style="background-color: #af2910;">
+                <table class="table">
+                    <thead>
                         <tr>
                             <th class="col">S.No.</th>
                             <th class="col">Major Subject Name</th>
                             <th class="col">Short Name</th>
-                            <th class="col">Action</th>
                             <th class="col">Status</th>
+                            <th class="col">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -41,34 +41,6 @@
                             <td>{{ $subject->subject_name }}</td>
                             <td>{{ $subject->sub_short_name }}</td>
                             <td>
-                                <div class="d-flex justify-content-start align-items-start gap-2">
-                                    <a href="{{ route('subject.edit', $subject->pk) }}"><i
-                                            class="material-icons material-symbols-rounded"
-                                            style="font-size: 22px;">edit</i></a>
-                                    <div class="delete-icon-container" data-item-id="{{ $subject->pk }}" data-delete-url="{{ route('subject.destroy', $subject->pk) }}">
-                                        @if($subject->active_inactive == 1)
-                                            <span class="delete-icon-disabled" title="Cannot delete active subject">
-                                                <i class="material-icons material-symbols-rounded"
-                                                    style="font-size: 22px; color: #ccc; cursor: not-allowed;">delete</i>
-                                            </span>
-                                        @else
-                                            <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
-                                                class="m-0 delete-form" data-status="{{ $subject->active_inactive }}">
-                                                @csrf
-                                                @method('DELETE')
-                                                <a href="javascript:void(0)" onclick="event.preventDefault();
-                                                        if(confirm('Are you sure you want to delete this subject?')) {
-                                                            this.closest('form').submit();
-                                                        }">
-                                                    <i class="material-icons material-symbols-rounded"
-                                                        style="font-size: 22px;">delete</i>
-                                                </a>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
                                 <div class="form-check form-switch">
                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                         data-table="subject_master" data-column="active_inactive"
@@ -76,6 +48,51 @@
                                         {{ $subject->active_inactive == 1 ? 'checked' : '' }}>
                                 </div>
                             </td>
+                            <td>
+    <div class="dropdown">
+        <a href="#" data-bs-toggle="dropdown"
+            aria-expanded="false">
+            <i class="material-icons material-symbols-rounded" style="font-size: 22px;">more_horiz</i>
+        </a>
+
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+
+            {{-- Edit --}}
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-2"
+                   href="{{ route('subject.edit', $subject->pk) }}">
+                    <i class="material-icons material-symbols-rounded" style="font-size: 20px;">edit</i>
+                    Edit
+                </a>
+            </li>
+
+            {{-- Delete --}}
+            @if($subject->active_inactive == 1)
+                <li>
+                    <span class="dropdown-item text-muted d-flex align-items-center gap-2"
+                          style="cursor: not-allowed;">
+                        <i class="material-icons material-symbols-rounded" style="font-size: 20px;">delete</i>
+                        Cannot delete (active)
+                    </span>
+                </li>
+            @else
+                <li>
+                    <form action="{{ route('subject.destroy', $subject->pk) }}" method="POST"
+                          onsubmit="return confirm('Are you sure you want to delete this subject?');">
+                        @csrf
+                        @method('DELETE')
+                        <button class="dropdown-item text-danger d-flex align-items-center gap-2" type="submit">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 20px;">delete</i>
+                            Delete
+                        </button>
+                    </form>
+                </li>
+            @endif
+
+        </ul>
+    </div>
+</td>
+
                         </tr>
                         @endforeach
                     </tbody>
