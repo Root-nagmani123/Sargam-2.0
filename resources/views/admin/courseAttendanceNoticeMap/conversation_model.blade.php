@@ -67,7 +67,7 @@
             </div>
             @else
             <div class="alert alert-info">
-                <strong>Notice Not started:</strong> This notice has not started yet.
+                <strong>Notice Not started:</strong> This notice conversation is not yet started. You cannot reply to it, click on the notice start button to start the Conversation.
             </div>
 
         @endif
