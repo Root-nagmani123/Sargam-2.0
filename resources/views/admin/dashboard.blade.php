@@ -250,8 +250,188 @@ textarea:focus,
     letter-spacing: 0.4px;
 }
 </style>
+<style>
+/* ================================
+   MODERN UI ENHANCEMENTS (GIGW)
+================================ */
 
-<div class="container-fluid">
+/* --- Global Card Styling --- */
+.stat-card-modern,
+.content-card-modern,
+.card,
+.birthday-card {
+    border-radius: 18px !important;
+    background: #ffffff;
+    box-shadow: var(--shadow-sm) !important;
+    border: 1px solid #e8e8e8;
+    transition: var(--transition-base);
+}
+
+.stat-card-modern:hover,
+.content-card-modern:hover,
+.card:hover {
+    box-shadow: var(--shadow-md) !important;
+    transform: translateY(-3px);
+}
+
+/* --- Modern Section Headers --- */
+.section-header-modern {
+    font-size: 1.2rem;
+    font-weight: 700;
+    padding-bottom: 4px;
+    color: var(--text-primary);
+    border-left: 4px solid var(--primary-color);
+    padding-left: 10px;
+}
+
+/* --- Divider --- */
+.divider-modern {
+    width: 100%;
+    height: 1px;
+    background: #e5e5e5;
+    margin: 16px 0;
+}
+
+/* --- Notice Sidebar --- */
+.card-header.bg-danger {
+    border-radius: 18px 18px 0 0 !important;
+    padding: 14px 20px;
+}
+
+.card-body {
+    padding: 20px !important;
+}
+
+.card-body p {
+    color: #202020;
+    line-height: 1.6;
+}
+
+/* --- Notice Items --- */
+.notice-item {
+    padding: 12px 14px;
+    border-radius: 12px;
+    transition: var(--transition-base);
+    background: #fafafa;
+}
+
+.notice-item:hover {
+    background: #eff5ff;
+    border-left: 4px solid var(--primary-color);
+}
+
+/* --- Calendar Card --- */
+.calendar-component {
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid #e6e6e6;
+    padding: 18px;
+}
+
+.calendar-component table {
+    border-collapse: separate !important;
+    border-spacing: 4px !important;
+}
+
+/* Highlight Active Day */
+.calendar-cell.is-selected {
+    background: var(--primary-color) !important;
+    color: #fff !important;
+    font-weight: 600;
+}
+
+/* --- Dropdown Alignment --- */
+.x-dropdown {
+    margin-bottom: 10px;
+    display: inline-block;
+    width: 100%;
+}
+
+/* --- Teacher Dropdown Column --- */
+.col-3 .x-dropdown {
+    width: 100%;
+}
+
+/* --- Birthday Cards Grid --- */
+.birthday-card {
+    min-height: 160px;
+    padding: 16px 20px !important;
+    transition: var(--transition-base);
+}
+
+.birthday-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Employee name */
+.emp-name {
+    font-size: 1.1rem !important;
+    font-weight: 700;
+}
+
+/* --- Smooth Scrolling --- */
+.content-card-body-modern {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) #f1f1f1;
+}
+
+.content-card-body-modern::-webkit-scrollbar {
+    width: 8px;
+}
+
+.content-card-body-modern::-webkit-scrollbar-thumb {
+    background: #c9c9c9;
+    border-radius: 10px;
+}
+
+.content-card-body-modern::-webkit-scrollbar-thumb:hover {
+    background: #a3a3a3;
+}
+
+/* --- Buttons Modernized --- */
+.btn-outline-primary {
+    border-radius: 10px;
+    padding: 6px 12px;
+    border-width: 1.5px;
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+/* --- GIGW Compliant Focus Styles --- */
+*:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* --- Improved Headings Spacing --- */
+h3.fw-bold {
+    margin-top: 30px;
+}
+
+/* --- Metric Cards Icons --- */
+.stat-card-icon-modern img {
+    width: 38px !important;
+    height: 38px !important;
+}
+
+.stat-card-icon-modern {
+    border-radius: 12px;
+    padding: 10px !important;
+}
+
+.stat-card-value-modern {
+    font-size: 1.8rem !important;
+    font-weight: 800 !important;
+}
+</style>
+
+
+<div class="container-fluid p-0">
 
     <div class="row mb-3">
         <div class="col-9">
@@ -414,7 +594,7 @@ textarea:focus,
         <hr class="my-2">
         <div class="row g-4">
             <!-- LEFT SIDE: Birthday Cards -->
-            <div class="col-7">
+            <div class="col-lg-7">
                 <div class="card">
                     <div class="card-body">
                         @if($emp_dob_data->isEmpty())
@@ -476,14 +656,13 @@ textarea:focus,
                 </div>
             </div>
             <!-- RIGHT SIDE: Calendar -->
-            <div class="col-5">
+            <div class="col-lg-5">
                 <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events"
                     theme="gov-red" />
 
             </div>
         </div>
     </div>
-
 
 </div>
 

@@ -189,7 +189,21 @@
 
                             <!-- faculty menu start -->
                             @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                             <li class="sidebar-item" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#facultyCollapse" role="button"
+                                    aria-expanded="false" aria-controls="facultyCollapse">
+                                    <span class="hide-menu fw-bold">Faculty View</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                             <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
+                               <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
                             <li class="sidebar-item"><a class="sidebar-link"
@@ -212,6 +226,7 @@
                                     href="{{route('feedback.get.feedbackList')}}">
                                     <span class="hide-menu">My Feedback</span>
                                 </a></li>
+                            </ul>
                             @endif
                             <!-- faculty menu end -->
                              <!-- medical exemption for OTs -->
@@ -223,7 +238,21 @@
 
                             <!-- OTs menu start -->
                             @if(hasRole('Student-OT') || hasRole('Admin'))
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                             <li class="sidebar-item" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#otCollapse" role="button"
+                                    aria-expanded="false" aria-controls="otCollapse">
+                                    <span class="hide-menu fw-bold">OT View</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                             <ul class="collapse list-unstyled ps-3" id="otCollapse">
+                               <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
                                     <span class="hide-menu">My Time Table</span>
                                 </a></li>
                             <li class="sidebar-item"><a class="sidebar-link"
@@ -248,6 +277,7 @@
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
                                     <span class="hide-menu">Peer Evaluation</span>
                                 </a></li>
+                            </ul>
                             @endif
                         </ul>
                     </div>
