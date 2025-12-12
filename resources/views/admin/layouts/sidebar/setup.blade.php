@@ -19,27 +19,6 @@
                                         <div class="simplebar-content" style="padding: 0px;">
 
                             @include('components.profile')
-                             <!-- Collapse Button with ARIA labels and better focus management -->
-                             <div class="brand-logo d-flex align-items-center justify-content-end" style="margin-right: 0.5rem;">
-    <a class="nav-link sidebartoggler"
-       id="headerCollapse"
-       href="javascript:void(0)"
-       data-bs-toggle="tooltip"
-       data-bs-custom-class="custom-tooltip"
-       data-bs-placement="right"
-       data-bs-title="Collapse/Expand Menu Bar"
-       aria-label="Toggle menu">
-
-        <i id="sidebarToggleIcon"
-           class="material-icons menu-icon material-symbols-rounded text-primary"
-           style="font-size: 40px;">
-            keyboard_double_arrow_left
-        </i>
-
-    </a>
-</div>
-=======
-@include('components.profile')
                                             <li class="mini-nav-item" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
