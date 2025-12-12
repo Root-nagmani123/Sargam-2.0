@@ -9,10 +9,7 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 0px 0px 20px 24px;">
                         <ul class="sidebar-menu" id="sidebarnav">
-<<<<<<< HEAD
                           
-=======
->>>>>>> 0da5e950 (ui fixes)
                             <li class="nav-section" role="listitem">
                                 @if(hasRole('Admin') || hasRole('Training'))
 
@@ -21,9 +18,6 @@
 
                                     <!-- Left Side: Collapse Button with Enhanced Accessibility -->
                                     <div class="d-flex align-items-center">
-<<<<<<< HEAD
-                                        
-=======
                                         <!-- Collapse Button with ARIA labels and better focus management -->
                                         <button
                                             class="nav-link sidebartoggler d-flex align-items-center justify-content-center p-2 me-2"
@@ -41,7 +35,6 @@
                                             <!-- Screen Reader Only Text -->
                                             <span class="visually-hidden">Toggle sidebar navigation</span>
                                         </button>
->>>>>>> 0da5e950 (ui fixes)
 
                                         <!-- Section Title with Proper Semantic Markup -->
                                         <h2 class="section-title text-white m-0"
