@@ -44,7 +44,7 @@ class CalendarController extends Controller
             ->select('pk', 'shift_name','shift_time', 'start_time', 'end_time')
             ->get();
             // print_r($classSessionMaster);die;
-    
+
         return view('admin.calendar.index', compact(
             'courseMaster',
             'facultyMaster',
@@ -52,6 +52,62 @@ class CalendarController extends Controller
             'venueMaster',
             'classSessionMaster'
         )); 
+    }
+    public function weeklyTimetable(Request $request)
+    {
+        // Determine weekStart (Monday) from request or default to current week
+        $weekStart = $request->week_start
+            ? Carbon::parse($request->week_start)->startOfWeek()
+            : Carbon::now()->startOfWeek();
+
+        // We'll consider monday-friday display (5 days) but fetch full week for safety
+        $weekEnd = $weekStart->copy()->endOfWeek();
+
+        // Build time slots (example: 09:00 - 18:00 hourly). Adjust as needed.
+        $timeSlots = [];
+        $startTime = Carbon::createFromTime(9, 0);
+        $endTime = Carbon::createFromTime(18, 0);
+
+        while ($startTime <= $endTime) {
+            $timeSlots[] = $startTime->format('H:i'); // 24-hour format
+            $startTime->addHour();
+        }
+
+        // Fetch events from timetable table for the week
+        $events = DB::table('timetable')
+            ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+            ->whereBetween('timetable.START_DATE', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->select(
+                'timetable.pk',
+                'timetable.subject_topic',
+                'timetable.class_session',
+                'timetable.START_DATE',
+                'timetable.END_DATE',
+                'faculty_master.full_name as faculty_name',
+                'venue_master.venue_name as venue_name'
+            )
+            ->get();
+
+        // Normalize events to array (JSON friendly) and ensure START_DATE is Y-m-d
+        $events = $events->map(function ($e) {
+            return [
+                'pk' => $e->pk,
+                'subject_topic' => $e->subject_topic,
+                'class_session' => $e->class_session,
+                'START_DATE' => Carbon::parse($e->START_DATE)->toDateString(),
+                'END_DATE' => $e->END_DATE ? Carbon::parse($e->END_DATE)->toDateString() : null,
+                'faculty_name' => $e->faculty_name,
+                'venue_name' => $e->venue_name,
+            ];
+        });
+
+        return response()->json([
+            'weekStart' => $weekStart->toDateString(), // yyyy-mm-dd
+            'weekEnd' => $weekEnd->toDateString(),
+            'timeSlots' => $timeSlots,
+            'events' => $events->values(), // collection -> array
+        ]);
     }
     public function getSubjectName(Request $request)
 {
@@ -164,7 +220,16 @@ if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
     // ❗⚠ Only WHERE — NO NEW JOIN
     $events = $events->where('faculty_master.employee_master_pk', $faculty_pk);
 }
+$cuurent_month_start_date = Carbon::now()->startOfMonth()->toDateString();
+$cuurent_month_end_date = Carbon::now()->endOfMonth()->toDateString();
+if(($request->start) && ($request->end)){
 
+}else{
+    $request->start = $cuurent_month_start_date;
+    $request->end = $cuurent_month_end_date;
+}
+
+    
 $events = $events
     ->whereDate('START_DATE', '>=', $request->start)
     ->whereDate('END_DATE', '<=', $request->end)
