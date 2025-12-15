@@ -804,7 +804,7 @@ public function memo_notice_conversation(Request $request)
                 ]);
         }else if ($type === 'notice' && isset($validated['conclusion_type'])) {
             // If status is not 2, still update modified_date
-            DB::table('student_memo_status')
+            DB::table('student_notice_status')
                 ->where('pk', $validated['memo_notice_id'])
                 ->update([
                     'memo_conclusion_master_pk' => $validated['conclusion_type'],
@@ -1215,6 +1215,7 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
         return $item;
     });
 
+    // print_r($conversations);die;
     return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id','user_type'));
 }
 
