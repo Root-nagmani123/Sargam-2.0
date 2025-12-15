@@ -234,6 +234,8 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
         Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
 
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
+   
+   Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
     });
 
     // Area of Expertise
