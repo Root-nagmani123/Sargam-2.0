@@ -25,7 +25,13 @@
                             data-view="list">List
                     </button>
                 </div>
-
+                <div class="btn-group" role="group" aria-label="Calendar action buttons">
+                    <button type="button" class="btn btn-outline-primary btn-sm" 
+                            id="btnCalendarView"
+                            aria-pressed="false"
+                            data-view="calendar">Calendar 
+                    </button>
+                </div>
                 <!-- Action Buttons -->
                 @if(hasRole('Training') || hasRole('Admin'))
                 <button type="button" 
