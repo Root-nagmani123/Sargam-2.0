@@ -319,11 +319,11 @@ textarea:focus,
                     <h2>Admin & Campus Summary</h2>
                 </div>
                 <div class="content-card-body-modern">
-                    <!-- Admin Summary -->
-                    <section aria-labelledby="admin-summary-title" class="mb-5">
-                        <h3 id="admin-summary-title" class="section-header-modern"
+                    <!-- Admin Summary / Notifications -->
+                    <section aria-labelledby="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}" class="mb-5">
+                        <h3 id="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}" class="section-header-modern"
                             style="font-size:1.25rem;line-height:1.4;">
-                            Admin Summary
+                            {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
                         </h3>
 
                         <div class="divider-modern"></div>
@@ -333,18 +333,34 @@ textarea:focus,
 
 
 
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
-                            <p>Welcome to the Admin Dashboard! Here you can find a summary of key metrics and quick
-                                access
-                                to various administrative functions.</p>
+                            @php
+                                $user = Auth::user();
+                                $notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
+                            @endphp
+                            
+                            @if($notifications->isEmpty())
+                                <p class="text-muted">No notifications available.</p>
+                            @else
+                                @foreach($notifications as $notification)
+                                    <div class="mb-3 pb-3 border-bottom">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="fw-bold mb-1" style="font-size: 1rem; color: {{ $notification->is_read ? '#6c757d' : '#1a1a1a' }};">
+                                                {{ $notification->title }}
+                                                @if(!$notification->is_read)
+                                                    <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">New</span>
+                                                @endif
+                                            </h6>
+                                            <small class="text-muted">{{ $notification->created_at->format('d M, Y') }}</small>
+                                        </div>
+                                        <p class="mb-1" style="font-size: 0.9rem; line-height: 1.5; color: #333;">
+                                            {{ $notification->message }}
+                                        </p>
+                                        <small class="text-muted">
+                                            <span class="badge bg-secondary">{{ $notification->module_name }}</span>
+                                        </small>
+                                    </div>
+                                @endforeach
+                            @endif
                         </div>
                     </section>
 

@@ -13,6 +13,8 @@ use App\Models\EmployeeMaster;
 use App\Models\StudentCourseGroupMap;
 use App\Models\GroupTypeMasterCourseMasterMap;
 use App\Exports\StudentMedicalExemptionExport;
+use App\Services\NotificationService;
+use App\Services\NotificationReceiverService;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -165,7 +167,46 @@ class StudentMedicalExemptionController extends Controller
         $validated['Doc_upload'] = $path;
     }
 
-    StudentMedicalExemption::create($validated);
+    $medicalExemption = StudentMedicalExemption::create($validated);
+
+    // Send notifications to relevant users
+    try {
+        $notificationService = app(NotificationService::class);
+        $receiverService = app(NotificationReceiverService::class);
+
+        // Get student and course information for notification
+        $student = StudentMaster::find($validated['student_master_pk']);
+        $course = CourseMaster::find($validated['course_master_pk']);
+
+        $studentName = $student ? $student->display_name : 'Student';
+        $courseName = $course ? $course->course_name : 'Course';
+        $fromDate = date('d M Y', strtotime($validated['from_date']));
+        $toDate = $validated['to_date'] ? date('d M Y', strtotime($validated['to_date'])) : 'Ongoing';
+
+        // Get receiver user_ids
+        $receiverUserIds = $receiverService->getMedicalExemptionReceivers(
+            $validated['student_master_pk'],
+            $validated['course_master_pk']
+        );
+
+        if (!empty($receiverUserIds)) {
+            $title = 'Medical Exemption Added';
+            $message = "A medical exemption has been added for student {$studentName} (Course: {$courseName}) from {$fromDate} to {$toDate}.";
+
+            // Send notifications to all receivers
+            $notificationService->createMultiple(
+                $receiverUserIds,
+                'medical_exemption',
+                'Medical Exemption',
+                $medicalExemption->pk,
+                $title,
+                $message
+            );
+        }
+    } catch (\Exception $e) {
+        // Log error but don't fail the request
+        \Log::error('Failed to send medical exemption notifications: ' . $e->getMessage());
+    }
 
     return redirect()->route('student.medical.exemption.index')->with('success', 'Record created successfully.');
 }
@@ -211,6 +252,45 @@ public function update(Request $request, $id)
     }
 
     $record->update($validated);
+
+    // Send notifications to relevant users
+    try {
+        $notificationService = app(NotificationService::class);
+        $receiverService = app(NotificationReceiverService::class);
+
+        // Get student and course information for notification
+        $student = StudentMaster::find($validated['student_master_pk']);
+        $course = CourseMaster::find($validated['course_master_pk']);
+
+        $studentName = $student ? $student->display_name : 'Student';
+        $courseName = $course ? $course->course_name : 'Course';
+        $fromDate = date('d M Y', strtotime($validated['from_date']));
+        $toDate = $validated['to_date'] ? date('d M Y', strtotime($validated['to_date'])) : 'Ongoing';
+
+        // Get receiver user_ids
+        $receiverUserIds = $receiverService->getMedicalExemptionReceivers(
+            $validated['student_master_pk'],
+            $validated['course_master_pk']
+        );
+
+        if (!empty($receiverUserIds)) {
+            $title = 'Medical Exemption Updated';
+            $message = "A medical exemption has been updated for student {$studentName} (Course: {$courseName}) from {$fromDate} to {$toDate}.";
+
+            // Send notifications to all receivers
+            $notificationService->createMultiple(
+                $receiverUserIds,
+                'medical_exemption',
+                'Medical Exemption',
+                $record->pk,
+                $title,
+                $message
+            );
+        }
+    } catch (\Exception $e) {
+        // Log error but don't fail the request
+        \Log::error('Failed to send medical exemption notifications: ' . $e->getMessage());
+    }
 
     return redirect()->route('student.medical.exemption.index')->with('success', 'Record updated successfully.');
 }

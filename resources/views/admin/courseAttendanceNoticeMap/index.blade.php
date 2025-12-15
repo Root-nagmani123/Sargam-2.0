@@ -229,6 +229,13 @@
                 <div class="col-6">
                     <div class="d-flex justify-content-end align-items-center gap-2">
 
+                        <!-- Export PDF Button -->
+                        <a href="{{ route('memo.notice.management.export_pdf', request()->query()) }}"
+                            class="btn btn-danger d-flex align-items-center" target="_blank">
+                            <i class="bi bi-file-earmark-pdf me-1" style="font-size: 18px;"></i>
+                            Export PDF
+                        </a>
+
                         <!-- Add Group Mapping -->
                         <a href="{{ route('memo.notice.management.create') }}"
                             class="btn btn-primary d-flex align-items-center">
@@ -276,8 +283,29 @@
                 </div>
                 <div class="col-3">
                     <div class="mb-3">
-                        <label for="status" class="form-label">Status</label>
+                        <label for="search" class="form-label">Search</label>
                        <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="from_date" class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="to_date" class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mb-3 d-flex align-items-center gap-2">
+                        <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Clear Filters
+                        </a>
                     </div>
                 </div>
             </div>
@@ -702,7 +730,7 @@ $(document).ready(function() {
 <script>
 $(document).ready(function() {
     // Filter form submission on change
-    $('#program_name, #type, #status').on('change', function() {
+    $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
         $('#filterForm').submit();
     });
     
