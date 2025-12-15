@@ -157,10 +157,10 @@
                                         href="{{ route('course.memo.decision.index') }}">
                                         <span class="hide-menu">Memo Course Mapping</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
+                                {{-- <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('memo.notice.management.user') }}">
-                                        <span class="hide-menu">Memo & Notice Chat (User)</span>
-                                    </a></li>
+                                        <span class="hide-menu">Memo & Notice Chat (User).</span>
+                                    </a></li> --}}
                             </ul>
                             <li class="sidebar-item" style="background: #4077ad;
     border-radius: 30px 0px 0px 30px;
@@ -267,8 +267,11 @@
                                     href="{{ route('medical.exception.ot.view') }}">
                                     <span class="hide-menu">Medical Exemption</span>
                                 </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
-                                    <span class="hide-menu">Memo/Notice</span>
+                            {{--<li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
+                                    <span class="hide-menu">Memo/Notice activety</span>
+                                </a></li>--}}
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.notice.management.user') }}">
+                                    <span class="hide-menu">Memo/Notice action</span>
                                 </a></li>
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('feedback.get.studentFeedback') }}">

@@ -55,50 +55,55 @@ class NoticeNotificationController extends Controller
    // Insert
 public function store(Request $request)
 {
-   
     $request->validate([
-        'notice_title'      => 'required|string|max:255',
-        'description'       => 'required|string',
-        'notice_type'       => 'required|string',
-        'display_date'      => 'required|date',
-        'expiry_date'       => 'required|date|after_or_equal:display_date',
-        'document'          => 'nullable|mimes:jpg,jpeg,png,pdf,doc,docx|max:2048',
-        'target_audience'   => 'required|string',
+        'notice_title'    => 'required|string|max:255',
+        'description'     => 'required|string',
+        'notice_type'     => 'required|string',
+        'display_date'    => 'required|date',
+        'expiry_date'     => 'required|date|after_or_equal:display_date',
+
+        // ✅ ONLY JPG, PNG, PDF
+        'document'        => 'nullable|file|mimetypes:image/jpeg,image/png,application/pdf|max:2048',
+
+        'target_audience' => 'required|string',
     ], [
-        'notice_title.required'     => 'Please enter notice title.',
-        'description.required'      => 'Please enter description.',
-        'notice_type.required'      => 'Please select notice type.',
-        'display_date.required'     => 'Please select display date.',
-        'expiry_date.required'      => 'Please select expiry date.',
-        'expiry_date.after_or_equal'=> 'Expiry date must be equal or greater than display date.',
-        'document.mimes'            => 'Only JPG, PNG, PDF, DOC files allowed.',
-        'document.max'              => 'File size must not exceed 2 MB.',
-        'target_audience.required'  => 'Please select target audience.',
-    ]);
-if($request->has('course_master_pk')){
-    $request->validate([
-        'course_master_pk'  => 'required|exists:course_master,pk',
-    ], [
-        'course_master_pk.required' => 'Please select a valid course.',
-        'course_master_pk.exists'   => 'Selected course does not exist.',
+        'notice_title.required'      => 'Please enter notice title.',
+        'description.required'       => 'Please enter description.',
+        'notice_type.required'       => 'Please select notice type.',
+        'display_date.required'      => 'Please select display date.',
+        'expiry_date.required'       => 'Please select expiry date.',
+        'expiry_date.after_or_equal' => 'Expiry date must be equal or greater than display date.',
+
+        // 🎯 FILE ERROR MESSAGES
+        'document.file'       => 'Uploaded file is not valid.',
+        'document.mimetypes'  => 'Unsupported file format. Only JPG, PNG and PDF files are allowed.',
+        'document.max'        => 'File size must not exceed 2 MB.',
+
+        'target_audience.required'   => 'Please select target audience.',
     ]);
 
-}
-//  print_r($request->all()); exit;
+    if ($request->has('course_master_pk')) {
+        $request->validate([
+            'course_master_pk' => 'required|exists:course_master,pk',
+        ], [
+            'course_master_pk.required' => 'Please select a valid course.',
+            'course_master_pk.exists'   => 'Selected course does not exist.',
+        ]);
+    }
+
     $data = $request->all();
     $data['created_by'] = Auth::id();
 
-    // File Upload
-    if($request->hasFile('document')){
-        // $data['document'] = $request->file('document')->store('public/notice_docs');
-         $file = $request->file('document');
-        $path = $file->store('notice_docs', 'public');
-        $data['document'] = $path;
+    if ($request->hasFile('document')) {
+        $data['document'] = $request->file('document')
+                                    ->store('notice_docs', 'public');
     }
 
     Notice::create($data);
 
-    return redirect()->route('admin.notice.index')->with('success','Notice created successfully!');
+    return redirect()
+        ->route('admin.notice.index')
+        ->with('success', 'Notice created successfully!');
 }
 
 
