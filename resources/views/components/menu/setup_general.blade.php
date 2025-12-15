@@ -58,6 +58,10 @@
                                     <span class="hide-menu">Attendance</span>
                                 </a></li>
                             <li class="sidebar-item"><a class="sidebar-link"
+                                    href="{{ route('send.notice.management.index') }}">
+                                    <span class="hide-menu">Send Direct Notice</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('memo.notice.management.index') }}">
                                     <span class="hide-menu">Send Memo / Notice</span>
                                 </a></li>

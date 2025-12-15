@@ -31,10 +31,12 @@ use App\Http\Controllers\Admin\{
     OTMDOEscrotExemptionController,
     FacultyMDOEscortExceptionViewController,
     OTNoticeMemoViewController,
-    FacultyNoticeMemoViewController
+    FacultyNoticeMemoViewController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
+use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -385,6 +387,15 @@ Route::prefix('admin/course-memo-decision')
    Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
 Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
 Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
+
+
+Route::prefix('admin/discipline')->name('master.discipline.')->group(function () {
+    Route::get('/', [DisciplineMasterController::class,'index'])->name('index');
+    Route::get('create', [DisciplineMasterController::class,'create'])->name('create');
+    Route::get('edit/{id}', [DisciplineMasterController::class,'edit'])->name('edit');
+    Route::post('store', [DisciplineMasterController::class,'store'])->name('store');
+    Route::delete('delete/{id}', [DisciplineMasterController::class,'destroy'])->name('delete');
+});
 
 
 

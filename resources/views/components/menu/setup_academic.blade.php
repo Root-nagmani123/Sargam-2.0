@@ -157,6 +157,11 @@
                                         href="{{ route('course.memo.decision.index') }}">
                                         <span class="hide-menu">Memo Course Mapping</span>
                                     </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.discipline.index') }}">
+                                        <span class="hide-menu">Discipline Master</span>
+                                    </a></li>
+
                                 {{-- <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('memo.notice.management.user') }}">
                                         <span class="hide-menu">Memo & Notice Chat (User).</span>
