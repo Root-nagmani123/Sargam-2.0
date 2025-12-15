@@ -41,125 +41,77 @@
 
         <!-- Calendar Container -->
         <section class="calendar-container" aria-label="Academic calendar">
-            <div class="card border-start-4 border-primary shadow-sm">
-                <div class="card-body p-3 p-md-4">
-                    <!-- FullCalendar -->
-                    <div id="calendar" class="fc" role="application" aria-label="Interactive calendar"></div>
+    <div class="card border-start-4 border-primary shadow-sm">
+        <div class="card-body p-3 p-md-4">
 
-                    <!-- List View (Hidden by default) -->
-                    <div id="eventListView" class="d-none" role="region" aria-label="Weekly timetable">
-                        <div class="timetable-wrapper">
-                            <!-- Timetable Header -->
-                            <div class="timetable-header bg-white border rounded-3 p-3 mb-4">
-                                <div class="row align-items-center g-3">
-                                    <div class="col-md-2 text-center text-md-start">
-                                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" 
-                                             alt="Lal Bahadur Shastri National Academy of Administration Logo" 
-                                             class="img-fluid institution-logo"
-                                             width="80" 
-                                             height="80">
-                                    </div>
-                                    <div class="col-md-8 text-center">
-                                        <h1 class="institution-name hindi-text mb-1 text-primary-dark">
-                                            लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी
-                                        </h1>
-                                        <h2 class="institution-name english-text mb-1" style="font-weight: 600; color: #af2910;">
-                                            Lal Bahadur Shastri National Academy of Administration
-                                        </h2>
-                                        <p class="text-muted mb-0">Weekly Timetable</p>
-                                    </div>
-                                    <div class="col-md-2 text-center text-md-end">
-                                        <div class="d-flex flex-column align-items-center gap-2">
-                                            <div class="btn-group" role="group" aria-label="Week navigation">
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-primary" 
-                                                        id="prevWeekBtn"
-                                                        aria-label="Previous week">
-                                                    <i class="material-symbols-rounded" aria-hidden="true">navigate_before</i>
-                                                </button>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-primary" 
-                                                        id="currentWeekBtn"
-                                                        aria-label="Current week">
-                                                    <i class="material-symbols-rounded" aria-hidden="true">today</i>
-                                                </button>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-primary" 
-                                                        id="nextWeekBtn"
-                                                        aria-label="Next week">
-                                                    <i class="material-symbols-rounded" aria-hidden="true">navigate_next</i>
-                                                </button>
-                                            </div>
-                                            <div>
-                                                <p class="text-muted mb-1">Week</p>
-                                                <p class="week-number text-primary fw-bold fs-2 mb-0" id="currentWeek">19</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+            <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
+            <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
+
+            <!-- List View -->
+            <div id="eventListView" class="mt-4" role="region" aria-label="Weekly timetable">
+                <div class="timetable-wrapper">
+                    <!-- Timetable Header -->
+                    <div class="timetable-header bg-white border rounded-3 p-3 mb-4">
+                        <div class="row align-items-center g-3">
+                            <div class="col-md-2 text-center text-md-start">
+                                <img src="{{ asset('images/lbsnaa_logo.jpg') }}"
+                                     alt="Logo"
+                                     class="img-fluid"
+                                     width="80" height="80">
                             </div>
 
-                            <!-- Timetable -->
-                            <div class="timetable-container border rounded-3 overflow-hidden">
-                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
-                                    <table class="table" 
-                                           id="timetableTable"
-                                           aria-describedby="timetableDescription">
-                                        <caption class="visually-hidden" id="timetableDescription">
-                                            Weekly academic timetable showing events for Monday through Friday
-                                        </caption>
-                                        <thead>
-                                            <tr>
-                                                <th scope="col" class="time-column">Time</th>
-                                                <th scope="col">
-                                                    Monday<br>
-                                                    <small>Nov 30</small>
-                                                </th>
-                                                <th scope="col">
-                                                    Tuesday<br>
-                                                    <small>Dec 1</small>
-                                                </th>
-                                                <th scope="col">
-                                                    Wednesday<br>
-                                                    <small>Dec 2</small>
-                                                </th>
-                                                <th scope="col">
-                                                    Thursday<br>
-                                                    <small>Dec 3</small>
-                                                </th>
-                                                <th scope="col">
-                                                    Friday<br>
-                                                    <small>Dec 4</small>
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="timetableBody">
-                                            <tr>
-                                                <td colspan="6" class="text-center p-5">
-                                                    <div class="empty-state">
-                                                        <i class="bi bi-calendar-x display-5 text-muted mb-3" 
-                                                           aria-hidden="true"></i>
-                                                        <p class="text-muted mb-3">No events scheduled yet.</p>
-                                                        @if(hasRole('Training') || hasRole('Admin'))
-                                                        <button type="button" 
-                                                                class="btn btn-primary"
-                                                                onclick="document.getElementById('createEventButton').click();">
-                                                            <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>
-                                                            Add Event
-                                                        </button>
-                                                        @endif
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                            <div class="col-md-8 text-center">
+                                <h2 class="mb-0">Weekly Timetable</h2>
+                                <p class="text-muted mb-0" id="weekRangeText">—</p>
+                            </div>
+
+                            <div class="col-md-2 text-center text-md-end">
+                                <div class="d-flex flex-column align-items-center gap-2">
+                                    <div class="btn-group" role="group" aria-label="Week navigation">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="prevWeekBtn" aria-label="Previous week">
+                                            &lt;
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="currentWeekBtn" aria-label="Current week">
+                                            Today
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" id="nextWeekBtn" aria-label="Next week">
+                                            &gt;
+                                        </button>
+                                    </div>
+
+                                    <div>
+                                        <p class="text-muted mb-1">Week</p>
+                                        <p class="week-number text-primary fw-bold fs-5 mb-0" id="currentWeekNumber">—</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Timetable table -->
+                    <div class="timetable-container border rounded-3 overflow-hidden">
+                        <div class="table-responsive" role="region" aria-label="Weekly timetable">
+                            <table class="table table-bordered" id="timetableTable" aria-describedby="timetableDescription">
+                                <caption class="visually-hidden" id="timetableDescription">
+                                    Weekly academic timetable showing events
+                                </caption>
+                                <thead id="timetableHead">
+                                    <!-- JS will populate header -->
+                                </thead>
+
+                                <tbody id="dynamicTimetable">
+                                    <!-- JS will populate body -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-        </section>
+
+        </div>
+    </div>
+</section>
     </main>
 </div>
 
