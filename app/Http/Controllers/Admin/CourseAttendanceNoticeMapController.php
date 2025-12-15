@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use App\Models\MemoNoticeTemplate;
+use Barryvdh\DomPDF\Facade\Pdf;
  
 class CourseAttendanceNoticeMapController extends Controller
 {
@@ -24,6 +25,14 @@ class CourseAttendanceNoticeMapController extends Controller
     $typeFilter = $request->get('type', '');
     $statusFilter = $request->get('status', '');
     $searchFilter = $request->get('search', '');
+    $fromDateFilter = $request->get('from_date', '');
+    $toDateFilter = $request->get('to_date', '');
+    
+    // Set default to today's date if no date filters are provided
+    if (empty($fromDateFilter) && empty($toDateFilter)) {
+        $fromDateFilter = Carbon::today()->toDateString();
+        $toDateFilter = Carbon::today()->toDateString();
+    }
 
     // Get initial notice records with course name
     $noticesQuery = DB::table('course_student_attendance as csa')
@@ -71,6 +80,14 @@ class CourseAttendanceNoticeMapController extends Controller
         } elseif ($statusFilter == '0') {
             $noticesQuery->where('sns.status', 2);
         }
+    }
+
+    // Apply date range filter for notices
+    if ($fromDateFilter) {
+        $noticesQuery->where('sns.date_', '>=', $fromDateFilter);
+    }
+    if ($toDateFilter) {
+        $noticesQuery->where('sns.date_', '<=', $toDateFilter);
     }
 
     $notices = $noticesQuery->get();
@@ -121,20 +138,37 @@ class CourseAttendanceNoticeMapController extends Controller
             }
         }
 
+        // Apply date range filter for memos
+        if ($fromDateFilter) {
+            $memoQuery->where('student_memo_status.date', '>=', $fromDateFilter);
+        }
+        if ($toDateFilter) {
+            $memoQuery->where('student_memo_status.date', '<=', $toDateFilter);
+        }
+
         $memos = $memoQuery->get();
     } else {
         // For Notice or no type filter, process notices normally
         foreach ($notices as $notice) {
             if ($notice->status == 2) {
                 // memo exists, try to pull memo data
-                $memoData = DB::table('student_memo_status')
+                $memoDataQuery = DB::table('student_memo_status')
                     ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
                     ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
                     ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
                     ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
                     ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
-                    ->where('student_memo_status.student_notice_status_pk', $notice->notice_id)
-                    ->select(
+                    ->where('student_memo_status.student_notice_status_pk', $notice->notice_id);
+                
+                // Apply date range filter for memo data
+                if ($fromDateFilter) {
+                    $memoDataQuery->where('student_memo_status.date', '>=', $fromDateFilter);
+                }
+                if ($toDateFilter) {
+                    $memoDataQuery->where('student_memo_status.date', '<=', $toDateFilter);
+                }
+                
+                $memoData = $memoDataQuery->select(
                         'student_memo_status.pk as memo_id',
                         'student_memo_status.pk as memo_notice_id',
                         'student_memo_status.student_notice_status_pk as notice_id',
@@ -207,6 +241,23 @@ class CourseAttendanceNoticeMapController extends Controller
                     || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false);
             });
         }
+
+        // Apply date range filter to collection
+        if ($fromDateFilter || $toDateFilter) {
+            $memos = $memos->filter(function($item) use ($fromDateFilter, $toDateFilter) {
+                if (!isset($item->date_)) {
+                    return false;
+                }
+                $itemDate = $item->date_;
+                if ($fromDateFilter && $itemDate < $fromDateFilter) {
+                    return false;
+                }
+                if ($toDateFilter && $itemDate > $toDateFilter) {
+                    return false;
+                }
+                return true;
+            });
+        }
     }
 
    
@@ -234,8 +285,267 @@ class CourseAttendanceNoticeMapController extends Controller
         ['path' => request()->url(), 'query' => request()->query()]
     );
 
-    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter'));
+    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter'));
 }
+
+    public function exportPdf(Request $request)
+    {
+        // Get filter parameters (same as index method)
+        $programNameFilter = $request->get('program_name', '');
+        $typeFilter = $request->get('type', '');
+        $statusFilter = $request->get('status', '');
+        $searchFilter = $request->get('search', '');
+        $fromDateFilter = $request->get('from_date', '');
+        $toDateFilter = $request->get('to_date', '');
+        
+        // Set default to today's date if no date filters are provided
+        if (empty($fromDateFilter) && empty($toDateFilter)) {
+            $fromDateFilter = Carbon::today()->toDateString();
+            $toDateFilter = Carbon::today()->toDateString();
+        }
+
+        // Get initial notice records with course name
+        $noticesQuery = DB::table('course_student_attendance as csa')
+            ->join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+            ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+            ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+            ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
+            ->select(
+                'sns.pk as notice_id',
+                'sns.pk as memo_notice_id',
+                'sns.student_pk',
+                'sns.course_master_pk',
+                'sns.date_',
+                'sns.subject_master_pk',
+                'sns.subject_topic',
+                'sns.venue_id',
+                'sns.class_session_master_pk',
+                'sns.faculty_master_pk',
+                'sns.message',
+                'sns.notice_memo',
+                'sns.status',
+                'sm.display_name as student_name',
+                'sm.pk as student_id',
+                't.subject_topic as topic_name',
+                'cm.course_name',
+                DB::raw('"Notice" as type_notice_memo')
+            );
+
+        // Apply filters on notices query
+        if ($programNameFilter) {
+            $noticesQuery->where('sns.course_master_pk', $programNameFilter);
+        }
+
+        if ($typeFilter !== null && $typeFilter !== '') {
+            if ($typeFilter == '1') {
+                $noticesQuery->where('sns.notice_memo', 1)->where('sns.status', '!=', 2);
+            }
+        }
+
+        if ($statusFilter !== null && $statusFilter !== '') {
+            if ($statusFilter == '1') {
+                $noticesQuery->where('sns.status', 1);
+            } elseif ($statusFilter == '0') {
+                $noticesQuery->where('sns.status', 2);
+            }
+        }
+
+        // Apply date range filter for notices
+        if ($fromDateFilter) {
+            $noticesQuery->where('sns.date_', '>=', $fromDateFilter);
+        }
+        if ($toDateFilter) {
+            $noticesQuery->where('sns.date_', '<=', $toDateFilter);
+        }
+
+        $notices = $noticesQuery->get();
+
+        $memos = collect();
+
+        // If filtering for Memo type, query student_memo_status directly
+        if ($typeFilter == '0') {
+            $memoQuery = DB::table('student_memo_status')
+                ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+                ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
+                ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+                ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
+                ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
+                ->select(
+                    'student_memo_status.pk as memo_id',
+                    'student_memo_status.pk as memo_notice_id',
+                    'student_memo_status.student_notice_status_pk as notice_id',
+                    'student_memo_status.student_pk',
+                    'student_memo_status.communication_status',
+                    'student_memo_status.course_master_pk',
+                    'student_memo_status.date as date_',
+                    'student_memo_status.conclusion_remark',
+                    DB::raw('NULL as subject_master_pk'),
+                    DB::raw('NULL as subject_topic'),
+                    DB::raw('NULL as venue_id'),
+                    DB::raw('NULL as class_session_master_pk'),
+                    DB::raw('NULL as faculty_master_pk'),
+                    DB::raw('"Memo" as type_notice_memo'),
+                    'student_memo_status.message',
+                    DB::raw('2 as notice_memo'),
+                    'student_memo_status.status',
+                    'sm.display_name as student_name',
+                    'sm.pk as student_id',
+                    't.subject_topic as topic_name',
+                    'mcm.discussion_name',
+                    'cm.course_name'
+                );
+
+            if ($programNameFilter) {
+                $memoQuery->where('student_memo_status.course_master_pk', $programNameFilter);
+            }
+            if ($statusFilter !== null && $statusFilter !== '') {
+                if ($statusFilter == '1') {
+                    $memoQuery->where('student_memo_status.status', 1);
+                } elseif ($statusFilter == '0') {
+                    $memoQuery->where('student_memo_status.status', 2);
+                }
+            }
+
+            // Apply date range filter for memos
+            if ($fromDateFilter) {
+                $memoQuery->where('student_memo_status.date', '>=', $fromDateFilter);
+            }
+            if ($toDateFilter) {
+                $memoQuery->where('student_memo_status.date', '<=', $toDateFilter);
+            }
+
+            $memos = $memoQuery->get();
+        } else {
+            // For Notice or no type filter, process notices normally
+            foreach ($notices as $notice) {
+                if ($notice->status == 2) {
+                    $memoDataQuery = DB::table('student_memo_status')
+                        ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+                        ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
+                        ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+                        ->leftJoin('memo_conclusion_master as mcm', 'student_memo_status.memo_conclusion_master_pk', '=', 'mcm.pk')
+                        ->leftJoin('course_master as cm', 'student_memo_status.course_master_pk', '=', 'cm.pk')
+                        ->where('student_memo_status.student_notice_status_pk', $notice->notice_id);
+                    
+                    if ($fromDateFilter) {
+                        $memoDataQuery->where('student_memo_status.date', '>=', $fromDateFilter);
+                    }
+                    if ($toDateFilter) {
+                        $memoDataQuery->where('student_memo_status.date', '<=', $toDateFilter);
+                    }
+                    
+                    $memoData = $memoDataQuery->select(
+                            'student_memo_status.pk as memo_id',
+                            'student_memo_status.pk as memo_notice_id',
+                            'student_memo_status.student_notice_status_pk as notice_id',
+                            'student_memo_status.student_pk',
+                            'student_memo_status.communication_status',
+                            'student_memo_status.course_master_pk',
+                            'student_memo_status.date as date_',
+                            'student_memo_status.conclusion_remark',
+                            DB::raw('NULL as subject_master_pk'),
+                            DB::raw('NULL as subject_topic'),
+                            DB::raw('NULL as venue_id'),
+                            DB::raw('NULL as class_session_master_pk'),
+                            DB::raw('NULL as faculty_master_pk'),
+                            DB::raw('"Memo" as type_notice_memo'),
+                            'student_memo_status.message',
+                            DB::raw('2 as notice_memo'),
+                            'student_memo_status.status',
+                            'sm.display_name as student_name',
+                            'sm.pk as student_id',
+                            't.subject_topic as topic_name',
+                            'mcm.discussion_name',
+                            'cm.course_name'
+                        )
+                        ->first();
+
+                    if ($memoData) {
+                        $memos->push($memoData);
+                    } else {
+                        $memos->push($notice);
+                    }
+                } else {
+                    $memos->push($notice);
+                }
+            }
+        }
+
+        // Apply additional filters to final collection
+        if ($typeFilter != '0') {
+            if ($programNameFilter) {
+                $memos = $memos->filter(function($item) use ($programNameFilter) {
+                    return isset($item->course_master_pk) && $item->course_master_pk == $programNameFilter;
+                });
+            }
+
+            if ($typeFilter !== null && $typeFilter !== '') {
+                if ($typeFilter == '1') {
+                    $memos = $memos->filter(function($item) {
+                        return isset($item->notice_memo) && $item->notice_memo == 1;
+                    });
+                }
+            }
+
+            if ($statusFilter !== null && $statusFilter !== '') {
+                if ($statusFilter == '1') {
+                    $memos = $memos->filter(function($item) {
+                        return isset($item->status) && $item->status == 1;
+                    });
+                } elseif ($statusFilter == '0') {
+                    $memos = $memos->filter(function($item) {
+                        return isset($item->status) && $item->status == 2;
+                    });
+                }
+            }
+
+            if ($searchFilter !== null && $searchFilter !== '') {
+                $memos = $memos->filter(function($item) use ($searchFilter) {
+                    return (isset($item->student_name) && stripos($item->student_name, $searchFilter) !== false)
+                        || (isset($item->course_name) && stripos($item->course_name, $searchFilter) !== false)
+                        || (isset($item->topic_name) && stripos($item->topic_name, $searchFilter) !== false);
+                });
+            }
+
+            // Apply date range filter to collection
+            if ($fromDateFilter || $toDateFilter) {
+                $memos = $memos->filter(function($item) use ($fromDateFilter, $toDateFilter) {
+                    if (!isset($item->date_)) {
+                        return false;
+                    }
+                    $itemDate = $item->date_;
+                    if ($fromDateFilter && $itemDate < $fromDateFilter) {
+                        return false;
+                    }
+                    if ($toDateFilter && $itemDate > $toDateFilter) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        }
+
+        // Get course name for filter display
+        $selectedCourse = null;
+        if ($programNameFilter) {
+            $selectedCourse = CourseMaster::find($programNameFilter);
+        }
+
+        // Generate PDF
+        $pdf = Pdf::loadView('admin.courseAttendanceNoticeMap.export_pdf', [
+            'memos' => $memos,
+            'programNameFilter' => $programNameFilter,
+            'typeFilter' => $typeFilter,
+            'statusFilter' => $statusFilter,
+            'searchFilter' => $searchFilter,
+            'fromDateFilter' => $fromDateFilter,
+            'toDateFilter' => $toDateFilter,
+            'selectedCourse' => $selectedCourse,
+        ])->setPaper('a4', 'landscape');
+
+        $fileName = 'Notice_Memo_Report_' . date('Y-m-d_His') . '.pdf';
+        return $pdf->download($fileName);
+    }
 
     public function index_bkp()
     {
