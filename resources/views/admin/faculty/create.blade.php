@@ -382,6 +382,17 @@ input.is-invalid {
                                     helperSmallText="CV or any other supporting document"
                                     />
 
+                                       <!-- PDF Preview -->
+                           <div class="d-flex align-items-start mt-2">
+                            <iframe id="documentPreviewPDF" class="d-none border"
+                                    style="width: 200px; height: 200px; border-radius: 6px;"></iframe>
+                        </div>
+
+                    <!-- Existing Document Link -->
+                            <div class="existing-document mt-2"></div>
+                        </div>
+
+
                             </div>
                         </div>
                     </div>
@@ -647,6 +658,12 @@ input.is-invalid {
                                         />
 										<div class="research_publications"></div>
 
+                                        <div class="mt-2">
+                                    <iframe id="researchPreview" class="d-none"
+                                            style="width:100%; height:250px; border:1px solid #ccc;"></iframe>
+                                </div>
+                                <div class="existing-research mt-2"></div>
+
                                 </div>
                                 <div class="col-6">
 
@@ -659,7 +676,11 @@ input.is-invalid {
                                         required="true"
                                         helperSmallText="Please upload your professional memberships, if any"
                                         />
-
+                                     <div class="mt-2">
+                                    <iframe id="membershipPreview" class="d-none"
+                                            style="width:100%; height:250px; border:1px solid #ccc;"></iframe>
+                                </div>
+                                <div class="existing-membership mt-2"></div>
                                 </div>
                                 <div class="col-6 mt-3">
 
@@ -672,6 +693,12 @@ input.is-invalid {
                                         required="true"
                                         helperSmallText="Please upload your reference/recommendation details, if any"
                                         />
+
+                                         <div class="mt-2">
+                                    <iframe id="referencePreview" class="d-none"
+                                            style="width:100%; height:250px; border:1px solid #ccc;"></iframe>
+                                </div>
+                                <div class="existing-reference mt-2"></div>
 
                                 </div>
                                 <div class="col-6 mt-3">
@@ -811,17 +838,22 @@ $(document).ready(function () {
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            success: function(response) {
-                if (response.status) {
-                    window.location.href = "{{ route('faculty.index') }}";
-                } else {
-                    if (window.toastr) {
-                        toastr.error(response.message || 'Error saving faculty.');
-                    } else {
-                        alert(response.message || 'Error saving faculty.');
+           success: function(response) {
+                    // Duplicate detected → Auto-fill
+                    if (response.duplicate) {
+                        fillFacultyForm(response.data);
+                        $("#faculty_id").val(response.data.pk);  // Set ID for update
+                        toastr.warning(response.message);
+                        return;
                     }
-                }
-            },
+
+                    // Normal create/update success
+                    if (response.status) {
+                        window.location.href = "{{ route('faculty.index') }}";
+                    } else {
+                        toastr.error(response.message || "Error saving faculty.");
+                    }
+                },
             error: function(xhr) {
                 var msg = (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error');
                 if (window.toastr) {
@@ -877,6 +909,44 @@ $(document).ready(function () {
 
     let $input = $('#firstName');
     let $suggestionBox = $('#suggestionList');
+
+
+
+    // ====== ADD THIS BLOCK HERE (before fillFacultyForm) ======
+    $("input[name='document']").on("change", function (e) {
+        const file = e.target.files[0];
+
+        // Reset preview
+        $("#documentPreviewPDF").addClass("d-none").attr("src", "");
+        $(".existing-document").html("");
+
+        if (!file) return;
+
+        const type = file.type;
+        const fileURL = URL.createObjectURL(file);
+
+        // PDF preview
+        if (type === "application/pdf") {
+            $("#documentPreviewPDF")
+                .attr("src", fileURL)
+                .removeClass("d-none");
+        }
+        // DOC/DOCX — no preview
+        else if (
+            type === "application/msword" ||
+            type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) {
+            $(".existing-document").html(`
+                <span class="text-info">DOC File Selected: ${file.name}</span>
+            `);
+        }
+        else {
+            alert("Only PDF or DOC/DOCX allowed.");
+            $(this).val("");
+        }
+    });
+    // ====== END BLOCK ======
+
 
 	  //$('#suggestionList').hide();
 
@@ -951,52 +1021,6 @@ $(document).ready(function () {
         }
     });
 
-  function fillFacultyForm_working(faculty) {
-
-    // Auto-fill all input fields
-    $('.facultyForm input').each(function () {
-        let fieldName = $(this).attr('name');
-
-        if (faculty[fieldName] !== undefined) {
-            $(this).val(faculty[fieldName]);
-        }
-    });
-
-    // Auto-fill all select fields
-    $('.facultyForm select').each(function () {
-        let fieldName = $(this).attr('name');
-
-        if (faculty[fieldName] !== undefined) {
-            $(this).val(faculty[fieldName]).trigger('change');
-        }
-    });
-
-    // Auto-fill all textarea fields
-    $('.facultyForm textarea').each(function () {
-        let fieldName = $(this).attr('name');
-
-        if (faculty[fieldName] !== undefined) {
-            $(this).val(faculty[fieldName]);
-        }
-		});
-
-		$('.facultyForm input').each(function () {
-		let fieldName = $(this).attr('name');
-
-		if (faculty[fieldName] !== undefined) {
-			$(this).val(faculty[fieldName]);
-		}
-		});
-
-		$('.facultyForm input').each(function () {
-		let fieldName = $(this).attr('name');
-		if (faculty[fieldName] !== undefined) {
-        $(this).val(faculty[fieldName]);
-		}
-	});
-
-
-}
 
 function fillFacultyForm(faculty) {
 
