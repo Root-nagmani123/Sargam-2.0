@@ -22,6 +22,9 @@
                                 <i class="material-icons menu-icon material-symbols-rounded"
                                     style="font-size: 24px;">search</i>
                             </a>
+                            <a href="{{ route('ot.notice.memo.view') }}" class="ms-2">
+                                <button class="btn btn-primary">Memo/Notice All activity</button>
+                            </a>
 
                             <input type="text" class="form-control search-input ms-2" id="searchInput"
                                 placeholder="Search…" aria-label="Search">
