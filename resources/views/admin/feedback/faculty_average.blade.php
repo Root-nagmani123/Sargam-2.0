@@ -109,6 +109,12 @@
                             <option>Phase-I 2024</option>
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Faculty Name</label>
+                        <select class="form-select">
+                            <option>Gaurab Kumar Sahu</option>
+                        </select>
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label">From Date</label>
