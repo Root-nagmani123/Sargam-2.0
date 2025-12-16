@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Crypt;
 use App\DataTables\CourseMasterDataTable;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use App\Services\NotificationService;
+use App\Services\NotificationReceiverService;
 
 
 class CourseController extends Controller
@@ -163,6 +165,75 @@ class CourseController extends Controller
                     'created_date' => now(),
                     'Modified_date' => now(),
                 ]);
+            }
+
+            // Send notifications - separate logic for create and edit
+            try {
+                $notificationService = app(NotificationService::class);
+                $receiverService = app(NotificationReceiverService::class);
+                
+                $courseName = $validated['coursename'];
+                $receiverUserIds = [];
+                
+                // 1. Get Admin user_id (same for both create and edit)
+                $adminUserId = $receiverService->getAdminUserId();
+                if ($adminUserId) {
+                    $receiverUserIds[] = $adminUserId;
+                }
+                
+                if ($request->course_id) {
+                    // EDIT COURSE - Use form data directly (more reliable after delete/recreate)
+                    $title = 'Course Updated';
+                    $type = 'course_update';
+                    $message = "The course '{$courseName}' has been updated.";
+                    
+                    // 2. Get Course Coordinator user_id from form data
+                    if (!empty($validated['coursecoordinator'])) {
+                        $receiverUserIds[] = (int) $validated['coursecoordinator'];
+                    }
+                    
+                    // 3. Get Assistant Coordinators user_ids from form data
+                    if (!empty($validated['assistantcoursecoordinator'])) {
+                        foreach ($validated['assistantcoursecoordinator'] as $assistantCoordinator) {
+                            if (!empty($assistantCoordinator)) {
+                                $receiverUserIds[] = (int) $assistantCoordinator;
+                            }
+                        }
+                    }
+                } else {
+                    // CREATE COURSE - Use service methods to get from database
+                    $title = 'New Course Added';
+                    $type = 'course_create';
+                    $message = "A new course '{$courseName}' has been added to the system.";
+                    
+                    // 2. Get Course Coordinator user_id
+                    $coordinatorUserId = $receiverService->getCourseCoordinatorUserId($courseMasterObj->pk);
+                    if ($coordinatorUserId) {
+                        $receiverUserIds[] = $coordinatorUserId;
+                    }
+                    
+                    // 3. Get Assistant Coordinators user_ids
+                    $assistantCoordinatorUserIds = $receiverService->getAssistantCoordinatorUserIds($courseMasterObj->pk);
+                    $receiverUserIds = array_merge($receiverUserIds, $assistantCoordinatorUserIds);
+                }
+                
+                // Remove duplicates and filter out empty values
+                $receiverUserIds = array_values(array_unique(array_filter($receiverUserIds)));
+                
+                // Send notifications to all receivers
+                if (!empty($receiverUserIds)) {
+                    $notificationService->createMultiple(
+                        $receiverUserIds,
+                        $type,
+                        'course',
+                        $courseMasterObj->pk,
+                        $title,
+                        $message
+                    );
+                }
+            } catch (\Exception $e) {
+                // Log error but don't fail the request
+                \Log::error('Failed to send course notifications: ' . $e->getMessage());
             }
 
             DB::commit();
