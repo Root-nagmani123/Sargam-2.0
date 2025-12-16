@@ -124,7 +124,7 @@ $(document).ready(function () {
 
         // Validate required fields before submit
         var requiredFields = [
-            'facultytype', 'firstName', 'middlename', 'lastname', 'fullname', 'gender', 'landline', 'mobile',
+            'facultytype', 'firstName', 'lastname', 'fullname', 'gender', 'landline', 'mobile',
             'country', 'state', 'district', 'city', 'email', 'residence_address', 'permanent_address', 'bankname',
             'accountnumber', 'ifsccode', 'pannumber', 'joiningdate', 'current_sector'
         ];
