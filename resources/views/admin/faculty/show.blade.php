@@ -74,7 +74,7 @@
         ============================================================ -->
         <div class="row mb-4 align-items-center">
             <div class="col-md-2 text-center">
-                <img src="{{ $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : asset('default-user.png') }}" 
+                <img src="{{ $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : asset('default-user.png') }}"
                      alt="Faculty Photo" class="profile-photo">
             </div>
 
@@ -113,7 +113,7 @@
 
             <div class="label-sm mt-2">Address</div>
             <div class="data-line mb-2">
-                {{ $faculty->countryMaster->country_name }}, 
+                {{ $faculty->countryMaster->country_name }},
                 {{ $faculty->stateMaster->state_name }},
                 {{ $faculty->districtMaster->district_name }},
                 {{ $faculty->cityMaster->city_name }}
@@ -178,7 +178,7 @@
 
                 <div class="col-md-3">
                     <div class="label-sm">Position Held</div>
-                    <div class="data-line">{{ $exp->Position_Held }}</div>
+                    <div class="data-line">{{ $exp->Position_hold }}</div>
                 </div>
             </div>
             @endforeach
