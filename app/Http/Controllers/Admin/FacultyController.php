@@ -40,9 +40,22 @@ class FacultyController extends Controller
     }
 
        public function store(FacultyRequest $request)
-    { //FacultyRequest
-        try {
+        { //FacultyRequest
+            try {
 
+            $existingFaculty = FacultyMaster::where('mobile_no', $request->mobile)
+            ->when($request->faculty_id, function ($q) use ($request) {
+                $q->where('pk', '!=', $request->faculty_id);
+            })
+            ->first();
+
+            if ($existingFaculty) {
+            return response()->json([
+                'duplicate' => true,
+                'message' => 'Mobile number already exists',
+                'data' => $existingFaculty
+            ]);
+        }
 
 
             DB::beginTransaction();
