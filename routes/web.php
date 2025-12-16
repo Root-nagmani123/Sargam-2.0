@@ -544,4 +544,19 @@ Route::middleware(['auth'])->group(function(){
             return response()->json(['success' => true, 'count' => $count]);
         })->name('mark-all-read');
     });
+
+
+    // Report walal route
+
+    Route::get('/faculty_view', function () {
+     return view('admin.feedback.faculty_view');
+ })->name('admin.feedback.faculty_view');
+
+  Route::get('/feedback_average', function () {
+     return view('admin.feedback.faculty_average');
+ })->name('admin.feedback.faculty_average');
+
+  Route::get('/faculty_database', function () {
+     return view('admin.feedback.feedback_database');
+ })->name('admin.feedback.feedback_database');
 });

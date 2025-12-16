@@ -27,24 +27,7 @@
                                 <div class="d-flex align-items-center justify-content-between w-100">
 
                                     <!-- Left Side: Collapse Button with Enhanced Accessibility -->
-                                    <div class="d-flex align-items-center">
-                                        <!-- Collapse Button with ARIA labels and better focus management -->
-                                        <button
-                                            class="nav-link sidebartoggler d-flex align-items-center justify-content-center p-2 me-2"
-                                            id="headerCollapse" aria-label="Toggle sidebar navigation"
-                                            aria-expanded="true" aria-controls="sidebarContent" data-bs-toggle="tooltip"
-                                            data-bs-placement="right">
-
-                                             <!-- Improved Icon with Animation Class -->
-                                            <i class="material-icons material-symbols-rounded text-white transition-all"
-                                                style="font-size: 30px; transition: transform 0.3s ease;"
-                                                aria-hidden="true">
-                                                keyboard_double_arrow_left
-                                            </i>
-
-                                            <!-- Screen Reader Only Text -->
-                                            <span class="visually-hidden">Toggle sidebar navigation</span>
-                                        </button>
+                                    <div class="d-flex align-items-center mb-3">
 
                                         <!-- Section Title with Proper Semantic Markup -->
                                         <h2 class="section-title text-white m-0"
@@ -189,6 +172,35 @@
                                         href="{{ route('feedback.get.studentFeedback') }}">
                                         <span class="hide-menu">Student Feedback</span>
                                     </a></li>
+
+                            </ul>
+                            <li class="sidebar-item" style="background: #4077ad;
+    border-radius: 30px 0px 0px 30px;
+    width: 100%;
+    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+    min-width: 250px;">
+                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#reportCollapse" role="button"
+                                    aria-expanded="false" aria-controls="reportCollapse">
+                                    <span class="hide-menu fw-bold">Report</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <ul class="collapse list-unstyled ps-3" id="reportCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.feedback.faculty_view') }}">
+                                        <span class="hide-menu">Faculty Feedback with Comments Admin View</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.feedback.faculty_average') }}">
+                                        <span class="hide-menu">Feedback With Average New</span>
+                                    </a></li>
+                                      <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.feedback.feedback_database') }}">
+                                        <span class="hide-menu">Faculty Feedback Database</span>
+                                    </a></li>
+
                             </ul>
                           @endif
 

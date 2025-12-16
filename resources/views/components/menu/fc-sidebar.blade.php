@@ -1,21 +1,14 @@
 <nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-3" data-simplebar="">
-        <ul class="sidebar-menu" id="sidebarnav">
-            <!-- Section Header -->
-             @if(hasRole('Admin') || hasRole('Training'))
+    <ul class="sidebar-menu" id="sidebarnav">
+        <!-- Section Header -->
+        @if (hasRole('Admin') || hasRole('Training'))
             <li class="nav-section" role="listitem">
                 <div class="d-flex align-items-center justify-content-between w-100">
                     <div class="d-flex align-items-center">
-                        <button
-                            class="nav-link sidebartoggler d-flex align-items-center justify-content-center p-2 me-2"
-                            id="headerCollapse" aria-label="Toggle sidebar navigation"
-                            aria-expanded="true" aria-controls="sidebarContent" data-bs-toggle="tooltip"
-                            data-bs-placement="right">
-                             <!-- Improved Icon with Animation Class -->
-                                            <i class="material-icons material-symbols-rounded text-white transition-all"
-                                                style="font-size: 30px; transition: transform 0.3s ease;"
-                                                aria-hidden="true">
-                                                keyboard_double_arrow_left
-                                            </i>
+                        <button class="nav-link sidebartoggler d-flex align-items-center justify-content-center p-2 me-2"
+                            id="headerCollapse" aria-label="Toggle sidebar navigation" aria-expanded="true"
+                            aria-controls="sidebarContent" data-bs-toggle="tooltip" data-bs-placement="right">
+                            <!-- Improved Icon with Animation Class -->
                             <span class="visually-hidden">Toggle sidebar navigation</span>
                         </button>
                         <h2 class="section-title text-white m-0"
@@ -27,8 +20,9 @@
             </li>
 
             <!-- ======= GENERAL ======= -->
-          
-            <li class="sidebar-item" style="background: #4077ad;
+
+            <li class="sidebar-item"
+                style="background: #4077ad;
                 border-radius: 30px 0px 0px 30px;
                 width: 100%;
                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -36,8 +30,8 @@
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseGeneral" role="button" aria-expanded="false" aria-controls="collapseGeneral">
                     <span class="fw-bold">General</span>
-                    <i class="material-icons menu-icon material-symbols-rounded"
-                        style="font-size: 24px;">keyboard_arrow_down</i>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
+                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseGeneral">
@@ -61,7 +55,8 @@
             </ul>
 
             <!-- ======= REGISTRATION MANAGEMENT ======= -->
-            <li class="sidebar-item mt-2" style="background: #4077ad;
+            <li class="sidebar-item mt-2"
+                style="background: #4077ad;
                 border-radius: 30px 0px 0px 30px;
                 width: 100%;
                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -70,8 +65,8 @@
                     href="#collapseRegistration" role="button" aria-expanded="false"
                     aria-controls="collapseRegistration">
                     <span class="fw-bold">Registration Management</span>
-                    <i class="material-icons menu-icon material-symbols-rounded"
-                        style="font-size: 24px;">keyboard_arrow_down</i>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
+                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseRegistration">
@@ -89,7 +84,8 @@
             </ul>
 
             <!-- ======= EXEMPTION ======= -->
-            <li class="sidebar-item mt-2" style="background: #4077ad;
+            <li class="sidebar-item mt-2"
+                style="background: #4077ad;
                 border-radius: 30px 0px 0px 30px;
                 width: 100%;
                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -97,8 +93,8 @@
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseExemption" role="button" aria-expanded="false" aria-controls="collapseExemption">
                     <span class="fw-bold">Exemption</span>
-                    <i class="material-icons menu-icon material-symbols-rounded"
-                        style="font-size: 24px;">keyboard_arrow_down</i>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
+                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseExemption">
@@ -115,7 +111,8 @@
             </ul>
 
             <!-- ======= DATABASE TOOLS ======= -->
-            <li class="sidebar-item mt-2" style="background: #4077ad;
+            <li class="sidebar-item mt-2"
+                style="background: #4077ad;
                 border-radius: 30px 0px 0px 30px;
                 width: 100%;
                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -123,8 +120,8 @@
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
                     href="#collapseDatabase" role="button" aria-expanded="false" aria-controls="collapseDatabase">
                     <span class="fw-bold">Database Tools</span>
-                    <i class="material-icons menu-icon material-symbols-rounded"
-                        style="font-size: 24px;">keyboard_arrow_down</i>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
+                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseDatabase">
@@ -158,16 +155,18 @@
             </ul>
 
             <!-- ======= DOCUMENTS ======= -->
-            <li class="sidebar-item mt-2" style="background: #4077ad;
+            <li class="sidebar-item mt-2"
+                style="background: #4077ad;
                 border-radius: 30px 0px 0px 30px;
                 width: 100%;
                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
                 min-width: 250px;">
                 <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                    href="#collapseDocuments" role="button" aria-expanded="false" aria-controls="collapseDocuments">
+                    href="#collapseDocuments" role="button" aria-expanded="false"
+                    aria-controls="collapseDocuments">
                     <span class="fw-bold">Documents</span>
-                    <i class="material-icons menu-icon material-symbols-rounded"
-                        style="font-size: 24px;">keyboard_arrow_down</i>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
+                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseDocuments">
@@ -184,7 +183,8 @@
             </ul>
 
             <!-- ======= PEER EVALUATION ======= -->
-            <li class="sidebar-item mt-2" style="background: #4077ad;
+            <li class="sidebar-item mt-2"
+                style="background: #4077ad;
                 border-radius: 30px 0px 0px 30px;
                 width: 100%;
                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -193,8 +193,8 @@
                     href="#collapsePeerEvaluation" role="button" aria-expanded="false"
                     aria-controls="collapsePeerEvaluation">
                     <span class="fw-bold">Peer Evaluation</span>
-                    <i class="material-icons menu-icon material-symbols-rounded"
-                        style="font-size: 24px;">keyboard_arrow_down</i>
+                    <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
+                        style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
                 </a>
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapsePeerEvaluation">
@@ -204,7 +204,38 @@
                     </a>
                 </li>
             </ul>
-            @endif
-           
-        </ul>
-    </nav>
+        @endif
+
+    </ul>
+</nav>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle toggle icon rotation for all collapsible sections
+        const collapseElements = document.querySelectorAll('.collapse');
+
+        collapseElements.forEach(function(collapseEl) {
+            collapseEl.addEventListener('show.bs.collapse', function() {
+                const trigger = document.querySelector(
+                    `[href="#${this.id}"], [data-bs-target="#${this.id}"]`);
+                if (trigger) {
+                    const icon = trigger.querySelector('.toggle-icon');
+                    if (icon) {
+                        icon.textContent = 'keyboard_arrow_down';
+                    }
+                }
+            });
+
+            collapseEl.addEventListener('hide.bs.collapse', function() {
+                const trigger = document.querySelector(
+                    `[href="#${this.id}"], [data-bs-target="#${this.id}"]`);
+                if (trigger) {
+                    const icon = trigger.querySelector('.toggle-icon');
+                    if (icon) {
+                        icon.textContent = 'keyboard_arrow_right';
+                    }
+                }
+            });
+        });
+    });
+</script>
