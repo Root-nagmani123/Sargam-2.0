@@ -500,7 +500,7 @@ class FacultyController extends Controller
             'facultyTypeMaster:pk,faculty_type_name',
             'facultyExpertiseMap.facultyExpertise:pk,expertise_name',
             'facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
-            'facultyExperienceMap:pk,Years_Of_Experience,Specialization,pre_Institutions,Position_held,duration,Nature_of_Work,faculty_master_pk',
+            'facultyExperienceMap:pk,Years_Of_Experience,Specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
             'facultyQualificationMap:faculty_master_pk,Degree_name,University_Institution_Name,Year_of_passing,Percentage_CGPA,Certifcates_upload_path'
         ])->find(decrypt($id));
 
