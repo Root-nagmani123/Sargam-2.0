@@ -77,7 +77,7 @@
                             </ul>
 
                             <!-- HOSTEL -->
-                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2 d-none" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
