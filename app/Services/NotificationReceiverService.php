@@ -7,6 +7,8 @@ use App\Models\UserCredential;
 use App\Models\StudentCourseGroupMap;
 use App\Models\GroupTypeMasterCourseMasterMap;
 use App\Models\CourseCordinatorMaster;
+use App\Models\UserRoleMaster;
+use App\Models\EmployeeRoleMapping;
 
 class NotificationReceiverService
 {
@@ -53,6 +55,39 @@ class NotificationReceiverService
                 ->where('user_category', 'S')
                 ->first();
             return $userCredential ? $userCredential->user_id : null;
+    }
+
+    /**
+     * Get user_ids for multiple students
+     * 
+     * @param array $studentPks Array of student master primary keys
+     * @return array Array of user_ids from user_credentials table
+     */
+    public function getStudentUserIds(array $studentPks): array
+    {
+        if (empty($studentPks)) {
+            return [];
+        }
+
+        $userCredentials = UserCredential::whereIn('user_id', $studentPks)
+            ->where('user_category', 'S')
+            ->pluck('user_id')
+            ->toArray();
+
+        return array_values(array_filter($userCredentials));
+    }
+
+    /**
+     * Get receiver user_ids for memo/notice notifications
+     * 
+     * This method returns user_ids for students to whom the memo/notice is sent.
+     * 
+     * @param array $studentPks Array of student master primary keys (students to whom memo/notice is sent)
+     * @return array Array of receiver user_ids
+     */
+    public function getMemoNoticeReceivers(array $studentPks): array
+    {
+        return $this->getStudentUserIds($studentPks);
     }
 
     /**
@@ -109,6 +144,79 @@ class NotificationReceiverService
             }
         }
     
+        return array_values(array_unique($userIds));
+    }
+
+    /**
+     * Get admin user_id
+     * 
+     * Flow:
+     * user_role_master.user_role_name = 'Admin'
+     * -> employee_role_mapping.user_role_master_pk = user_role_master.pk
+     * -> user_credentials.pk = employee_role_mapping.user_credentials_pk
+     * -> user_credentials.user_id
+     * 
+     * @return int|null Admin user ID
+     */
+    public function getAdminUserId()
+    {
+        $adminRole = UserRoleMaster::where('user_role_name', 'Admin')->first();
+        if (!$adminRole) {
+            return null;
+        }
+
+        $adminMapping = EmployeeRoleMapping::where('user_role_master_pk', $adminRole->pk)->first();
+        if (!$adminMapping) {
+            return null;
+        }
+
+        $adminUserCredential = UserCredential::find($adminMapping->user_credentials_pk);
+        if (!$adminUserCredential) {
+            return null;
+        }
+
+        return $adminUserCredential->user_id;
+    }
+
+    /**
+     * Get course coordinator user_id for a course
+     * 
+     * @param int $coursePk Course master primary key
+     * @return int|null Coordinator user ID
+     */
+    public function getCourseCoordinatorUserId(int $coursePk): ?int
+    {
+        $record = CourseCordinatorMaster::where('courses_master_pk', $coursePk)
+            ->select('Coordinator_name')
+            ->first();
+
+        if (!$record || empty($record->Coordinator_name)) {
+            return null;
+        }
+
+        return (int) $record->Coordinator_name;
+    }
+
+    /**
+     * Get assistant coordinator user_ids for a course
+     * 
+     * @param int $coursePk Course master primary key
+     * @return array Array of assistant coordinator user_ids
+     */
+    public function getAssistantCoordinatorUserIds(int $coursePk): array
+    {
+        $records = CourseCordinatorMaster::where('courses_master_pk', $coursePk)
+            ->select('Assistant_Coordinator_name')
+            ->get();
+
+        $userIds = [];
+
+        foreach ($records as $record) {
+            if (!empty($record->Assistant_Coordinator_name)) {
+                $userIds[] = (int) $record->Assistant_Coordinator_name;
+            }
+        }
+
         return array_values(array_unique($userIds));
     }
     

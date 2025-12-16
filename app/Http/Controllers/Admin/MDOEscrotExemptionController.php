@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\{MDODutyTypeMaster, StudentMaster, CourseMaster, MDOEscotDutyMap, FacultyMaster};
 use App\Http\Requests\MDOEscrotExemptionRequest;
 use App\DataTables\MDOEscrotExemptionDataTable;
+use App\Services\NotificationService;
+use App\Services\NotificationReceiverService;
 
 class MDOEscrotExemptionController extends Controller
 {
@@ -72,12 +74,11 @@ class MDOEscrotExemptionController extends Controller
     function store(MDOEscrotExemptionRequest $request)
     {
         try {
-            
-            $data = [];
+            $insertedRecords = [];
 
             if ($request->selected_student_list != null) {
                 foreach ($request->selected_student_list as $student_id) {
-                    $data[] = [
+                    $record = MDOEscotDutyMap::create([
                         'course_master_pk' => $request->course_master_pk,
                         'mdo_duty_type_master_pk' => $request->mdo_duty_type_master_pk,
                         'mdo_date' => $request->mdo_date,
@@ -86,11 +87,56 @@ class MDOEscrotExemptionController extends Controller
                         'Remark' => $request->Remark,
                         'selected_student_list' => $student_id,
                         'faculty_master_pk' => $request->faculty_master_pk ?? null,
+                    ]);
+                    
+                    $insertedRecords[] = [
+                        'record' => $record,
+                        'student_id' => $student_id
                     ];
                 }
             }
 
-            MDOEscotDutyMap::insert($data);
+            // Send notifications to students
+            try {
+                $notificationService = app(NotificationService::class);
+                $receiverService = app(NotificationReceiverService::class);
+                
+                // Get course and duty type information for notification
+                $course = CourseMaster::find($request->course_master_pk);
+                $dutyType = MDODutyTypeMaster::find($request->mdo_duty_type_master_pk);
+                
+                $courseName = $course ? $course->course_name : 'Course';
+                $dutyTypeName = $dutyType ? $dutyType->mdo_duty_type_name : 'Duty';
+                $mdoDate = date('d M Y', strtotime($request->mdo_date));
+                $timeFrom = date('h:i A', strtotime($request->Time_from));
+                $timeTo = date('h:i A', strtotime($request->Time_to));
+                
+                foreach ($insertedRecords as $item) {
+                    // Get student user_id using NotificationReceiverService
+                    $receiverUserId = $receiverService->getStudentUserId((int) $item['student_id']);
+                    
+                    if ($receiverUserId) {
+                        $title = "{$dutyTypeName} Duty Assigned";
+                        $message = "You have been assigned {$dutyTypeName} duty for {$courseName} on {$mdoDate} from {$timeFrom} to {$timeTo}.";
+                        
+                        if (!empty($request->Remark)) {
+                            $message .= " Remark: {$request->Remark}";
+                        }
+                        
+                        $notificationService->create(
+                            $receiverUserId,
+                            'mdo_escort_exemption',
+                            'MDO/Escort Exemption',
+                            $item['record']->pk,
+                            $title,
+                            $message
+                        );
+                    }
+                }
+            } catch (\Exception $e) {
+                // Log error but don't fail the request
+                \Log::error('Failed to send MDO/Escort exemption notifications: ' . $e->getMessage());
+            }
 
             return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO/Escort Exemption created successfully.');
         } catch (\Exception $e) {

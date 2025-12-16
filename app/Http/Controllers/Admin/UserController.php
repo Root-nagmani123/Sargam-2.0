@@ -13,6 +13,7 @@ use App\Models\EmployeeRoleMapping;
 use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
 use App\Models\Holiday;
+use App\Services\NotificationService;
 
 
 
@@ -106,8 +107,9 @@ class UserController extends Controller
                 'password' => Hash::make($request->password),
             ]);
             
-            if ($request->has('roles')) {
+            if ($request->has('roles') && !empty($request->roles)) {
                 // $user->assignRole($request->roles);
+                $assignedRoleNames = [];
                 foreach ($request->roles as $roleId) {
                     EmployeeRoleMapping::create([
                     'user_credentials_pk' => $user->id,
@@ -116,8 +118,32 @@ class UserController extends Controller
                     'created_date' => now(),
                     'updated_date' => now(),
                 ]);
+                    // Get role name for notification
+                    $role = UserRoleMaster::find($roleId);
+                    if ($role) {
+                        $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
+                    }
+                }
+                
+                // Send notification to the user
+                if (!empty($assignedRoleNames) && $user->user_id) {
+                    try {
+                        $notificationService = app(NotificationService::class);
+                        $roleNames = implode(', ', $assignedRoleNames);
+                        $notificationService->create(
+                            (int)$user->user_id,
+                            'role_assignment',
+                            'Role Assignment',
+                            $user->pk,
+                            'Role Assigned',
+                            "You have been assigned the following role(s): {$roleNames}."
+                        );
+                    } catch (\Exception $e) {
+                        // Log error but don't fail the request
+                        \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
+                    }
+                }
             }
-        }
             
             DB::commit();
             
@@ -183,14 +209,41 @@ class UserController extends Controller
            EmployeeRoleMapping::where('user_credentials_pk', $user->id)->delete();
 
             // Assign new roles
-            foreach ($request->roles as $roleId) {
-                EmployeeRoleMapping::create([
-                    'user_credentials_pk' => $user->id,
-                    'user_role_master_pk' => $roleId,
-                    'active_inactive' => 1,
-                    'created_date' => now(),
-                    'updated_date' => now(),
-                ]);
+            $assignedRoleNames = [];
+            if (!empty($request->roles)) {
+                foreach ($request->roles as $roleId) {
+                    EmployeeRoleMapping::create([
+                        'user_credentials_pk' => $user->id,
+                        'user_role_master_pk' => $roleId,
+                        'active_inactive' => 1,
+                        'created_date' => now(),
+                        'updated_date' => now(),
+                    ]);
+                    // Get role name for notification
+                    $role = UserRoleMaster::find($roleId);
+                    if ($role) {
+                        $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
+                    }
+                }
+            }
+            
+            // Send notification to the user if roles were assigned
+            if (!empty($assignedRoleNames) && $user->user_id) {
+                try {
+                    $notificationService = app(NotificationService::class);
+                    $roleNames = implode(', ', $assignedRoleNames);
+                    $notificationService->create(
+                        (int)$user->user_id,
+                        'role_assignment',
+                        'Role Assignment',
+                        $user->pk,
+                        'Role Assigned',
+                        "You have been assigned the following role(s): {$roleNames}."
+                    );
+                } catch (\Exception $e) {
+                    // Log error but don't fail the request
+                    \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
+                }
             }
         }
             
@@ -289,6 +342,7 @@ public function assignRoleSave(Request $request)
             ->delete();
 
         // Insert new roles
+        $assignedRoleNames = [];
         if (!empty($request->roles)) {
             foreach ($request->roles as $roleId) {
                 \DB::table('employee_role_mapping')->insert([
@@ -298,10 +352,41 @@ public function assignRoleSave(Request $request)
                     'created_date'         => now(),
                     'updated_date'        => now(),
                 ]);
+                // Get role name for notification
+                $role = UserRoleMaster::find($roleId);
+                if ($role) {
+                    $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
+                }
             }
         }
 
         \DB::commit();
+        
+        // Send notification to the user if roles were assigned
+        if (!empty($assignedRoleNames)) {
+            try {
+                // Get user_id from user_credentials table
+                $userCredential = \DB::table('user_credentials')
+                    ->where('pk', $userId)
+                    ->first();
+                
+                if ($userCredential && $userCredential->user_id) {
+                    $notificationService = app(NotificationService::class);
+                    $roleNames = implode(', ', $assignedRoleNames);
+                    $notificationService->create(
+                        (int)$userCredential->user_id,
+                        'role_assignment',
+                        'Role Assignment',
+                        $userId,
+                        'Role Assigned',
+                        "You have been assigned the following role(s): {$roleNames}."
+                    );
+                }
+            } catch (\Exception $e) {
+                // Log error but don't fail the request
+                \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
+            }
+        }
 
         return redirect()->route('admin.users.index')
                          ->with('success', 'Roles assigned successfully.');
