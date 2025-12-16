@@ -8,6 +8,11 @@ input.is-invalid {
     border-color: #dc3545;
 }
 
+.mobile-duplicate {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff5f5;
+}
+
 #suggestionList a {
     cursor: pointer;
 }
@@ -805,7 +810,14 @@ input.is-invalid {
 
 </script>
 <script>
+let isMobileDuplicate = false;
 $(document).ready(function () {
+
+    if (isMobileDuplicate) {
+    toastr.error("Cannot save. Mobile number already exists.");
+    return;
+}
+
     // AJAX submit for Save button
     $(document).on('click', '#saveFacultyForm', function (e) {
         e.preventDefault();
@@ -844,15 +856,18 @@ $(document).ready(function () {
                         fillFacultyForm(response.data);
                         $("#faculty_id").val(response.data.pk);  // Set ID for update
                         toastr.warning(response.message);
+
+                        $("#saveFacultyForm").prop('disabled', true);
                         return;
                     }
 
                     // Normal create/update success
                     if (response.status) {
                         window.location.href = "{{ route('faculty.index') }}";
-                    } else {
-                        toastr.error(response.message || "Error saving faculty.");
                     }
+                    /*else {
+                        toastr.error(response.message || "Error saving faculty.");
+                    }*/
                 },
             error: function(xhr) {
                 var msg = (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error');
@@ -881,7 +896,18 @@ $(document).ready(function () {
         }
     });
 
+    /*
+   // ENABLE SAVE BUTTON WHEN USER EDITS MOBILE
+    $('input[name="mobile"]').on('input', function () {
+    $("#saveFacultyForm").prop('disabled', false);
+    isMobileDuplicate = false;
+    });
+    */
+
     function checkUnique(type, value, inputElement) {
+
+
+
         $.ajax({
             url: "{{ route('faculty.checkUnique') }}",
             method: "POST",
@@ -892,12 +918,27 @@ $(document).ready(function () {
             },
             success: function (response) {
                 inputElement.next('.unique-error').remove(); // remove old messages
+                 inputElement.removeClass('mobile-duplicate');
+
                 if (response.exists) {
                     inputElement.after('<small class="text-danger unique-error">' + response.message + '</small>');
-                    inputElement.addClass('is-invalid');
+                   // inputElement.addClass('is-invalid');
+                     inputElement.addClass('is-invalid mobile-duplicate');
+                     if (type === 'mobile') {
+                    isMobileDuplicate = true;
+                    $("#saveFacultyForm").prop('disabled', true);
+                }
+
                 } else {
                     inputElement.after('<small class="text-success unique-error">' + response.message + '</small>');
                     inputElement.removeClass('is-invalid');
+
+                    if (type === 'mobile') {
+                    isMobileDuplicate = false;
+                    $("#saveFacultyForm").prop('disabled', false);
+
+
+                    }
                 }
             }
         });
