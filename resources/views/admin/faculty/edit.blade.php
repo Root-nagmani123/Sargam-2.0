@@ -148,17 +148,18 @@ $(document).ready(function () {
             headers: {
                 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
             },
-            success: function(response) {
+          /* success: function(response) {
                 if (response.status) {
                     window.location.href = "{{ route('faculty.index') }}";
                 } else {
                     if (window.toastr) {
                         toastr.error(response.message || 'Error updating faculty.');
-                    } else {
-                        alert(response.message || 'Error updating faculty.');
                     }
                 }
-            },
+            },*/
+            success: function () {
+                    window.location.href = "{{ route('faculty.index') }}";
+                },
             error: function(xhr) {
                 var msg = (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error');
                 if (window.toastr) {
