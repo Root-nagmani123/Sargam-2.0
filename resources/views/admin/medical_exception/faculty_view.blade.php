@@ -129,9 +129,27 @@
     .table-responsive {
         overflow-x: auto;
     }
+    .badge {
+    font-weight: 500;
+    padding: 6px 10px;
+}
+
+.bg-warning-subtle {
+    background-color: #fff4d6;
+}
+
+.bg-danger-subtle {
+    background-color: #fde8e8;
+}
+
+.card h6 {
+    color: #003366;
+}
+
 </style>
 
 <div class="container-fluid">
+    <x-breadcrum title="Medical Exception Faculty View"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row mb-3">
@@ -147,6 +165,72 @@
                     </div>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-2">
+                    <label for="" class="form-label"></label>
+                    <div class="row">
+                        <div class="col-12">
+                             <label for="" class="form-label">Course Name</label>
+                    <div class="mb-3">
+                        <select name="" id="" class="form-control">
+                            <option value="0">Select</option>
+                            <option value="1">A01</option>
+                            <option value="2">A02</option>
+                        </select>
+                    </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-4">
+<label for="" class="form-label">Date</label>
+<div class="row">
+    <div class="col-6">
+        <label for="" class="form-label">from</label>
+        <div class="mb-3">
+            <input type="date" name="" id="" class="form-control">
+        </div>
+    </div>
+    <div class="col-6">
+        <label for="" class="form-label">To</label>
+        <div class="mb-3">
+            <input type="date" name="" id="" class="form-control">
+        </div>
+    </div>
+</div>
+                </div>
+                <div class="col-4">
+<label for="" class="form-label">Time</label>
+<div class="row">
+    <div class="col-6">
+        <label for="" class="form-label">from</label>
+        <div class="mb-3">
+            <input type="time" name="" id="" class="form-control">
+        </div>
+    </div>
+    <div class="col-6">
+        <label for="" class="form-label">To</label>
+        <div class="mb-3">
+            <input type="time" name="" id="" class="form-control">
+        </div>
+    </div>
+</div>
+                </div>
+                <div class="col-2">
+                    <label for="" class="form-label"></label>
+                    <div class="row">
+                        <div class="col-12">
+                             <label for="" class="form-label">OT Code</label>
+                    <div class="mb-3">
+                        <select name="" id="" class="form-control">
+                            <option value="0">Select</option>
+                            <option value="1">A01</option>
+                            <option value="2">A02</option>
+                        </select>
+                    </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <hr>
             
@@ -155,107 +239,81 @@
                 $isFacultyView = isset($isFacultyView) && $isFacultyView === true;
             @endphp
             
-            @if($isFacultyView)
-                <!-- Faculty Login View -->
-                @if(isset($hasData) && $hasData && count($studentData) > 0)
-                    <!-- Total Exceptions Summary -->
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card bg-light" style="border-left: 4px solid #004a93;">
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold text-muted mb-1">Total Number of Exceptions</label>
-                                                <div class="fs-4 fw-semibold text-primary">{{ $totalExceptions ?? 0 }}</div>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold text-muted mb-1">Total Students with Exceptions</label>
-                                                <div class="fs-4 fw-semibold text-primary">{{ count($studentData) }}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+          @if($isFacultyView)
+
+    @if(isset($hasData) && $hasData && count($studentData) > 0)
+
+        @foreach($studentData as $course)
+
+            <div class="card mb-4 shadow-sm border-0" style="border-left:4px solid #004a93;">
+                <div class="card-body">
+
+                    <!-- Course Header -->
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="fw-bold mb-1">
+                                {{ $course['course_name'] }}
+                            </h6>
+
+                            <div class="text-muted small">
+                                CC:
+                                <span class="fw-semibold text-dark">
+                                    {{ $course['cc_name'] ?? 'N/A' }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <span class="badge bg-warning-subtle text-warning border mb-1 d-block">
+                                {{ $course['total_exemption_count'] }} Student(s) on Medical Exception
+                            </span>
+                            <div class="text-muted small">
+                                Total Students: {{ $course['total_students'] }}
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Student Data -->
-                    @foreach($studentData as $student)
-                        <div class="student-card">
-                            <div class="student-header">
-                                <div>
-                                    <h5 class="mb-1">
-                                        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px; vertical-align: middle;">person</i>
-                                        <strong>{{ $student['ot_code'] }}</strong> - {{ $student['student_name'] }}
-                                    </h5>
-                                    <div class="mt-2">
+
+                    <!-- Students List -->
+                    @if(count($course['students']) > 0)
+                        <div class="mt-3">
+
+                            @foreach($course['students'] as $student)
+                                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                                    <div>
+                                        <span class="fw-semibold">
+                                            {{ $student['generated_OT_code'] }}
+                                        </span>
                                         <span class="text-muted">
-                                            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 16px; vertical-align: middle;">email</i>
-                                            {{ $student['email'] ?? 'N/A' }}
+                                            – {{ $student['display_name'] }}
                                         </span>
                                     </div>
+
+                                    <span class="badge bg-danger-subtle text-danger border">
+                                        Medical Exception
+                                    </span>
                                 </div>
-                                <div class="exemption-count-badge">
-                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px; vertical-align: middle;">medical_services</i>
-                                    Total Exceptions: {{ $student['total_exemption_count'] }}
-                                </div>
-                            </div>
-                            
-                            @if(count($student['exemptions']) > 0)
-                                <div class="exemption-list">
-                                    @foreach($student['exemptions'] as $exemption)
-                                        <div class="exemption-item">
-                                            <div class="exemption-details">
-                                                <div class="detail-item">
-                                                    <span class="detail-label">Course:</span>
-                                                    <span class="detail-value">{{ $exemption['course_name'] ?? 'N/A' }}</span>
-                                                </div>
-                                                <div class="detail-item">
-                                                    <span class="detail-label">From Date:</span>
-                                                    <span class="detail-value">{{ $exemption['from_date'] ? \Carbon\Carbon::parse($exemption['from_date'])->format('d/m/Y') : 'N/A' }}</span>
-                                                </div>
-                                                <div class="detail-item">
-                                                    <span class="detail-label">To Date:</span>
-                                                    <span class="detail-value">{{ $exemption['to_date'] ? \Carbon\Carbon::parse($exemption['to_date'])->format('d/m/Y') : 'Ongoing' }}</span>
-                                                </div>
-                                                <div class="detail-item">
-                                                    <span class="detail-label">OPD Category:</span>
-                                                    <span class="detail-value">{{ $exemption['opd_category'] ?? 'N/A' }}</span>
-                                                </div>
-                                                @if($exemption['doc_upload'])
-                                                <div class="detail-item">
-                                                    <span class="detail-label">Document:</span>
-                                                    <span class="detail-value">
-                                                        <a href="{{ asset('storage/' . $exemption['doc_upload']) }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                                            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 16px;">file_download</i>
-                                                            View Document
-                                                        </a>
-                                                    </span>
-                                                </div>
-                                                @endif
-                                                @if($exemption['description'])
-                                                <div class="detail-item" style="grid-column: 1 / -1;">
-                                                    <span class="detail-label">Description:</span>
-                                                    <div class="detail-value mt-1">{{ $exemption['description'] }}</div>
-                                                </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
+                            @endforeach
+
                         </div>
-                    @endforeach
-                @else
-                    <!-- No records found -->
-                    <div class="alert alert-info text-center">
-                        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 48px;">info</i>
-                        <p class="mt-2 fs-5">No records found</p>
-                    </div>
-                @endif
+                    @else
+                        <div class="text-muted fst-italic">
+                            No students under medical exception.
+                        </div>
+                    @endif
+
+                </div>
+            </div>
+
+        @endforeach
+
+    @else
+        <div class="alert alert-info text-center">
+            <i class="material-icons material-symbols-rounded fs-1">info</i>
+            <div class="mt-2">No records found</div>
+        </div>
+
+@endif
+
             @else
                 <!-- Admin View -->
                 <!-- Faculty Data -->

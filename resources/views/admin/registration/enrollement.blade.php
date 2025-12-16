@@ -141,7 +141,7 @@
                                             </h5>
                                             <div class="d-flex">
                                                 <input type="text" id="studentSearch"
-                                                    class="form-control form-control-sm me-2"
+                                                    class="form-control me-2"
                                                     placeholder="Search students..." style="width: 200px;">
                                                 <button type="button" id="filterBtn" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-filter"></i> Filter

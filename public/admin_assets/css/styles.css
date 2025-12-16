@@ -21084,6 +21084,11 @@ textarea.form-control-lg {
     background-color: transparent;
 }
 
+table>thead {
+    background: #af2910 !important;
+    color: #ffffff !important;
+}
+
 .form-range:focus {
     outline: 0;
 }
