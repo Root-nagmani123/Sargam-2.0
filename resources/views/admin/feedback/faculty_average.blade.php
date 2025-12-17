@@ -80,9 +80,6 @@
         background: #083e6c;
     }
 </style>
-@endsection
-
-@section('content')
 <div class="container-fluid py-3">
     <x-breadcrum title="Faculty Average"></x-breadcrum>
     

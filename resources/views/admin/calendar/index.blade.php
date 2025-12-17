@@ -13,23 +13,26 @@
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
         <section class="calendar-controls mb-4" aria-label="Calendar view controls">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
                 <!-- View Toggle Buttons -->
-                <div class="btn-group text-end" role="group" aria-label="Calendar view options">
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView" aria-pressed="false"
-                        data-view="list">List
-                    </button>
-                </div>
-                <div class="btn-group" role="group" aria-label="Calendar action buttons">
-                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnCalendarView"
-                        aria-pressed="false" data-view="calendar">Calendar
-                    </button>
+                <div class="view-toggle-section d-flex align-items-center gap-3">
+                    <span class="text-muted fw-medium small d-none d-md-inline">View:</span>
+                    <div class="btn-group" role="group" aria-label="Calendar view options">
+                        <button type="button" class="btn btn-outline-primary" id="btnListView" aria-pressed="false"
+                            data-view="list">
+                            <i class="bi bi-list-ul me-2"></i>List View
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="btnCalendarView"
+                            aria-pressed="false" data-view="calendar">
+                            <i class="bi bi-calendar3 me-2"></i>Calendar View
+                        </button>
+                    </div>
                 </div>
                 <!-- Action Buttons -->
                 @if(hasRole('Training') || hasRole('Admin'))
-                <button type="button" class="btn btn-primary btn-sm" id="createEventButton" data-bs-toggle="modal"
+                <button type="button" class="btn btn-primary px-4" id="createEventButton" data-bs-toggle="modal"
                     data-bs-target="#eventModal">
-                    <i class="bi bi-plus-circle me-1" aria-hidden="true"></i> Add Event
+                    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i> Add New Event
                 </button>
                 @endif
             </div>
@@ -47,39 +50,43 @@
                     <div id="eventListView" class="mt-4" role="region" aria-label="Weekly timetable">
                         <div class="timetable-wrapper">
                             <!-- Timetable Header -->
-                            <div class="timetable-header bg-white border rounded-3 p-3 mb-4">
-                                <div class="row align-items-center g-3">
+                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
+                                <div class="row align-items-center g-4">
                                     <div class="col-md-2 text-center text-md-start">
-                                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="Logo" class="img-fluid"
-                                            width="80" height="80">
+                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
+                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" class="img-fluid"
+                                                width="70" height="70">
+                                        </div>
                                     </div>
 
-                                    <div class="col-md-8 text-center">
-                                        <h2 class="mb-0">Weekly Timetable</h2>
-                                        <p class="text-muted mb-0" id="weekRangeText">—</p>
+                                    <div class="col-md-6 text-center">
+                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
+                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText">
+                                            <i class="bi bi-calendar-week me-2"></i>—
+                                        </p>
                                     </div>
 
-                                    <div class="col-md-2 text-center text-md-end">
-                                        <div class="d-flex flex-column align-items-center gap-2">
-                                            <div class="btn-group" role="group" aria-label="Week navigation">
-                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                    <div class="col-md-4 text-center text-md-end">
+                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
+                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
+                                                <button type="button" class="btn btn-outline-primary"
                                                     id="prevWeekBtn" aria-label="Previous week">
-                                                    &lt;
+                                                    <i class="bi bi-chevron-left"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                <button type="button" class="btn btn-primary px-4"
                                                     id="currentWeekBtn" aria-label="Current week">
-                                                    Today
+                                                    <i class="bi bi-calendar-check me-2"></i>Today
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                <button type="button" class="btn btn-outline-primary"
                                                     id="nextWeekBtn" aria-label="Next week">
-                                                    &gt;
+                                                    <i class="bi bi-chevron-right"></i>
                                                 </button>
                                             </div>
 
-                                            <div>
-                                                <p class="text-muted mb-1">Week</p>
-                                                <p class="week-number text-primary fw-bold fs-5 mb-0"
-                                                    id="currentWeekNumber">—</p>
+                                            <div class="week-badge">
+                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
+                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -471,11 +478,17 @@
 :root {
     --primary-color: #004a93;
     --primary-dark: #003366;
+    --primary-light: #e6f0fa;
     --secondary-color: #af2910;
     --light-bg: #f8f9fa;
     --border-color: #dee2e6;
     --success-color: #198754;
     --danger-color: #dc3545;
+    --text-dark: #1a1a1a;
+    --text-muted: #6c757d;
+    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    --shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Accessibility improvements */
@@ -496,11 +509,30 @@
     font-size: 0.875rem;
 }
 
+.fc-daygrid-day {
+    transition: background-color 0.2s ease;
+}
+
+.fc-daygrid-day:hover {
+    background-color: rgba(0, 74, 147, 0.03);
+}
+
+.fc-daygrid-day.fc-day-today {
+    background-color: var(--primary-light) !important;
+}
+
+.fc-col-header-cell {
+    background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
+    font-weight: 600;
+    padding: 1rem 0.5rem;
+}
+
 .fc-event-card {
     padding: 0.5rem;
     border-radius: 0.375rem;
     margin: 0.125rem;
     transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 3px solid var(--primary-color);
 }
 
 .fc-event-card:hover {
@@ -509,16 +541,48 @@
 }
 
 /* Timetable styling */
+.timetable-grid {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
 .timetable-grid th {
     font-weight: 600;
     color: var(--primary-color);
-    background-color: var(--light-bg);
+    background: linear-gradient(135deg, rgba(0, 74, 147, 0.08), rgba(175, 41, 16, 0.05));
+    padding: 1rem 0.75rem;
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.timetable-grid td {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    vertical-align: top;
+    transition: background-color 0.2s ease;
+}
+
+.timetable-grid td:hover {
+    background-color: rgba(0, 74, 147, 0.02);
 }
 
 .timetable-grid .time-column {
     min-width: 120px;
     font-weight: 600;
     color: var(--secondary-color);
+    background-color: rgba(175, 41, 16, 0.05);
+}
+
+/* List Event Cards */
+.list-event-card {
+    background: white;
+    border-radius: 8px;
+    transition: var(--transition);
+    border-left: 3px solid var(--primary-color) !important;
+}
+
+.list-event-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Institution name styling */
@@ -534,9 +598,36 @@
 }
 
 /* Form styling */
+.form-label {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+}
+
 .form-label.required::after {
     content: " *";
     color: var(--danger-color);
+}
+
+.form-control,
+.form-select {
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.625rem 0.875rem;
+    transition: var(--transition);
+    font-size: 0.95rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
+    outline: none;
+}
+
+.form-control:hover:not(:focus):not(:disabled),
+.form-select:hover:not(:focus):not(:disabled) {
+    border-color: var(--primary-color);
 }
 
 .readonly-checkbox {
@@ -544,18 +635,117 @@
     cursor: not-allowed;
 }
 
+/* Custom Checkbox/Radio - GIGW Compliant */
+.form-check-input {
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 2px solid var(--primary-color);
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.25);
+    border-color: var(--primary-color);
+}
+
 /* Modal improvements */
 .modal-header {
-    padding: 1rem 1.5rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
+    border-bottom: 2px solid var(--primary-color);
+}
+
+.modal-header .modal-title {
+    font-weight: 600;
+    color: var(--primary-color);
 }
 
 .modal-body {
     padding: 1.5rem;
 }
 
+.modal-footer {
+    padding: 1rem 1.5rem;
+    background-color: var(--light-bg);
+}
+
 /* Button states */
-.btn:focus {
+.btn {
+    transition: var(--transition);
+    font-weight: 500;
+}
+
+.btn:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 3px;
     box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.25);
+}
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+}
+
+.btn-outline-primary {
+    border-width: 2px;
+    font-weight: 500;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-outline-primary.active,
+.btn-outline-primary:active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.control-panel {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 74, 147, 0.1) !important;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, rgba(0, 74, 147, 0.03), rgba(175, 41, 16, 0.03));
+}
+
+.logo-wrapper {
+    transition: var(--transition);
+}
+
+.logo-wrapper:hover {
+    transform: scale(1.05);
+}
+
+.week-controls {
+    transition: var(--transition);
+}
+
+.week-badge {
+    margin-top: 0.5rem;
+}
+
+.badge {
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 /* Responsive adjustments */
@@ -572,6 +762,60 @@
         width: 100%;
         justify-content: center;
     }
+
+    .control-panel {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .control-panel .btn-group {
+        width: 100%;
+    }
+
+    .control-panel .btn {
+        flex: 1;
+    }
+}
+
+/* Empty State Styling */
+.empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+}
+
+.empty-state i {
+    opacity: 0.3;
+}
+
+.empty-state p {
+    font-size: 1.1rem;
+}
+
+/* Loading State */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 /* Focus indicators for accessibility */
@@ -638,6 +882,171 @@
     transform: scale(1.08);
     color: #ffffff !important;
 }
+
+/* Timeline View - Modern Design */
+.timeline-container {
+    display: flex;
+    gap: 2rem;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+}
+
+.timeline-times {
+    width: 120px;
+    flex-shrink: 0;
+    padding-right: 1rem;
+    border-right: 2px solid var(--border-color);
+}
+
+.timeline-time-label {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 0.95rem;
+    position: relative;
+}
+
+.timeline-time-label::after {
+    content: '';
+    position: absolute;
+    right: -1rem;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    transform: translateY(-50%);
+}
+
+.timeline-slots {
+    flex: 1;
+    position: relative;
+    min-height: 600px;
+}
+
+.timeline-slot {
+    position: relative;
+    height: 80px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
+}
+
+.timeline-slot:hover {
+    background-color: rgba(0, 74, 147, 0.02);
+}
+
+.timeline-slot:last-child {
+    border-bottom: none;
+}
+
+.timeline-event-card {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    border-left: 4px solid var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: var(--transition);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.timeline-event-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 16px rgba(0, 74, 147, 0.2);
+    border-left-width: 6px;
+}
+
+.timeline-event-card .event-title {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.timeline-event-card .event-time {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.timeline-event-card .event-time i {
+    font-size: 1rem;
+}
+
+.timeline-event-card .event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.timeline-event-card .event-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 12px;
+    background-color: var(--primary-light);
+    color: var(--primary-color);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* Event Type Colors */
+.timeline-event-card[data-event-type="lecture"] {
+    border-left-color: #4e73df;
+}
+
+.timeline-event-card[data-event-type="exam"] {
+    border-left-color: #e74a3b;
+}
+
+.timeline-event-card[data-event-type="meeting"] {
+    border-left-color: #1cc88a;
+}
+
+.timeline-event-card[data-event-type="workshop"] {
+    border-left-color: #f6c23e;
+}
+
+/* Timeline Responsive Design */
+@media (max-width: 768px) {
+    .timeline-container {
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .timeline-times {
+        width: 80px;
+    }
+
+    .timeline-time-label {
+        font-size: 0.85rem;
+    }
+
+    .timeline-event-card {
+        padding: 0.75rem;
+    }
+
+    .timeline-event-card .event-title {
+        font-size: 0.9rem;
+    }
+}
+
 </style>
 
 <!-- Modern JavaScript with improved accessibility -->
