@@ -368,9 +368,10 @@
 </div>
 
     <div id="main-wrapper">
-        @include('admin.layouts.sidebar')
+         @include('admin.layouts.header')
         <div class="page-wrapper">
-            @include('admin.layouts.header')
+            
+           @include('admin.layouts.sidebar')
             @include('admin.layouts.aside')
             <div class="body-wrapper">
                 <!-- Tab Content Container -->

@@ -16,11 +16,11 @@
                             <!-- Academic -->
                             <!-- ---------------------------------- -->
 
-                                <!-- Main Container with Improved Layout -->
-                                
+                            <!-- Main Container with Improved Layout -->
+
                             @if(hasRole('Admin') || hasRole('Training'))
-                           
-                       
+
+
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -41,7 +41,7 @@
                                     </div>
                                 </div>
                             </li>
-                          
+
                             <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -147,8 +147,8 @@
 
                                 {{-- <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('memo.notice.management.user') }}">
-                                        <span class="hide-menu">Memo & Notice Chat (User).</span>
-                                    </a></li> --}}
+                                <span class="hide-menu">Memo & Notice Chat (User).</span>
+                                </a></li> --}}
                             </ul>
                             <li class="sidebar-item" style="background: #4077ad;
     border-radius: 30px 0px 0px 30px;
@@ -180,8 +180,8 @@
     box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
     min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#reportCollapse" role="button"
-                                    aria-expanded="false" aria-controls="reportCollapse">
+                                    data-bs-toggle="collapse" href="#reportCollapse" role="button" aria-expanded="false"
+                                    aria-controls="reportCollapse">
                                     <span class="hide-menu fw-bold">Report</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
@@ -196,17 +196,17 @@
                                         href="{{ route('admin.feedback.faculty_average') }}">
                                         <span class="hide-menu">Feedback With Average New</span>
                                     </a></li>
-                                      <li class="sidebar-item"><a class="sidebar-link"
+                                <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.feedback.feedback_database') }}">
                                         <span class="hide-menu">Faculty Feedback Database</span>
                                     </a></li>
 
                             </ul>
-                          @endif
+                            @endif
 
                             <!-- faculty menu start -->
                             @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
-                             <li class="sidebar-item" style="background: #4077ad;
+                            <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
@@ -219,84 +219,86 @@
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                             <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
-                               <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
-                                    <span class="hide-menu">My Time Table</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('attendance.user_attendance.index') }}">
-                                    <span class="hide-menu">OT - Attendance</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('faculty.mdo.escort.exception.view') }}">
-                                    <span class="hide-menu">OT - MDO / Escort Duty</span>
-                                </a></li>
+                            <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                                        <span class="hide-menu">My Time Table</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('attendance.user_attendance.index') }}">
+                                        <span class="hide-menu">OT - Attendance</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('faculty.mdo.escort.exception.view') }}">
+                                        <span class="hide-menu">OT - MDO / Escort Duty</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('medical.exception.faculty.view') }}">
+                                        <span class="hide-menu">OT - Medical Exemption</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('faculty.notice.memo.view') }}">
+                                        <span class="hide-menu">OT - Memo / Notice</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{route('feedback.get.feedbackList')}}">
+                                        <span class="hide-menu">My Feedback</span>
+                                    </a></li>
+                            </ul>
+                            @endif
+                            <!-- faculty menu end -->
+                            <!-- medical exemption for OTs -->
+                            @if(hasRole('Doctor'))
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('medical.exception.faculty.view') }}">
                                     <span class="hide-menu">OT - Medical Exemption</span>
                                 </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('faculty.notice.memo.view') }}">
-                                    <span class="hide-menu">OT - Memo / Notice</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{route('feedback.get.feedbackList')}}">
-                                    <span class="hide-menu">My Feedback</span>
-                                </a></li>
-                            </ul>
                             @endif
-                            <!-- faculty menu end -->
-                             <!-- medical exemption for OTs -->
-                              @if(hasRole('Doctor'))
-                              <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.faculty.view') }}">
-                                    <span class="hide-menu">OT - Medical Exemption</span>
-                                </a></li>
-                                @endif
 
                             <!-- OTs menu start -->
                             @if(hasRole('Student-OT') || hasRole('Admin'))
-                             <li class="sidebar-item" style="background: #4077ad;
+                            <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
                                 box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
                                 min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#otCollapse" role="button"
-                                    aria-expanded="false" aria-controls="otCollapse">
+                                    data-bs-toggle="collapse" href="#otCollapse" role="button" aria-expanded="false"
+                                    aria-controls="otCollapse">
                                     <span class="hide-menu fw-bold">OT View</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                             <ul class="collapse list-unstyled ps-3" id="otCollapse">
-                               <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
-                                    <span class="hide-menu">My Time Table</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('attendance.user_attendance.index') }}">
-                                    <span class="hide-menu">My Attendance</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('ot.mdo.escrot.exemption.view') }}">
-                                    <span class="hide-menu">MDO/Escort Duty</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('medical.exception.ot.view') }}">
-                                    <span class="hide-menu">Medical Exemption</span>
-                                </a></li>
-                            {{--<li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
-                                    <span class="hide-menu">Memo/Notice activety</span>
+                            <ul class="collapse list-unstyled ps-3" id="otCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                                        <span class="hide-menu">My Time Table</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('attendance.user_attendance.index') }}">
+                                        <span class="hide-menu">My Attendance</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('ot.mdo.escrot.exemption.view') }}">
+                                        <span class="hide-menu">MDO/Escort Duty</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('medical.exception.ot.view') }}">
+                                        <span class="hide-menu">Medical Exemption</span>
+                                    </a></li>
+                                {{--<li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
+                                <span class="hide-menu">Memo/Notice activety</span>
                                 </a></li>--}}
-                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.notice.management.user') }}">
-                                    <span class="hide-menu">Memo/Notice action</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('feedback.get.studentFeedback') }}">
-                                    <span class="hide-menu">Session Feedback</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
-                                    <span class="hide-menu">Peer Evaluation</span>
-                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('memo.notice.management.user') }}">
+                                        <span class="hide-menu">Memo/Notice action</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.studentFeedback') }}">
+                                        <span class="hide-menu">Session Feedback</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
+                                        <span class="hide-menu">Peer Evaluation</span>
+                                    </a></li>
                             </ul>
                             @endif
                         </ul>

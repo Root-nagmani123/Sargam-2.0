@@ -38949,7 +38949,7 @@ fieldset:disabled .btn {
     margin-left: calc(380px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
-    border-radius: 20px;
+    border-radius: 30px;
     background: #f2f2f2;
     min-height: calc(100% - 102px);
     min-height: 100vh;
@@ -39005,9 +39005,6 @@ ul {
 }
 
 @media (min-width: 1300px) {
-    html[data-layout="vertical"] .topbar {
-        width: calc(100% - (80px + 240px));
-    }
 
     html[data-layout="vertical"] .page-wrapper {
         margin-left: calc(80px + 240px);
@@ -39053,9 +39050,8 @@ pre.code-view code.hljs {
 .side-mini-panel {
     position: fixed;
     left: 0;
-    width: 80px;
+    width: 230px;
     height: 100%;
-    background: var(--bs-white);
     top: 0;
     z-index: 99;
     transition: all 0.4s ease-in-out;
@@ -39080,7 +39076,7 @@ pre.code-view code.hljs {
     position: relative;
     background: #ECEDF8;
     width: 230px;
-    margin-top: 71.5px;
+    margin-top: 89.5px;
     padding: 5px;
     border-radius: 0px 15px 0px 0px;
 }
@@ -39150,7 +39146,7 @@ pre.code-view code.hljs {
 /* MAIN SIDEBAR */
 .side-mini-panel .sidebarmenu .sidebar-nav {
     position: absolute;
-    top: 72px;
+    top: 90px;
     left: 220px;
     width: 260px;
     height: calc(100vh - 72px);

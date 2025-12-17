@@ -29,7 +29,7 @@
                     <span class="text-muted">{{ $groupName ?? 'N/A' }}</span>
                 </div>
                 <div class="col-md-4">
-                    <strong>Facility:</strong>
+                    <strong>Faculty:</strong>
                     <span class="text-muted">{{ $facilityName ?? 'N/A' }}</span>
                 </div>
             </div>

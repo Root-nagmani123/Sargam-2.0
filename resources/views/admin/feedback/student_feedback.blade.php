@@ -35,7 +35,6 @@
 
     <style>
     .star-rating {
-        direction: rtl;
         display: inline-flex;
         justify-content: flex-start;
     }
@@ -410,7 +409,7 @@
                                     <td>
                                         @if ($feedback->Ratting_checkbox == 1)
                                         <div class="star-rating d-inline-flex flex-row-reverse">
-                                            @for ($i = 5; $i >= 1; $i--)
+                                            @for ($i = 1; $i <= 5; $i++)
                                             <input type="radio" id="content-{{ $i }}-{{ $index }}"
                                                 name="content[{{ $index }}]" value="{{ $i }}"
                                                 {{ old('content.' . $index) == $i ? 'checked' : '' }} required>
@@ -424,7 +423,7 @@
                                     <td>
                                         @if ($feedback->Ratting_checkbox == 1)
                                         <div class="star-rating d-inline-flex flex-row-reverse">
-                                            @for ($i = 5; $i >= 1; $i--)
+                                            @for ($i = 1; $i <= 5; $i++)
                                             <input type="radio" id="presentation-{{ $i }}-{{ $index }}"
                                                 name="presentation[{{ $index }}]" value="{{ $i }}"
                                                 {{ old('presentation.' . $index) == $i ? 'checked' : '' }} required>
