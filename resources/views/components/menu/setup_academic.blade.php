@@ -196,8 +196,8 @@
                                         href="{{ route('admin.feedback.faculty_average') }}">
                                         <span class="hide-menu">Feedback With Average New</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.feedback.feedback_database') }}">
+                                      <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.feedback.database') }}">
                                         <span class="hide-menu">Faculty Feedback Database</span>
                                     </a></li>
 
