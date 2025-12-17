@@ -1,223 +1,343 @@
-<!-- 🌟 Header Start -->
-<style>
-/* --- Navbar Styling --- */
-.navbar-nav .nav-link {
-    color: #333;
-    font-size: 0.95rem;
-    transition: all 0.2s ease;
-}
-
-.navbar-nav .nav-link:hover,
-.navbar-nav .nav-link:focus {
-    background-color: #f2f2f2;
-    color: #000;
-    outline: none;
-}
-
-.navbar-nav .nav-link.active {
-    background-color: #B12923;
-    color: #fbf8f8 !important;
-    font-size: 16px !important;
-    line-height: 24px;
-    font-weight: 500 !important;
-    padding: 20px !important;
-    border-radius: 26px !important;
-    Width: 100% !important;
-    Height: 40px !important;
-    text-align: center !important;
-    justify-content: center !important;
-    transition: all 0.3s ease-in-out;
-    box-shadow: 3px 0 3px 0 rgba(232, 191, 189, 0.8);
-}
-
-.btn-link {
-    text-decoration: none !important;
-}
-
-.btn-link:hover {
-    opacity: 0.8;
-}
-
-@media (max-width: 991.98px) {
-    .navbar-nav {
-        border-radius: 0.5rem;
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-    }
-
-    .navbar-nav .nav-link {
-        width: 100%;
-        border-radius: 0.5rem;
-    }
-}
-
-/* --- Search Animation --- */
-.search-wrapper {
-    position: relative;
-    display: inline-block;
-}
-
-.search-box {
-    position: absolute;
-    top: 50%;
-    left: 120%;
-    transform: translateY(-50%) scale(0.95);
-    opacity: 0;
-    display: none;
-    min-width: 220px;
-    transition: all 0.3s ease;
-    z-index: 1050;
-}
-
-.search-box.show {
-    display: block !important;
-    opacity: 1;
-    transform: translateY(-50%) scale(1);
-}
-
-.input-group-sm .form-control {
-    border-radius: 50rem 0 0 50rem;
-}
-
-.input-group-sm .btn {
-    border-radius: 0 50rem 50rem 0;
-}
-
-#mainNavbar {
-    height: auto !important;
-    overflow: visible !important;
-}
-
-#mainNavbar.collapse:not(.show),
-#navbarNav.collapse:not(.show) {
-    display: contents !important;
-}
-
-/* Notification Badge */
-.notification-badge {
-    font-size: 10px;
-    padding: 2px 6px;
-    min-width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.nav-link {
-    font-size: 14px;
-    font-weight: 500;
-}
-
-.nav-link:not(.active):hover {
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 999px;
-}
-
-.nav-link:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
-}
-</style>
-
-<!-- GIGW-Compliant Modern Header -->
-<header class="topbar bg-white border-bottom" role="banner">
-    <nav class="navbar container-fluid px-4 py-2" role="navigation" aria-label="Primary navigation">
-
-        <!-- LEFT: LOGO -->
-        <div class="d-flex align-items-center gap-2">
-            <img src="{{ asset('images/ashoka.webp') }}" alt="Sargam Icon" height="46">
-            |
-            <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Sargam – LBSNAA" height="46">
-        </div>
-
-        <!-- CENTER: PILL NAVIGATION -->
-        <div class="mx-auto">
-            <ul class="nav align-items-center px-2 py-1" style="border-radius: 20px; height: 60px; background: #f2f2f2; 
-                       border: 1px solid rgba(0, 0, 0, 0.05);" role="menubar" aria-label="Main navigation">
-
-                <li class="nav-item" role="none">
-                    <a class="nav-link px-3 py-1 text-dark" href="#home" role="menuitem">
-                        Home
+<header class="topbar">
+    <div class="with-vertical">
+        <nav class="navbar navbar-expand-lg p-0">
+            <ul class="navbar-nav">
+                <li class="nav-item d-flex d-xl-none">
+                    <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
+                        href="javascript:void(0)">
+                        <iconify-icon icon="solar:hamburger-menu-line-duotone" class="fs-6"></iconify-icon>
                     </a>
-                </li>
-
-                <li class="nav-item" role="none">
-                    <a class="nav-link px-3 py-1 active text-white" href="#setup" role="menuitem" aria-current="page"
-                        style="background:#b91c1c; border-radius:999px;">
-                        Setup
-                    </a>
-                </li>
-
-                <li class="nav-item" role="none">
-                    <a class="nav-link px-3 py-1 text-dark" href="#communications" role="menuitem">
-                        Communications
-                    </a>
-                </li>
-
-                <li class="nav-item" role="none">
-                    <a class="nav-link px-3 py-1 text-dark" href="#academics" role="menuitem">
-                        Academics
-                    </a>
-                </li>
-
-                <li class="nav-item" role="none">
-                    <a class="nav-link px-3 py-1 text-dark" href="#material" role="menuitem">
-                        Material Management
-                    </a>
-                </li>
-
-                <li class="nav-item dropdown" role="none">
-                    <a class="nav-link px-3 py-1 text-dark dropdown-toggle" href="#" id="financeMenu" role="menuitem"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                        Financial
-                    </a>
-                    <ul class="dropdown-menu" role="menu">
-                        <li><a class="dropdown-item" href="#">Budget</a></li>
-                        <li><a class="dropdown-item" href="#">Accounts</a></li>
-                    </ul>
-                </li>
-
-                <li class="nav-item" role="none">
-                    <button class="btn p-1" aria-label="Search">
-                        <span class="material-icons" style="font-size:20px;">
-                            search
-                        </span>
-                    </button>
                 </li>
             </ul>
-        </div>
 
-        <!-- RIGHT: LOGOUT + LAST LOGIN -->
-        <div class="d-flex align-items-center gap-4">
-
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="btn p-0 border-0 bg-transparent" aria-label="Logout">
-                    <span class="material-icons" style="font-size:22px;">
-                        logout
-                    </span>
-                </button>
-            </form>
-
-            @php
-            $lastLogin = Auth::user()->last_login;
-            $dt = $lastLogin ? \Carbon\Carbon::parse($lastLogin) : null;
-            @endphp
-
-            <div class="text-end">
-                <div class="text-muted" style="font-size:11px;">
-                    Last login
-                </div>
-                <time datetime="{{ $dt?->toIso8601String() }}" class="fw-medium text-dark" style="font-size:12px;">
-                    {{ $dt?->format('d-m-Y H:i:s') ?? 'Never' }}
-                </time>
+            <div class=" py-9 py-xl-0">
+                    <img src="{{ asset('images/ashoka.webp') }}" alt="ashoka emblem" style="height: 40px;"> | 
+                    <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo">
             </div>
-        </div>
-    </nav>
-</header>
 
+            <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
+                data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <iconify-icon icon="solar:menu-dots-bold-duotone" class="fs-6"></iconify-icon>
+            </a>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
+                    <!-- Enhanced Navigation Container -->
+                    <div class="nav-container position-relative">
+                        <ul class="navbar-nav px-4 py-2 gap-2 align-items-center" style="border-radius: 20px; height: 60px; background: #f2f2f2; 
+                       border: 1px solid rgba(0, 0, 0, 0.05);" role="menubar" aria-label="Main navigation">
+
+                            <!-- Home -->
+                            <li class="nav-item" role="none">
+                                <a href="#home"
+                                    class="nav-link active rounded-pill px-4 py-2 d-flex align-items-center gap-2"
+                                    data-bs-toggle="tab" role="tab" aria-selected="true" aria-controls="home-panel"
+                                    id="home-tab">
+                                    <span>Home</span>
+                                </a>
+                            </li>
+
+                            <!-- Setup -->
+                            <li class="nav-item" role="none">
+                                <a href="#tab-setup"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
+                                    id="setup-tab">
+
+                                    @if(hasRole('Admin') || hasRole('Training'))
+                                    <span>Setup</span>
+                                    @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
+                                    hasRole('Student-OT'))
+                                    <span>Academics</span>
+                                    @else
+                                    <span>Setup</span>
+                                    @endif
+
+                                </a>
+                            </li>
+
+
+                            <!-- Communications -->
+                            <li class="nav-item" role="none">
+                                <a href="#tab-communications"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                    aria-controls="communications-panel" id="communications-tab">
+                                    <span>Communications</span>
+                                </a>
+                            </li>
+
+                            <!-- Academics -->
+                            <!-- <li class="nav-item" role="none">
+                                <a href="#tab-academics"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                    aria-controls="academics-panel" id="academics-tab">
+                                    <span>Academics</span>
+                                </a>
+                            </li> -->
+
+                            <!-- Material Management -->
+                            <li class="nav-item" role="none">
+                                <a href="#tab-material-management"
+                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
+                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                    aria-controls="material-management-panel" id="material-management-tab">
+                                    <span>Material Management</span>
+                                </a>
+                            </li>
+
+                            <!-- Financial Dropdown - Enhanced -->
+                            <li class="nav-item dropdown" role="none">
+                                <a class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
+                                    href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
+                                    aria-expanded="false" data-bs-toggle="dropdown">
+                                    <span>Financial</span>
+                                    <i class="material-icons material-symbols-rounded fs-6 dropdown-arrow transition-all"
+                                        aria-hidden="true">expand_more</i>
+                                </a>
+
+                                <ul class="dropdown-menu shadow-lg border-0 rounded-xl p-2 mt-1"
+                                    style="min-width: 180px; border: 1px solid rgba(0, 0, 0, 0.08);"
+                                    aria-labelledby="financialDropdown" role="menu">
+                                    <li role="none">
+                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
+                                            href="#" role="menuitem">
+                                            <span>Budget</span>
+                                        </a>
+                                    </li>
+                                    <li role="none">
+                                        <a class="dropdown-item d-flex align-items-center gap-2 px-3 py-2 rounded-lg hover-lift"
+                                            href="#" role="menuitem">
+                                            <span>Accounts</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+
+                            <!-- Search with Enhanced UI -->
+                            <li class="nav-item" role="none">
+                                <button class="nav-link rounded-circle px-2 py-2 search-trigger hover-lift"
+                                    style="width: 40px; height: 40px;" aria-label="Open search" aria-expanded="false"
+                                    aria-controls="searchModal">
+                                    <i class="material-icons material-symbols-rounded text-dark"
+                                        style="font-size: 20px;" aria-hidden="true">search</i>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Right Side Actions - Enhanced -->
+                <div class="d-flex align-items-center ms-auto gap-2" style="margin-right: 56px;">
+                    <!-- Notification Icon -->
+                    <div class="dropdown position-relative">
+                        <button type="button"
+                            class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
+                            id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                            aria-label="Notifications" data-bs-placement="bottom" title="Notifications">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 30px; color: #475569;"
+                                aria-hidden="true">notifications_active</i>
+                            @php
+                            $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
+                            @endphp
+                            @if($unreadCount > 0)
+                            <span
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                style="font-size: 10px;">
+                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                            </span>
+                            @endif
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-xl p-2"
+                            style="min-width: 350px; max-height: 400px; overflow-y: auto;"
+                            aria-labelledby="notificationDropdown">
+                            <li class="dropdown-header d-flex justify-content-between align-items-center px-3 py-2">
+                                <span class="fw-semibold">Notifications</span>
+                                @if($unreadCount > 0)
+                                <button type="button" class="btn btn-sm btn-link text-primary p-0"
+                                    onclick="markAllAsRead()">
+                                    Mark all as read
+                                </button>
+                                @endif
+                            </li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <div id="notificationList">
+                                @php
+                                $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, true);
+                                @endphp
+                                @if($notifications->count() > 0)
+                                @foreach($notifications as $notification)
+                                <li>
+                                    <a class="dropdown-item px-3 py-2 rounded-lg {{ $notification->is_read ? '' : 'bg-light' }}"
+                                        href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
+                                        <div class="d-flex flex-column">
+                                            <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}
+                                            </div>
+                                            <div class="text-muted small mt-1">
+                                                {{ Str::limit($notification->message ?? '', 50) }}</div>
+                                            <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
+                                                {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                                @endforeach
+                                @else
+                                <li class="px-3 py-4 text-center text-muted">
+                                    <i class="material-icons material-symbols-rounded"
+                                        style="font-size: 48px; opacity: 0.3;">notifications_none</i>
+                                    <div class="mt-2">No notifications</div>
+                                </li>
+                                @endif
+                            </div>
+                        </ul>
+                    </div>
+
+                    <!-- Logout Button - Enhanced -->
+                    <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
+                        @csrf
+                        <button type="submit"
+                            class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
+                            aria-label="Sign out from system" data-bs-toggle="tooltip" data-bs-placement="bottom"
+                            title="Sign Out">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 30px; color: #475569;"
+                                aria-hidden="true">logout</i>
+                            <span class="tooltip-text visually-hidden">Sign out from system</span>
+                        </button>
+                    </form>
+
+                    <!-- Last Login - Enhanced -->
+                    <div class="d-flex flex-column align-items-end">
+                        <div class="text-muted small d-flex align-items-center gap-1"
+                            style="font-size: 11px; line-height: 14px;">
+                            <i class="material-icons material-symbols-rounded" style="font-size: 14px;"
+                                aria-hidden="true">schedule</i>
+                            <span class="fw-medium">Last login:</span>
+                        </div>
+                        @php
+                        $lastLogin = Auth::user()->last_login ?? null;
+                        if ($lastLogin) {
+                        $date = \Carbon\Carbon::parse($lastLogin);
+                        $formattedDate = $date->format('d-m-Y H:i:s');
+                        $isoDate = $date->toIso8601String();
+                        } else {
+                        $formattedDate = 'Never';
+                        $isoDate = '';
+                        }
+                        @endphp
+                        <time id="myTime" datetime="{{ $isoDate }}" class="text-dark fw-semibold"
+                            style="font-size: 13px; line-height: 16px;" aria-live="polite">
+                            {{ $formattedDate }}
+                        </time>
+                    </div>
+                </div>
+            </div>
+
+            <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Time format is already set in PHP, no need to override
+
+                // Active tab indicator animation
+                const activeTab = document.querySelector('.nav-link.active');
+                const indicator = document.querySelector('.active-tab-indicator');
+
+                if (activeTab && indicator) {
+                    updateIndicatorPosition(activeTab);
+
+                    // Listen for tab changes
+                    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                        tab.addEventListener('shown.bs.tab', function(e) {
+                            updateIndicatorPosition(e.target);
+                        });
+                    });
+                }
+
+                function updateIndicatorPosition(element) {
+                    const rect = element.getBoundingClientRect();
+                    const parentRect = element.closest('.nav-container').getBoundingClientRect();
+
+                    indicator.style.width = `${rect.width}px`;
+                    indicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
+                }
+
+                // Enhanced dropdown interaction
+                const financialDropdown = document.getElementById('financialDropdown');
+                if (financialDropdown) {
+                    financialDropdown.addEventListener('focus', function() {
+                        this.setAttribute('aria-expanded', 'true');
+                    });
+
+                    financialDropdown.addEventListener('blur', function(e) {
+                        if (!this.parentElement.contains(e.relatedTarget)) {
+                            this.setAttribute('aria-expanded', 'false');
+                        }
+                    });
+                }
+
+                // Search trigger functionality
+                const searchTrigger = document.querySelector('.search-trigger');
+                if (searchTrigger) {
+                    searchTrigger.addEventListener('click', function() {
+                        // Open search modal or expand search bar
+                        this.setAttribute('aria-expanded', 'true');
+                        // Add your search functionality here
+                        console.log('Search triggered');
+                    });
+                }
+
+                // Keyboard navigation enhancement
+                document.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
+                    item.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            this.click();
+                        }
+                    });
+                });
+            });
+
+            // Notification functions
+            function markAsRead(notificationId) {
+                fetch('/admin/notifications/mark-read/' + notificationId, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+
+            function markAllAsRead() {
+                fetch('/admin/notifications/mark-all-read', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+            }
+            </script>
+        </nav>
+    </div>
+</header>
 
 
 
