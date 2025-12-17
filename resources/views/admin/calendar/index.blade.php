@@ -28,6 +28,14 @@
                             <i class="bi bi-calendar3 me-2"></i>Calendar View
                         </button>
                     </div>
+
+                    <!-- Density Toggle -->
+                    <div class="density-toggle d-flex align-items-center gap-2 ms-2">
+                        <span class="text-muted fw-medium small d-none d-md-inline">Density:</span>
+                        <button type="button" class="btn btn-outline-secondary" id="toggleDensityBtn" aria-pressed="false" aria-label="Toggle compact mode">
+                            <i class="bi bi-arrows-collapse me-2" aria-hidden="true"></i>Compact
+                        </button>
+                    </div>
                 </div>
                 <!-- Action Buttons -->
                 @if(hasRole('Training') || hasRole('Admin'))
@@ -143,7 +151,7 @@
 
 /* Calendar styling */
 .fc {
-    font-size: 0.875rem;
+    font-size: 0.95rem;
 }
 
 .fc-daygrid-day {
@@ -165,16 +173,41 @@
 }
 
 .fc-event-card {
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-    margin: 0.125rem;
-    transition: transform 0.2s, box-shadow 0.2s;
-    border-left: 3px solid var(--primary-color);
+    padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem;
+    margin: 0.2rem 0.125rem;
+    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
+    border-left: 4px solid var(--primary-color);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
 }
 
 .fc-event-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+    background-color: rgba(0, 0, 0, 0.01);
+}
+
+/* Event card content improvements */
+.fc-event-card .event-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    line-height: 1.35;
+}
+
+.fc-event-card .event-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.25rem;
+}
+
+.fc-event-card .meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
 }
 
 /* Dense mode for days with many events */
@@ -184,14 +217,15 @@
     box-shadow: none;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .fw-bold {
+.fc-daygrid-day.dense-day .fc-event-card .event-title {
     font-size: 0.8rem;
+    font-weight: 700;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .small {
-    display: none;
-    /* show only title to keep compact */
-}
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item { display: none; }
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--time { display: inline-flex; }
+
+/* show only title to keep compact */
 
 /* Popover styling for "+ more" */
 .fc-popover {
@@ -208,8 +242,8 @@
 
 .fc-popover .fc-popover-body .fc-event-card {
     margin: 0.25rem 0;
-    padding: 0.5rem;
-    border-left: 3px solid var(--primary-color);
+    padding: 0.625rem 0.75rem;
+    border-left: 4px solid var(--primary-color);
 }
 
 /* Ensure default popover events look like cards */
@@ -257,13 +291,8 @@
     box-shadow: var(--shadow-sm);
 }
 
-.fc-daygrid-day-frame .fc-event-card .fw-bold {
-    font-size: 0.85rem;
-}
-
-.fc-daygrid-day-frame .fc-event-card .small {
-    font-size: 0.75rem;
-}
+.fc-daygrid-day-frame .fc-event-card .event-title { font-size: 0.9rem; }
+.fc-daygrid-day-frame .fc-event-card .meta-item { font-size: 0.8rem; }
 
 /* TimeGrid overlapping events */
 .fc-timegrid-event .fc-event-main {
@@ -283,6 +312,7 @@
 .fc-timegrid-event:focus-visible {
     outline: 3px solid var(--primary-color);
     outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.2);
 }
 
 /* Timetable styling */
@@ -321,7 +351,7 @@
 .list-event-card {
     background: #ffffff;
     border: 1px solid var(--border-color);
-    border-radius: 10px;
+    border-radius: 12px;
     transition: var(--transition);
     border-left: 4px solid var(--primary-color) !important;
     box-shadow: var(--shadow-sm);
@@ -333,6 +363,12 @@
     transform: translateX(4px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     z-index: 10;
+}
+
+.list-event-card:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.2);
 }
 
 /* Hover tooltip for full details */
@@ -356,6 +392,14 @@
 }
 
 .list-event-card:hover .event-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Show tooltip on keyboard focus for accessibility */
+.list-event-card:focus-within .event-tooltip,
+.list-event-card:focus .event-tooltip {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
@@ -407,13 +451,14 @@
 }
 
 .list-event-card .title {
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 1rem;
+    line-height: 1.4;
 }
 
 .list-event-card .meta {
     color: var(--text-muted);
-    font-size: 0.78rem;
+    font-size: 0.85rem;
 }
 
 /* Group-specific backgrounds */
@@ -700,6 +745,7 @@
     .fc-event-card {
         border-width: 2px;
     }
+    .list-event-card { border-width: 2px; }
 }
 
 /* Reduced motion */
@@ -709,6 +755,36 @@
     .btn {
         transition: none;
     }
+}
+
+/* Compact density mode */
+body.compact-mode .fc { font-size: 0.85rem; }
+body.compact-mode .fc-event-card {
+    padding: 0.35rem 0.5rem;
+    border-left-width: 3px;
+    border-radius: 0.375rem;
+}
+body.compact-mode .fc-event-card .event-title { font-size: 0.85rem; }
+body.compact-mode .fc-event-card .event-meta .meta-item { display: none; }
+body.compact-mode .fc-event-card .event-meta .meta-item--time { display: inline-flex; }
+body.compact-mode .fc-timegrid-event .fc-event-main { border-left-width: 3px; }
+body.compact-mode .fc-popover .fc-popover-body .fc-event-card { padding: 0.5rem 0.625rem; }
+
+body.compact-mode .list-event-card { padding: 0.5rem 0.625rem !important; border-radius: 10px; }
+body.compact-mode .list-event-card .title { font-size: 0.95rem; }
+body.compact-mode .list-event-card .meta:not(:first-of-type) { display: none; }
+body.compact-mode .list-event-card .event-tooltip { display: none; }
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .fc-event-card,
+    .list-event-card,
+    .timeline-event-card {
+        background: #111827;
+        color: #E5E7EB;
+        border-color: rgba(255, 255, 255, 0.12);
+    }
+    .list-event-card .meta, .fc-event-card .meta-item { color: #9CA3AF; }
 }
 
 /* FullCalendar "+ more" text styling */
@@ -964,6 +1040,7 @@ class CalendarManager {
         this.validateDates();
         this.updateCurrentWeek();
         this.observeMoreLinksChanges();
+        this.initDensity();
     }
 
     initFullCalendar() {
@@ -1085,6 +1162,9 @@ class CalendarManager {
         const topic = arg.event.title || '';
         const venue = arg.event.extendedProps.vanue || '';
         const faculty = arg.event.extendedProps.faculty_name || '';
+        const idStr = (arg.event.id || arg.event._def?.publicId || Math.random().toString(36).slice(2));
+        const titleId = `fc-evt-${idStr}-title`;
+        const descId = `fc-evt-${idStr}-desc`;
 
         return {
             html: `
@@ -1092,21 +1172,19 @@ class CalendarManager {
                      style="border-left: 4px solid ${cardColor};"
                      tabindex="0"
                      role="button"
-                     aria-label="${topic} at ${venue} with ${faculty}"
+                     aria-labelledby="${titleId}"
+                     aria-describedby="${descId}"
                      ${type ? `data-event-type="${typeAttr}"` : ''}>
-                    <div class="fw-bold mb-1 text-truncate" style="color: ${cardColor};">
+                    <div class="event-title mb-1 text-truncate" id="${titleId}" style="color: ${cardColor};">
                         ${topic}
                     </div>
                     ${type ? `<div class="mb-1"><span class="event-badge">${type}</span></div>` : ''}
-                    <div class="small text-muted text-truncate d-flex align-items-center">
-                        <i class="bi bi-clock me-1" aria-hidden="true"></i>${arg.timeText || ''}
+                    <div class="event-meta">
+                        ${arg.timeText ? `<span class=\"meta-item meta-item--time\"><i class=\"bi bi-clock\" aria-hidden=\"true\"></i>${arg.timeText}</span>` : ''}
+                        ${venue ? `<span class=\"meta-item meta-item--venue\"><i class=\"bi bi-geo-alt\" aria-hidden=\"true\"></i>${venue}</span>` : ''}
+                        ${faculty ? `<span class=\"meta-item meta-item--faculty\"><i class=\"bi bi-person\" aria-hidden=\"true\"></i>${faculty}</span>` : ''}
                     </div>
-                    <div class="small text-muted text-truncate d-flex align-items-center">
-                        <i class="bi bi-geo-alt me-1" aria-hidden="true"></i>${venue}
-                    </div>
-                    <div class="small text-muted text-truncate d-flex align-items-center">
-                        <i class="bi bi-person me-1" aria-hidden="true"></i>${faculty}
-                    </div>
+                    <span class="visually-hidden" id="${descId}">${type ? `${type} ` : ''}${arg.timeText ? `${arg.timeText} ` : ''}${venue ? `at ${venue} ` : ''}${faculty ? `with ${faculty}` : ''}</span>
                 </div>
             `
         };
@@ -1252,6 +1330,61 @@ class CalendarManager {
         document.getElementById('createEventButton')?.addEventListener('click', () => {
             this.resetEventForm();
         });
+
+        // List view: open details on click/keyboard
+        const listView = document.getElementById('eventListView');
+        listView?.addEventListener('click', (e) => {
+            const card = e.target.closest('.list-event-card');
+            if (card?.dataset?.id) {
+                this.loadEventDetails(card.dataset.id);
+            }
+        });
+        listView?.addEventListener('keydown', (e) => {
+            const card = e.target.closest('.list-event-card');
+            if (!card) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                if (card.dataset?.id) {
+                    this.loadEventDetails(card.dataset.id);
+                }
+            }
+        });
+
+        // Density toggle
+        document.getElementById('toggleDensityBtn')?.addEventListener('click', () => this.toggleDensity());
+    }
+
+    initDensity() {
+        const saved = localStorage.getItem('calendarDensity');
+        let isCompact;
+        if (saved === null) {
+            isCompact = true; // Default to compact mode
+            try { localStorage.setItem('calendarDensity', 'compact'); } catch {}
+        } else {
+            isCompact = saved === 'compact';
+        }
+        document.body.classList.toggle('compact-mode', isCompact);
+
+        const btn = document.getElementById('toggleDensityBtn');
+        if (btn) {
+            btn.classList.toggle('active', isCompact);
+            btn.setAttribute('aria-pressed', String(isCompact));
+        }
+    }
+
+    toggleDensity() {
+        const isCompact = !document.body.classList.contains('compact-mode');
+        document.body.classList.toggle('compact-mode', isCompact);
+        localStorage.setItem('calendarDensity', isCompact ? 'compact' : 'comfortable');
+
+        const btn = document.getElementById('toggleDensityBtn');
+        if (btn) {
+            btn.classList.toggle('active', isCompact);
+            btn.setAttribute('aria-pressed', String(isCompact));
+        }
+
+        // Re-measure dense days in month view
+        this.applyDenseMode();
     }
 
     toggleView(button) {
@@ -1937,8 +2070,8 @@ class CalendarManager {
                 <div class="list-event-card p-2 mb-2" data-group="${groupName}">
                     ${groupName ? `<div class="group-badge">${groupName}</div>` : ''}
                     <div class="title">${title}</div>
-                    <div class="meta d-flex align-items-center"><i class="bi bi-geo-alt me-1"></i>${venue}</div>
-                    <div class="meta d-flex align-items-center"><i class="bi bi-person me-1"></i>${faculty}</div>
+                    <div class="meta d-flex align-items-center"><i class="material-icons me-1">class</i>${classSession}</div> <div class="meta d-flex align-items-center"><i class="material-icons me-1">place</i>${venue}</div>
+                    <div class="meta d-flex align-items-center"><i class="material-icons me-1">person</i>${faculty}</div>
                     
                     <!-- Hover Tooltip -->
                     <div class="event-tooltip">
@@ -1963,13 +2096,13 @@ class CalendarManager {
                         </div>` : ''}
                         ${faculty ? `
                         <div class="tooltip-row">
-                            <i class="bi bi-person"></i>
+                            <i class="material-icons me-1">person</i>
                             <span class="tooltip-label">Faculty:</span>
                             <span class="tooltip-value">${faculty}</span>
                         </div>` : ''}
                         ${classSession ? `
                         <div class="tooltip-row">
-                            <i class="bi bi-bookmark"></i>
+                            <i class="material-icons me-1">book</i>
                             <span class="tooltip-label">Session:</span>
                             <span class="tooltip-value">${classSession}</span>
                         </div>` : ''}
