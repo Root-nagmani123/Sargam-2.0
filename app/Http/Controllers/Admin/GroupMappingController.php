@@ -158,32 +158,67 @@ class GroupMappingController extends Controller
             $course = CourseMaster::find($request->course_id);
             $courseName = $course ? $course->course_name : '';
 
-            // Handle notifications based on three scenarios
+            // Handle notifications - convert faculty PKs to user_ids and handle all scenarios
             $notificationService = app(NotificationService::class);
             
-            // Scenario 1: Faculty was already selected earlier and any details are updated
-            if ($oldFacilityId && $newFacilityId && $oldFacilityId == $newFacilityId && $detailsChanged) {
+            // Convert faculty PKs to user_ids (employee_master_pk from FacultyMaster)
+            $oldFacilityUserId = $oldFacilityId ? $this->convertFacultyPkToUserId((int)$oldFacilityId) : null;
+            $newFacilityUserId = $newFacilityId ? $this->convertFacultyPkToUserId((int)$newFacilityId) : null;
+
+            // Scenario 1: Faculty REMOVED - old faculty exists but new is null
+            if ($oldFacilityUserId && !$newFacilityUserId) {
                 $notificationService->create(
-                    (int)$newFacilityId,
-                    'group_mapping',
+                    $oldFacilityUserId,
+                    'group_mapping_removed',
                     'Group Mapping',
                     $groupMapping->pk,
-                    'Group Mapping Updated',
-                    "The group mapping '{$request->group_name}' for course '{$courseName}' has been updated."
+                    'Removed from Group Mapping',
+                    "You have been removed from the group mapping '{$request->group_name}' for course '{$courseName}'."
                 );
             }
-            // Scenario 2: Faculty was NOT selected earlier and Faculty is added now
-            elseif (!$oldFacilityId && $newFacilityId) {
+            // Scenario 2: Faculty CHANGED - old and new are different
+            elseif ($oldFacilityUserId && $newFacilityUserId && $oldFacilityId != $newFacilityId) {
+                // Notify old faculty they were removed
                 $notificationService->create(
-                    (int)$newFacilityId,
-                    'group_mapping',
+                    $oldFacilityUserId,
+                    'group_mapping_removed',
+                    'Group Mapping',
+                    $groupMapping->pk,
+                    'Removed from Group Mapping',
+                    "You have been removed from the group mapping '{$request->group_name}' for course '{$courseName}'."
+                );
+                // Notify new faculty they were added
+                $notificationService->create(
+                    $newFacilityUserId,
+                    'group_mapping_added',
                     'Group Mapping',
                     $groupMapping->pk,
                     'Added to Group Mapping',
                     "You have been added to the group mapping '{$request->group_name}' for course '{$courseName}'."
                 );
             }
-            // Scenario 3: Faculty is not selected - do not send any notification (handled by condition)
+            // Scenario 3: Faculty ADDED - no old faculty, new faculty added (create or update)
+            elseif (!$oldFacilityUserId && $newFacilityUserId) {
+                $notificationService->create(
+                    $newFacilityUserId,
+                    'group_mapping_added',
+                    'Group Mapping',
+                    $groupMapping->pk,
+                    'Added to Group Mapping',
+                    "You have been added to the group mapping '{$request->group_name}' for course '{$courseName}'."
+                );
+            }
+            // Scenario 4: Faculty SAME but details changed - same faculty, other details updated
+            elseif ($oldFacilityUserId && $newFacilityUserId && $oldFacilityId == $newFacilityId && $detailsChanged) {
+                $notificationService->create(
+                    $newFacilityUserId,
+                    'group_mapping_updated',
+                    'Group Mapping',
+                    $groupMapping->pk,
+                    'Group Mapping Updated',
+                    "The group mapping '{$request->group_name}' for course '{$courseName}' has been updated."
+                );
+            }
 
             return redirect()->route('group.mapping.index')->with('success', $message);
         } catch (\Exception $e) {
@@ -658,5 +693,25 @@ class GroupMappingController extends Controller
                 'failed' => $failed,
             ],
         ]);
+    }
+
+    /**
+     * Convert faculty PK to user_id (employee_master_pk)
+     * 
+     * @param int|null $facultyPk
+     * @return int|null
+     */
+    protected function convertFacultyPkToUserId(?int $facultyPk): ?int
+    {
+        if (empty($facultyPk)) {
+            return null;
+        }
+        
+        $faculty = FacultyMaster::find($facultyPk);
+        if (!$faculty || !$faculty->employee_master_pk) {
+            return null;
+        }
+        
+        return (int) $faculty->employee_master_pk;
     }
 }

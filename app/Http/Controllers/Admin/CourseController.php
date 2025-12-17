@@ -13,8 +13,7 @@ use Illuminate\Support\Facades\Crypt;
 use App\DataTables\CourseMasterDataTable;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
-use App\Services\NotificationService;
-use App\Services\NotificationReceiverService;
+use App\Services\CourseService;
 
 
 class CourseController extends Controller
@@ -105,192 +104,14 @@ class CourseController extends Controller
 
     }
 
-    public function store(ProgrammeRequest $request)
+    public function store(ProgrammeRequest $request, CourseService $courseService)
     {
         DB::beginTransaction();
         try {
-
             $validated = $request->validated();
-
-            $validated['courseyear'] = date('Y', strtotime($validated['courseyear']));
-            $validated['startdate'] = date('Y-m-d', strtotime($validated['startdate']));
-            $validated['enddate'] = date('Y-m-d', strtotime($validated['enddate']));
-
-            $courseMasterObj = null;
-
-            if( $request->course_id ) {
-
-                // Update existing course
-
-                $courseMasterObj = CourseMaster::findOrFail(decrypt($request->course_id));
-                $courseMasterObj->update([
-                    'course_name' => $validated['coursename'],
-                    'couse_short_name' => $validated['courseshortname'],
-                    'course_year' => $validated['courseyear'],
-                    'start_year' => $validated['startdate'],
-                    'end_date' => $validated['enddate'],
-                    'Modified_date' => now(),
-                ]);
-            } else {
-
-                // Create new course
-
-                $courseMasterObj = new CourseMaster();
-                $courseMasterObj->fill([
-                    'course_name' => $validated['coursename'],
-                    'couse_short_name' => $validated['courseshortname'],
-                    'course_year' => $validated['courseyear'],
-                    'start_year' => $validated['startdate'],
-                    'end_date' => $validated['enddate'],
-                    'created_date' => now(),
-                    'Modified_date' => now(),
-                ]);
-                $courseMasterObj->save();
-            }
-
-            if (!$courseMasterObj) {
-                return redirect()->back()->with('error', 'Course creation failed');
-            }
-
-            // For edit: Capture old assistant coordinators before deletion
-            $oldAssistantCoordinatorUserIds = [];
-            if ($request->course_id) {
-                $oldAssistantCoordinators = $courseMasterObj->courseCordinatorMater()
-                    ->whereNotNull('Assistant_Coordinator_name')
-                    ->where('Assistant_Coordinator_name', '!=', '')
-                    ->pluck('Assistant_Coordinator_name')
-                    ->unique()
-                    ->map(function($id) {
-                        return (int) $id;
-                    })
-                    ->toArray();
-                $oldAssistantCoordinatorUserIds = array_values(array_filter($oldAssistantCoordinators));
-            }
-
-            // Delete existing course coordinators
-            $courseMasterObj->courseCordinatorMater()->delete();
-
-
-            foreach ($validated['assistantcoursecoordinator'] as $key => $value) {
-                $courseMasterObj->courseCordinatorMater()->create([
-                    'courses_master_pk' => $courseMasterObj->pk,
-                    'Coordinator_name' => $validated['coursecoordinator'],
-                    'Assistant_Coordinator_name' => $value,
-                    'assistant_coordinator_role' => $validated['assistant_coordinator_role'][$key] ?? '',
-                    'created_date' => now(),
-                    'Modified_date' => now(),
-                ]);
-            }
-
-            // Send notifications - separate logic for create and edit
-            try {
-                $notificationService = app(NotificationService::class);
-                $receiverService = app(NotificationReceiverService::class);
-                
-                $courseName = $validated['coursename'];
-                $receiverUserIds = [];
-                
-                // 1. Get Admin user_id (same for both create and edit)
-                $adminUserId = $receiverService->getAdminUserId();
-                if ($adminUserId) {
-                    $receiverUserIds[] = $adminUserId;
-                }
-                
-                if ($request->course_id) {
-                    // EDIT COURSE - Use form data directly (more reliable after delete/recreate)
-                    $title = 'Course Updated';
-                    $type = 'course_update';
-                    $message = "The course '{$courseName}' has been updated.";
-                    
-                    // 2. Get Course Coordinator user_id from form data
-                    if (!empty($validated['coursecoordinator'])) {
-                        $receiverUserIds[] = (int) $validated['coursecoordinator'];
-                    }
-                    
-                    // 3. Get new Assistant Coordinators user_ids from form data
-                    $newAssistantCoordinatorUserIds = [];
-                    if (!empty($validated['assistantcoursecoordinator'])) {
-                        foreach ($validated['assistantcoursecoordinator'] as $assistantCoordinator) {
-                            if (!empty($assistantCoordinator)) {
-                                $newAssistantCoordinatorUserIds[] = (int) $assistantCoordinator;
-                            }
-                        }
-                    }
-                    $newAssistantCoordinatorUserIds = array_values(array_unique(array_filter($newAssistantCoordinatorUserIds)));
-                    
-                    // Add new assistant coordinators to general notification list
-                    $receiverUserIds = array_merge($receiverUserIds, $newAssistantCoordinatorUserIds);
-                    
-                    // 4. Compare old vs new to find added/removed assistant coordinators
-                    $addedAssistantCoordinators = array_diff($newAssistantCoordinatorUserIds, $oldAssistantCoordinatorUserIds);
-                    $removedAssistantCoordinators = array_diff($oldAssistantCoordinatorUserIds, $newAssistantCoordinatorUserIds);
-                    
-                    // Send specific notifications to added assistant coordinators
-                    if (!empty($addedAssistantCoordinators)) {
-                        $addedTitle = 'Added as Assistant Coordinator';
-                        $addedType = 'course_assistant_coordinator_added';
-                        $addedMessage = "You have been added as an Assistant Coordinator for the course '{$courseName}'.";
-                        
-                        $notificationService->createMultiple(
-                            array_values($addedAssistantCoordinators),
-                            $addedType,
-                            'course',
-                            $courseMasterObj->pk,
-                            $addedTitle,
-                            $addedMessage
-                        );
-                    }
-                    
-                    // Send specific notifications to removed assistant coordinators
-                    if (!empty($removedAssistantCoordinators)) {
-                        $removedTitle = 'Removed as Assistant Coordinator';
-                        $removedType = 'course_assistant_coordinator_removed';
-                        $removedMessage = "You have been removed as an Assistant Coordinator from the course '{$courseName}'.";
-                        
-                        $notificationService->createMultiple(
-                            array_values($removedAssistantCoordinators),
-                            $removedType,
-                            'course',
-                            $courseMasterObj->pk,
-                            $removedTitle,
-                            $removedMessage
-                        );
-                    }
-                } else {
-                    // CREATE COURSE - Use service methods to get from database
-                    $title = 'New Course Added';
-                    $type = 'course_create';
-                    $message = "A new course '{$courseName}' has been added to the system.";
-                    
-                    // 2. Get Course Coordinator user_id
-                    $coordinatorUserId = $receiverService->getCourseCoordinatorUserId($courseMasterObj->pk);
-                    if ($coordinatorUserId) {
-                        $receiverUserIds[] = $coordinatorUserId;
-                    }
-                    
-                    // 3. Get Assistant Coordinators user_ids
-                    $assistantCoordinatorUserIds = $receiverService->getAssistantCoordinatorUserIds($courseMasterObj->pk);
-                    $receiverUserIds = array_merge($receiverUserIds, $assistantCoordinatorUserIds);
-                }
-                
-                // Remove duplicates and filter out empty values
-                $receiverUserIds = array_values(array_unique(array_filter($receiverUserIds)));
-                
-                // Send notifications to all receivers
-                if (!empty($receiverUserIds)) {
-                    $notificationService->createMultiple(
-                        $receiverUserIds,
-                        $type,
-                        'course',
-                        $courseMasterObj->pk,
-                        $title,
-                        $message
-                    );
-                }
-            } catch (\Exception $e) {
-                // Log error but don't fail the request
-                \Log::error('Failed to send course notifications: ' . $e->getMessage());
-            }
+            
+            // Delegate all business logic to the service
+            $courseService->createOrUpdateCourse($validated, $request->course_id);
 
             DB::commit();
             return redirect()->route('programme.index')->with('success', 'Course created successfully');
@@ -299,7 +120,6 @@ class CourseController extends Controller
             DB::rollBack();
 
             \Log::error('Course creation error: ' . $e->getMessage());
-            // return redirect()->back()->with('error', $e->getMessage());
             return redirect()->back()->with('error', 'Something went wrong. Please try again.');
         }
     } 
