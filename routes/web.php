@@ -560,9 +560,9 @@ Route::middleware(['auth'])->group(function(){
      return view('admin.feedback.faculty_average');
  })->name('admin.feedback.faculty_average');
 
-//   Route::get('/faculty_database', function () {
-//      return view('admin.feedback.feedback_database');
-//  })->name('admin.feedback.feedback_database');
+  Route::get('/feedback_details', function () {
+     return view('admin.feedback.feedback_details');
+ })->name('admin.feedback.feedback_details');
 });
 
 // Feedback Database Routes

@@ -37,40 +37,53 @@ class MemoConclusionMasterDataTable extends DataTable
                 $editUrl = route('master.memo.conclusion.master.edit', encrypt($row->pk));
                 $deleteUrl = route('master.memo.conclusion.master.delete', encrypt($row->pk));
                 $isActive = $row->active_inactive == 1;
-                
-                $html = '
-                    <div class="d-flex justify-content-center align-items-center gap-2">
-                        <a href="' . $editUrl . '" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
-                            <i class="material-icons menu-icon material-symbols-rounded"
-                                style="font-size: 24px;">edit</i>
-                        </a>
-                        <div class="delete-icon-container" data-item-id="' . $row->pk . '" data-delete-url="' . $deleteUrl . '">';
-                
+                $csrf = csrf_token();
+                $formId = 'delete-form-' . $row->pk;
+
+                $html = <<<HTML
+<div class="dropdown text-center">
+    <button class="btn btn-link p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+        <span class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">more_horiz</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+        <li>
+            <a class="dropdown-item d-flex align-items-center" href="{$editUrl}">
+                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">edit</span>
+                Edit
+            </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+HTML;
+
                 if ($isActive) {
-                    $html .= '
-                            <span class="delete-icon-disabled" title="Cannot delete active memo conclusion">
-                                <i class="material-icons menu-icon material-symbols-rounded"
-                                    style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
-                            </span>';
+                    $html .= <<<HTML
+        <li>
+            <span class="dropdown-item d-flex align-items-center disabled" title="Cannot delete active memo conclusion" aria-disabled="true">
+                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
+                Delete
+            </span>
+        </li>
+HTML;
                 } else {
-                    $csrf = csrf_token();
-                    $html .= '
-                            <form action="' . $deleteUrl . '" method="POST" class="m-0 delete-form" data-status="0">
-                                <input type="hidden" name="_token" value="' . $csrf . '">
-                                <input type="hidden" name="_method" value="DELETE">
-                                <a href="javascript:void(0)" onclick="event.preventDefault();
-                                    if(confirm(\'Are you sure you want to delete this memo conclusion?\')) {
-                                        this.closest(\'form\').submit();
-                                    }" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete">
-                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
-                                </a>
-                            </form>';
+                    $html .= <<<HTML
+        <li>
+            <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
+                <input type="hidden" name="_token" value="{$csrf}">
+                <input type="hidden" name="_method" value="DELETE">
+                <a href="#" class="dropdown-item d-flex align-items-center text-danger" onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this memo conclusion?')) document.getElementById('{$formId}').submit();">
+                    <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
+                    Delete
+                </a>
+            </form>
+        </li>
+HTML;
                 }
-                
-                $html .= '
-                        </div>
-                    </div>';
-                
+
+                $html .= <<<HTML
+    </ul>
+</div>
+HTML;
+
                 return $html;
             })
             ->addColumn('status', function ($row) {
@@ -101,14 +114,6 @@ class MemoConclusionMasterDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'language' => [
-                    'paginate' => [
-                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_left</i>',
-                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_right</i>'
-                    ]
-                ],
             ]);
     }
 

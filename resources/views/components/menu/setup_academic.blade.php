@@ -189,6 +189,10 @@
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="reportCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.feedback.feedback_details') }}">
+                                        <span class="hide-menu">Faculty Feedback with Comments All Details</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.feedback.faculty_view') }}">
                                         <span class="hide-menu">Faculty Feedback with Comments Admin View</span>
                                     </a></li>
