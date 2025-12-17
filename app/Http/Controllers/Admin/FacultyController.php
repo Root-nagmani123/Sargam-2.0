@@ -56,7 +56,10 @@ class FacultyController extends Controller
                 'data' => $existingFaculty
             ]);
         }
-
+            \Log::info($request->only([
+            'current_designation',
+            'current_department'
+        ]));
 
             DB::beginTransaction();
 
@@ -75,8 +78,8 @@ class FacultyController extends Controller
                 'country_master_pk' => $request->country,
                 'state_master_pk' => $request->state,
                 'state_district_mapping_pk' => $request->district,
-                'current_designation' => $request->current_designation,
-                'current_department'  => $request->current_department,
+                'currentDesignation' => $request->current_designation,
+                'currentDepartment'  => $request->current_department,
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
                 'residence_address' => $request->residence_address,
