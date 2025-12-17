@@ -197,7 +197,7 @@
                                         <span class="hide-menu">Faculty Feedback with Comments Admin View</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.feedback.faculty_average') }}">
+                                        href="{{ route('feedback.average') }}">
                                         <span class="hide-menu">Feedback With Average New</span>
                                     </a></li>
                                       <li class="sidebar-item"><a class="sidebar-link"
