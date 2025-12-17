@@ -150,7 +150,7 @@ input.is-invalid {
 
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-3">
                                 <div class="mb-3">
 
                                     <x-input
@@ -160,6 +160,19 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         required="true"
                                         />
+
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+
+                                    <x-input
+									name="faculty_code"
+									label="Faculty Code :"
+									placeholder="Faculty Code"
+									formLabelClass="form-label"
+									readonly
+								/>
 
                                 </div>
                             </div>
@@ -856,7 +869,10 @@ $(document).ready(function () {
         var form = $('.facultyForm')[0];
         var formData = new FormData(form);
 
-        // Validate required fields before submit
+    formData.set('current_designation', $("input[name='current_designation']").val());
+    formData.set('current_department', $("input[name='current_department']").val());
+
+              // Validate required fields before submit
         var requiredFields = [
             'facultytype', 'firstName', 'lastname', 'gender', 'landline', 'mobile',
             'country', 'state', 'district', 'city', 'email', 'bankname',
@@ -1123,11 +1139,12 @@ function fillFacultyForm(faculty) {
 
             // Auto-fill remaining fields
            $("select[name='facultytype']").val(faculty.faculty_type);
+           $("input[name='faculty_code']").val(faculty.faculty_code);
            $("input[name='landline']").val(faculty.landline_no);
            $("input[name='mobile']").val(faculty.mobile_no);
            $("input[name='email']").val(faculty.email_id);
 
-            // New change added fileds
+
            $("input[name='current_designation']").val(faculty.current_designation);
            $("input[name='current_department']").val(faculty.current_department);
 
