@@ -3,107 +3,7 @@
 @section('title', 'Course Group Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
-<style>
-.btn-group[role="group"] .btn {
-    transition: all 0.3s ease-in-out;
-    border-radius: 0;
-}
 
-.btn-group[role="group"] .btn:first-child {
-    border-top-left-radius: 50rem !important;
-    border-bottom-left-radius: 50rem !important;
-}
-
-.btn-group[role="group"] .btn:last-child {
-    border-top-right-radius: 50rem !important;
-    border-bottom-right-radius: 50rem !important;
-}
-
-.btn-group .btn:hover {
-    transform: translateY(-1px);
-}
-
-.btn-group .btn.active {
-    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 123, 255, 0.3);
-}
-
-.btn:focus-visible {
-    outline: 3px solid #0d6efd;
-    outline-offset: 2px;
-}
-
-.student-table-wrapper .table {
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(13, 45, 80, 0.08);
-}
-
-.student-table-wrapper thead th {
-    background: linear-gradient(90deg, #f5f9ff 0%, #eef4ff 100%) !important;
-    color: #1b3155 !important;
-    border-bottom: none;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.student-table-wrapper thead.table-primary th {
-    color: #1b3155 !important;
-}
-
-.student-table-wrapper tbody tr {
-    transition: background 0.2s ease, transform 0.2s ease;
-}
-
-.student-table-wrapper tbody tr:hover {
-    background: #f9fbff;
-    transform: translateX(3px);
-}
-
-.student-actions .student-action-btn {
-    border-radius: 999px;
-    font-weight: 600;
-    padding: 0.25rem 0.9rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    border-width: 2px;
-}
-
-.student-actions .btn-soft-primary {
-    color: #0f4c81;
-    border-color: rgba(15, 76, 129, 0.2);
-    background: rgba(15, 76, 129, 0.08);
-}
-
-.student-actions .btn-soft-primary:hover {
-    color: #fff;
-    background: #0f4c81;
-    border-color: #0f4c81;
-}
-
-.student-actions .btn-soft-danger {
-    color: #b42318;
-    border-color: rgba(180, 35, 24, 0.2);
-    background: rgba(180, 35, 24, 0.08);
-}
-
-.student-actions .btn-soft-danger:hover {
-    color: #fff;
-    background: #b42318;
-    border-color: #b42318;
-}
-
-.student-table-wrapper th:first-child,
-.student-table-wrapper td:first-child {
-    width: 55px;
-}
-
-.student-table-wrapper th:last-child,
-.student-table-wrapper td:last-child {
-    width: 180px;
-}
-</style>
 <div class="container-fluid">
 
     <x-breadcrum title="Course Group Mapping" />
@@ -116,11 +16,11 @@
                     <div class="row mb-3">
                         <div class="row align-items-center mb-4">
 
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 col-md-4">
                                 <h4 class="fw-bold mb-3 mb-md-0">Course Group Mapping</h4>
                             </div>
 
-                            <div class="col-12 col-md-6 d-flex justify-content-md-end flex-wrap gap-2">
+                            <div class="col-12 col-md-8 d-flex justify-content-md-end flex-wrap gap-2">
 
                                 <a href="{{ route('group.mapping.create') }}"
                                     class="btn btn-primary px-3 d-flex align-items-center shadow-sm">
@@ -154,7 +54,33 @@
 
                         {{-- Status Filter --}}
                         <div class="row mb-4">
-                            <div class="col-12 text-end">
+                            <div class="col-md-4">
+                                <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
+                                <select id="courseFilter" class="form-select shadow-sm">
+                                    <option value="">All Courses</option>
+                                    @foreach($courses ?? [] as $pk => $name)
+                                    <option value="{{ $pk }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="groupTypeFilter" class="form-label fw-semibold">Group Type</label>
+                                <select id="groupTypeFilter" class="form-select shadow-sm">
+                                    <option value="">All Group Types</option>
+                                    @foreach($groupTypes ?? [] as $pk => $name)
+                                    <option value="{{ $pk }}">{{ $name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="col-md-2 d-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary px-4 py-2 mt-lg-4 shadow-sm btn-sm"
+                                    id="resetFilters">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                                </button>
+                            </div>
+                            <div class="col-3 text-end">
                                 <div class="btn-group shadow-sm rounded-pill" role="group"
                                     aria-label="Group Mapping Status Filter">
                                     <button type="button" class="btn btn-outline-success px-4 py-2 fw-semibold"
@@ -173,32 +99,7 @@
                         {{-- Filters --}}
                         <div class="row g-3 mb-4 align-items-end">
 
-                            <div class="col-md-6 col-lg-4">
-                                <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
-                                <select id="courseFilter" class="form-select shadow-sm">
-                                    <option value="">All Courses</option>
-                                    @foreach($courses ?? [] as $pk => $name)
-                                    <option value="{{ $pk }}">{{ $name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6 col-lg-4">
-                                <label for="groupTypeFilter" class="form-label fw-semibold">Group Type</label>
-                                <select id="groupTypeFilter" class="form-select shadow-sm">
-                                    <option value="">All Group Types</option>
-                                    @foreach($groupTypes ?? [] as $pk => $name)
-                                    <option value="{{ $pk }}">{{ $name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-12 col-lg-4 d-flex gap-2">
-                                <button type="button" class="btn btn-outline-secondary px-4 py-2 mt-lg-4 shadow-sm"
-                                    id="resetFilters">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
-                                </button>
-                            </div>
+                            
                         </div>
 
 

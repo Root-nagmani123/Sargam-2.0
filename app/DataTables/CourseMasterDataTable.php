@@ -34,52 +34,6 @@ class CourseMasterDataTable extends DataTable
             ->addColumn('end_date', function ($row) {
                 return $row->end_date ? Carbon::parse($row->end_date)->format('d-m-Y') : '';
             })
-            ->addColumn('action', function ($row) {
-                $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
-                $viewUrl = route('programme.show', ['id' => encrypt($row->pk)]);
-                $deleteUrl = route('programme.destroy', ['id' => encrypt($row->pk)]);
-                $isActive = $row->active_inactive == 1;
-                
-                $html = <<<HTML
-    <div class="d-flex justify-content-center align-items-center gap-2">
-        <a href="{$editUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit Course">
-            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">edit</i>
-        </a>
-        <a href="{$viewUrl}" target="_blank" data-bs-toggle="tooltip" data-bs-placement="top" title="View Course">
-            <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">visibility</i>
-        </a>
-        <div class="delete-icon-container" data-item-id="{$row->pk}" data-delete-url="{$deleteUrl}">
-HTML;
-                
-                if ($isActive) {
-                    $html .= <<<HTML
-            <span class="delete-icon-disabled" title="Cannot delete active course">
-                <i class="material-icons menu-icon material-symbols-rounded"
-                    style="font-size: 24px; color: #ccc; cursor: not-allowed;">delete</i>
-            </span>
-HTML;
-                } else {
-                    $csrf = csrf_token();
-                    $html .= <<<HTML
-            <form action="{$deleteUrl}" method="POST" class="m-0 delete-form" data-status="0">
-                <input type="hidden" name="_token" value="{$csrf}">
-                <input type="hidden" name="_method" value="DELETE">
-                <a href="javascript:void(0)" onclick="event.preventDefault();
-                    if(confirm('Are you sure you want to delete this course?')) {
-                        this.closest('form').submit();
-                    }" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete Course">
-                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">delete</i>
-                </a>
-            </form>
-HTML;
-                }
-                
-                $html .= <<<HTML
-        </div>
-    </div>
-HTML;
-                return $html;
-            })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return '
@@ -87,6 +41,65 @@ HTML;
                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                         data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
                 </div>';
+            })
+            ->addColumn('action', function ($row) {
+                $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
+                $viewUrl = route('programme.show', ['id' => encrypt($row->pk)]);
+                $deleteUrl = route('programme.destroy', ['id' => encrypt($row->pk)]);
+                $isActive = $row->active_inactive == 1;
+                $csrf = csrf_token();
+
+                $html = <<<HTML
+<div class="dropdown text-center">
+    <button class="btn btn-link text-secondary p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
+        <span class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">more_horiz</span>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+        <li>
+            <a class="dropdown-item d-flex align-items-center" href="{$viewUrl}" target="_blank">
+                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">visibility</span>
+                View
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item d-flex align-items-center" href="{$editUrl}">
+                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">edit</span>
+                Edit
+            </a>
+        </li>
+        <li><hr class="dropdown-divider"></li>
+HTML;
+
+                if ($isActive) {
+                    $html .= <<<HTML
+        <li>
+            <span class="dropdown-item d-flex align-items-center disabled" title="Cannot delete active course" aria-disabled="true">
+                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
+                Delete
+            </span>
+        </li>
+HTML;
+                } else {
+                    $formId = 'delete-form-' . $row->pk;
+                    $html .= <<<HTML
+        <li>
+            <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
+                <input type="hidden" name="_token" value="{$csrf}">
+                <input type="hidden" name="_method" value="DELETE">
+                <a href="#" class="dropdown-item d-flex align-items-center text-danger" onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this course?')) document.getElementById('{$formId}').submit();">
+                    <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
+                    Delete
+                </a>
+            </form>
+        </li>
+HTML;
+                }
+
+                $html .= <<<HTML
+    </ul>
+</div>
+HTML;
+                return $html;
             })
             ->filterColumn('course_name', function ($query, $keyword) {
                 $query->where('course_name', 'like', "%{$keyword}%");
@@ -172,14 +185,6 @@ HTML;
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'order' => [],
-                'language' => [
-                    'paginate' => [
-                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_left</i>',
-                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_right</i>'
-                    ]
-                ],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -205,8 +210,9 @@ HTML;
             Column::make('course_year')->title('Course Year')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('start_year')->title('Start Date')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('end_date')->title('End Date')->addClass('text-center')->orderable(false)->searchable(false),
+                Column::computed('status')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('action')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::computed('status')->addClass('text-center')->orderable(false)->searchable(false),
+        
         ];
     }
 

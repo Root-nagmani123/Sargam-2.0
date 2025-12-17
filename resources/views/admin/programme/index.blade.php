@@ -34,17 +34,6 @@
     outline: 3px solid #0d6efd;
     outline-offset: 2px;
 }
-
-/* Better contrast for GIGW compliance */
-.btn-outline-secondary {
-    color: #333;
-    border-color: #999;
-}
-
-.btn-outline-secondary:hover {
-    background-color: #f8f9fa;
-    border-color: #666;
-}
 </style>
 <div class="container-fluid">
     <x-breadcrum title="Course Master" />
@@ -72,7 +61,21 @@
 
                 <!-- Filter Buttons -->
                 <div class="row mb-3">
-                    <div class="col-12 text-end">
+                    <div class="col-4">
+                        <label for="courseFilter" class="form-label mb-1">Course Name</label>
+                        <select id="courseFilter" class="form-select">
+                            <option value="">All Courses</option>
+                            @foreach($courses ?? [] as $pk => $name)
+                                <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-2">
+                        <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                        </button>
+                    </div>
+                    <div class="col-6 text-end">
                         <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                             aria-label="Course Status Filter">
                             <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
@@ -86,26 +89,7 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- Course Name Filter -->
-                <div class="row g-3 mb-3 align-items-end">
-                    <div class="col-md-6 col-lg-4">
-                        <label for="courseFilter" class="form-label mb-1">Course Name</label>
-                        <select id="courseFilter" class="form-select">
-                            <option value="">All Courses</option>
-                            @foreach($courses ?? [] as $pk => $name)
-                                <option value="{{ $pk }}">{{ $name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-12 col-lg-4 d-flex gap-2">
-                        <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
-                        </button>
-                    </div>
-                </div>
                 <div class="table-responsive">
-
                     {!! $dataTable->table(['class' => 'table']) !!}
                 </div>
 
