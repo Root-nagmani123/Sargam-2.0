@@ -152,6 +152,21 @@ class CourseController extends Controller
                 return redirect()->back()->with('error', 'Course creation failed');
             }
 
+            // For edit: Capture old assistant coordinators before deletion
+            $oldAssistantCoordinatorUserIds = [];
+            if ($request->course_id) {
+                $oldAssistantCoordinators = $courseMasterObj->courseCordinatorMater()
+                    ->whereNotNull('Assistant_Coordinator_name')
+                    ->where('Assistant_Coordinator_name', '!=', '')
+                    ->pluck('Assistant_Coordinator_name')
+                    ->unique()
+                    ->map(function($id) {
+                        return (int) $id;
+                    })
+                    ->toArray();
+                $oldAssistantCoordinatorUserIds = array_values(array_filter($oldAssistantCoordinators));
+            }
+
             // Delete existing course coordinators
             $courseMasterObj->courseCordinatorMater()->delete();
 
@@ -192,13 +207,54 @@ class CourseController extends Controller
                         $receiverUserIds[] = (int) $validated['coursecoordinator'];
                     }
                     
-                    // 3. Get Assistant Coordinators user_ids from form data
+                    // 3. Get new Assistant Coordinators user_ids from form data
+                    $newAssistantCoordinatorUserIds = [];
                     if (!empty($validated['assistantcoursecoordinator'])) {
                         foreach ($validated['assistantcoursecoordinator'] as $assistantCoordinator) {
                             if (!empty($assistantCoordinator)) {
-                                $receiverUserIds[] = (int) $assistantCoordinator;
+                                $newAssistantCoordinatorUserIds[] = (int) $assistantCoordinator;
                             }
                         }
+                    }
+                    $newAssistantCoordinatorUserIds = array_values(array_unique(array_filter($newAssistantCoordinatorUserIds)));
+                    
+                    // Add new assistant coordinators to general notification list
+                    $receiverUserIds = array_merge($receiverUserIds, $newAssistantCoordinatorUserIds);
+                    
+                    // 4. Compare old vs new to find added/removed assistant coordinators
+                    $addedAssistantCoordinators = array_diff($newAssistantCoordinatorUserIds, $oldAssistantCoordinatorUserIds);
+                    $removedAssistantCoordinators = array_diff($oldAssistantCoordinatorUserIds, $newAssistantCoordinatorUserIds);
+                    
+                    // Send specific notifications to added assistant coordinators
+                    if (!empty($addedAssistantCoordinators)) {
+                        $addedTitle = 'Added as Assistant Coordinator';
+                        $addedType = 'course_assistant_coordinator_added';
+                        $addedMessage = "You have been added as an Assistant Coordinator for the course '{$courseName}'.";
+                        
+                        $notificationService->createMultiple(
+                            array_values($addedAssistantCoordinators),
+                            $addedType,
+                            'course',
+                            $courseMasterObj->pk,
+                            $addedTitle,
+                            $addedMessage
+                        );
+                    }
+                    
+                    // Send specific notifications to removed assistant coordinators
+                    if (!empty($removedAssistantCoordinators)) {
+                        $removedTitle = 'Removed as Assistant Coordinator';
+                        $removedType = 'course_assistant_coordinator_removed';
+                        $removedMessage = "You have been removed as an Assistant Coordinator from the course '{$courseName}'.";
+                        
+                        $notificationService->createMultiple(
+                            array_values($removedAssistantCoordinators),
+                            $removedType,
+                            'course',
+                            $courseMasterObj->pk,
+                            $removedTitle,
+                            $removedMessage
+                        );
                     }
                 } else {
                     // CREATE COURSE - Use service methods to get from database
