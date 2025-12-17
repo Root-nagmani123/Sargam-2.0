@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use App\Http\Requests\Admin\GroupMapping\BulkMessageRequest;
 use App\Services\Messaging\EmailService;
 use App\Services\Messaging\SmsService;
+use App\Services\NotificationService;
 
 class GroupMappingController extends Controller
 {
@@ -123,18 +124,66 @@ class GroupMappingController extends Controller
                 'facility_id' => 'nullable|string|max:255',
             ]);
 
+            // Get old facility_id if updating
+            $oldFacilityId = null;
+            $isUpdate = false;
             if ($request->pk) {
                 $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($request->pk));
+                $oldFacilityId = $groupMapping->facility_id;
+                $isUpdate = true;
                 $message = 'Group Mapping updated successfully.';
             } else {
                 $groupMapping = new GroupTypeMasterCourseMasterMap();
                 $message = 'Group Mapping created successfully.';
             }
+
+            // Check if any details changed (for update scenario)
+            $detailsChanged = false;
+            if ($isUpdate) {
+                $detailsChanged = (
+                    $groupMapping->course_name != $request->course_id ||
+                    $groupMapping->type_name != $request->type_id ||
+                    $groupMapping->group_name != $request->group_name
+                );
+            }
+
             $groupMapping->course_name = $request->course_id;
             $groupMapping->type_name = $request->type_id;
             $groupMapping->group_name = $request->group_name;
-            $groupMapping->facility_id = $request->facility_id ?: null;
+            $newFacilityId = $request->facility_id ?: null;
+            $groupMapping->facility_id = $newFacilityId;
             $groupMapping->save();
+
+            // Get the course name for notification
+            $course = CourseMaster::find($request->course_id);
+            $courseName = $course ? $course->course_name : '';
+
+            // Handle notifications based on three scenarios
+            $notificationService = app(NotificationService::class);
+            
+            // Scenario 1: Faculty was already selected earlier and any details are updated
+            if ($oldFacilityId && $newFacilityId && $oldFacilityId == $newFacilityId && $detailsChanged) {
+                $notificationService->create(
+                    (int)$newFacilityId,
+                    'group_mapping',
+                    'Group Mapping',
+                    $groupMapping->pk,
+                    'Group Mapping Updated',
+                    "The group mapping '{$request->group_name}' for course '{$courseName}' has been updated."
+                );
+            }
+            // Scenario 2: Faculty was NOT selected earlier and Faculty is added now
+            elseif (!$oldFacilityId && $newFacilityId) {
+                $notificationService->create(
+                    (int)$newFacilityId,
+                    'group_mapping',
+                    'Group Mapping',
+                    $groupMapping->pk,
+                    'Added to Group Mapping',
+                    "You have been added to the group mapping '{$request->group_name}' for course '{$courseName}'."
+                );
+            }
+            // Scenario 3: Faculty is not selected - do not send any notification (handled by condition)
 
             return redirect()->route('group.mapping.index')->with('success', $message);
         } catch (\Exception $e) {
