@@ -9,6 +9,7 @@ use App\Models\GroupTypeMasterCourseMasterMap;
 use App\Models\CourseCordinatorMaster;
 use App\Models\UserRoleMaster;
 use App\Models\EmployeeRoleMapping;
+use App\Models\FacultyMaster;
 
 class NotificationReceiverService
 {
@@ -186,16 +187,22 @@ class NotificationReceiverService
      */
     public function getCourseCoordinatorUserId(int $coursePk): ?int
     {
+        // 1. Get coordinator mapping for the course
         $record = CourseCordinatorMaster::where('courses_master_pk', $coursePk)
-            ->select('Coordinator_name')
-            ->first();
-
-        if (!$record || empty($record->Coordinator_name)) {
+            ->value('Coordinator_name'); // directly get value
+    
+        if (!$record) {
             return null;
         }
-
-        return (int) $record->Coordinator_name;
+    
+        // 2. Get faculty record using coordinator PK
+        $coordinatorUser = FacultyMaster::where('pk', $record)
+            ->value('employee_master_pk'); // directly get value
+    
+        // 3. Return user id or null
+        return $coordinatorUser ? (int) $coordinatorUser : null;
     }
+    
 
     /**
      * Get assistant coordinator user_ids for a course
@@ -205,20 +212,27 @@ class NotificationReceiverService
      */
     public function getAssistantCoordinatorUserIds(int $coursePk): array
     {
-        $records = CourseCordinatorMaster::where('courses_master_pk', $coursePk)
-            ->select('Assistant_Coordinator_name')
-            ->get();
-
-        $userIds = [];
-
-        foreach ($records as $record) {
-            if (!empty($record->Assistant_Coordinator_name)) {
-                $userIds[] = (int) $record->Assistant_Coordinator_name;
-            }
+        // 1. Get all assistant coordinator faculty PKs
+        $facultyPks = CourseCordinatorMaster::where('courses_master_pk', $coursePk)
+            ->whereNotNull('Assistant_Coordinator_name')
+            ->pluck('Assistant_Coordinator_name')
+            ->unique()
+            ->toArray();
+    
+        if (empty($facultyPks)) {
+            return [];
         }
-
-        return array_values(array_unique($userIds));
-    }
+    
+        // 2. Get corresponding employee_master_pk
+        $userIds = FacultyMaster::whereIn('pk', $facultyPks)
+            ->pluck('employee_master_pk')
+            ->filter()
+            ->unique()
+            ->map(fn ($id) => (int) $id)
+            ->toArray();
+    
+        return $userIds;
+    }    
     
     
 }
