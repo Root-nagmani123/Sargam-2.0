@@ -302,7 +302,9 @@ class CourseController extends Controller
             // return redirect()->back()->with('error', $e->getMessage());
             return redirect()->back()->with('error', 'Something went wrong. Please try again.');
         }
-    }
+    } 
+
+
 
     public function view($id)
     {
