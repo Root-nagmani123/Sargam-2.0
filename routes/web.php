@@ -36,6 +36,10 @@ use App\Http\Controllers\Admin\{
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
+use App\Http\Controllers\Admin\FeedbackController;
+
+
+
 
 
 Route::get('clear-cache', function () {
@@ -556,7 +560,15 @@ Route::middleware(['auth'])->group(function(){
      return view('admin.feedback.faculty_average');
  })->name('admin.feedback.faculty_average');
 
-  Route::get('/faculty_database', function () {
-     return view('admin.feedback.feedback_database');
- })->name('admin.feedback.feedback_database');
+//   Route::get('/faculty_database', function () {
+//      return view('admin.feedback.feedback_database');
+//  })->name('admin.feedback.feedback_database');
+});
+
+// Feedback Database Routes
+Route::prefix('faculty')->group(function () {
+    Route::get('/database', [FeedbackController::class, 'database'])->name('admin.feedback.database');
+    Route::get('/database/data', [FeedbackController::class, 'getDatabaseData'])->name('admin.feedback.database.data');
+    Route::get('/database/topics', [FeedbackController::class, 'getTopicsForCourse'])->name('admin.feedback.database.topics');
+    Route::get('/database/export', [FeedbackController::class, 'exportDatabase'])->name('admin.feedback.database.export');
 });
