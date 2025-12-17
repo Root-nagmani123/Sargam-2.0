@@ -59,6 +59,39 @@ class NotificationReceiverService
     }
 
     /**
+     * Get user_ids for multiple students
+     * 
+     * @param array $studentPks Array of student master primary keys
+     * @return array Array of user_ids from user_credentials table
+     */
+    public function getStudentUserIds(array $studentPks): array
+    {
+        if (empty($studentPks)) {
+            return [];
+        }
+
+        $userCredentials = UserCredential::whereIn('user_id', $studentPks)
+            ->where('user_category', 'S')
+            ->pluck('user_id')
+            ->toArray();
+
+        return array_values(array_filter($userCredentials));
+    }
+
+    /**
+     * Get receiver user_ids for memo/notice notifications
+     * 
+     * This method returns user_ids for students to whom the memo/notice is sent.
+     * 
+     * @param array $studentPks Array of student master primary keys (students to whom memo/notice is sent)
+     * @return array Array of receiver user_ids
+     */
+    public function getMemoNoticeReceivers(array $studentPks): array
+    {
+        return $this->getStudentUserIds($studentPks);
+    }
+
+    /**
      * Get faculty user_id from student_course_group_map
      * 
      * Flow:
