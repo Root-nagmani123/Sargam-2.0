@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="{{asset('admin_assets/libs/select2/dist/css/select2.min.css')}}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/plugins/datatable.min.css')}}">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
 <style>
 .material-symbols-rounded {
   font-variation-settings:

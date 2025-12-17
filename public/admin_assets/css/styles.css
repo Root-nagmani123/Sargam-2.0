@@ -39154,7 +39154,6 @@ pre.code-view code.hljs {
     /* SVG background panel */
     background: #004384;
     margin-top: 0px;
-    filter: drop-shadow(-1px -2px 7px rgba(0, 0, 0, 0.2));
     display: none;
     padding: 20px 0px 24px 20px;
     z-index: 98;
