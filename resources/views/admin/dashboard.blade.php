@@ -630,10 +630,6 @@ table>thead{
                         <div class="divider-modern"></div>
 
                         <div class="content-text">
-
-
-
-
                             @php
                                 $user = Auth::user();
                                 $notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
