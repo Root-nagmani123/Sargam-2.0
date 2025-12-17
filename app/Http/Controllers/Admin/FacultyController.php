@@ -39,7 +39,7 @@ class FacultyController extends Controller
         return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
     }
 
-       public function store(FacultyRequest $request)
+        public function store(FacultyRequest $request)
         { //FacultyRequest
             try {
 
@@ -65,17 +65,18 @@ class FacultyController extends Controller
 
             $facultyDetails = [
                 'faculty_type' => $request->facultyType,
-                'first_name' => $request->firstName,
+               /*  'first_name' => $request->firstName,
                 'middle_name' => $request->middlename,
                 'last_name' => $request->lastname,
-                'full_name' => $request->fullname,
+                'full_name' => $request->fullname, */
                 'gender' => $request->gender,
                 'landline_no' => $request->landline,
                 'mobile_no' => $request->mobile,
                 'country_master_pk' => $request->country,
                 'state_master_pk' => $request->state,
                 'state_district_mapping_pk' => $request->district,
-
+                'current_designation' => $request->current_designation,
+                'current_department'  => $request->current_department,
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
                 'residence_address' => $request->residence_address,
@@ -87,6 +88,20 @@ class FacultyController extends Controller
                 'IFSC_Code' => $request->ifsccode,
                 'PAN_No' => $request->pannumber,
             ];
+
+			if (!$request->faculty_id) {
+
+				$facultyDetails['first_name']  = $request->firstName;
+				$facultyDetails['middle_name'] = $request->middlename;
+				$facultyDetails['last_name']   = $request->lastname;
+
+				$facultyDetails['full_name'] = trim(
+					$request->firstName . ' ' .
+					($request->middlename ?? '') . ' ' .
+					$request->lastname
+				);
+			}
+
 
             if(!empty($request->other_city)) {
                 $otherCity = City::create([
@@ -132,6 +147,14 @@ class FacultyController extends Controller
             $facultyDetails['active_inactive'] = 1;
 
             if($request->faculty_id) {
+
+				/* unset(
+					$facultyDetails['first_name'],
+					$facultyDetails['middle_name'],
+					$facultyDetails['last_name'],
+					$facultyDetails['full_name']
+				); */
+
                 $faculty = FacultyMaster::find($request->faculty_id);
                 $faculty->update($facultyDetails);
             }
@@ -228,7 +251,6 @@ class FacultyController extends Controller
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
         }
     }
-
 
 
     public function edit(Request $request, $id)

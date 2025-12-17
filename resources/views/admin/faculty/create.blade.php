@@ -222,6 +222,32 @@ input.is-invalid {
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <x-input
+                                        name="current_designation"
+                                        label="Current Designation :"
+                                        placeholder="Current Designation"
+                                        formLabelClass="form-label"
+                                        required="true"
+                                        labelRequired="true"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <x-input
+                                        name="current_department"
+                                        label="Current Department :"
+                                        placeholder="Current Department"
+                                        formLabelClass="form-label"
+                                        required="true"
+                                        labelRequired="true"
+                                    />
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-3">
                                     <x-select
                                         name="country"
                                         label="Country :"
@@ -813,10 +839,16 @@ input.is-invalid {
 let isMobileDuplicate = false;
 $(document).ready(function () {
 
-    if (isMobileDuplicate) {
+    /*if (isMobileDuplicate) {
     toastr.error("Cannot save. Mobile number already exists.");
     return;
-}
+}*/
+
+	if (isMobileDuplicate && !facultyId) {
+    toastr.error("Mobile already exists. Please search and update the existing faculty.");
+    return;
+	}
+
 
     // AJAX submit for Save button
     $(document).on('click', '#saveFacultyForm', function (e) {
@@ -924,10 +956,16 @@ $(document).ready(function () {
                     inputElement.after('<small class="text-danger unique-error">' + response.message + '</small>');
                    // inputElement.addClass('is-invalid');
                      inputElement.addClass('is-invalid mobile-duplicate');
-                     if (type === 'mobile') {
+
+			/*if (type === 'mobile') {
                     isMobileDuplicate = true;
                     $("#saveFacultyForm").prop('disabled', true);
                 }
+				*/
+				if (type === 'mobile') {
+					isMobileDuplicate = true;
+					toastr.warning("Mobile exists. You can update other details.");
+				}
 
                 } else {
                     inputElement.after('<small class="text-success unique-error">' + response.message + '</small>');
@@ -1062,12 +1100,19 @@ $(document).ready(function () {
         }
     });
 
+function lockNameFields() {
+				$("input[name='firstName'], input[name='middlename'], input[name='lastname']")
+					.prop("readonly", true)
+					.addClass("bg-light");
+			}
 
 function fillFacultyForm(faculty) {
 
     		//Personal Information
 
 			// Auto-fill name
+			lockNameFields();
+
 
             $("input[name='firstName']").val(faculty.first_name ?? "");
             $("input[name='middlename']").val(faculty.middle_name ?? "");
@@ -1081,6 +1126,11 @@ function fillFacultyForm(faculty) {
            $("input[name='landline']").val(faculty.landline_no);
            $("input[name='mobile']").val(faculty.mobile_no);
            $("input[name='email']").val(faculty.email_id);
+
+            // New change added fileds
+           $("input[name='current_designation']").val(faculty.current_designation);
+           $("input[name='current_department']").val(faculty.current_department);
+
 		   $("input[name='alternativeEmail']").val(faculty.alternate_email_id);
 
             $("select[name='gender']").val(faculty.gender);
@@ -1184,7 +1234,7 @@ function fillFacultyForm(faculty) {
  //document.querySelectorAll('input[name="faculties[]"]:checked');
 
 
-	$("#faculty_id").val(faculty.id);
+	$("#faculty_id").val(faculty.pk);
 
 	}
 
@@ -1207,6 +1257,7 @@ function fillFacultyForm(faculty) {
         type: "GET",
         success: function (faculty) {
 			fillFacultyForm(faculty);  // <--- AUTO FILL FULL FORM
+
 
         }
     });
