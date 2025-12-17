@@ -98,9 +98,9 @@ class GroupMappingController extends Controller
             ->toArray();
 
         if ($groupMapping && $groupMapping->facility_id && !isset($facilities[$groupMapping->facility_id])) {
-            $facility = FacultyMaster::find($groupMapping->facility_id);
-            if ($facility) {
-                $facilities[$facility->pk] = $facility->full_name;
+            $Faculty= FacultyMaster::find($groupMapping->facility_id);
+            if ($Faculty) {
+                $facilities[$Faculty->pk] = $Faculty->full_name;
             }
         }
 
@@ -189,7 +189,7 @@ class GroupMappingController extends Controller
     {
         try {
             $groupMappingID = decrypt($request->groupMappingID);
-            $groupMapping = GroupTypeMasterCourseMasterMap::with(['facility', 'courseGroup'])->findOrFail($groupMappingID);
+            $groupMapping = GroupTypeMasterCourseMasterMap::with(['Faculty', 'courseGroup'])->findOrFail($groupMappingID);
             
             // Get the course ID from the group mapping
             $courseId = $groupMapping->course_name;
@@ -221,7 +221,7 @@ class GroupMappingController extends Controller
                 'students' => $students,
                 'groupMappingPk' => $groupMappingPk,
                 'groupName' => $groupMapping->group_name,
-                'facilityName' => optional($groupMapping->facility)->venue_name,
+                'facilityName' => optional($groupMapping->Faculty)->venue_name,
                 'courseName' => $courseName,
                 'searchQuery' => $searchQuery,
             ])->render();

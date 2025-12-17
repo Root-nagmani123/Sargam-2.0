@@ -24,8 +24,8 @@ class GroupMappingDataTable extends DataTable
             ->addColumn('group_name', function ($row) {
                 return $row->group_name ?? '';
             })
-            ->addColumn('facility', function ($row) {
-                return $row->facility->full_name ?? '-';
+            ->addColumn('Faculty', function ($row) {
+                return $row->Faculty->full_name ?? '-';
             })
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
             ->addColumn('view_download', function ($row) {
@@ -147,7 +147,7 @@ HTML;
 
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
-                ->with(['courseGroup', 'courseGroupType', 'facility'])
+                ->with(['courseGroup', 'courseGroupType', 'Faculty'])
                 ->when($statusFilter === 'active', function ($query) use ($currentDate) {
                     $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
                         $courseQuery->where(function ($q) use ($currentDate) {
@@ -224,8 +224,8 @@ public function html(): HtmlBuilder
                 ->title('Group Name')
                 ->addClass('text-center')
                 ->searchable(true),
-            Column::make('facility')
-                ->title('Facility')
+            Column::make('Faculty')
+                ->title('Faculty')
                 ->addClass('text-center')
                 ->searchable(false)
                 ->orderable(false),

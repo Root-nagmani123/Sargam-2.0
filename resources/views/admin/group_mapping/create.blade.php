@@ -44,7 +44,7 @@
                     </div>
                     <div class="col-4">
                         <div class="mb-3">
-                            <x-select name="facility_id" label="Facility (Optional) :" placeholder="Select Facility"
+                            <x-select name="facility_id" label="Faculty(Optional) :" placeholder="Select Faculty"
                                 formLabelClass="form-label" formSelectClass="select2"
                                 :options="$facilities ?? []"
                                 :value="old('facility_id', $groupMapping->facility_id ?? '')" />

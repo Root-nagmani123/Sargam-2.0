@@ -134,8 +134,7 @@
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
             <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
+                  <div class="row">
                         <div class="col-6">
                             <h4>Medical Exemption Form</h4>
                         </div>
@@ -384,8 +383,6 @@
                         </div>
                         @endif
                     </div>
-                </div>
-
             </div>
         </div>
     </div>

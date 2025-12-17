@@ -18,7 +18,7 @@
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
 
-                            @include('components.profile')
+                                            @include('components.profile')
                                             <li class="mini-nav-item" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -32,10 +32,11 @@
                                                         </i>
                                                         <span class="mini-nav-title">
                                                             @if(hasRole('Admin') || hasRole('Training'))
-                                                                Training
-                                                        @elseif(hasRole('Internal Faculty')  || hasRole('Guest Faculty') || hasRole('Student-OT'))
+                                                            Training
+                                                            @elseif(hasRole('Internal Faculty') || hasRole('Guest
+                                                            Faculty') || hasRole('Student-OT'))
 
-                                                                Academic
+                                                            Academic
                                                             @endif
                                                         </span>
                                                     </div>
@@ -48,7 +49,7 @@
                                                 </a>
                                             </li>
 
-@if(hasRole('Admin') || hasRole('Training'))
+                                            @if(hasRole('Admin') || hasRole('Training'))
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -114,27 +115,26 @@
                                                     </i>
                                                 </a>
                                             </li>
-                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
-                                                 id="mini-3">
-                                                 <a href="javascript:void(0)"
-                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
-                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                     data-bs-placement="right" data-bs-title="FC Forms">
+                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
+                                                id="mini-3">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="FC Forms">
 
-                                                     <div class="d-flex align-items-center gap-2">
-                                                         <i class="material-icons menu-icon material-symbols-rounded"
-                                                             style="font-size: 32px;">note_add</i>
-                                                         <span
-                                                             class="mini-nav-title fs-4 text-dark text-wrap">FC
-                                                             Registration</span>
-                                                     </div>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">note_add</i>
+                                                        <span class="mini-nav-title fs-4 text-dark text-wrap">FC
+                                                            Registration</span>
+                                                    </div>
 
-                                                     <i class="material-icons material-symbols-rounded"
-                                                         style="font-size: 20px;">chevron_right</i>
-                                                 </a>
-                                             </li>
+                                                    <i class="material-icons material-symbols-rounded"
+                                                        style="font-size: 20px;">chevron_right</i>
+                                                </a>
+                                            </li>
 
-@endif
+                                            @endif
 
                                         </div>
                                     </div>
@@ -155,12 +155,6 @@
 
                 </div>
                 <div class="sidebarmenu">
-                    <div class="brand-logo d-flex align-items-center nav-logo">
-                        <a href="javascript:void(0)" class="text-nowrap logo-img">
-                            <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Logo">
-                        </a>
-
-                    </div>
                     <!-- ---------------------------------- -->
                     <!-- Academic -->
                     <!-- ---------------------------------- -->
@@ -183,8 +177,8 @@
                     <x-menu.setup_mappings />
 
                     <!-- Forms -->
-                     <!-- ---------------------------------- -->
-                     <x-menu.fc-sidebar />
+                    <!-- ---------------------------------- -->
+                    <x-menu.fc-sidebar />
 
                 </div>
             </div>
@@ -236,7 +230,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (parentNav) {
                 const allCollapses = parentNav.querySelectorAll('.collapse');
                 allCollapses.forEach(collapse => {
-                    if (collapse !== targetCollapse && collapse.classList.contains('show')) {
+                    if (collapse !== targetCollapse && collapse.classList.contains(
+                            'show')) {
                         const bsCollapse = bootstrap.Collapse.getInstance(collapse);
                         if (bsCollapse) {
                             bsCollapse.hide();
@@ -375,7 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Found active links in', nav.id, ':', activeLinks.length);
                 activeLinks.forEach(function(activeLink) {
                     console.log('Processing active link:', activeLink.textContent
-                    .trim());
+                        .trim());
                     let parent = activeLink.closest('.collapse');
                     while (parent) {
                         console.log('Expanding collapse:', parent.id);
@@ -384,7 +379,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const collapseId = parent.id;
                         const toggleBtn = nav.querySelector(
                             `[href="#${collapseId}"], [data-bs-target="#${collapseId}"]`
-                            );
+                        );
                         if (toggleBtn) {
                             console.log('Found toggle button for:', collapseId);
                             toggleBtn.setAttribute('aria-expanded', 'true');

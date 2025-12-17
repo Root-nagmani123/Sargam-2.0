@@ -1,5 +1,3 @@
-
-
 @extends('admin.layouts.master')
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
@@ -18,27 +16,19 @@
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <!-- View Toggle Buttons -->
                 <div class="btn-group text-end" role="group" aria-label="Calendar view options">
-                    <button type="button" 
-                            class="btn btn-outline-primary btn-sm" 
-                            id="btnListView"
-                            aria-pressed="false"
-                            data-view="list">List
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnListView" aria-pressed="false"
+                        data-view="list">List
                     </button>
                 </div>
                 <div class="btn-group" role="group" aria-label="Calendar action buttons">
-                    <button type="button" class="btn btn-outline-primary btn-sm" 
-                            id="btnCalendarView"
-                            aria-pressed="false"
-                            data-view="calendar">Calendar 
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnCalendarView"
+                        aria-pressed="false" data-view="calendar">Calendar
                     </button>
                 </div>
                 <!-- Action Buttons -->
                 @if(hasRole('Training') || hasRole('Admin'))
-                <button type="button" 
-                        class="btn btn-primary btn-sm" 
-                        id="createEventButton"
-                        data-bs-toggle="modal" 
-                        data-bs-target="#eventModal">
+                <button type="button" class="btn btn-primary btn-sm" id="createEventButton" data-bs-toggle="modal"
+                    data-bs-target="#eventModal">
                     <i class="bi bi-plus-circle me-1" aria-hidden="true"></i> Add Event
                 </button>
                 @endif
@@ -47,77 +37,80 @@
 
         <!-- Calendar Container -->
         <section class="calendar-container" aria-label="Academic calendar">
-    <div class="card border-start-4 border-primary shadow-sm">
-        <div class="card-body p-3 p-md-4">
+            <div class="card border-start-4 border-primary shadow-sm">
+                <div class="card-body p-3 p-md-4">
 
-            <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
-            <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
+                    <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
+                    <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
 
-            <!-- List View -->
-            <div id="eventListView" class="mt-4" role="region" aria-label="Weekly timetable">
-                <div class="timetable-wrapper">
-                    <!-- Timetable Header -->
-                    <div class="timetable-header bg-white border rounded-3 p-3 mb-4">
-                        <div class="row align-items-center g-3">
-                            <div class="col-md-2 text-center text-md-start">
-                                <img src="{{ asset('images/lbsnaa_logo.jpg') }}"
-                                     alt="Logo"
-                                     class="img-fluid"
-                                     width="80" height="80">
-                            </div>
-
-                            <div class="col-md-8 text-center">
-                                <h2 class="mb-0">Weekly Timetable</h2>
-                                <p class="text-muted mb-0" id="weekRangeText">—</p>
-                            </div>
-
-                            <div class="col-md-2 text-center text-md-end">
-                                <div class="d-flex flex-column align-items-center gap-2">
-                                    <div class="btn-group" role="group" aria-label="Week navigation">
-                                        <button type="button" class="btn btn-sm btn-outline-primary" id="prevWeekBtn" aria-label="Previous week">
-                                            &lt;
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" id="currentWeekBtn" aria-label="Current week">
-                                            Today
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" id="nextWeekBtn" aria-label="Next week">
-                                            &gt;
-                                        </button>
+                    <!-- List View -->
+                    <div id="eventListView" class="mt-4" role="region" aria-label="Weekly timetable">
+                        <div class="timetable-wrapper">
+                            <!-- Timetable Header -->
+                            <div class="timetable-header bg-white border rounded-3 p-3 mb-4">
+                                <div class="row align-items-center g-3">
+                                    <div class="col-md-2 text-center text-md-start">
+                                        <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="Logo" class="img-fluid"
+                                            width="80" height="80">
                                     </div>
 
-                                    <div>
-                                        <p class="text-muted mb-1">Week</p>
-                                        <p class="week-number text-primary fw-bold fs-5 mb-0" id="currentWeekNumber">—</p>
+                                    <div class="col-md-8 text-center">
+                                        <h2 class="mb-0">Weekly Timetable</h2>
+                                        <p class="text-muted mb-0" id="weekRangeText">—</p>
+                                    </div>
+
+                                    <div class="col-md-2 text-center text-md-end">
+                                        <div class="d-flex flex-column align-items-center gap-2">
+                                            <div class="btn-group" role="group" aria-label="Week navigation">
+                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                    id="prevWeekBtn" aria-label="Previous week">
+                                                    &lt;
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                    id="currentWeekBtn" aria-label="Current week">
+                                                    Today
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                    id="nextWeekBtn" aria-label="Next week">
+                                                    &gt;
+                                                </button>
+                                            </div>
+
+                                            <div>
+                                                <p class="text-muted mb-1">Week</p>
+                                                <p class="week-number text-primary fw-bold fs-5 mb-0"
+                                                    id="currentWeekNumber">—</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- Timetable table -->
-                    <div class="timetable-container border rounded-3 overflow-hidden">
-                        <div class="table-responsive" role="region" aria-label="Weekly timetable">
-                            <table class="table table-bordered" id="timetableTable" aria-describedby="timetableDescription">
-                                <caption class="visually-hidden" id="timetableDescription">
-                                    Weekly academic timetable showing events
-                                </caption>
-                                <thead id="timetableHead">
-                                    <!-- JS will populate header -->
-                                </thead>
+                            <!-- Timetable table -->
+                            <div class="timetable-container border rounded-3 overflow-hidden">
+                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
+                                    <table class="table table-bordered" id="timetableTable"
+                                        aria-describedby="timetableDescription">
+                                        <caption class="visually-hidden" id="timetableDescription">
+                                            Weekly academic timetable showing events
+                                        </caption>
+                                        <thead id="timetableHead">
+                                            <!-- JS will populate header -->
+                                        </thead>
 
-                                <tbody id="dynamicTimetable">
-                                    <!-- JS will populate body -->
-                                </tbody>
-                            </table>
+                                        <tbody id="dynamicTimetable">
+                                            <!-- JS will populate body -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
                 </div>
             </div>
-
-        </div>
-    </div>
-</section>
+        </section>
     </main>
 </div>
 
@@ -131,24 +124,19 @@
                 <div class="modal-header bg-primary text-white">
                     <div class="d-flex flex-column w-100">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="modal-title h5 mb-0 text-white" id="eventModalTitle">Add Calendar Event</h2> &nbsp;&nbsp;&nbsp;&nbsp;
+                            <h2 class="modal-title h5 mb-0 text-white" id="eventModalTitle">Add Calendar Event</h2>
+                            &nbsp;&nbsp;&nbsp;&nbsp;
                             <label for="start_datetime" class="form-label text-white me-2 mb-0">
                                 <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>Date:
                             </label>
-                            <input type="date" 
-                                   name="start_datetime" 
-                                   id="start_datetime" 
-                                   class="form-control form-control-sm w-auto text-white" 
-                                   required
-                                   aria-required="true">
-                            <button type="button" 
-                                    class="btn-close btn-close-white" 
-                                    data-bs-dismiss="modal" 
-                                    aria-label="Close"></button>
-                                    
+                            <input type="date" name="start_datetime" id="start_datetime"
+                                class="form-control form-control-sm w-auto text-white" required aria-required="true">
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+
                         </div>
                         <div class="mt-2 d-flex align-items-center">
-                            
+
                         </div>
                     </div>
                 </div>
@@ -163,11 +151,8 @@
                                 <label for="Course_name" class="form-label required">
                                     Course Name
                                 </label>
-                                <select name="Course_name" 
-                                        id="Course_name" 
-                                        class="form-select" 
-                                        required
-                                        aria-required="true">
+                                <select name="Course_name" id="Course_name" class="form-select" required
+                                    aria-required="true">
                                     <option value="">Select Course</option>
                                     @foreach($courseMaster as $course)
                                     <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
@@ -179,11 +164,8 @@
                                 <label for="group_type" class="form-label required">
                                     Group Type
                                 </label>
-                                <select name="group_type" 
-                                        id="group_type" 
-                                        class="form-select" 
-                                        required
-                                        aria-required="true">
+                                <select name="group_type" id="group_type" class="form-select" required
+                                    aria-required="true">
                                     <option value="">Select Group Type</option>
                                 </select>
                             </div>
@@ -201,11 +183,8 @@
                                 <label for="subject_module" class="form-label required">
                                     Subject Module
                                 </label>
-                                <select name="subject_module" 
-                                        id="subject_module" 
-                                        class="form-select" 
-                                        required
-                                        aria-required="true">
+                                <select name="subject_module" id="subject_module" class="form-select" required
+                                    aria-required="true">
                                     <option value="">Select Subject Module</option>
                                     @foreach($subjects as $subject)
                                     <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
@@ -219,11 +198,8 @@
                                 <label for="subject_name" class="form-label required">
                                     Subject Name
                                 </label>
-                                <select name="subject_name" 
-                                        id="subject_name" 
-                                        class="form-select" 
-                                        required
-                                        aria-required="true">
+                                <select name="subject_name" id="subject_name" class="form-select" required
+                                    aria-required="true">
                                     <option value="">Select Subject Name</option>
                                 </select>
                             </div>
@@ -232,13 +208,8 @@
                                 <label for="topic" class="form-label required">
                                     Topic
                                 </label>
-                                <textarea name="topic" 
-                                          id="topic" 
-                                          class="form-control" 
-                                          rows="3" 
-                                          placeholder="Enter topic details"
-                                          required
-                                          aria-required="true"></textarea>
+                                <textarea name="topic" id="topic" class="form-control" rows="3"
+                                    placeholder="Enter topic details" required aria-required="true"></textarea>
                             </div>
                         </div>
                     </section>
@@ -251,11 +222,7 @@
                                 <label for="faculty" class="form-label required">
                                     Faculty
                                 </label>
-                                <select name="faculty" 
-                                        id="faculty" 
-                                        class="form-select" 
-                                        required
-                                        aria-required="true">
+                                <select name="faculty" id="faculty" class="form-select" required aria-required="true">
                                     <option value="">Select Faculty</option>
                                     @foreach($facultyMaster as $faculty)
                                     <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
@@ -269,11 +236,8 @@
                                 <label for="faculty_type" class="form-label required">
                                     Faculty Type
                                 </label>
-                                <select name="faculty_type" 
-                                        id="faculty_type" 
-                                        class="form-select" 
-                                        required
-                                        aria-required="true">
+                                <select name="faculty_type" id="faculty_type" class="form-select" required
+                                    aria-required="true">
                                     <option value="">Select Faculty Type</option>
                                     <option value="1">Internal</option>
                                     <option value="2">Guest</option>
@@ -285,11 +249,7 @@
                                 <label for="vanue" class="form-label required">
                                     Location
                                 </label>
-                                <select name="vanue" 
-                                        id="vanue" 
-                                        class="form-select" 
-                                        required
-                                        aria-required="true">
+                                <select name="vanue" id="vanue" class="form-select" required aria-required="true">
                                     <option value="">Select Location</option>
                                     @foreach($venueMaster as $loc)
                                     <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
@@ -302,27 +262,18 @@
                     <!-- Schedule -->
                     <section class="mb-4" aria-labelledby="scheduleHeading">
                         <h3 id="scheduleHeading" class="h6 text-primary mb-3">Schedule</h3>
-                        
+
                         <!-- Shift Type -->
                         <div class="mb-3">
                             <label class="form-label d-block required">Shift Type</label>
                             <div class="form-check form-check-inline">
-                                <input type="radio" 
-                                       name="shift_type" 
-                                       id="normalShift" 
-                                       value="1" 
-                                       class="form-check-input" 
-                                       checked
-                                       aria-controls="shiftSelect">
+                                <input type="radio" name="shift_type" id="normalShift" value="1"
+                                    class="form-check-input" checked aria-controls="shiftSelect">
                                 <label class="form-check-label" for="normalShift">Normal Shift</label>
                             </div>
                             <div class="form-check form-check-inline">
-                                <input type="radio" 
-                                       name="shift_type" 
-                                       id="manualShift" 
-                                       value="2" 
-                                       class="form-check-input"
-                                       aria-controls="manualShiftFields">
+                                <input type="radio" name="shift_type" id="manualShift" value="2"
+                                    class="form-check-input" aria-controls="manualShiftFields">
                                 <label class="form-check-label" for="manualShift">Manual Shift</label>
                             </div>
                         </div>
@@ -330,11 +281,7 @@
                         <!-- Normal Shift -->
                         <div id="shiftSelect" class="mb-3">
                             <label for="shift" class="form-label required">Shift</label>
-                            <select name="shift" 
-                                    id="shift" 
-                                    class="form-select" 
-                                    required
-                                    aria-required="true">
+                            <select name="shift" id="shift" class="form-select" required aria-required="true">
                                 <option value="">Select Shift</option>
                                 @foreach($classSessionMaster as $shift)
                                 <option value="{{ $shift->shift_time }}">
@@ -348,12 +295,8 @@
                         <div id="manualShiftFields" class="d-none">
                             <div class="mb-3">
                                 <div class="form-check">
-                                    <input class="form-check-input" 
-                                           type="checkbox" 
-                                           value="1" 
-                                           id="fullDayCheckbox" 
-                                           name="fullDayCheckbox"
-                                           aria-controls="dateTimeFields">
+                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
+                                        name="fullDayCheckbox" aria-controls="dateTimeFields">
                                     <label class="form-check-label" for="fullDayCheckbox">
                                         Full Day Event
                                     </label>
@@ -364,21 +307,15 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="start_time" class="form-label required">Start Time</label>
-                                        <input type="time" 
-                                               name="start_time" 
-                                               id="start_time" 
-                                               class="form-control" 
-                                               aria-describedby="startTimeHelp">
+                                        <input type="time" name="start_time" id="start_time" class="form-control"
+                                            aria-describedby="startTimeHelp">
                                         <small id="startTimeHelp" class="form-text text-muted">
                                             Must be at least 1 hour from now
                                         </small>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="end_time" class="form-label required">End Time</label>
-                                        <input type="time" 
-                                               name="end_time" 
-                                               id="end_time" 
-                                               class="form-control">
+                                        <input type="time" name="end_time" id="end_time" class="form-control">
                                     </div>
                                 </div>
                             </div>
@@ -391,44 +328,29 @@
                         <div class="row">
                             <div class="col-md-3 mb-2">
                                 <div class="form-check">
-                                    <input class="form-check-input" 
-                                           type="checkbox" 
-                                           value="1" 
-                                           name="feedback_checkbox" 
-                                           id="feedback_checkbox"
-                                           aria-controls="remarkCheckbox ratingCheckbox">
+                                    <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox"
+                                        id="feedback_checkbox" aria-controls="remarkCheckbox ratingCheckbox">
                                     <label class="form-check-label" for="feedback_checkbox">Feedback</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-2">
                                 <div class="form-check">
-                                    <input class="form-check-input" 
-                                           type="checkbox" 
-                                           value="1" 
-                                           name="remarkCheckbox" 
-                                           id="remarkCheckbox"
-                                           disabled>
+                                    <input class="form-check-input" type="checkbox" value="1" name="remarkCheckbox"
+                                        id="remarkCheckbox" disabled>
                                     <label class="form-check-label" for="remarkCheckbox">Remark</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-2">
                                 <div class="form-check">
-                                    <input class="form-check-input" 
-                                           type="checkbox" 
-                                           value="1" 
-                                           name="ratingCheckbox" 
-                                           id="ratingCheckbox"
-                                           disabled>
+                                    <input class="form-check-input" type="checkbox" value="1" name="ratingCheckbox"
+                                        id="ratingCheckbox" disabled>
                                     <label class="form-check-label" for="ratingCheckbox">Rating</label>
                                 </div>
                             </div>
                             <div class="col-md-3 mb-2">
                                 <div class="form-check">
-                                    <input class="form-check-input" 
-                                           type="checkbox" 
-                                           value="1" 
-                                           name="bio_attendanceCheckbox" 
-                                           id="bio_attendanceCheckbox">
+                                    <input class="form-check-input" type="checkbox" value="1"
+                                        name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
                                     <label class="form-check-label" for="bio_attendanceCheckbox">Bio Attendance</label>
                                 </div>
                             </div>
@@ -438,14 +360,10 @@
 
                 <!-- Modal Footer -->
                 <div class="modal-footer">
-                    <button type="button" 
-                            class="btn btn-outline-secondary" 
-                            data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" 
-                            class="btn btn-primary" 
-                            id="submitEventBtn">
+                    <button type="submit" class="btn btn-primary" id="submitEventBtn">
                         <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
                         <span class="btn-text">Add Event</span>
                     </button>
@@ -465,10 +383,8 @@
                         <h3 class="modal-title h5 mb-0" id="eventDetailsTitle">
                             <span id="eventTitle">Event</span>
                         </h3>
-                        <button type="button" 
-                                class="btn-close btn-close-white" 
-                                data-bs-dismiss="modal" 
-                                aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
                     </div>
                     <div class="mt-2">
                         <p class="mb-0 small">
@@ -481,7 +397,7 @@
             <div class="modal-body">
                 <div class="event-details">
                     <h4 class="h6 mb-3" id="eventTopic"></h4>
-                    
+
                     <div class="row g-3">
                         <div class="col-md-6">
                             <div class="detail-item">
@@ -490,14 +406,14 @@
                                 <span id="eventfaculty" class="ms-1"></span>
                             </div>
                         </div>
-                          <div class="col-md-6">
+                        <div class="col-md-6">
                             <div class="d`etail-item">
                                 <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
                                 <strong>Session:</strong>
                                 <span id="eventclasssession" class="ms-1"></span>
                             </div>
                         </div>
-                          <div class="col-md-6">
+                        <div class="col-md-6">
                             <div class="d`etail-item">
                                 <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
                                 <strong>Group name:</strong>
@@ -516,14 +432,10 @@
                     <div class="mt-4 pt-3 border-top">
                         <div class="d-flex gap-2">
                             @if(hasRole('Training') || hasRole('Admin'))
-                            <button type="button" 
-                                    class="btn btn-sm btn-outline-primary" 
-                                    id="editEventBtn">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="editEventBtn">
                                 <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
                             </button>
-                            <button type="button" 
-                                    class="btn btn-sm btn-outline-danger" 
-                                    id="deleteEventBtn">
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="deleteEventBtn">
                                 <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
                             </button>
                             @endif
@@ -651,11 +563,11 @@
     .timetable-header .institution-name {
         font-size: 1rem;
     }
-    
+
     .modal-dialog {
         margin: 0.5rem;
     }
-    
+
     .btn-group {
         width: 100%;
         justify-content: center;
@@ -673,7 +585,7 @@
     .btn-outline-primary {
         border-width: 2px;
     }
-    
+
     .fc-event-card {
         border-width: 2px;
     }
@@ -681,6 +593,7 @@
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
+
     .fc-event-card,
     .btn {
         transition: none;
@@ -771,7 +684,7 @@ class CalendarManager {
 
     initFullCalendar() {
         const calendarEl = document.getElementById('calendar');
-        
+
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridDay',
             headerToolbar: {
@@ -795,14 +708,15 @@ class CalendarManager {
             select: this.handleDateSelect.bind(this),
             eventDidMount: this.setEventAccessibility.bind(this)
         });
-        
+
         this.calendar.render();
         this.styleMoreLinks();
     }
 
     styleMoreLinks() {
         // Style all "+ more" links
-        const moreLinks = document.querySelectorAll('.fc-daygrid-day-more-link, .fc-more-link, .fc-daygrid-day-frame a[data-date]');
+        const moreLinks = document.querySelectorAll(
+            '.fc-daygrid-day-more-link, .fc-more-link, .fc-daygrid-day-frame a[data-date]');
         moreLinks.forEach(link => {
             if (link.textContent.includes('+')) {
                 link.style.fontSize = '1.25rem';
@@ -815,13 +729,13 @@ class CalendarManager {
                 link.style.textDecoration = 'none';
                 link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
                 link.style.transition = 'all 0.2s ease';
-                
+
                 link.addEventListener('mouseenter', () => {
                     link.style.background = 'linear-gradient(135deg, #003366, #004a93)';
                     link.style.transform = 'scale(1.08)';
                     link.style.boxShadow = '0 4px 12px rgba(0, 74, 147, 0.4)';
                 });
-                
+
                 link.addEventListener('mouseleave', () => {
                     link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
                     link.style.transform = 'scale(1)';
@@ -856,15 +770,15 @@ class CalendarManager {
     }
 
     renderEventContent(arg) {
-        const colorIdx = arg.event.id ? 
-            parseInt(arg.event.id) % CalendarConfig.colors.length : 
+        const colorIdx = arg.event.id ?
+            parseInt(arg.event.id) % CalendarConfig.colors.length :
             arg.event._index % CalendarConfig.colors.length;
         const cardColor = CalendarConfig.colors[colorIdx];
-        
+
         const topic = arg.event.title || '';
         const venue = arg.event.extendedProps.vanue || '';
         const faculty = arg.event.extendedProps.faculty_name || '';
-        
+
         return {
             html: `
                 <div class="fc-event-card" 
@@ -904,9 +818,9 @@ class CalendarManager {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 }
             });
-            
+
             if (!response.ok) throw new Error('Failed to load event details');
-            
+
             const data = await response.json();
             this.showEventDetails(data);
         } catch (error) {
@@ -919,7 +833,7 @@ class CalendarManager {
         // Update modal content
         document.getElementById('eventTitle').textContent = 'Event Details';
         document.getElementById('eventTopic').textContent = data.topic || '';
-        document.getElementById('eventDate').textContent = 
+        document.getElementById('eventDate').textContent =
             new Date(data.start).toLocaleDateString('en-IN', {
                 weekday: 'long',
                 year: 'numeric',
@@ -931,14 +845,14 @@ class CalendarManager {
         document.getElementById('eventVanue').textContent = data.venue_name || '';
         document.getElementById('eventclasssession').textContent = data.class_session || '';
         document.getElementById('eventgroupname').textContent = data.group_name || '';
-        
+
         // Set edit/delete button data
         const editBtn = document.getElementById('editEventBtn');
         const deleteBtn = document.getElementById('deleteEventBtn');
-        
+
         if (editBtn) editBtn.dataset.id = data.id;
         if (deleteBtn) deleteBtn.dataset.id = data.id;
-        
+
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('eventDetails'));
         modal.show();
@@ -946,10 +860,10 @@ class CalendarManager {
 
     handleDateSelect(info) {
         if (!@json(hasRole('Training') || hasRole('Admin'))) return;
-        
+
         this.resetEventForm();
         this.setFormDate(info.start);
-        
+
         const modal = new bootstrap.Modal(document.getElementById('eventModal'));
         modal.show();
     }
@@ -957,30 +871,30 @@ class CalendarManager {
     resetEventForm() {
         const form = document.getElementById('eventForm');
         form.reset();
-        
+
         // Reset dynamic fields
         document.getElementById('group_type').innerHTML = '<option value="">Select Group Type</option>';
-        document.getElementById('type_name_container').innerHTML = 
+        document.getElementById('type_name_container').innerHTML =
             '<div class="text-center text-muted">Select a Group Type first</div>';
-        
+
         // Update button text
         document.getElementById('eventModalTitle').textContent = 'Add Calendar Event';
         document.querySelector('.btn-text').textContent = 'Add Event';
         document.getElementById('submitEventBtn').dataset.action = 'create';
-        
+
         // Reset date field
         document.getElementById('start_datetime').removeAttribute('readonly');
-        
+
         // Show normal shift by default
         this.toggleShiftFields();
     }
 
     setFormDate(date) {
-    const formattedDate = date.toLocaleDateString('en-CA');
-    console.log('Selected date for form:', formattedDate);
-    document.getElementById('start_datetime').value = formattedDate;
-    document.getElementById('start_datetime').setAttribute('readonly', 'true');
-}
+        const formattedDate = date.toLocaleDateString('en-CA');
+        console.log('Selected date for form:', formattedDate);
+        document.getElementById('start_datetime').value = formattedDate;
+        document.getElementById('start_datetime').setAttribute('readonly', 'true');
+    }
 
 
     bindEvents() {
@@ -993,35 +907,35 @@ class CalendarManager {
         document.getElementById('prevWeekBtn')?.addEventListener('click', () => this.navigateWeek(-1));
         document.getElementById('nextWeekBtn')?.addEventListener('click', () => this.navigateWeek(1));
         document.getElementById('currentWeekBtn')?.addEventListener('click', () => this.navigateWeek(0));
-        
+
         // Form submission
         document.getElementById('eventForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
-        
+
         // Dynamic field dependencies
         document.getElementById('Course_name').addEventListener('change', () => this.loadGroupTypes());
         document.getElementById('subject_module').addEventListener('change', () => this.loadSubjectNames());
         document.getElementById('faculty').addEventListener('change', () => this.updateFacultyType());
         document.getElementById('faculty_type').addEventListener('change', () => this.updateCheckboxState());
-        
+
         // Shift type toggles
         document.querySelectorAll('input[name="shift_type"]').forEach(radio => {
             radio.addEventListener('change', () => this.toggleShiftFields());
         });
-        
+
         // Full day checkbox
         document.getElementById('fullDayCheckbox').addEventListener('change', (e) => {
             this.toggleFullDayFields(e.target.checked);
         });
-        
+
         // Feedback checkbox
         document.getElementById('feedback_checkbox').addEventListener('change', () => {
             this.toggleFeedbackDependencies();
         });
-        
+
         // Edit/Delete buttons
         document.getElementById('editEventBtn')?.addEventListener('click', () => this.loadEventForEdit());
         document.getElementById('deleteEventBtn')?.addEventListener('click', () => this.confirmDelete());
-        
+
         // Create event button
         document.getElementById('createEventButton')?.addEventListener('click', () => {
             this.resetEventForm();
@@ -1034,14 +948,14 @@ class CalendarManager {
             btn.classList.remove('active');
             btn.setAttribute('aria-pressed', 'false');
         });
-        
+
         button.classList.add('active');
         button.setAttribute('aria-pressed', 'true');
-        
+
         const view = button.dataset.view;
         const calendarEl = document.getElementById('calendar');
         const listViewEl = document.getElementById('eventListView');
-        
+
         if (view === 'list') {
             calendarEl.style.display = 'none';
             listViewEl.classList.remove('d-none');
@@ -1067,11 +981,11 @@ class CalendarManager {
     async loadGroupTypes() {
         const courseId = document.getElementById('Course_name').value;
         if (!courseId) return;
-        
+
         try {
             const response = await fetch(`${CalendarConfig.api.groupTypes}?course_id=${courseId}`);
             const data = await response.json();
-            
+
             this.populateGroupTypes(data);
         } catch (error) {
             console.error('Error loading group types:', error);
@@ -1087,11 +1001,11 @@ class CalendarManager {
             }
             grouped[item.group_type_name].push(item);
         });
-        
+
         // Populate dropdown
         const select = document.getElementById('group_type');
         select.innerHTML = '<option value="">Select Group Type</option>';
-        
+
         Object.keys(grouped).forEach(key => {
             const typeName = grouped[key][0].type_name;
             const option = document.createElement('option');
@@ -1099,26 +1013,26 @@ class CalendarManager {
             option.textContent = typeName;
             select.appendChild(option);
         });
-        
+
         // Set up change handler
         select.onchange = () => this.populateGroupCheckboxes(grouped[select.value] || []);
     }
 
     populateGroupCheckboxes(groups) {
         const container = document.getElementById('type_name_container');
-        
+
         if (!groups.length) {
             container.innerHTML = '<div class="text-center text-muted">No groups found</div>';
             return;
         }
-        
+
         let html = '<div class="row g-2">';
-        
+
         groups.forEach(group => {
-            const checked = this.selectedGroupNames === 'ALL' || 
-                           (Array.isArray(this.selectedGroupNames) && 
-                            this.selectedGroupNames.includes(group.pk)) ? 'checked' : '';
-            
+            const checked = this.selectedGroupNames === 'ALL' ||
+                (Array.isArray(this.selectedGroupNames) &&
+                    this.selectedGroupNames.includes(group.pk)) ? 'checked' : '';
+
             html += `
                 <div class="col-md-6">
                     <div class="form-check">
@@ -1135,7 +1049,7 @@ class CalendarManager {
                 </div>
             `;
         });
-        
+
         html += '</div>';
         container.innerHTML = html;
     }
@@ -1143,11 +1057,11 @@ class CalendarManager {
     async loadSubjectNames() {
         const moduleId = document.getElementById('subject_module').value;
         if (!moduleId) return;
-        
+
         try {
             const response = await fetch(`${CalendarConfig.api.subjectNames}?data_id=${moduleId}`);
             const data = await response.json();
-            
+
             this.populateSubjectNames(data);
         } catch (error) {
             console.error('Error loading subject names:', error);
@@ -1157,7 +1071,7 @@ class CalendarManager {
     populateSubjectNames(subjects) {
         const select = document.getElementById('subject_name');
         select.innerHTML = '<option value="">Select Subject Name</option>';
-        
+
         subjects.forEach(subject => {
             const option = document.createElement('option');
             option.value = subject.pk;
@@ -1170,7 +1084,7 @@ class CalendarManager {
         const facultySelect = document.getElementById('faculty');
         const selectedOption = facultySelect.options[facultySelect.selectedIndex];
         const facultyType = selectedOption?.dataset.faculty_type;
-        
+
         if (facultyType) {
             document.getElementById('faculty_type').value = facultyType;
             this.updateCheckboxState();
@@ -1179,8 +1093,8 @@ class CalendarManager {
 
     updateCheckboxState() {
         const facultyType = document.getElementById('faculty_type').value;
-        
-        switch(facultyType) {
+
+        switch (facultyType) {
             case '1': // Internal
                 this.setCheckboxState('remarkCheckbox', false, false);
                 this.setCheckboxState('ratingCheckbox', true, false);
@@ -1199,7 +1113,7 @@ class CalendarManager {
         const checkbox = document.getElementById(id);
         checkbox.disabled = disabled;
         checkbox.checked = checked;
-        
+
         if (disabled) {
             checkbox.classList.add('readonly-checkbox');
         } else {
@@ -1209,15 +1123,15 @@ class CalendarManager {
 
     toggleShiftFields() {
         const isManual = document.getElementById('manualShift').checked;
-        
+
         document.getElementById('shiftSelect').classList.toggle('d-none', isManual);
         document.getElementById('manualShiftFields').classList.toggle('d-none', !isManual);
-        
+
         // Toggle required attributes
         const shiftSelect = document.getElementById('shift');
         const startTime = document.getElementById('start_time');
         const endTime = document.getElementById('end_time');
-        
+
         if (isManual) {
             shiftSelect.removeAttribute('required');
             startTime.setAttribute('required', 'true');
@@ -1231,7 +1145,7 @@ class CalendarManager {
 
     toggleFullDayFields(isFullDay) {
         const dateTimeFields = document.getElementById('dateTimeFields');
-        
+
         if (isFullDay) {
             dateTimeFields.classList.add('d-none');
             document.getElementById('start_time').value = '08:00';
@@ -1247,7 +1161,7 @@ class CalendarManager {
         const isChecked = document.getElementById('feedback_checkbox').checked;
         const remarkCheckbox = document.getElementById('remarkCheckbox');
         const ratingCheckbox = document.getElementById('ratingCheckbox');
-        
+
         if (!isChecked) {
             remarkCheckbox.checked = false;
             ratingCheckbox.checked = false;
@@ -1262,13 +1176,13 @@ class CalendarManager {
     validateDates() {
         const dateInput = document.getElementById('start_datetime');
         // dateInput.setAttribute('min', CalendarConfig.minDate);
-        
+
         // Add real-time validation
         dateInput.addEventListener('change', function() {
             const selectedDate = new Date(this.value);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             if (selectedDate < today) {
                 // this.setCustomValidity('Date cannot be in the past');
                 // this.reportValidity();
@@ -1280,17 +1194,17 @@ class CalendarManager {
 
     async handleFormSubmit(e) {
         e.preventDefault();
-        
+
         if (!this.validateForm()) {
             return;
         }
-        
+
         const formData = new FormData(e.target);
         const action = document.getElementById('submitEventBtn').dataset.action;
-        const url = action === 'edit' ? 
-            `${CalendarConfig.api.update}${this.currentEventId}` : 
+        const url = action === 'edit' ?
+            `${CalendarConfig.api.update}${this.currentEventId}` :
             CalendarConfig.api.store;
-        
+
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -1300,19 +1214,19 @@ class CalendarManager {
                 },
                 body: new URLSearchParams(formData)
             });
-            
+
             if (!response.ok) {
                 const error = await response.json();
                 throw new Error(error.message || 'Submission failed');
             }
-            
+
             const result = await response.json();
             this.showNotification(result.message || 'Event saved successfully', 'success');
-            
+
             // Close modal and refresh calendar
             bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
             this.calendar.refetchEvents();
-            
+
         } catch (error) {
             this.showNotification(error.message, 'danger');
             console.error('Form submission error:', error);
@@ -1321,18 +1235,18 @@ class CalendarManager {
 
     validateForm() {
         let isValid = true;
-        
+
         // Clear previous errors
         document.querySelectorAll('.is-invalid').forEach(el => {
             el.classList.remove('is-invalid');
         });
-        
+
         // Required fields validation
         const requiredFields = [
-            'Course_name', 'subject_module','group_type', 'subject_name', 'topic',
+            'Course_name', 'subject_module', 'group_type', 'subject_name', 'topic',
             'faculty', 'faculty_type', 'vanue', 'start_datetime'
         ];
-        
+
         requiredFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (!field.value.trim()) {
@@ -1340,7 +1254,7 @@ class CalendarManager {
                 isValid = false;
             }
         });
-        
+
         // Shift validation
         if (document.getElementById('normalShift').checked) {
             const shift = document.getElementById('shift');
@@ -1351,13 +1265,13 @@ class CalendarManager {
         } else {
             const startTime = document.getElementById('start_time');
             const endTime = document.getElementById('end_time');
-            
+
             if (!startTime.value || !endTime.value) {
                 startTime.classList.add('is-invalid');
                 endTime.classList.add('is-invalid');
                 isValid = false;
             }
-            
+
             // Time validation
             if (startTime.value && endTime.value) {
                 if (startTime.value >= endTime.value) {
@@ -1366,41 +1280,42 @@ class CalendarManager {
                 }
             }
         }
-        
+
         // Feedback validation
         if (document.getElementById('feedback_checkbox').checked) {
             const remarkChecked = document.getElementById('remarkCheckbox').checked;
             const ratingChecked = document.getElementById('ratingCheckbox').checked;
-            
+
             if (!remarkChecked && !ratingChecked) {
-                this.showNotification('Please select at least Remark or Rating when Feedback is checked', 'warning');
+                this.showNotification('Please select at least Remark or Rating when Feedback is checked',
+                'warning');
                 isValid = false;
             }
         }
-        
+
         return isValid;
     }
 
     async loadEventForEdit() {
         const eventId = document.getElementById('editEventBtn').dataset.id;
-        
+
         try {
             const response = await fetch(`/calendar/event-edit/${eventId}`);
             const event = await response.json();
-            
+
             this.populateEditForm(event);
-            
+
             // Update modal for edit
             document.getElementById('eventModalTitle').textContent = 'Edit Event';
             document.querySelector('.btn-text').textContent = 'Update Event';
             document.getElementById('submitEventBtn').dataset.action = 'edit';
             document.getElementById('start_datetime').removeAttribute('readonly');
-            
+
             // Show modal
             bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
             const modal = new bootstrap.Modal(document.getElementById('eventModal'));
             modal.show();
-            
+
         } catch (error) {
             this.showNotification('Error loading event for editing', 'danger');
             console.error('Edit load error:', error);
@@ -1417,12 +1332,12 @@ class CalendarManager {
         document.getElementById('faculty').value = event.faculty_master;
         document.getElementById('faculty_type').value = event.faculty_type;
         document.getElementById('vanue').value = event.venue_id;
-        
+
         // Shift settings
         if (event.session_type == 2) {
             document.getElementById('manualShift').checked = true;
             this.toggleShiftFields();
-            
+
             if (event.class_session) {
                 const [start, end] = event.class_session.split(' - ');
                 document.getElementById('start_time').value = this.convertTo24Hour(start);
@@ -1433,18 +1348,18 @@ class CalendarManager {
             document.getElementById('shift').value = event.class_session;
             this.toggleShiftFields();
         }
-        
+
         // Checkboxes
         document.getElementById('fullDayCheckbox').checked = event.full_day == 1;
         document.getElementById('feedback_checkbox').checked = event.feedback_checkbox == 1;
         document.getElementById('remarkCheckbox').checked = event.Remark_checkbox == 1;
         document.getElementById('ratingCheckbox').checked = event.Ratting_checkbox == 1;
         document.getElementById('bio_attendanceCheckbox').checked = event.Bio_attendance == 1;
-        
+
         // Trigger dependent loads
         this.loadGroupTypesForEdit(event);
         this.loadSubjectNamesForEdit(event);
-        
+
         // Store current event ID
         this.currentEventId = event.pk;
     }
@@ -1456,7 +1371,7 @@ class CalendarManager {
         } catch {
             this.selectedGroupNames = [];
         }
-        
+
         // Trigger group type load
         document.getElementById('Course_name').dispatchEvent(new Event('change'));
     }
@@ -1464,7 +1379,7 @@ class CalendarManager {
     loadSubjectNamesForEdit(event) {
         // Trigger subject module change
         document.getElementById('subject_module').dispatchEvent(new Event('change'));
-        
+
         // Set subject name after a delay (wait for AJAX)
         setTimeout(() => {
             document.getElementById('subject_name').value = event.subject_master_pk;
@@ -1473,7 +1388,7 @@ class CalendarManager {
 
     confirmDelete() {
         const eventId = document.getElementById('deleteEventBtn').dataset.id;
-        
+
         // Show confirmation modal
         const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
         document.getElementById('confirmAction').onclick = () => this.deleteEvent(eventId);
@@ -1488,16 +1403,16 @@ class CalendarManager {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
                 }
             });
-            
+
             if (!response.ok) throw new Error('Delete failed');
-            
+
             this.showNotification('Event deleted successfully', 'success');
-            
+
             // Close modals and refresh
             bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
             bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
             this.calendar.refetchEvents();
-            
+
         } catch (error) {
             this.showNotification('Delete failed', 'danger');
             console.error('Delete error:', error);
@@ -1512,7 +1427,7 @@ class CalendarManager {
             // Navigate forward or backward
             this.listViewWeekOffset += offset;
         }
-        
+
         // Reload the list view with the new week
         this.loadListView();
     }
@@ -1522,37 +1437,37 @@ class CalendarManager {
         const today = new Date();
         const dayOfWeek = today.getDay();
         const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        
+
         // Create new date to avoid mutation
         const weekStart = new Date(today.getFullYear(), today.getMonth(), diff);
-        
+
         // Apply week offset
         weekStart.setDate(weekStart.getDate() + (weekOffset * 7));
-        
+
         // Set week end (Friday)
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday
-        
+
         // Filter events that fall within this week
         return events.filter(event => {
             const eventDate = new Date(event.start);
             const eventDay = eventDate.getDate();
             const eventMonth = eventDate.getMonth();
             const eventYear = eventDate.getFullYear();
-            
+
             const startDay = weekStart.getDate();
             const startMonth = weekStart.getMonth();
             const startYear = weekStart.getFullYear();
-            
+
             const endDay = weekEnd.getDate();
             const endMonth = weekEnd.getMonth();
             const endYear = weekEnd.getFullYear();
-            
+
             // Compare dates properly
             const eventDateObj = new Date(eventYear, eventMonth, eventDay);
             const startDateObj = new Date(startYear, startMonth, startDay);
             const endDateObj = new Date(endYear, endMonth, endDay);
-            
+
             return eventDateObj >= startDateObj && eventDateObj <= endDateObj;
         });
     }
@@ -1561,7 +1476,7 @@ class CalendarManager {
         try {
             const response = await fetch(CalendarConfig.api.events);
             const events = await response.json();
-            
+
             // Calculate week start date based on offset
             const today = new Date();
             const dayOfWeek = today.getDay();
@@ -1569,7 +1484,7 @@ class CalendarManager {
             const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
             const weekStart = new Date(today.getFullYear(), today.getMonth(), diff);
             weekStart.setDate(weekStart.getDate() + (this.listViewWeekOffset * 7));
-            
+
             // Update week display in header (use same calculation as updateCurrentWeek)
             const date = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
             const jan4 = new Date(date.getFullYear(), 0, 4);
@@ -1578,20 +1493,20 @@ class CalendarManager {
             const timeDiff = date - monday;
             const weekDiff = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000));
             const weekNum = weekDiff + 1;
-            
+
             const weekElement = document.getElementById('currentWeek');
             if (weekElement) {
                 weekElement.textContent = weekNum;
             }
-            
+
             // Update table header with week dates
             this.updateTableHeader(weekStart);
-            
+
             // Debug: Log the week being displayed
             console.log('List view - Week offset:', this.listViewWeekOffset);
             console.log('Week start:', weekStart);
             console.log('Total events:', events.length);
-            
+
             // Filter and render events
             const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
             console.log('Filtered events for this week:', filteredEvents.length);
@@ -1608,27 +1523,30 @@ class CalendarManager {
             console.warn('Table #timetableTable not found');
             return;
         }
-        
+
         const thead = table.querySelector('thead tr');
         if (!thead) {
             console.warn('Table header not found');
             return;
         }
-        
+
         const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
         const headers = thead.querySelectorAll('th:not(.time-column)');
-        
+
         headers.forEach((header, index) => {
             const date = new Date(weekStart);
             date.setDate(date.getDate() + index);
-            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            const dateStr = date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
             header.innerHTML = `${days[index]}<br><small class="text-muted">${dateStr}</small>`;
         });
     }
 
     renderListView(events) {
         const tbody = document.getElementById('timetableBody');
-        
+
         if (!events.length) {
             tbody.innerHTML = `
                 <tr>
@@ -1642,10 +1560,10 @@ class CalendarManager {
             `;
             return;
         }
-        
+
         // Group events by time slot
         const timeSlots = this.groupEventsByTime(events);
-        
+
         let html = '';
         Object.entries(timeSlots).forEach(([time, dayEvents]) => {
             html += `
@@ -1659,7 +1577,7 @@ class CalendarManager {
                 </tr>
             `;
         });
-        
+
         tbody.innerHTML = html;
     }
 
@@ -1667,26 +1585,26 @@ class CalendarManager {
         // Implement grouping logic based on your data structure
         // This is a simplified example
         const groups = {};
-        
+
         events.forEach(event => {
             const time = event.start ? new Date(event.start).toLocaleTimeString([], {
                 hour: '2-digit',
                 minute: '2-digit'
             }) : 'All Day';
-            
+
             if (!groups[time]) groups[time] = {};
-            
+
             const day = new Date(event.start).getDay();
             const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const dayName = dayNames[day];
-            
+
             if (!groups[time][dayName]) {
                 groups[time][dayName] = [];
             }
-            
+
             groups[time][dayName].push(event);
         });
-        
+
         return groups;
     }
 
@@ -1707,17 +1625,17 @@ class CalendarManager {
 
     convertTo24Hour(timeStr) {
         if (!timeStr) return '';
-        
+
         const [time, modifier] = timeStr.split(' ');
         let [hours, minutes] = time.split(':');
-        
+
         hours = parseInt(hours);
         if (modifier === 'PM' && hours !== 12) {
             hours += 12;
         } else if (modifier === 'AM' && hours === 12) {
             hours = 0;
         }
-        
+
         return `${String(hours).padStart(2, '0')}:${minutes}`;
     }
 
@@ -1725,19 +1643,19 @@ class CalendarManager {
         // Calculate ISO week number for current date
         const today = new Date();
         const date = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        
+
         // January 4th is always in week 1 (ISO 8601 standard)
         const jan4 = new Date(date.getFullYear(), 0, 4);
-        
+
         // Calculate the Monday of week containing Jan 4
         const monday = new Date(jan4);
         monday.setDate(monday.getDate() - monday.getDay() + 1);
-        
+
         // Calculate difference in milliseconds and convert to weeks
         const timeDiff = date - monday;
         const weekDiff = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000));
         const weekNum = weekDiff + 1;
-        
+
         // Update the week number display
         const weekElement = document.getElementById('currentWeek');
         if (weekElement) {
@@ -1749,7 +1667,7 @@ class CalendarManager {
         // Remove existing notifications
         const existing = document.querySelector('.alert-notification');
         if (existing) existing.remove();
-        
+
         // Create notification element
         const alert = document.createElement('div');
         alert.className = `alert alert-${type} alert-notification position-fixed`;
@@ -1767,9 +1685,9 @@ class CalendarManager {
                 <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         `;
-        
+
         document.body.appendChild(alert);
-        
+
         // Auto-remove after 5 seconds
         setTimeout(() => {
             if (alert.parentNode) {
@@ -1787,10 +1705,10 @@ class CalendarManager {
                     bootstrap.Modal.getInstance(modal).hide();
                 });
             }
-            
+
             // Calendar navigation
             if (e.target.closest('.fc')) {
-                switch(e.key) {
+                switch (e.key) {
                     case 'ArrowLeft':
                         this.calendar.prev();
                         break;
@@ -1803,12 +1721,13 @@ class CalendarManager {
                 }
             }
         });
-        
+
         // Focus trap for modals
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
             modal.addEventListener('shown.bs.modal', () => {
-                const focusable = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                const focusable = modal.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
                 if (focusable.length) focusable[0].focus();
             });
         });

@@ -32,7 +32,7 @@ class GroupTypeMasterCourseMasterMap extends Model
         return $this->belongsTo(CourseGroupTypeMaster::class, 'type_name', 'pk');
     }
 
-    public function facility()
+    public function Faculty()
     {
         return $this->belongsTo(FacultyMaster::class, 'facility_id', 'pk');
     }
