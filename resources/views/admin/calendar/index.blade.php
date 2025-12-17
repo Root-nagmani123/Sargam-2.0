@@ -13,7 +13,8 @@
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
         <section class="calendar-controls mb-4" aria-label="Calendar view controls">
-            <div class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
+            <div
+                class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
                 <!-- View Toggle Buttons -->
                 <div class="view-toggle-section d-flex align-items-center gap-3">
                     <span class="text-muted fw-medium small d-none d-md-inline">View:</span>
@@ -22,8 +23,8 @@
                             data-view="list">
                             <i class="bi bi-list-ul me-2"></i>List View
                         </button>
-                        <button type="button" class="btn btn-outline-primary" id="btnCalendarView"
-                            aria-pressed="false" data-view="calendar">
+                        <button type="button" class="btn btn-outline-primary" id="btnCalendarView" aria-pressed="false"
+                            data-view="calendar">
                             <i class="bi bi-calendar3 me-2"></i>Calendar View
                         </button>
                     </div>
@@ -54,8 +55,8 @@
                                 <div class="row align-items-center g-4">
                                     <div class="col-md-2 text-center text-md-start">
                                         <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
-                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" class="img-fluid"
-                                                width="70" height="70">
+                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
+                                                class="img-fluid" width="70" height="70">
                                         </div>
                                     </div>
 
@@ -69,16 +70,16 @@
                                     <div class="col-md-4 text-center text-md-end">
                                         <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
                                             <div class="btn-group mb-2" role="group" aria-label="Week navigation">
-                                                <button type="button" class="btn btn-outline-primary"
-                                                    id="prevWeekBtn" aria-label="Previous week">
+                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
+                                                    aria-label="Previous week">
                                                     <i class="bi bi-chevron-left"></i>
                                                 </button>
-                                                <button type="button" class="btn btn-primary px-4"
-                                                    id="currentWeekBtn" aria-label="Current week">
+                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
+                                                    aria-label="Current week">
                                                     <i class="bi bi-calendar-check me-2"></i>Today
                                                 </button>
-                                                <button type="button" class="btn btn-outline-primary"
-                                                    id="nextWeekBtn" aria-label="Next week">
+                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
+                                                    aria-label="Next week">
                                                     <i class="bi bi-chevron-right"></i>
                                                 </button>
                                             </div>
@@ -121,376 +122,12 @@
     </main>
 </div>
 
-<!-- Add/Edit Event Modal -->
-<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-lg">
-        <form id="eventForm" novalidate>
-            @csrf
-            <div class="modal-content">
-                <!-- Modal Header -->
-                <div class="modal-header bg-primary text-white">
-                    <div class="d-flex flex-column w-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="modal-title h5 mb-0 text-white" id="eventModalTitle">Add Calendar Event</h2>
-                            &nbsp;&nbsp;&nbsp;&nbsp;
-                            <label for="start_datetime" class="form-label text-white me-2 mb-0">
-                                <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>Date:
-                            </label>
-                            <input type="date" name="start_datetime" id="start_datetime"
-                                class="form-control form-control-sm w-auto text-white" required aria-required="true">
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
-
-                        </div>
-                        <div class="mt-2 d-flex align-items-center">
-
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal Body -->
-                <div class="modal-body">
-                    <!-- Basic Information -->
-                    <section class="mb-4" aria-labelledby="basicInfoHeading">
-                        <h3 id="basicInfoHeading" class="h6 text-primary mb-3">Basic Information</h3>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="Course_name" class="form-label required">
-                                    Course Name
-                                </label>
-                                <select name="Course_name" id="Course_name" class="form-select" required
-                                    aria-required="true">
-                                    <option value="">Select Course</option>
-                                    @foreach($courseMaster as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="group_type" class="form-label required">
-                                    Group Type
-                                </label>
-                                <select name="group_type" id="group_type" class="form-select" required
-                                    aria-required="true">
-                                    <option value="">Select Group Type</option>
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label">Group Type Name</label>
-                                <div id="type_name_container" class="border rounded p-3 bg-light-subtle">
-                                    <div class="text-center text-muted" id="groupTypePlaceholder">
-                                        Select a Group Type first
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="subject_module" class="form-label required">
-                                    Subject Module
-                                </label>
-                                <select name="subject_module" id="subject_module" class="form-select" required
-                                    aria-required="true">
-                                    <option value="">Select Subject Module</option>
-                                    @foreach($subjects as $subject)
-                                    <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
-                                        {{ $subject->module_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="subject_name" class="form-label required">
-                                    Subject Name
-                                </label>
-                                <select name="subject_name" id="subject_name" class="form-select" required
-                                    aria-required="true">
-                                    <option value="">Select Subject Name</option>
-                                </select>
-                            </div>
-
-                            <div class="col-12">
-                                <label for="topic" class="form-label required">
-                                    Topic
-                                </label>
-                                <textarea name="topic" id="topic" class="form-control" rows="3"
-                                    placeholder="Enter topic details" required aria-required="true"></textarea>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Faculty & Venue -->
-                    <section class="mb-4" aria-labelledby="facultyVenueHeading">
-                        <h3 id="facultyVenueHeading" class="h6 text-primary mb-3">Faculty & Venue</h3>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="faculty" class="form-label required">
-                                    Faculty
-                                </label>
-                                <select name="faculty" id="faculty" class="form-select" required aria-required="true">
-                                    <option value="">Select Faculty</option>
-                                    @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                        {{ $faculty->full_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="faculty_type" class="form-label required">
-                                    Faculty Type
-                                </label>
-                                <select name="faculty_type" id="faculty_type" class="form-select" required
-                                    aria-required="true">
-                                    <option value="">Select Faculty Type</option>
-                                    <option value="1">Internal</option>
-                                    <option value="2">Guest</option>
-                                    <option value="3">Research</option>
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="vanue" class="form-label required">
-                                    Location
-                                </label>
-                                <select name="vanue" id="vanue" class="form-select" required aria-required="true">
-                                    <option value="">Select Location</option>
-                                    @foreach($venueMaster as $loc)
-                                    <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Schedule -->
-                    <section class="mb-4" aria-labelledby="scheduleHeading">
-                        <h3 id="scheduleHeading" class="h6 text-primary mb-3">Schedule</h3>
-
-                        <!-- Shift Type -->
-                        <div class="mb-3">
-                            <label class="form-label d-block required">Shift Type</label>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" name="shift_type" id="normalShift" value="1"
-                                    class="form-check-input" checked aria-controls="shiftSelect">
-                                <label class="form-check-label" for="normalShift">Normal Shift</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" name="shift_type" id="manualShift" value="2"
-                                    class="form-check-input" aria-controls="manualShiftFields">
-                                <label class="form-check-label" for="manualShift">Manual Shift</label>
-                            </div>
-                        </div>
-
-                        <!-- Normal Shift -->
-                        <div id="shiftSelect" class="mb-3">
-                            <label for="shift" class="form-label required">Shift</label>
-                            <select name="shift" id="shift" class="form-select" required aria-required="true">
-                                <option value="">Select Shift</option>
-                                @foreach($classSessionMaster as $shift)
-                                <option value="{{ $shift->shift_time }}">
-                                    {{ $shift->shift_name }} ({{ $shift->shift_time }})
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <!-- Manual Shift -->
-                        <div id="manualShiftFields" class="d-none">
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
-                                        name="fullDayCheckbox" aria-controls="dateTimeFields">
-                                    <label class="form-check-label" for="fullDayCheckbox">
-                                        Full Day Event
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div id="dateTimeFields">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label for="start_time" class="form-label required">Start Time</label>
-                                        <input type="time" name="start_time" id="start_time" class="form-control"
-                                            aria-describedby="startTimeHelp">
-                                        <small id="startTimeHelp" class="form-text text-muted">
-                                            Must be at least 1 hour from now
-                                        </small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="end_time" class="form-label required">End Time</label>
-                                        <input type="time" name="end_time" id="end_time" class="form-control">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Additional Options -->
-                    <section class="pt-3 border-top" aria-labelledby="additionalOptionsHeading">
-                        <h3 id="additionalOptionsHeading" class="h6 text-primary mb-3">Additional Options</h3>
-                        <div class="row">
-                            <div class="col-md-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox"
-                                        id="feedback_checkbox" aria-controls="remarkCheckbox ratingCheckbox">
-                                    <label class="form-check-label" for="feedback_checkbox">Feedback</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" name="remarkCheckbox"
-                                        id="remarkCheckbox" disabled>
-                                    <label class="form-check-label" for="remarkCheckbox">Remark</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" name="ratingCheckbox"
-                                        id="ratingCheckbox" disabled>
-                                    <label class="form-check-label" for="ratingCheckbox">Rating</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1"
-                                        name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                    <label class="form-check-label" for="bio_attendanceCheckbox">Bio Attendance</label>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <!-- Modal Footer -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="submitEventBtn">
-                        <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
-                        <span class="btn-text">Add Event</span>
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- Event Details Modal -->
-<div class="modal fade" id="eventDetails" tabindex="-1" aria-labelledby="eventDetailsTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <div class="d-flex flex-column w-100">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h3 class="modal-title h5 mb-0" id="eventDetailsTitle">
-                            <span id="eventTitle">Event</span>
-                        </h3>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                            aria-label="Close"></button>
-                    </div>
-                    <div class="mt-2">
-                        <p class="mb-0 small">
-                            <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>
-                            <span id="eventDate"></span>
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div class="event-details">
-                    <h4 class="h6 mb-3" id="eventTopic"></h4>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="detail-item">
-                                <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Faculty:</strong>
-                                <span id="eventfaculty" class="ms-1"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d`etail-item">
-                                <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Session:</strong>
-                                <span id="eventclasssession" class="ms-1"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d`etail-item">
-                                <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Group name:</strong>
-                                <span id="eventgroupname" class="ms-1"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="detail-item">
-                                <i class="bi bi-geo-alt-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Venue:</strong>
-                                <span id="eventVanue" class="ms-1"></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 pt-3 border-top">
-                        <div class="d-flex gap-2">
-                            @if(hasRole('Training') || hasRole('Admin'))
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="editEventBtn">
-                                <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" id="deleteEventBtn">
-                                <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
-                            </button>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Confirmation Modal -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="confirmModalTitle">Confirm Action</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p id="confirmMessage">Are you sure you want to delete this event?</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmAction">Delete</button>
-            </div>
-        </div>
-    </div>
-</div>
+@include('admin.calendar.partials.add_edit_events')
+@include('admin.calendar.partials.events_details')
+@include('admin.calendar.partials.confirmation')
 
 <!-- Add CSS for modern look -->
 <style>
-:root {
-    --primary-color: #004a93;
-    --primary-dark: #003366;
-    --primary-light: #e6f0fa;
-    --secondary-color: #af2910;
-    --light-bg: #f8f9fa;
-    --border-color: #dee2e6;
-    --success-color: #198754;
-    --danger-color: #dc3545;
-    --text-dark: #1a1a1a;
-    --text-muted: #6c757d;
-    --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    --shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
 /* Accessibility improvements */
 .visually-hidden {
     position: absolute;
@@ -552,7 +189,8 @@
 }
 
 .fc-daygrid-day.dense-day .fc-event-card .small {
-    display: none; /* show only title to keep compact */
+    display: none;
+    /* show only title to keep compact */
 }
 
 /* Popover styling for "+ more" */
@@ -611,6 +249,7 @@
 .fc-event-card[data-event-type="workshop"] {
     border-left-color: #f6c23e;
 }
+
 /* Improved stacking for multiple events in same day */
 .fc-daygrid-day-frame .fc-event-card {
     margin: 0.25rem 0;
@@ -680,15 +319,135 @@
 
 /* List Event Cards */
 .list-event-card {
-    background: white;
-    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
     transition: var(--transition);
-    border-left: 3px solid var(--primary-color) !important;
+    border-left: 4px solid var(--primary-color) !important;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    cursor: pointer;
 }
 
 .list-event-card:hover {
     transform: translateX(4px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+}
+
+/* Hover tooltip for full details */
+.list-event-card .event-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 280px;
+    background: white;
+    border: 2px solid var(--primary-color);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    padding: 1rem;
+    margin-top: 0.5rem;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.list-event-card:hover .event-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.event-tooltip .tooltip-title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--primary-color);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-light);
+}
+
+.event-tooltip .tooltip-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.event-tooltip .tooltip-row i {
+    color: var(--primary-color);
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+.event-tooltip .tooltip-label {
+    font-weight: 600;
+    color: var(--text-dark);
+    min-width: 60px;
+}
+
+.event-tooltip .tooltip-value {
+    color: var(--text-muted);
+    flex: 1;
+}
+
+.list-event-card .group-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    color: var(--primary-color);
+    background: var(--primary-light);
+    margin-bottom: 0.35rem;
+}
+
+.list-event-card .title {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.list-event-card .meta {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+}
+
+/* Group-specific backgrounds */
+.list-event-card[data-group="Group A"],
+.list-event-card[data-group*="Group A"] {
+    background: #e8e4f3;
+    border-left-color: #8b7ab8 !important;
+}
+
+.list-event-card[data-group="Group B"],
+.list-event-card[data-group*="Group B"] {
+    background: #d4edda;
+    border-left-color: #5cb85c !important;
+}
+
+.list-event-card[data-group*="Group A"] .group-badge {
+    background: #b8a9d6;
+    color: #5a4a7d;
+}
+
+.list-event-card[data-group*="Group B"] .group-badge {
+    background: #8fd19e;
+    color: #2d5f37;
+}
+
+/* Break / Lunch rows */
+.timetable-grid tr.break-row th,
+.timetable-grid tr.break-row td {
+    background: #fff7ec;
+}
+
+.timetable-grid tr.lunch-row th,
+.timetable-grid tr.lunch-row td {
+    background: #fff2f0;
 }
 
 /* Institution name styling */
@@ -768,7 +527,7 @@
 
 .modal-header .modal-title {
     font-weight: 600;
-    color: var(--primary-color);
+    color: white;
 }
 
 .modal-body {
@@ -921,7 +680,9 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Focus indicators for accessibility */
@@ -1152,7 +913,6 @@
         font-size: 0.9rem;
     }
 }
-
 </style>
 
 <!-- Modern JavaScript with improved accessibility -->
@@ -1173,6 +933,15 @@ const CalendarConfig = {
         '#e74a3b', '#858796', '#5a5c69', '#fd7e14',
         '#20c997', '#6f42c1'
     ],
+    // Consistent colors per event type (fallbacks to colors list)
+    eventTypeColors: {
+        lecture: '#4e73df',
+        exam: '#e74a3b',
+        meeting: '#1cc88a',
+        workshop: '#f6c23e',
+        seminar: '#6f42c1',
+        training: '#20c997'
+    },
     minDate: new Date().toISOString().split('T')[0],
     minTime: '09:00',
     maxTime: '18:00'
@@ -1304,16 +1073,18 @@ class CalendarManager {
     }
 
     renderEventContent(arg) {
-        const colorIdx = arg.event.id ?
+        // Normalize type and derive color
+        const type = (arg.event.extendedProps.type || arg.event.extendedProps.event_type || arg.event.extendedProps
+            .session_type || '').toString();
+        const typeAttr = type.toLowerCase();
+        const fallbackIdx = arg.event.id ?
             parseInt(arg.event.id) % CalendarConfig.colors.length :
             arg.event._index % CalendarConfig.colors.length;
-        const cardColor = CalendarConfig.colors[colorIdx];
+        const cardColor = CalendarConfig.eventTypeColors[typeAttr] || CalendarConfig.colors[fallbackIdx];
 
         const topic = arg.event.title || '';
         const venue = arg.event.extendedProps.vanue || '';
         const faculty = arg.event.extendedProps.faculty_name || '';
-        const type = (arg.event.extendedProps.type || arg.event.extendedProps.event_type || arg.event.extendedProps.session_type || '').toString();
-        const typeAttr = type.toLowerCase();
 
         return {
             html: `
@@ -1829,7 +1600,7 @@ class CalendarManager {
 
             if (!remarkChecked && !ratingChecked) {
                 this.showNotification('Please select at least Remark or Rating when Feedback is checked',
-                'warning');
+                    'warning');
                 isValid = false;
             }
         }
@@ -2120,6 +1891,7 @@ class CalendarManager {
         });
 
         tbody.innerHTML = html;
+        this.applyBreakLunchRowStyles();
     }
 
     groupEventsByTime(events) {
@@ -2149,19 +1921,71 @@ class CalendarManager {
         return groups;
     }
 
-    renderListEvent(event) {
-        return `
-            <div class="list-event-card p-2 mb-2 border-start border-3" 
-                 style="border-color: ${CalendarConfig.colors[event.id % CalendarConfig.colors.length]};">
-                <div class="fw-bold small">${event.title}</div>
-                <div class="text-muted x-small">
-                    <i class="bi bi-person me-1"></i>${event.extendedProps.faculty_name || ''}
+    renderListEvent(events) {
+        const arr = Array.isArray(events) ? events : [events];
+        return arr.map(event => {
+            const groupName = event.extendedProps.group_name || event.extendedProps.group || '';
+            const title = event.title || event.extendedProps.topic || '';
+            const faculty = event.extendedProps.faculty_name || '';
+            const venue = event.extendedProps.vanue || event.extendedProps.venue_name || '';
+            const classSession = event.extendedProps.class_session || '';
+            const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+            const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+            const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
+            
+            return `
+                <div class="list-event-card p-2 mb-2" data-group="${groupName}">
+                    ${groupName ? `<div class="group-badge">${groupName}</div>` : ''}
+                    <div class="title">${title}</div>
+                    <div class="meta d-flex align-items-center"><i class="bi bi-geo-alt me-1"></i>${venue}</div>
+                    <div class="meta d-flex align-items-center"><i class="bi bi-person me-1"></i>${faculty}</div>
+                    
+                    <!-- Hover Tooltip -->
+                    <div class="event-tooltip">
+                        <div class="tooltip-title">${title}</div>
+                        ${timeRange ? `
+                        <div class="tooltip-row">
+                            <i class="bi bi-clock"></i>
+                            <span class="tooltip-label">Time:</span>
+                            <span class="tooltip-value">${timeRange}</span>
+                        </div>` : ''}
+                        ${groupName ? `
+                        <div class="tooltip-row">
+                            <i class="bi bi-people"></i>
+                            <span class="tooltip-label">Group:</span>
+                            <span class="tooltip-value">${groupName}</span>
+                        </div>` : ''}
+                        ${venue ? `
+                        <div class="tooltip-row">
+                            <i class="bi bi-geo-alt"></i>
+                            <span class="tooltip-label">Venue:</span>
+                            <span class="tooltip-value">${venue}</span>
+                        </div>` : ''}
+                        ${faculty ? `
+                        <div class="tooltip-row">
+                            <i class="bi bi-person"></i>
+                            <span class="tooltip-label">Faculty:</span>
+                            <span class="tooltip-value">${faculty}</span>
+                        </div>` : ''}
+                        ${classSession ? `
+                        <div class="tooltip-row">
+                            <i class="bi bi-bookmark"></i>
+                            <span class="tooltip-label">Session:</span>
+                            <span class="tooltip-value">${classSession}</span>
+                        </div>` : ''}
+                    </div>
                 </div>
-                <div class="text-muted x-small">
-                    <i class="bi bi-geo-alt me-1"></i>${event.extendedProps.vanue || ''}
-                </div>
-            </div>
-        `;
+            `;
+        }).join('');
+    }
+
+    applyBreakLunchRowStyles() {
+        const rows = document.querySelectorAll('#timetableBody tr');
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes('break time')) row.classList.add('break-row');
+            if (text.includes('lunch')) row.classList.add('lunch-row');
+        });
     }
 
     convertTo24Hour(timeStr) {
