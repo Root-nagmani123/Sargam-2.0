@@ -39078,7 +39078,7 @@ pre.code-view code.hljs {
     width: 230px;
     margin-top: 89.5px;
     padding: 5px;
-    border-radius: 0px 15px 0px 0px;
+    border-radius: 0px 30px 0px 0px;
 }
 
 .side-mini-panel .mini-nav ul.mini-nav-ul {
@@ -39148,7 +39148,7 @@ pre.code-view code.hljs {
     position: absolute;
     top: 90px;
     left: 220px;
-    width: 260px;
+    width: 280px;
     height: calc(100vh - 72px);
 
     /* SVG background panel */
@@ -39158,7 +39158,7 @@ pre.code-view code.hljs {
     display: none;
     padding: 20px 0px 24px 20px;
     z-index: 98;
-    border-radius: 0 20px 20px 0;
+    border-radius: 0 30px 30px 0;
 }
 
 .brand-logo {
@@ -52077,4 +52077,19 @@ h6 {
     top: -81px;
     border-radius: 50%;
     opacity: 20%;
+}
+.navbar-nav .nav-link.active {
+    background-color: #B12923;
+    color: #fbf8f8 !important;
+    font-size: 16px !important;
+    line-height: 24px;
+    font-weight: 500 !important;
+    padding: 20px !important;
+    border-radius: 26px !important;
+    Width: 100% !important;
+    Height: 40px !important;
+    text-align: center !important;
+    justify-content: center !important;
+    transition: all 0.3s ease-in-out;
+    box-shadow: 3px 0 3px 0 rgba(232, 191, 189, 0.8);
 }

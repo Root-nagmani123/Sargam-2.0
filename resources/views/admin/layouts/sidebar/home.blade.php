@@ -16,9 +16,9 @@
                                      <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                          aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                          <div class="simplebar-content" style="padding: 0px;">
-                                            
-                            @include('components.profile')
-                            
+
+                                             @include('components.profile')
+
 
                                              <li class="mini-nav-item {{ request()->routeIs('dashboard') ? 'selected' : '' }}"
                                                  id="mini-1">
@@ -56,26 +56,21 @@
                      </ul>
                  </div>
                  <div class="sidebarmenu">
-                     <div class="brand-logo d-flex align-items-center nav-logo">
-                         <a href="#" class="text-nowrap logo-img">
-                             <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Logo">
-                         </a>
-                     </div>
                      <!-- ---------------------------------- -->
                      <!-- Dashboard -->
                      <!-- ---------------------------------- -->
                      <x-menu.general />
-                     
+
                  </div>
              </div>
          </div>
      </div>
  </aside>
 
-<script>
+ <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Home sidebar script started');
-    
+
     // Wait a bit for sidebarmenu.js to finish
     setTimeout(function() {
         // Scope to ONLY the home tab
@@ -84,30 +79,31 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Home tab not found');
             return;
         }
-        
+
         // Initialize mini-navbar functionality for home ONLY
         const miniNavItems = homeTab.querySelectorAll('.mini-nav .mini-nav-item');
         const sidebarMenus = homeTab.querySelectorAll('.sidebarmenu nav');
-        
+
         console.log('Found mini-nav items in home tab:', miniNavItems.length);
         console.log('Found sidebar menus in home tab:', sidebarMenus.length);
-        
+
         // Function to manually find and mark active links based on current URL
         function markActiveLinks() {
             const currentUrl = window.location.href;
             console.log('Current URL:', currentUrl);
-            
+
             sidebarMenus.forEach(function(nav) {
                 const links = nav.querySelectorAll('.sidebar-link[href]');
                 links.forEach(function(link) {
                     if (link.href === currentUrl) {
-                        console.log('Found matching link:', link.href, 'in nav:', nav.id);
+                        console.log('Found matching link:', link.href, 'in nav:', nav
+                            .id);
                         link.classList.add('active');
                     }
                 });
             });
         }
-        
+
         // Function to keep sidebar menu visible
         function keepSidebarVisible(menuId, duration = 3000) {
             const targetMenu = document.getElementById(menuId);
@@ -126,7 +122,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 200);
         }
-        
+
         // Function to show sidebar menu and save state
         function showSidebarMenu(miniId) {
             console.log('Showing sidebar for miniId:', miniId);
@@ -158,12 +154,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             localStorage.setItem('selectedHomeMiniNav', miniId);
         }
-        
+
         // MutationObserver to keep sidebar visible
         sidebarMenus.forEach(function(nav) {
             const observer = new MutationObserver(function(mutations) {
                 mutations.forEach(function(mutation) {
-                    if (nav.classList.contains('d-block') && nav.style.display !== 'block') {
+                    if (nav.classList.contains('d-block') && nav.style
+                        .display !== 'block') {
                         nav.style.display = 'block';
                     }
                 });
@@ -173,7 +170,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 attributeFilter: ['style', 'class']
             });
         });
-        
+
         // Function to expand collapsed menus containing active links
         function expandActiveMenus() {
             console.log('Expanding active menus');
@@ -184,7 +181,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const activeLinks = nav.querySelectorAll('.sidebar-link.active');
                 console.log('Found active links in', nav.id, ':', activeLinks.length);
                 activeLinks.forEach(function(activeLink) {
-                    console.log('Processing active link:', activeLink.textContent.trim());
+                    console.log('Processing active link:', activeLink.textContent
+                    .trim());
                     let parent = activeLink.closest('.collapse');
                     while (parent) {
                         console.log('Expanding collapse:', parent.id);
@@ -204,17 +202,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             });
         }
-        
+
         // Mark active links first
         markActiveLinks();
-        
+
         // Add click handlers to mini-nav items
         miniNavItems.forEach(function(item) {
             item.addEventListener('click', function() {
                 showSidebarMenu(this.id);
             });
         });
-        
+
         // Function to restore sidebar menu visibility
         function restoreSidebarMenu() {
             // Always remove selected from all mini-nav-items first
@@ -244,10 +242,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-        
+
         // Initial restore on page load
         restoreSidebarMenu();
-        
+
         // Listen for tab switches (Bootstrap)
         document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(function(tabLink) {
             tabLink.addEventListener('shown.bs.tab', function(e) {
@@ -256,11 +254,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
-        
+
         // Listen for window focus
         window.addEventListener('focus', function() {
             setTimeout(restoreSidebarMenu, 100);
         });
     }, 200);
 });
-</script>
+ </script>
