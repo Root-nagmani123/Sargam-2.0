@@ -65,8 +65,8 @@ class CalendarController extends Controller
 
         // Build time slots (example: 09:00 - 18:00 hourly). Adjust as needed.
         $timeSlots = [];
-        $startTime = Carbon::createFromTime(9, 0);
-        $endTime = Carbon::createFromTime(18, 0);
+        $startTime = Carbon::createFromTime(0, 0);
+        $endTime = Carbon::createFromTime(23, 0);
 
         while ($startTime <= $endTime) {
             $timeSlots[] = $startTime->format('H:i'); // 24-hour format
