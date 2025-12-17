@@ -82,8 +82,21 @@
                 <div class="label-sm">Full Name:</div>
                 <div class="data-line">{{ $faculty->full_name }}</div>
 
-                <div class="label-sm mt-3">Faculty Type:</div>
-                <div class="data-line">{{ $faculty->facultyTypeMaster->faculty_type_name }}</div>
+             <div class="row mt-3">
+				<div class="col-md-6">
+					<div class="label-sm">Faculty Type:</div>
+					<div class="data-line">
+						{{ $faculty->facultyTypeMaster->faculty_type_name }}
+					</div>
+				</div>
+
+				<div class="col-md-6">
+					<div class="label-sm">Faculty Code:</div>
+					<div class="data-line">
+						{{ $faculty->faculty_code }}
+					</div>
+				</div>
+			</div>
             </div>
         </div>
 
