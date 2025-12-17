@@ -273,4 +273,182 @@ class FeedbackController extends Controller
 
         return $query;
     }
+
+    public function showFacultyAverage(Request $request)
+    {
+        // Get filter parameters with defaults
+        $programName = $request->input('program_name');
+        $facultyName = $request->input('faculty_name');
+        $fromDate = $request->input('from_date');
+        $toDate = $request->input('to_date');
+        $courseType = $request->input('course_type', 'archived');
+
+        // 1. Get programs from course_master table
+        $programs = DB::table('course_master')
+            ->select('course_name')
+            ->distinct()
+            ->orderBy('course_name')
+            ->pluck('course_name', 'course_name');
+
+        if ($programs->isEmpty()) {
+            $programs = collect(['Phase-I 2024' => 'Phase-I 2024']);
+        }
+
+        // 2. Get faculties from faculty_master
+        $faculties = DB::table('faculty_master')
+            ->select('full_name as name', 'pk')
+            ->orderBy('full_name')
+            ->pluck('name', 'pk');
+
+        if ($faculties->isEmpty()) {
+            // Fallback: Get faculty names from topic_feedback faculty_pk
+            $faculties = DB::table('topic_feedback as tf')
+                ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+                ->select('fm.full_name as name', 'fm.pk')
+                ->distinct()
+                ->orderBy('fm.full_name')
+                ->pluck('name', 'fm.pk');
+        }
+
+        // Set default program if not selected
+        if (!$programName && !$programs->isEmpty()) {
+            $programName = $programs->keys()->first();
+        }
+
+        // 3. Build the main query with CORRECT JOIN
+        $query = DB::table('topic_feedback as tf')
+            ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+            ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk') // FIXED: course_master_pk
+            ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+            ->select(
+                'tf.faculty_pk',
+                'fm.full_name as faculty_name', // Get faculty name directly
+                'tf.topic_name',
+                'cm.course_name as program_name',
+                DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
+                // Presentation rating counts
+                DB::raw('SUM(CASE WHEN tf.presentation = "5" THEN 1 ELSE 0 END) as presentation_5'),
+                DB::raw('SUM(CASE WHEN tf.presentation = "4" THEN 1 ELSE 0 END) as presentation_4'),
+                DB::raw('SUM(CASE WHEN tf.presentation = "3" THEN 1 ELSE 0 END) as presentation_3'),
+                DB::raw('SUM(CASE WHEN tf.presentation = "2" THEN 1 ELSE 0 END) as presentation_2'),
+                DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
+                // Content rating counts (note: tf.content is varchar in your table)
+                DB::raw('SUM(CASE WHEN tf.content = "5" THEN 1 ELSE 0 END) as content_5'),
+                DB::raw('SUM(CASE WHEN tf.content = "4" THEN 1 ELSE 0 END) as content_4'),
+                DB::raw('SUM(CASE WHEN tf.content = "3" THEN 1 ELSE 0 END) as content_3'),
+                DB::raw('SUM(CASE WHEN tf.content = "2" THEN 1 ELSE 0 END) as content_2'),
+                DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1')
+            )
+            ->where('tf.is_submitted', 1)
+            ->whereNotNull('tf.presentation')
+            ->whereNotNull('tf.content')
+            ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name');
+
+        // Apply filters
+        if ($programName && $programName !== 'All Programs') {
+            $query->where('cm.course_name', 'LIKE', '%' . $programName . '%');
+        }
+
+        if ($facultyName && $facultyName !== 'All Faculty') {
+            $query->where('tf.faculty_pk', $facultyName);
+        }
+
+        if ($fromDate) {
+            $query->whereDate('tf.created_date', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('tf.created_date', '<=', $toDate);
+        }
+
+        // For archived courses - filter by end date
+        if ($courseType === 'archived') {
+            $query->whereDate('tt.END_DATE', '<', Carbon::today());
+        }
+
+        // Execute query
+        $feedbackData = $query->get();
+
+        // 4. Process each record to calculate percentages
+        $processedData = $feedbackData->map(function ($item) {
+            // IMPORTANT: Convert counts to integers since they're from SUM() functions
+            $presentation_5 = (int)$item->presentation_5;
+            $presentation_4 = (int)$item->presentation_4;
+            $presentation_3 = (int)$item->presentation_3;
+            $presentation_2 = (int)$item->presentation_2;
+            $presentation_1 = (int)$item->presentation_1;
+
+            $content_5 = (int)$item->content_5;
+            $content_4 = (int)$item->content_4;
+            $content_3 = (int)$item->content_3;
+            $content_2 = (int)$item->content_2;
+            $content_1 = (int)$item->content_1;
+
+            // Calculate presentation percentage
+            $presentationWeightedSum = (5 * $presentation_5) +
+                (4 * $presentation_4) +
+                (3 * $presentation_3) +
+                (2 * $presentation_2) +
+                (1 * $presentation_1);
+
+            $presentationTotal = $presentation_5 + $presentation_4 +
+                $presentation_3 + $presentation_2 +
+                $presentation_1;
+
+            $presentationPercentage = $presentationTotal > 0
+                ? round(($presentationWeightedSum / ($presentationTotal * 5)) * 100, 2)
+                : 0;
+
+            // Calculate content percentage
+            $contentWeightedSum = (5 * $content_5) +
+                (4 * $content_4) +
+                (3 * $content_3) +
+                (2 * $content_2) +
+                (1 * $content_1);
+
+            $contentTotal = $content_5 + $content_4 +
+                $content_3 + $content_2 +
+                $content_1;
+
+            $contentPercentage = $contentTotal > 0
+                ? round(($contentWeightedSum / ($contentTotal * 5)) * 100, 2)
+                : 0;
+
+            return [
+                'faculty_pk' => $item->faculty_pk,
+                'faculty_name' => $item->faculty_name,
+                'topic_name' => $item->topic_name,
+                'program_name' => $item->program_name,
+                'participants' => (int)$item->participants,
+                'presentation_percentage' => $presentationPercentage,
+                'content_percentage' => $contentPercentage,
+                'presentation_counts' => [
+                    '5' => $presentation_5,
+                    '4' => $presentation_4,
+                    '3' => $presentation_3,
+                    '2' => $presentation_2,
+                    '1' => $presentation_1,
+                ],
+                'content_counts' => [
+                    '5' => $content_5,
+                    '4' => $content_4,
+                    '3' => $content_3,
+                    '2' => $content_2,
+                    '1' => $content_1,
+                ]
+            ];
+        });
+
+        return view('admin.feedback.faculty_average', [
+            'feedbackData' => $processedData,
+            'programs' => $programs,
+            'faculties' => $faculties,
+            'currentProgram' => $programName,
+            'currentFaculty' => $facultyName,
+            'fromDate' => $fromDate,
+            'toDate' => $toDate,
+            'courseType' => $courseType,
+            'refreshTime' => now()->format('d-M-Y H:i'),
+        ]);
+    }
 }
