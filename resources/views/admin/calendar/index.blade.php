@@ -162,6 +162,8 @@
 
 .fc-daygrid-day {
     transition: background-color 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
 
 .fc-daygrid-day:hover {
@@ -181,11 +183,13 @@
 .fc-event-card {
     padding: 0.625rem 0.75rem;
     border-radius: 0.5rem;
-    margin: 0.2rem 0.125rem;
+    margin: 0.2rem 0;
     transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
     border-left: 4px solid var(--primary-color);
     background: #fff;
     box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .fc-event-card:hover {
@@ -327,10 +331,17 @@
 }
 
 /* Improved stacking for multiple events in same day */
+.fc-daygrid-day-frame {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
 .fc-daygrid-day-frame .fc-event-card {
     margin: 0.25rem 0;
     background: #fff;
     box-shadow: var(--shadow-sm);
+    flex-shrink: 0;
 }
 
 .fc-daygrid-day-frame .fc-event-card .event-title { font-size: 0.9rem; }
