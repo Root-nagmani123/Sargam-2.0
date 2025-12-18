@@ -382,8 +382,8 @@
                         <label for="status" class="form-label">Status</label>
                         <select class="form-select" id="status" name="status">
                             <option value="">Select status</option>
-                            <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
-                            <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
+                            <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Open</option>
+                            <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Close</option>
                         </select>
                     </div>
                 </div>
@@ -393,6 +393,34 @@
                        <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
                     </div>
                 </div>
+                </div>
+                 <div class="row">
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="from_date" class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="to_date" class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mb-3 d-flex align-items-center gap-2">
+                        <a href="{{ route('memo.discipline.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Clear Filters
+                        </a>
+                    </div>
+                </div>
+                <div class="col-6 text-end">
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                        </button>
+                    </div>
+            </div>
             </div>
             </form>
             <hr>
@@ -456,14 +484,14 @@
                                 <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}" class="badge bg-primary-subtle text-primary ms-2 view-reason" >
                                          View Memo
                                     </a>
-                                  <a class="text-primary d-flex align-items-center view-conversation"
+                                  <a class="text-success d-flex align-items-center view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" 
                                         data-id="{{ $memo->pk }}" data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}"
 >
                                         <i class="material-icons material-symbols-rounded">chat</i>
                                     </a>
                                 @else 
-                                <a class="text-primary d-flex align-items-center view-conversation"
+                                <a class="text-success d-flex align-items-center view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" 
                                         data-id="{{ $memo->pk }}" data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}"
 >

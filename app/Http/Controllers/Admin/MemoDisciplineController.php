@@ -14,27 +14,37 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class MemoDisciplineController extends Controller
 {
  public function index(Request $request)
 {
-    if(hasRole('Student-OT')){
+    // Courses
+    if (hasRole('Student-OT')) {
         $courses = DB::table('student_master_course__map as smcm')
             ->join('course_master as cm', 'smcm.course_master_pk', '=', 'cm.pk')
             ->where('smcm.student_master_pk', Auth::user()->user_id)
             ->select('cm.*')
             ->get();
-    // $courses = CourseMaster::where('active_inactive', 1)->where('end_date', '>', now())->get();
-    }else{
-    $courses = CourseMaster::where('active_inactive', 1)->where('end_date', '>', now())->get();
-
+    } else {
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '>', now())
+            ->get();
     }
 
     // Filters
     $programNameFilter = $request->program_name;
     $statusFilter      = $request->status;
     $searchFilter      = $request->search;
+    $fromDateFilter    = $request->get('from_date');
+    $toDateFilter      = $request->get('to_date');
+
+    // Default today date
+    if (!$fromDateFilter && !$toDateFilter) {
+        $fromDateFilter = Carbon::today()->toDateString();
+        $toDateFilter   = Carbon::today()->toDateString();
+    }
 
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
@@ -42,7 +52,7 @@ class MemoDisciplineController extends Controller
             'student:pk,display_name'
         ])
         ->when(hasRole('Student-OT'), function ($q) use ($courses) {
-            $q->whereIn('course_master_pk', $courses->pluck('pk')->toArray());
+            $q->whereIn('course_master_pk', $courses->pluck('pk'));
         })
         ->when($programNameFilter, function ($q) use ($programNameFilter) {
             $q->where('course_master_pk', $programNameFilter);
@@ -61,18 +71,24 @@ class MemoDisciplineController extends Controller
                     ->orWhere('remarks', 'like', "%{$searchFilter}%");
             });
         })
+        ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
+            $q->whereBetween('date', [$fromDateFilter, $toDateFilter]);
+        })
         ->orderBy('pk', 'desc')
         ->paginate(10)
-        ->appends($request->all()); // pagination me filter preserve
+        ->appends($request->all());
 
     return view('admin.memo_discipline.index', compact(
         'memos',
         'courses',
         'programNameFilter',
         'statusFilter',
-        'searchFilter'
+        'searchFilter',
+        'fromDateFilter',
+        'toDateFilter'
     ));
 }
+
     public function create()
     {
         $activeCourses = CourseMaster::where('active_inactive', 1)
@@ -330,8 +346,11 @@ class MemoDisciplineController extends Controller
         }
 
         DB::commit();
+return redirect()
+    ->route('memo.discipline.index')
+    ->with('success', 'Message sent successfully.');
 
-        return back()->with('success', 'Message sent successfully.');
+        // return back()->with('success', 'Message sent successfully.');
     } catch (\Throwable $e) {
         DB::rollBack();
         return back()->with('error', 'Something went wrong.')->withInput();
