@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\{
     FacultyMDOEscortExceptionViewController,
     OTNoticeMemoViewController,
     FacultyNoticeMemoViewController,
+    NotificationController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -536,17 +537,15 @@ Route::middleware(['auth'])->group(function(){
 })->name('faculty.dashboard');
 
     // Notification Routes
-    Route::prefix('admin/notifications')->name('admin.notifications.')->group(function () {
-        Route::post('/mark-read/{id}', function ($id) {
-            $result = notification()->markAsRead($id);
-            return response()->json(['success' => $result]);
-        })->name('mark-read');
+    Route::prefix('admin/notifications')->name('admin.notifications.')->controller(NotificationController::class)->group(function () {
+        // Mark as read and redirect (new method with redirect)
+        Route::post('/mark-read-redirect/{id}', 'markAsReadAndRedirect')->name('mark-read-redirect');
         
-        Route::post('/mark-all-read', function () {
-            $userId = Auth::user()->user_id ?? 0;
-            $count = notification()->markAllAsRead($userId);
-            return response()->json(['success' => true, 'count' => $count]);
-        })->name('mark-all-read');
+        // Mark as read (legacy method for backward compatibility)
+        Route::post('/mark-read/{id}', 'markAsRead')->name('mark-read');
+        
+        // Mark all as read
+        Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
 

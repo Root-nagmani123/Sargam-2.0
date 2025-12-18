@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 
 class NotificationService
 {
@@ -261,6 +262,104 @@ class NotificationService
         return Notification::where('is_read', 1)
             ->where('created_at', '<', $cutoffDate)
             ->delete();
+    }
+
+    /**
+     * Get redirect URL for a notification based on type and module
+     * 
+     * @param int $notificationPk Notification primary key
+     * @return string|null Redirect URL or null if no mapping found
+     */
+    public function getRedirectUrl(int $notificationPk): ?string
+    {
+        $notification = Notification::find($notificationPk);
+        
+        if (!$notification) {
+            return null;
+        }
+
+        $config = config('notifications', []);
+        $type = strtolower($notification->type ?? '');
+        $moduleName = $notification->module_name ?? '';
+
+        // Try to find route mapping by type and module
+        if (isset($config[$type]) && is_array($config[$type])) {
+            // Check for exact module name match
+            if (isset($config[$type][$moduleName])) {
+                $routeConfig = $config[$type][$moduleName];
+                return $this->buildRouteUrl($routeConfig, $notification);
+            }
+
+            // Try case-insensitive module name match
+            foreach ($config[$type] as $configModuleName => $routeConfig) {
+                if (strtolower($configModuleName) === strtolower($moduleName)) {
+                    return $this->buildRouteUrl($routeConfig, $notification);
+                }
+            }
+        }
+
+        // Fallback to default route
+        if (isset($config['default'])) {
+            return $this->buildRouteUrl($config['default'], $notification);
+        }
+
+        // Ultimate fallback to dashboard
+        return route('admin.dashboard');
+    }
+
+    /**
+     * Build route URL from configuration
+     * 
+     * @param array $routeConfig Route configuration
+     * @param Notification $notification Notification instance
+     * @return string Route URL
+     */
+    protected function buildRouteUrl(array $routeConfig, Notification $notification): string
+    {
+        $routeName = $routeConfig['route'] ?? 'admin.dashboard';
+        $params = $routeConfig['params'] ?? [];
+
+        // Build parameters array
+        $routeParams = [];
+        foreach ($params as $paramName => $sourceField) {
+            if ($sourceField === 'reference_pk') {
+                $routeParams[$paramName] = $notification->reference_pk;
+            } elseif (isset($notification->$sourceField)) {
+                $routeParams[$paramName] = $notification->$sourceField;
+            } elseif (is_string($sourceField) && !empty($sourceField)) {
+                // Static value (e.g., 'type' => 'memo')
+                $routeParams[$paramName] = $sourceField;
+            }
+        }
+
+        // Check if route exists
+        try {
+            if (Route::has($routeName)) {
+                return route($routeName, $routeParams);
+            }
+        } catch (\Exception $e) {
+            // Route doesn't exist or has invalid parameters, fallback to dashboard
+        }
+
+        // Fallback to dashboard if route doesn't exist
+        return route('admin.dashboard');
+    }
+
+    /**
+     * Mark notification as read and get redirect URL
+     * 
+     * @param int $notificationPk Notification primary key
+     * @return array ['success' => bool, 'redirect_url' => string|null]
+     */
+    public function markAsReadAndGetRedirect(int $notificationPk): array
+    {
+        $marked = $this->markAsRead($notificationPk);
+        $redirectUrl = $this->getRedirectUrl($notificationPk);
+
+        return [
+            'success' => $marked,
+            'redirect_url' => $redirectUrl,
+        ];
     }
 }
 
