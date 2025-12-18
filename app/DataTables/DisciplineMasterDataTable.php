@@ -15,7 +15,7 @@ class DisciplineMasterDataTable extends DataTable
             ->addIndexColumn()
 
             ->editColumn('discipline_name', fn($row) => $row->discipline_name ?? 'N/A')
-            ->editColumn('mark_diduction', fn($row) => $row->mark_diduction ?? '0')
+            ->editColumn('mark_deduction', fn($row) => $row->mark_deduction ?? '0')
 
             ->addColumn('status', function ($row) {
                  return '<div class="form-check form-switch d-inline-block">
@@ -57,7 +57,7 @@ class DisciplineMasterDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('S.No'),
             Column::make('course_name')->title('Course'),
             Column::make('discipline_name')->title('Discipline'),
-            Column::make('mark_diduction')->title('Mark Deduction'),
+            Column::make('mark_deduction')->title('Mark Deduction'),
             Column::computed('status')->title('Status'),
             Column::computed('actions')->title('Actions'),
         ];
