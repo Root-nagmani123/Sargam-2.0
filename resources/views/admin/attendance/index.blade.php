@@ -163,9 +163,17 @@ hr {
                                 <th class="col">Action</th>
                             </tr>
                         </thead>
+                        <tbody>
+                            <tr id="defaultMessageRow">
+                                <td colspan="9" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <p class="mb-2" style="font-size: 1rem;">Apply filter to mark attendance.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
-                </di>
             </div>
         </div>
 
