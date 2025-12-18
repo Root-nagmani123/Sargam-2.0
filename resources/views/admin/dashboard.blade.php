@@ -443,7 +443,7 @@ h3.fw-bold {
     left: -100%;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
     transition: left 0.5s ease;
 }
 
@@ -478,14 +478,22 @@ h3.fw-bold {
 
 /* Add subtle pulse animation to stat values */
 @keyframes pulseValue {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
 }
 
 .stat-card-modern:hover .stat-card-value-modern {
     animation: pulseValue 0.6s ease;
     color: var(--primary-color);
 }
+
 /* Modern card style matching the reference image */
 .stat-card.clean-style {
     display: flex;
@@ -494,14 +502,14 @@ h3.fw-bold {
     background: #ffffff;
     padding: 20px 22px;
     border-radius: 16px;
-    border: 1px solid rgba(0,0,0,0.06);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: all 0.2s ease;
 }
 
 .stat-card.clean-style:hover {
     transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
 }
 
 /* Icon container */
@@ -520,10 +528,21 @@ h3.fw-bold {
 }
 
 /* Colors */
-.icon-blue { background: #e5edff; }
-.icon-green { background: #e6f7ec; }
-.icon-yellow { background: #fff4e2; }
-.icon-purple { background: #f1ebff; }
+.icon-blue {
+    background: #e5edff;
+}
+
+.icon-green {
+    background: #e6f7ec;
+}
+
+.icon-yellow {
+    background: #fff4e2;
+}
+
+.icon-purple {
+    background: #f1ebff;
+}
 
 /* Texts */
 .stat-label {
@@ -543,74 +562,79 @@ h3.fw-bold {
     font-size: 13px;
     margin-top: 3px;
 }
-table>thead{
-    background-color:#ffffff !important;
-}
 
+table>thead {
+    background-color: #ffffff !important;
+}
 </style>
 
 
 <div class="container-fluid p-0">
 
-<div class="row g-4 mb-4">
+    <div class="row g-4 mb-4">
 
-    <!-- Total Active Courses -->
-    <div class="col-lg-3 col-md-6 col-sm-12">
-        <div class="stat-card clean-style">
-            <div class="stat-icon icon-blue">
-                <img src="{{ asset('images/groups.svg') }}" alt="">
-            </div>
-            <div>
-                <div class="stat-label">Total Active Courses</div>
-                <div class="stat-value">{{ $totalActiveCourses }}</div>
-                <div class="stat-change text-primary">+12% from last month</div>
-            </div>
+        <!-- Total Active Courses -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('programme.index') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-blue">
+                        <img src="{{ asset('images/groups.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Total Active Courses</div>
+                        <div class="stat-value">{{ $totalActiveCourses }}</div>
+                    </div>
+                </div>
+            </a>
         </div>
-    </div>
 
-    <!-- Upcoming Courses -->
-    <div class="col-lg-3 col-md-6 col-sm-12">
-        <div class="stat-card clean-style">
-            <div class="stat-icon icon-green">
-                <img src="{{ asset('images/teachers.svg') }}" alt="">
-            </div>
-            <div>
-                <div class="stat-label">Upcoming Courses</div>
-                <div class="stat-value">{{ $upcomingCourses }}</div>
-                <div class="stat-change text-success">+3% from last month</div>
-            </div>
+        <!-- Upcoming Courses -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('programme.index') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-green">
+                        <img src="{{ asset('images/teachers.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Upcoming Courses</div>
+                        <div class="stat-value">{{ $upcomingCourses }}</div>
+                    </div>
+                </div>
+            </a>
         </div>
-    </div>
 
-    <!-- Total Guest Faculty -->
-    <div class="col-lg-3 col-md-6 col-sm-12">
-        <div class="stat-card clean-style">
-            <div class="stat-icon icon-yellow">
-                <img src="{{ asset('images/classes.svg') }}" alt="">
-            </div>
-            <div>
-                <div class="stat-label">Total Guest Faculty</div>
-                <div class="stat-value">{{ $total_guest_faculty }}</div>
-                <div class="stat-change text-warning">+2 new</div>
-            </div>
+        <!-- Total Guest Faculty -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('faculty.index') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-yellow">
+                        <img src="{{ asset('images/classes.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Total Guest Faculty</div>
+                        <div class="stat-value">{{ $total_guest_faculty }}</div>
+                    </div>
+                </div>
+            </a>
         </div>
-    </div>
 
-    <!-- Total Inhouse Faculty -->
-    <div class="col-lg-3 col-md-6 col-sm-12">
-        <div class="stat-card clean-style">
-            <div class="stat-icon icon-purple">
-                <img src="{{ asset('images/attendance.svg') }}" alt="">
-            </div>
-            <div>
-                <div class="stat-label">Total Inhouse Faculty</div>
-                <div class="stat-value">{{ $total_internal_faculty }}</div>
-                <div class="stat-change text-info">+2.1% improvement</div>
-            </div>
+        <!-- Total Inhouse Faculty -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('faculty.index') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-purple">
+                        <img src="{{ asset('images/attendance.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Total Inhouse Faculty</div>
+                        <div class="stat-value">{{ $total_internal_faculty }}</div>
+                    </div>
+                </div>
+            </a>
+
         </div>
-    </div>
 
-</div>
+    </div>
 
     <div class="row g-4 mb-4">
         <!-- LEFT CONTENT -->
@@ -621,9 +645,10 @@ table>thead{
                 </div>
                 <div class="content-card-body-modern">
                     <!-- Admin Summary / Notifications -->
-                    <section aria-labelledby="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}" class="mb-5">
-                        <h3 id="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}" class="section-header-modern"
-                            style="font-size:1.25rem;line-height:1.4;">
+                    <section aria-labelledby="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}"
+                        class="mb-5">
+                        <h3 id="{{ hasRole('Admin') ? 'admin-summary-title' : 'notifications-title' }}"
+                            class="section-header-modern" style="font-size:1.25rem;line-height:1.4;">
                             {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
                         </h3>
 
@@ -631,32 +656,33 @@ table>thead{
 
                         <div class="content-text">
                             @php
-                                $user = Auth::user();
-                                $notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
+                            $user = Auth::user();
+                            $notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
                             @endphp
-                            
+
                             @if($notifications->isEmpty())
-                                <p class="text-muted">No notifications available.</p>
+                            <p class="text-muted">No notifications available.</p>
                             @else
-                                @foreach($notifications as $notification)
-                                    <div class="mb-3 pb-3 border-bottom">
-                                        <div class="d-flex justify-content-between align-items-start mb-2">
-                                            <h6 class="fw-bold mb-1" style="font-size: 1rem; color: {{ $notification->is_read ? '#6c757d' : '#1a1a1a' }};">
-                                                {{ $notification->title }}
-                                                @if(!$notification->is_read)
-                                                    <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">New</span>
-                                                @endif
-                                            </h6>
-                                            <small class="text-muted">{{ $notification->created_at->format('d M, Y') }}</small>
-                                        </div>
-                                        <p class="mb-1" style="font-size: 0.9rem; line-height: 1.5; color: #333;">
-                                            {{ $notification->message }}
-                                        </p>
-                                        <small class="text-muted">
-                                            <span class="badge bg-secondary">{{ $notification->module_name }}</span>
-                                        </small>
-                                    </div>
-                                @endforeach
+                            @foreach($notifications as $notification)
+                            <div class="mb-3 pb-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="fw-bold mb-1"
+                                        style="font-size: 1rem; color: {{ $notification->is_read ? '#6c757d' : '#1a1a1a' }};">
+                                        {{ $notification->title }}
+                                        @if(!$notification->is_read)
+                                        <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">New</span>
+                                        @endif
+                                    </h6>
+                                    <small class="text-muted">{{ $notification->created_at->format('d M, Y') }}</small>
+                                </div>
+                                <p class="mb-1" style="font-size: 0.9rem; line-height: 1.5; color: #333;">
+                                    {{ $notification->message }}
+                                </p>
+                                <small class="text-muted">
+                                    <span class="badge bg-secondary">{{ $notification->module_name }}</span>
+                                </small>
+                            </div>
+                            @endforeach
                             @endif
                         </div>
                     </section>
@@ -686,44 +712,40 @@ table>thead{
         <div class="col-lg-5">
 
             <div class="card shadow-sm border-0 rounded-4 h-100">
- <!-- Notice Header -->
-                    <div class="card-header bg-danger text-white rounded-top-4 py-3">
-                        <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
-                            <i class="bi bi-megaphone-fill me-2"></i>
-                            Notices
-                        </h5>
-                    </div>
+                <!-- Notice Header -->
+                <div class="card-header bg-danger text-white rounded-top-4 py-3">
+                    <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
+                        <i class="bi bi-megaphone-fill me-2"></i>
+                        Notices
+                    </h5>
+                </div>
 
-                    <!-- Notice Body -->
-                    <div class="card-body" style="max-height:600px; overflow-y:auto;">
-                        @php $notices = get_notice_notification_by_role() @endphp
-                        @foreach($notices as $notice)
-                        @php //print_r($notice); @endphp
-                        <div class="mb-4 pb-2 border-bottom">
-                            <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
-                            <p class="mb-1" style="font-size: 14px; line-height: 1.5; color: #333;">
-                                {!! Str::limit($notice->description, 100) !!}
-                            </p>
-                            <small class="text-muted">Posted on:
-                                {{ date('d M, Y', strtotime($notice->created_at)) }}</small>
-                            @if($notice->document)
-                            <div class="mt-2">
-                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
-                                    class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-download me-1"></i>View Attachment
-                                </a>
-                            </div>
-                            @endif
-                          {{--  @if($notice->description != '')
-                            {!! $notice->description !!}
-                            @endif
-                            --}}
-
+                <!-- Notice Body -->
+                <div class="card-body" style="max-height:600px; overflow-y:auto;">
+                    @php $notices = get_notice_notification_by_role() @endphp
+                    @foreach($notices as $notice)
+                    @php //print_r($notice); @endphp
+                    <div class="mb-4 pb-2 border-bottom">
+                        <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
+                        <p class="mb-1" style="font-size: 14px; line-height: 1.5; color: #333;">
+                            {!! Str::limit($notice->description, 100) !!}
+                        </p>
+                        <small class="text-muted">Posted on:
+                            {{ date('d M, Y', strtotime($notice->created_at)) }}</small>
+                        @if($notice->document)
+                        <div class="mt-2">
+                            <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
+                                class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download me-1"></i>View Attachment
+                            </a>
                         </div>
-                        @endforeach
-
+                        @endif
 
                     </div>
+                    @endforeach
+
+
+                </div>
 
             </div>
         </div>

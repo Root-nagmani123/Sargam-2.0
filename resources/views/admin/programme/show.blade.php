@@ -58,10 +58,10 @@
     }
 
     .photo-frame img {
-      border-radius: 0.5rem;
-      width: 140px;
-      height: 140px;
-      object-fit: cover;
+     border-radius: 0.5rem;
+    width: 200px;
+    height: 200px;
+    object-fit: fill;
     }
 
     .role-badge {
@@ -181,7 +181,7 @@
                 @if($assistant['photo'])
                   <img src="{{ asset('storage/' . $assistant['photo']) }}"
                        alt="Photo of {{ $assistant['name'] }}"
-                       onerror="this.onerror=null; this.src='{{ asset('images/user-placeholder.png') }}';">
+                       onerror="this.onerror=null; this.src='{{ asset('images/user-placeholder.png') }}';" class="img-fluid">
                 @else
                   <img src="{{ asset('images/user-placeholder.png') }}" alt="No photo available">
                 @endif
