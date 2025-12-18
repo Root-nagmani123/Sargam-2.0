@@ -1537,6 +1537,9 @@ function drawAttendanceTable() {
         attendanceTable.destroy(); // destroy previous instance
     }
 
+    // Hide default message when table is initialized
+    $('#defaultMessageRow').hide();
+
     attendanceTable = $('#attendanceTable').DataTable({
         processing: true,
         serverSide: true,
