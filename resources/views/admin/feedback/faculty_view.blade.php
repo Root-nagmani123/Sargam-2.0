@@ -126,6 +126,9 @@
         }
     </style>
 
+    <!-- Add CSRF token meta tag -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <div class="container-fluid py-3">
         <x-breadcrum title="Faculty Feedback with Comments Admin View"></x-breadcrum>
         <div class="row g-3">
@@ -135,7 +138,12 @@
                 <div class="card filter-card">
                     <div class="card-header">Options</div>
                     <div class="card-body">
-                        <form method="GET" action="{{ route('admin.feedback.faculty_view') }}" id="filterForm">
+                        <!-- Change form method to POST -->
+                        <form method="POST" action="{{ route('admin.feedback.faculty_view') }}" id="filterForm">
+                            @csrf
+                            <!-- Add hidden page input -->
+                            <input type="hidden" name="page" id="pageInput" value="{{ $currentPage ?? 1 }}">
+                            
                             <fieldset class="mb-3">
                                 <legend class="fs-6 fw-semibold">Course Status</legend>
                                 <div class="form-check">
@@ -154,6 +162,10 @@
                                 <label class="form-label">Program Name</label>
                                 <select class="form-select" name="program_id" id="programSelect">
                                     <option value="">All Programs</option>
+                                    @php
+                                        $programs = $programs ?? collect([]);
+                                        $currentProgram = $currentProgram ?? '';
+                                    @endphp
                                     @foreach ($programs as $key => $program)
                                         <option value="{{ $key }}" {{ $currentProgram == $key ? 'selected' : '' }}>
                                             {{ $program }}
@@ -173,11 +185,14 @@
                             </div>
 
                             <fieldset class="mb-3">
+                                @php
+                                    $selectedFacultyTypes = $selectedFacultyTypes ?? [];
+                                @endphp
                                 <legend class="fs-6 fw-semibold">Faculty Type</legend>
                                 <div class="form-check">
                                     <input class="form-check-input faculty-type-checkbox" type="checkbox"
                                         name="faculty_type[]" value="2" id="faculty_type_guest"
-                                        {{ in_array('2', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
+                                        {{ in_array('2', $selectedFacultyTypes) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="faculty_type_guest">
                                         Guest
                                     </label>
@@ -185,7 +200,7 @@
                                 <div class="form-check">
                                     <input class="form-check-input faculty-type-checkbox" type="checkbox"
                                         name="faculty_type[]" value="1" id="faculty_type_internal"
-                                        {{ in_array('1', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
+                                        {{ in_array('1', $selectedFacultyTypes) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="faculty_type_internal">
                                         Internal
                                     </label>
@@ -200,7 +215,10 @@
 
                                 <!-- Suggestions dropdown -->
                                 <div class="suggestions-list" id="facultySuggestions">
-                                    @if (isset($facultySuggestions) && $facultySuggestions->isNotEmpty())
+                                    @php
+                                        $facultySuggestions = $facultySuggestions ?? collect([]);
+                                    @endphp
+                                    @if ($facultySuggestions->isNotEmpty())
                                         @foreach ($facultySuggestions as $faculty)
                                             <div class="suggestion-item" data-value="{{ $faculty->full_name }}">
                                                 {{ $faculty->full_name }}
@@ -249,6 +267,12 @@
 
                         <!-- Content Container -->
                         <div id="contentContainer">
+                            @php
+                                $feedbackData = $feedbackData ?? collect([]);
+                                $currentPage = $currentPage ?? 1;
+                                $totalRecords = $totalRecords ?? 0;
+                                $totalPages = $totalPages ?? 0;
+                            @endphp
                             @if ($feedbackData->isEmpty())
                                 <div class="alert alert-info text-center">
                                     No feedback data found for the selected filters.
@@ -258,21 +282,21 @@
                                     <div class="feedback-section mb-4">
                                         <!-- META INFO -->
                                         <div class="text-center mb-4">
-                                            <p class="mb-1"><strong>Course:</strong> {{ $data['program_name'] }}
+                                            <p class="mb-1"><strong>Course:</strong> {{ $data['program_name'] ?? '' }}
                                                 @if(isset($data['course_status']))
                                                     <span class="faculty-type-badge ms-1">{{ $data['course_status'] }}</span>
                                                 @endif
                                             </p>
                                             <p class="mb-1">
-                                                <strong>Faculty:</strong> {{ $data['faculty_name'] }}
-                                                <span class="faculty-type-badge ms-2">{{ $data['faculty_type'] }}</span>
+                                                <strong>Faculty:</strong> {{ $data['faculty_name'] ?? '' }}
+                                                <span class="faculty-type-badge ms-2">{{ $data['faculty_type'] ?? '' }}</span>
                                             </p>
-                                            <p class="mb-1"><strong>Topic:</strong> {{ $data['topic_name'] }}</p>
-                                            @if ($data['start_date'])
+                                            <p class="mb-1"><strong>Topic:</strong> {{ $data['topic_name'] ?? '' }}</p>
+                                            @if (!empty($data['start_date']))
                                                 <p class="mb-0">
                                                     <strong>Lecture Date:</strong>
                                                     {{ \Carbon\Carbon::parse($data['start_date'])->format('d-M-Y') }}
-                                                    @if ($data['end_date'])
+                                                    @if (!empty($data['end_date']))
                                                         ({{ \Carbon\Carbon::parse($data['start_date'])->format('H:i') }} –
                                                         {{ \Carbon\Carbon::parse($data['end_date'])->format('H:i') }})
                                                     @endif
@@ -296,49 +320,49 @@
                                                     <tr>
                                                         <th class="rating-header" style="color:#af2910 !important;">
                                                             Excellent</th>
-                                                        <td>{{ $data['content_counts']['5'] }}</td>
-                                                        <td>{{ $data['presentation_counts']['5'] }}</td>
+                                                        <td>{{ $data['content_counts']['5'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['5'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Very Good -->
                                                     <tr>
                                                         <th class="rating-header" style="color:#af2910 !important;">Very
                                                             Good</th>
-                                                        <td>{{ $data['content_counts']['4'] }}</td>
-                                                        <td>{{ $data['presentation_counts']['4'] }}</td>
+                                                        <td>{{ $data['content_counts']['4'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['4'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Good -->
                                                     <tr>
                                                         <th class="rating-header" style="color:#af2910 !important;">Good
                                                         </th>
-                                                        <td>{{ $data['content_counts']['3'] }}</td>
-                                                        <td>{{ $data['presentation_counts']['3'] }}</td>
+                                                        <td>{{ $data['content_counts']['3'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['3'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Average -->
                                                     <tr>
                                                         <th class="rating-header" style="color:#af2910 !important;">
                                                             Average</th>
-                                                        <td>{{ $data['content_counts']['2'] }}</td>
-                                                        <td>{{ $data['presentation_counts']['2'] }}</td>
+                                                        <td>{{ $data['content_counts']['2'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['2'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Below Average -->
                                                     <tr>
                                                         <th class="rating-header" style="color:#af2910 !important;">Below
                                                             Average</th>
-                                                        <td>{{ $data['content_counts']['1'] }}</td>
-                                                        <td>{{ $data['presentation_counts']['1'] }}</td>
+                                                        <td>{{ $data['content_counts']['1'] ?? 0 }}</td>
+                                                        <td>{{ $data['presentation_counts']['1'] ?? 0 }}</td>
                                                     </tr>
                                                     <!-- Percentage -->
                                                     <tr class="fw-semibold">
                                                         <th class="rating-header" style="color:#af2910 !important;">
                                                             Percentage</th>
                                                         <td class="percentage-cell">
-                                                            {{ number_format($data['content_percentage'], 2) }}%</td>
+                                                            {{ number_format($data['content_percentage'] ?? 0, 2) }}%</td>
                                                         <td class="percentage-cell">
-                                                            {{ number_format($data['presentation_percentage'], 2) }}%</td>
+                                                            {{ number_format($data['presentation_percentage'] ?? 0, 2) }}%</td>
                                                     </tr>
                                                 </tbody>
                                             </table>
-                                            <small>* is defined as Total Student Count: {{ $data['participants'] }}</small>
+                                            <small>* is defined as Total Student Count: {{ $data['participants'] ?? 0 }}</small>
                                         </div>
 
                                         <!-- REMARKS -->
@@ -421,6 +445,7 @@
             const courseTypeRadios = document.querySelectorAll('.course-type-radio');
             const programSelect = document.getElementById('programSelect');
             const resetButton = document.getElementById('resetButton');
+            const pageInput = document.getElementById('pageInput');
             let debounceTimer;
 
             // Function to reload programs based on course type
@@ -428,17 +453,11 @@
                 const courseType = document.querySelector('input[name="course_type"]:checked')?.value || 'archived';
                 
                 // Show loading state for program dropdown
-                const originalValue = programSelect.value;
                 programSelect.innerHTML = '<option value="">Loading programs...</option>';
                 programSelect.disabled = true;
                 
-                // Trigger the form submission which will reload everything including programs
-                loadFeedbackData();
-                
-                // After loading, re-enable the dropdown (it will be populated by the AJAX response)
-                setTimeout(() => {
-                    programSelect.disabled = false;
-                }, 1000);
+                // Reset to page 1 when course type changes
+                goToPage(1);
             }
 
             // Show/hide suggestions based on faculty type selection
@@ -463,25 +482,29 @@
 
             // Fetch faculty suggestions from server
             function fetchFacultySuggestions(selectedTypes, searchTerm = '') {
-                // Create form data to properly handle array
-                const formData = new FormData();
+                const params = new URLSearchParams();
+                
                 selectedTypes.forEach(type => {
-                    formData.append('faculty_type[]', type);
+                    params.append('faculty_type[]', type);
                 });
+                
                 if (searchTerm) {
-                    formData.append('faculty_name', searchTerm);
+                    params.append('faculty_name', searchTerm);
                 }
-                formData.append('_token', '{{ csrf_token() }}');
 
-                fetch(`{{ route('feedback.faculty_suggestions') }}`, {
-                    method: 'POST',
-                    body: formData,
+                fetch(`{{ route('feedback.faculty_suggestions') }}?${params.toString()}`, {
+                    method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Accept': 'application/json'
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success && data.faculties && data.faculties.length > 0) {
                         suggestionsList.innerHTML = '';
@@ -499,7 +522,7 @@
                             item.addEventListener('click', function() {
                                 facultySearch.value = this.getAttribute('data-value');
                                 suggestionsList.style.display = 'none';
-                                loadFeedbackData();
+                                goToPage(1); // Reset to page 1
                             });
 
                             suggestionsList.appendChild(item);
@@ -551,14 +574,14 @@
                 checkbox.addEventListener('change', function() {
                     facultySearch.value = ''; // Clear faculty search when type changes
                     updateFacultySuggestions();
-                    loadFeedbackData();
+                    goToPage(1); // Reset to page 1
                 });
             });
 
-            // Form submission via AJAX
+            // Form submission via AJAX - prevent default and handle via AJAX
             filterForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                loadFeedbackData();
+                goToPage(1); // Always start from page 1 on form submit
             });
 
             // Reset button - reset form without page refresh
@@ -574,129 +597,134 @@
                 suggestionsList.innerHTML = '';
                 suggestionsList.style.display = 'none';
 
+                // Reset program dropdown to show all programs
+                programSelect.innerHTML = '<option value="">Loading programs...</option>';
+                programSelect.disabled = true;
+
+                // Reset page to 1
+                pageInput.value = 1;
+
                 // Load data with reset filters (go to page 1)
                 goToPage(1);
             });
 
-            // Auto-load on filter change (except course type which is handled separately)
+            // Auto-load on filter change
             const filterInputs = document.querySelectorAll('#filterForm select[name="program_id"], #filterForm input[type="date"]');
             filterInputs.forEach(input => {
                 input.addEventListener('change', function() {
-                    // When filters change, go back to page 1
-                    loadFeedbackData();
+                    goToPage(1); // Reset to page 1 when filters change
                 });
             });
 
-            // Load initial data
-            loadFeedbackData();
+            // Load initial data with current page
+            loadFeedbackData({{ $currentPage ?? 1 }});
         });
 
         // Function to load feedback data with current filters
-        function loadFeedbackData() {
+        function loadFeedbackData(page = 1) {
             const loadingSpinner = document.getElementById('loadingSpinner');
             const contentContainer = document.getElementById('contentContainer');
             const programSelect = document.getElementById('programSelect');
             const form = document.getElementById('filterForm');
+            const pageInput = document.getElementById('pageInput');
 
             loadingSpinner.style.display = 'block';
             contentContainer.style.display = 'none';
 
+            // Update hidden page input
+            pageInput.value = page;
+
+            // Create FormData for POST request
             const formData = new FormData(form);
-            const params = new URLSearchParams();
-            
-            // Convert form data to URL parameters
-            for (const [key, value] of formData) {
-                if (key === 'program_id') {
-                    // Keep program_id as is
-                    params.append(key, value);
-                } else if (Array.isArray(value)) {
-                    value.forEach(val => params.append(key + '[]', val));
-                } else {
-                    params.append(key, value);
+
+            // Add CSRF token
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            if (csrfToken) {
+                formData.append('_token', csrfToken);
+            }
+
+            fetch(`{{ route('admin.feedback.faculty_view') }}`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html'
                 }
-            }
-
-            // Keep current page if it exists in URL (for pagination)
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentPage = urlParams.get('page');
-            if (currentPage) {
-                params.append('page', currentPage);
-            }
-
-            fetch(`{{ route('admin.feedback.faculty_view') }}?${params.toString()}`)
-                .then(response => response.text())
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-                    
-                    // Update programs dropdown
-                    const newProgramSelect = doc.getElementById('programSelect');
-                    if (newProgramSelect) {
-                        const currentProgramId = programSelect.value;
-                        programSelect.innerHTML = newProgramSelect.innerHTML;
-                        // Try to preserve the selected program
-                        if (currentProgramId) {
-                            const optionExists = Array.from(programSelect.options).some(opt => opt.value === currentProgramId);
-                            if (optionExists) {
-                                programSelect.value = currentProgramId;
-                            }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Update programs dropdown
+                const newProgramSelect = doc.getElementById('programSelect');
+                if (newProgramSelect) {
+                    const currentProgramId = programSelect.value;
+                    programSelect.innerHTML = newProgramSelect.innerHTML;
+                    // Try to preserve the selected program
+                    if (currentProgramId) {
+                        const optionExists = Array.from(programSelect.options).some(opt => opt.value === currentProgramId);
+                        if (optionExists) {
+                            programSelect.value = currentProgramId;
                         }
                     }
-                    
-                    // Update content
-                    const newContent = doc.querySelector('#contentContainer');
-                    const newRefreshTime = doc.querySelector('.card-header small');
+                    programSelect.disabled = false;
+                }
+                
+                // Update content
+                const newContent = doc.querySelector('#contentContainer');
+                const newRefreshTime = doc.querySelector('.card-header small');
 
-                    if (newContent) {
-                        contentContainer.innerHTML = newContent.innerHTML;
+                if (newContent) {
+                    contentContainer.innerHTML = newContent.innerHTML;
+                }
+
+                if (newRefreshTime) {
+                    const refreshElement = document.querySelector('.card-header small');
+                    if (refreshElement) {
+                        refreshElement.textContent = newRefreshTime.textContent;
                     }
+                }
 
-                    if (newRefreshTime) {
-                        document.querySelector('.card-header small').textContent = newRefreshTime.textContent;
-                    }
+                // Update page input with current page from response
+                const newPageInput = doc.getElementById('pageInput');
+                if (newPageInput) {
+                    pageInput.value = newPageInput.value;
+                }
 
-                    // Update URL without reloading page
-                    window.history.pushState({}, '', `{{ route('admin.feedback.faculty_view') }}?${params.toString()}`);
+                // Update URL to clean version without parameters
+                const cleanUrl = `{{ route('admin.feedback.faculty_view') }}`;
+                if (window.location.href !== cleanUrl) {
+                    window.history.replaceState({}, '', cleanUrl);
+                }
 
-                    loadingSpinner.style.display = 'none';
-                    contentContainer.style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('Error loading feedback data:', error);
-                    loadingSpinner.style.display = 'none';
-                    contentContainer.style.display = 'block';
-                    contentContainer.innerHTML =
-                        '<div class="alert alert-danger text-center">Error loading data. Please try again.</div>';
-                });
+                loadingSpinner.style.display = 'none';
+                contentContainer.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error loading feedback data:', error);
+                loadingSpinner.style.display = 'none';
+                contentContainer.style.display = 'block';
+                contentContainer.innerHTML =
+                    '<div class="alert alert-danger text-center">Error loading data. Please try again.</div>';
+            });
         }
 
         // Simple pagination function - go to specific page
         function goToPage(pageNumber) {
-            const form = document.getElementById('filterForm');
-            const formData = new FormData(form);
-            const params = new URLSearchParams();
-            
-            // Add all form data
-            for (const [key, value] of formData) {
-                if (Array.isArray(value)) {
-                    value.forEach(val => params.append(key + '[]', val));
-                } else {
-                    params.append(key, value);
-                }
-            }
-            
-            // Add page number
-            params.append('page', pageNumber);
-            
-            // Update URL and load data
-            const newUrl = `{{ route('admin.feedback.faculty_view') }}?${params.toString()}`;
-            window.history.pushState({}, '', newUrl);
-            loadFeedbackData();
+            loadFeedbackData(pageNumber);
         }
 
         // Handle browser back/forward buttons
         window.addEventListener('popstate', function() {
-            loadFeedbackData();
+            // Since we're not updating URL with parameters, just reload current page
+            const pageInput = document.getElementById('pageInput');
+            loadFeedbackData(parseInt(pageInput.value) || 1);
         });
     </script>
 @endsection
