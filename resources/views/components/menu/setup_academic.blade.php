@@ -273,36 +273,39 @@
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="otCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
-                                        <span class="hide-menu">My Time Table</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('attendance.user_attendance.index') }}">
-                                        <span class="hide-menu">My Attendance</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('ot.mdo.escrot.exemption.view') }}">
-                                        <span class="hide-menu">MDO/Escort Duty</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('medical.exception.ot.view') }}">
-                                        <span class="hide-menu">Medical Exemption</span>
-                                    </a></li>
-                                {{--<li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
-                                <span class="hide-menu">Memo/Notice activety</span>
-                                </a></li>--}}
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('memo.notice.management.user') }}">
-                                        <span class="hide-menu">Memo/Notice action</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('feedback.get.studentFeedback') }}">
-                                        <span class="hide-menu">Session Feedback</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
-                                        <span class="hide-menu">Peer Evaluation</span>
-                                    </a></li>
+                             <ul class="collapse list-unstyled ps-3" id="otCollapse">
+                               <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                                    <span class="hide-menu">My Time Table</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link"
+                                    href="{{ route('attendance.user_attendance.index') }}">
+                                    <span class="hide-menu">My Attendance</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link"
+                                    href="{{ route('ot.mdo.escrot.exemption.view') }}">
+                                    <span class="hide-menu">MDO/Escort Duty</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link"
+                                    href="{{ route('medical.exception.ot.view') }}">
+                                    <span class="hide-menu">Medical Exemption</span>
+                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.discipline.index') }}">
+                                    <span class="hide-menu">Displine Memo Action</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
+                                    <span class="hide-menu">Memo/Notice activety</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.notice.management.user') }}">
+                                    <span class="hide-menu">Memo/Notice action</span>
+                                </a></li>
+                                
+                            <li class="sidebar-item"><a class="sidebar-link"
+                                    href="{{ route('feedback.get.studentFeedback') }}">
+                                    <span class="hide-menu">Session Feedback</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
+                                    <span class="hide-menu">Peer Evaluation</span>
+                                </a></li>
                             </ul>
                             @endif
                         </ul>

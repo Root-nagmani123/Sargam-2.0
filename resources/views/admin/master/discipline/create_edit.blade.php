@@ -76,12 +76,12 @@
                             </label>
                             <input type="number"
                                    step="0.01"
-                                   name="mark_diduction"
+                                   name="mark_deduction"
                                    class="form-control"
-                                   value="{{ old('mark_diduction', $discipline->mark_diduction ?? '') }}"
+                                   value="{{ old('mark_deduction', $discipline->mark_deduction ?? '') }}"
                                    placeholder="Enter mark deduction"
                                    required>
-                            @error('mark_diduction')
+                            @error('mark_deduction')
                                 <small class="text-danger">{{ $message }}</small>
                             @enderror
                         </div>
