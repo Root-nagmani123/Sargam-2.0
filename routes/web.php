@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\{
     FacultyMDOEscortExceptionViewController,
     OTNoticeMemoViewController,
     FacultyNoticeMemoViewController,
+    MemoDisciplineController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -395,6 +396,25 @@ Route::prefix('admin/discipline')->name('master.discipline.')->group(function ()
     Route::get('edit/{id}', [DisciplineMasterController::class,'edit'])->name('edit');
     Route::post('store', [DisciplineMasterController::class,'store'])->name('store');
     Route::delete('delete/{id}', [DisciplineMasterController::class,'destroy'])->name('delete');
+});
+Route::prefix('memo/discipline')->name('memo.discipline.')->group(function () {
+    Route::get('/', [MemoDisciplineController::class,'index'])->name('index');
+    Route::get('create', [MemoDisciplineController::class,'create'])->name('create');
+    Route::get('edit/{id}', [MemoDisciplineController::class,'edit'])->name('edit');
+Route::post('/discipline_generate_memo_store', [MemoDisciplineController::class, 'discipline_generate_memo_store'])->name('discipline_generate_memo_store');
+
+Route::get('/get-student-by-course', [MemoDisciplineController::class, 'getStudentByCourse'])->name('getStudentByCourse');
+Route::get('/getMarkDeduction', [MemoDisciplineController::class, 'getMarkDeduction'])->name('getMarkDeduction');
+
+Route::post('/send-memo', [MemoDisciplineController::class, 'sendMemo'])->name('sendMemo');
+Route::post('/close-memo', [MemoDisciplineController::class, 'closeMemo'])->name('closeMemo');
+Route::get('/get_conversation_model/{memoId}/{type}', [MemoDisciplineController::class, 'getConversationModel'])->name('get_conversation_model');
+
+Route::post('/memo-discipline-conversation-store', [MemoDisciplineController::class, 'memoDisciplineConversationStore'])->name('conversation.store');
+
+
+Route::get('/memo-discipline-show/{id}', [MemoDisciplineController::class, 'memo_show'])->name('memo.show');
+
 });
 
 
