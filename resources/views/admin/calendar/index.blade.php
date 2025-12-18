@@ -180,7 +180,7 @@
 }
 
 .fc-daygrid-day.fc-day-today {
-    background-color: var(--primary-light) !important;
+    background-color: #CCDBE9 !important;
 }
 
 .fc-col-header-cell {
@@ -325,7 +325,7 @@
     font-size: 0.7rem;
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
-    background-color: var(--primary-light);
+    background-color: #4e73df;
     color: var(--primary-color);
     font-weight: 600;
 }
@@ -563,7 +563,7 @@
     color: var(--primary-color);
     margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--primary-light);
+    border-bottom: 2px solid #4e73df;
 }
 
 .event-tooltip .tooltip-row {
@@ -598,7 +598,7 @@
     padding: 0.15rem 0.5rem;
     border-radius: 999px;
     color: var(--primary-color);
-    background: var(--primary-light);
+    background: #4e73df;
     margin-bottom: 0.35rem;
 }
 
@@ -1136,7 +1136,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     font-size: 0.75rem;
     padding: 0.25rem 0.625rem;
     border-radius: 12px;
-    background-color: var(--primary-light);
+    background-color: #4e73df;
     color: var(--primary-color);
     font-weight: 600;
     letter-spacing: 0.3px;
