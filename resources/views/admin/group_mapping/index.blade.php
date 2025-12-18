@@ -391,7 +391,7 @@
 
 
                         <hr>
-                        {!! $dataTable->table(['class' => 'table']) !!}
+                        {!! $dataTable->table(['class' => 'table text-nowrap']) !!}
                     </div>
                 </div>
             </div>

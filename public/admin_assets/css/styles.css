@@ -38951,8 +38951,7 @@ fieldset:disabled .btn {
     margin-bottom: 30px;
     border-radius: 30px;
     background: #f2f2f2;
-    min-height: calc(100% - 102px);
-    min-height: 100vh;
+    min-height: calc(100vh - 102px);
 }
 
 .container-fluid,
