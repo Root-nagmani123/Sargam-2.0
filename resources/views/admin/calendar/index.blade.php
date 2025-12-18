@@ -31,9 +31,8 @@
 
                     <!-- Density Toggle -->
                     <div class="density-toggle d-flex align-items-center gap-2 ms-2">
-                        <span class="text-muted fw-medium small d-none d-md-inline">Density:</span>
                         <button type="button" class="btn btn-outline-secondary" id="toggleDensityBtn" aria-pressed="false" aria-label="Toggle compact mode">
-                            <i class="bi bi-arrows-collapse me-2" aria-hidden="true"></i>Compact
+                            Expand / Collapse
                         </button>
                     </div>
                 </div>
@@ -584,50 +583,6 @@
     background-color: var(--light-bg);
 }
 
-/* Button states */
-.btn {
-    transition: var(--transition);
-    font-weight: 500;
-}
-
-.btn:focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: 3px;
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.25);
-}
-
-.btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow);
-}
-
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
-    border: none;
-}
-
-.btn-primary:hover {
-    background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
-}
-
-.btn-outline-primary {
-    border-width: 2px;
-    font-weight: 500;
-}
-
-.btn-outline-primary:hover {
-    background-color: var(--primary-light);
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-}
-
-.btn-outline-primary.active,
-.btn-outline-primary:active {
-    background: var(--primary-color);
-    border-color: var(--primary-color);
-    color: white;
-}
-
 .control-panel {
     backdrop-filter: blur(10px);
     border: 1px solid rgba(0, 74, 147, 0.1) !important;
@@ -1052,6 +1007,12 @@ class CalendarManager {
                 left: 'prev,next today',
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay'
+            },
+            buttonText: {
+                today: 'Today',
+                month: 'Month',
+                week: 'Week',
+                day: 'Day'
             },
             slotMinTime: CalendarConfig.minTime,
             slotMaxTime: CalendarConfig.maxTime,
