@@ -13,6 +13,7 @@ use App\Models\StudentMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMedicalExemption;
 use App\Models\CalendarEvent;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class MedicalExceptionFacultyViewController extends Controller
 {
@@ -100,82 +101,110 @@ class MedicalExceptionFacultyViewController extends Controller
         }
         
         $validCourseIds = $validCourses->pluck('pk');
-        
-        // Step 4: Fetch all students' medical exceptions for those courses
-        $exemptions = StudentMedicalExemption::whereIn('course_master_pk', $validCourseIds)
-            ->where('active_inactive', 1)
-            ->get();
-        
-        if ($exemptions->isEmpty()) {
-            // Show "Data Not Found" message
-            return view('admin.medical_exception.faculty_view', [
-                'isFacultyView' => true,
-                'studentData' => [],
-                'totalExceptions' => 0,
-                'hasData' => false
-            ]);
-        }
-        
-        // Step 5: Get unique student_pk who took medical exception
-        $studentIds = $exemptions->pluck('student_master_pk')->unique();
-        
-        // Step 6: Fetch student details and build data structure
-        $students = StudentMaster::whereIn('pk', $studentIds)
-            ->get(['pk', 'display_name', 'generated_OT_code', 'email']);
-        
-        $studentData = [];
+
+        // Build course-centric data to align with view and paginate server-side
+        $courseData = [];
         $totalExceptions = 0;
-        
-        foreach ($students as $student) {
-            // Get all exemptions for this student in the valid courses
-            $studentExemptions = $exemptions->where('student_master_pk', $student->pk);
-            
-            $exemptionDetails = [];
-            foreach ($studentExemptions as $exemption) {
-                // Get course name
-                $course = $validCourses->firstWhere('pk', $exemption->course_master_pk);
-                
-                $exemptionDetails[] = [
-                    'from_date' => $exemption->from_date,
-                    'to_date' => $exemption->to_date,
-                    'opd_category' => $exemption->opd_category,
-                    'description' => $exemption->Description,
-                    'doc_upload' => $exemption->Doc_upload,
-                    'course_master_pk' => $exemption->course_master_pk,
-                    'course_name' => $course ? $course->course_name : 'N/A',
-                ];
-            }
-            
-            $exemptionCount = count($exemptionDetails);
+
+        foreach ($validCourses as $course) {
+            $courseId = $course->pk;
+
+            // Coordinators
+            $coordinators = CourseCordinatorMaster::where('courses_master_pk', $courseId)->first();
+            $ccName = $coordinators->Coordinator_name ?? 'Not Assigned';
+
+            // Enrolled students
+            $studentIds = StudentMasterCourseMap::where('course_master_pk', $courseId)
+                ->where('active_inactive', 1)
+                ->pluck('student_master_pk');
+
+            $students = StudentMaster::whereIn('pk', $studentIds)
+                ->where('status', 1)
+                ->get(['pk', 'generated_OT_code', 'display_name']);
+
+            // Students on medical exception (current)
+            $exceptionStudentIds = StudentMedicalExemption::where('course_master_pk', $courseId)
+                ->whereIn('student_master_pk', $studentIds)
+                ->where('from_date', '<=', $currentDate)
+                ->where(function($q) use ($currentDate) {
+                    $q->where('to_date', '>=', $currentDate)
+                      ->orWhereNull('to_date');
+                })
+                ->where('active_inactive', 1)
+                ->distinct('student_master_pk')
+                ->pluck('student_master_pk');
+
+            $exceptionStudents = $students->whereIn('pk', $exceptionStudentIds->all())
+                ->map(function($s) {
+                    return [
+                        'generated_OT_code' => $s->generated_OT_code,
+                        'display_name' => $s->display_name,
+                    ];
+                })->values()->all();
+
+            $exemptionCount = count($exceptionStudents);
             $totalExceptions += $exemptionCount;
-            
-            // Get student name - prefer display_name, fallback to first_name + last_name
-            $studentName = $student->display_name;
-            if (!$studentName && (isset($student->first_name) || isset($student->last_name))) {
-                $studentName = trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''));
-            }
-            $studentName = $studentName ?: 'N/A';
-            
-            $studentData[] = [
-                'student_pk' => $student->pk,
-                'student_name' => $studentName,
-                'ot_code' => $student->generated_OT_code,
-                'email' => $student->email,
+
+            $courseData[] = [
+                'course_name' => $course->course_name,
+                'cc_name' => $ccName,
+                'total_students' => $students->count(),
                 'total_exemption_count' => $exemptionCount,
-                'exemptions' => $exemptionDetails,
+                'students' => $exceptionStudents,
             ];
         }
-        
-        // Sort by student name
-        usort($studentData, function($a, $b) {
-            return strcmp($a['student_name'], $b['student_name']);
-        });
-        
+
+        // Server-side pagination for course summary
+        $perPage = 10;
+        $coursePage = (int) $request->get('course_page', 1);
+        $courseTotal = count($courseData);
+        $courseItems = array_slice($courseData, ($coursePage - 1) * $perPage, $perPage);
+        $coursePaginator = new LengthAwarePaginator(
+            $courseItems,
+            $courseTotal,
+            $perPage,
+            $coursePage,
+            ['path' => $request->url(), 'pageName' => 'course_page']
+        );
+
+        // Server-side pagination for flattened students under exception
+        $studentRows = [];
+        foreach ($courseData as $course) {
+            if (!empty($course['students'])) {
+                foreach ($course['students'] as $student) {
+                    $studentRows[] = [
+                        'course_name' => $course['course_name'],
+                        'generated_OT_code' => $student['generated_OT_code'] ?? '',
+                        'display_name' => $student['display_name'] ?? '',
+                        'status' => 'Medical Exception',
+                    ];
+                }
+            } else {
+                $studentRows[] = [
+                    'course_name' => $course['course_name'],
+                    'generated_OT_code' => '',
+                    'display_name' => 'No students under medical exception.',
+                    'status' => '',
+                ];
+            }
+        }
+
+        $studentsPage = (int) $request->get('students_page', 1);
+        $studentsTotal = count($studentRows);
+        $studentsItems = array_slice($studentRows, ($studentsPage - 1) * $perPage, $perPage);
+        $studentsPaginator = new LengthAwarePaginator(
+            $studentsItems,
+            $studentsTotal,
+            $perPage,
+            $studentsPage,
+            ['path' => $request->url(), 'pageName' => 'students_page']
+        );
+
         return view('admin.medical_exception.faculty_view', [
             'isFacultyView' => true,
-            'studentData' => $studentData,
-            'totalExceptions' => $totalExceptions,
-            'hasData' => count($studentData) > 0
+            'coursePaginator' => $coursePaginator,
+            'studentsPaginator' => $studentsPaginator,
+            'hasData' => $courseTotal > 0
         ]);
     }
     
@@ -302,13 +331,79 @@ class MedicalExceptionFacultyViewController extends Controller
             ->orderBy('course_name')
             ->get(['pk', 'course_name']);
         
-        return view('admin.medical_exception.faculty_view', compact(
-            'facultyData',
-            'allFaculties',
-            'allCourses',
-            'facultyFilter',
-            'courseFilter'
-        ));
+        // Build paginated rows for admin tables
+        $perPage = 10;
+        $adminCoursePage = (int) $request->get('admin_course_page', 1);
+        $adminStudentPage = (int) $request->get('admin_students_page', 1);
+
+        // Flatten course rows
+        $adminCourseRows = [];
+        foreach ($facultyData as $faculty) {
+            foreach ($faculty['courses'] as $course) {
+                $adminCourseRows[] = [
+                    'faculty_name' => $faculty['faculty_name'],
+                    'course_name' => $course['course_name'],
+                    'cc' => $course['cc'],
+                    'acc' => $course['acc'],
+                    'total_students' => $course['total_students'],
+                    'exemption_count' => $course['exemption_count'],
+                ];
+            }
+        }
+
+        $adminCourseTotal = count($adminCourseRows);
+        $adminCourseItems = array_slice($adminCourseRows, ($adminCoursePage - 1) * $perPage, $perPage);
+        $adminCoursePaginator = new LengthAwarePaginator(
+            $adminCourseItems,
+            $adminCourseTotal,
+            $perPage,
+            $adminCoursePage,
+            ['path' => $request->url(), 'pageName' => 'admin_course_page']
+        );
+
+        // Flatten student rows (all students per course)
+        $adminStudentRows = [];
+        foreach ($facultyData as $faculty) {
+            foreach ($faculty['courses'] as $course) {
+                if ($course['students']->count() > 0) {
+                    foreach ($course['students'] as $student) {
+                        $adminStudentRows[] = [
+                            'faculty_name' => $faculty['faculty_name'],
+                            'course_name' => $course['course_name'],
+                            'generated_OT_code' => $student->generated_OT_code,
+                            'display_name' => $student->display_name,
+                        ];
+                    }
+                } else {
+                    $adminStudentRows[] = [
+                        'faculty_name' => $faculty['faculty_name'],
+                        'course_name' => $course['course_name'],
+                        'generated_OT_code' => '',
+                        'display_name' => 'No students enrolled in this course.',
+                    ];
+                }
+            }
+        }
+
+        $adminStudentsTotal = count($adminStudentRows);
+        $adminStudentsItems = array_slice($adminStudentRows, ($adminStudentPage - 1) * $perPage, $perPage);
+        $adminStudentsPaginator = new LengthAwarePaginator(
+            $adminStudentsItems,
+            $adminStudentsTotal,
+            $perPage,
+            $adminStudentPage,
+            ['path' => $request->url(), 'pageName' => 'admin_students_page']
+        );
+
+        return view('admin.medical_exception.faculty_view', [
+            'facultyData' => $facultyData,
+            'allFaculties' => $allFaculties,
+            'allCourses' => $allCourses,
+            'facultyFilter' => $facultyFilter,
+            'courseFilter' => $courseFilter,
+            'adminCoursePaginator' => $adminCoursePaginator,
+            'adminStudentsPaginator' => $adminStudentsPaginator,
+        ]);
     }
 }
 

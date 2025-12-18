@@ -107,7 +107,7 @@
                        border-radius: 6px; color: white; font-weight: bold;">
                         S
                     </div>
-                    <span class="page-title">Faculty Feedback Database</span>
+                    <h4 class="page-title">Faculty Feedback Database</h4>
                 </div>
                 <div class="export-btn-group">
                     <button class="btn btn-outline-primary btn-sm" id="exportExcelBtn">
