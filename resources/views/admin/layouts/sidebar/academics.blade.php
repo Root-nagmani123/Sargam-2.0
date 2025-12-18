@@ -82,15 +82,12 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Academics sidebar script started');
-
-    // Wait a bit for sidebarmenu.js to finish
-    setTimeout(function() {
-        // Scope to ONLY the academics tab
-        const academicsTab = document.getElementById('tab-academics');
-        if (!academicsTab) {
-            console.error('Academics tab not found');
-            return;
-        }
+    // Scope to ONLY the academics tab
+    const academicsTab = document.getElementById('tab-academics');
+    if (!academicsTab) {
+        console.error('Academics tab not found');
+        return;
+    }
 
         // Initialize mini-navbar functionality for academics ONLY
         const miniNavItems = academicsTab.querySelectorAll('.mini-nav .mini-nav-item');
@@ -215,12 +212,29 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mark active links first
         markActiveLinks();
 
-        // Add click handlers to mini-nav items
-        miniNavItems.forEach(function(item) {
-            item.addEventListener('click', function() {
-                showSidebarMenu(this.id);
+        // Ensure single-click opens the corresponding sidebar via event delegation
+        const miniNav = academicsTab.querySelector('.mini-nav');
+        if (miniNav) {
+            miniNav.addEventListener('click', function(e) {
+                const li = e.target.closest('.mini-nav-item');
+                if (li && miniNav.contains(li)) {
+                    e.preventDefault();
+                    showSidebarMenu(li.id);
+                }
             });
-        });
+            // Explicitly bind anchor clicks to ensure single-click behavior
+            const anchorLinks = miniNav.querySelectorAll('.mini-nav-item > a.mini-nav-link');
+            anchorLinks.forEach(function(anchor) {
+                anchor.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const li = this.closest('.mini-nav-item');
+                    if (li) {
+                        showSidebarMenu(li.id);
+                    }
+                });
+            });
+        }
 
         // Function to restore sidebar menu visibility
         function restoreSidebarMenu() {
@@ -268,6 +282,5 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('focus', function() {
             setTimeout(restoreSidebarMenu, 100);
         });
-    }, 200);
 });
 </script>

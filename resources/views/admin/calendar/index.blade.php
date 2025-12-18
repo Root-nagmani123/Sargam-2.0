@@ -56,7 +56,7 @@
                     <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
 
                     <!-- List View -->
-                    <div id="eventListView" class="mt-4" role="region" aria-label="Weekly timetable">
+                    <div id="eventListView" class="mt-4 d-none" role="region" aria-label="Weekly timetable">
                         <div class="timetable-wrapper">
                             <!-- Timetable Header -->
                             <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
@@ -184,9 +184,17 @@
 }
 
 .fc-col-header-cell {
-    background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
+    background: var(--primary-color);
+    color: #fff;
     font-weight: 600;
     padding: 1rem 0.5rem;
+}
+
+/* Ensure FullCalendar header text is white */
+.fc .fc-col-header-cell-cushion,
+.fc .fc-scrollgrid-section-header .fc-col-header-cell a,
+.fc .fc-col-header-cell a {
+    color: #ffffff !important;
 }
 
 .fc-event-card {
@@ -385,8 +393,8 @@
 
 .timetable-grid th {
     font-weight: 600;
-    color: var(--primary-color);
-    background: linear-gradient(135deg, rgba(0, 74, 147, 0.08), rgba(175, 41, 16, 0.05));
+    color: #ffffff;
+    background: var(--primary-color);
     padding: 1rem 0.75rem;
     border-bottom: 2px solid var(--primary-color);
 }

@@ -4,13 +4,7 @@
         @if (hasRole('Admin') || hasRole('Training'))
             <li class="nav-section" role="listitem">
                 <div class="d-flex align-items-center justify-content-between w-100">
-                    <div class="d-flex align-items-center">
-                        <button class="nav-link sidebartoggler d-flex align-items-center justify-content-center p-2 me-2"
-                            id="headerCollapse" aria-label="Toggle sidebar navigation" aria-expanded="true"
-                            aria-controls="sidebarContent" data-bs-toggle="tooltip" data-bs-placement="right">
-                            <!-- Improved Icon with Animation Class -->
-                            <span class="visually-hidden">Toggle sidebar navigation</span>
-                        </button>
+                    <div class="d-flex align-items-center mb-3">
                         <h2 class="section-title text-white m-0"
                             style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
                             FC Registration
