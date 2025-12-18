@@ -4,6 +4,30 @@
 
 @section('setup_content')
 <style>
+/* Fix dropdown visibility in table */
+.table-responsive {
+    overflow: visible !important;
+}
+
+.table td {
+    overflow: visible !important;
+    vertical-align: middle;
+}
+
+.action-dropdown {
+    position: static;
+}
+
+.dropdown-menu {
+    z-index: 1050 !important;
+    position: fixed !important;
+}
+
+/* Ensure dropdown items are clickable */
+.dropdown-item {
+    cursor: pointer;
+}
+
 .btn-group[role="group"] .btn {
     transition: all 0.3s ease-in-out;
     border-radius: 0;
@@ -137,6 +161,9 @@ $(document).ready(function() {
     // Wait for DataTable to be initialized
     setTimeout(function() {
         table = $('#coursemaster-table').DataTable();
+        
+        // Initialize dropdowns after table loads
+        initializeDropdowns();
 
         // Set initial active state - Active button is already styled as active in HTML
         // No need to change styling initially
@@ -168,6 +195,7 @@ $(document).ready(function() {
                         
                         // Reload table
                         table.ajax.reload();
+                        initializeDropdowns();
                     }
                 },
                 error: function(xhr) {
@@ -188,6 +216,29 @@ $(document).ready(function() {
             currentFilter = 'archive';
             loadCoursesByStatus('archive');
         });
+
+        // Function to initialize dropdowns
+        function initializeDropdowns() {
+            var dropdownElementList = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+            dropdownElementList.forEach(function (dropdownToggleEl) {
+                // Dispose of existing dropdown instance if any
+                try {
+                    var existingDropdown = bootstrap.Dropdown.getInstance(dropdownToggleEl);
+                    if (existingDropdown) {
+                        existingDropdown.dispose();
+                    }
+                } catch (e) {
+                    // Instance doesn't exist, continue
+                }
+                
+                // Create new dropdown instance
+                try {
+                    new bootstrap.Dropdown(dropdownToggleEl);
+                } catch (e) {
+                    console.error('Error initializing dropdown:', e);
+                }
+            });
+        }
 
         // Function to set active button styling
         function setActiveButton(activeBtn) {
@@ -223,9 +274,24 @@ $(document).ready(function() {
             }
         });
 
+        // Reinitialize dropdowns after table draw
+        $('#coursemaster-table').on('draw.dt', function() {
+            initializeDropdowns();
+        });
+
+        // Handle dropdown toggle with event delegation
+        $(document).on('click', '[data-bs-toggle="dropdown"]', function(e) {
+            // Bootstrap will handle the toggle, just ensure it's initialized
+            var el = this;
+            if (!bootstrap.Dropdown.getInstance(el)) {
+                new bootstrap.Dropdown(el);
+            }
+        });
+
         // Handle course filter change
         $('#courseFilter').on('change', function () {
             table.ajax.reload();
+            initializeDropdowns();
         });
 
         // Handle reset filters
