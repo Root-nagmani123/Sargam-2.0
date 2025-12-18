@@ -302,7 +302,7 @@
 
             // Notification functions
             function markAsRead(notificationId) {
-                fetch('/admin/notifications/mark-read/' + notificationId, {
+                fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -311,11 +311,21 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        if (data.success) {
+                        if (data.success && data.redirect_url) {
+                            // Redirect to the appropriate module view
+                            window.location.href = data.redirect_url;
+                        } else if (data.success) {
+                            // Fallback: reload if no redirect URL
                             location.reload();
+                        } else {
+                            console.error('Failed to mark notification as read');
                         }
                     })
-                    .catch(error => console.error('Error:', error));
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // Fallback to dashboard on error
+                        window.location.href = '{{ route("admin.dashboard") }}';
+                    });
             }
 
             function markAllAsRead() {

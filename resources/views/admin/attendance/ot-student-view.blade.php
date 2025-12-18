@@ -431,13 +431,13 @@
                                 class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'active' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
                                 id="filterActive"
                                 aria-pressed="{{ ($archiveMode ?? 'active') === 'active' ? 'true' : 'false' }}">
-                                <i class="bi bi-check-circle me-1"></i> Active Records
+                                <i class="bi bi-check-circle me-1"></i> Active 
                             </button>
                             <button type="button"
                                 class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'archive' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
                                 id="filterArchive"
                                 aria-pressed="{{ ($archiveMode ?? 'active') === 'archive' ? 'true' : 'false' }}">
-                                <i class="bi bi-archive me-1"></i> Archive Records
+                                <i class="bi bi-archive me-1"></i> Archive 
                             </button>
                         </div>
                     </div>
@@ -470,7 +470,7 @@
                             <i class="bi bi-calendar-date me-1 text-primary"></i> Date:
                         </label>
                         <input type="date" class="form-control form-control-lg" id="filter_date" name="filter_date"
-                            value="{{ $filterDate ?? '' }}" aria-label="Filter by Date">
+                            value="{{ $filterDate ?? '' }}" max="{{ date('Y-m-d') }}" aria-label="Filter by Date">
                     </div>
                     <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
                         <label for="filter_session_time" class="form-label fw-semibold">

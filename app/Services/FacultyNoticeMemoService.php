@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\CourseMaster;
 use App\Models\CourseCordinatorMaster;
 use App\Models\StudentMaster;
+use App\Models\UserCredential;
 
 class FacultyNoticeMemoService
 {
@@ -17,9 +18,7 @@ class FacultyNoticeMemoService
      */
     public function getLoggedInFaculty($userPk)
     {
-        return DB::table('user_credentials')
-            ->where('pk', $userPk)
-            ->where('user_category', 'F')
+        return UserCredential::where('pk', $userPk)
             ->first();
     }
 
@@ -33,12 +32,23 @@ class FacultyNoticeMemoService
      */
     public function getCoordinatorCourses($userId)
     {
-        return CourseCordinatorMaster::where('Assistant_Coordinator_name', $userId)
-            ->where('assistant_coordinator_role', 'discipline')
-            ->pluck('courses_master_pk')
-            ->unique()
-            ->filter();
+        return CourseCordinatorMaster::where(function ($query) use ($userId) {
+    
+            // Case 1: Main Course Coordinator
+            $query->where('Coordinator_name', $userId)
+    
+                  // Case 2: Assistant Course Coordinator with discipline role
+                  ->orWhere(function ($q) use ($userId) {
+                      $q->where('Assistant_Coordinator_name', $userId)
+                        ->where('assistant_coordinator_role', 'discipline');
+                  });
+    
+        })
+        ->pluck('courses_master_pk')
+        ->unique()
+        ->filter();
     }
+    
 
     /**
      * Validate courses (active = 1, end_date >= today)
