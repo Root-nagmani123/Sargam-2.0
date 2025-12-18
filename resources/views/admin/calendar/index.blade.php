@@ -104,16 +104,23 @@
                             <!-- Timetable table -->
                             <div class="timetable-container border rounded-3 overflow-hidden">
                                 <div class="table-responsive" role="region" aria-label="Weekly timetable">
-                                    <table class="table table-bordered" id="timetableTable"
+                                    <table class="table table-bordered timetable-grid" id="timetableTable"
                                         aria-describedby="timetableDescription">
                                         <caption class="visually-hidden" id="timetableDescription">
                                             Weekly academic timetable showing events
                                         </caption>
                                         <thead id="timetableHead">
-                                            <!-- JS will populate header -->
+                                            <tr>
+                                                <th scope="col" class="time-column">Time</th>
+                                                <th scope="col">Monday</th>
+                                                <th scope="col">Tuesday</th>
+                                                <th scope="col">Wednesday</th>
+                                                <th scope="col">Thursday</th>
+                                                <th scope="col">Friday</th>
+                                            </tr>
                                         </thead>
 
-                                        <tbody id="dynamicTimetable">
+                                        <tbody id="timetableBody">
                                             <!-- JS will populate body -->
                                         </tbody>
                                     </table>
@@ -232,11 +239,47 @@
     box-shadow: var(--shadow) !important;
     border: 1px solid var(--border-color) !important;
     overflow: hidden;
+    max-height: 500px;
+    display: flex;
+    flex-direction: column;
 }
 
 .fc-popover .fc-popover-title {
     background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
     font-weight: 600;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.fc-popover .fc-popover-body {
+    max-height: 450px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) rgba(0, 74, 147, 0.05);
+}
+
+/* Custom scrollbar for popover body */
+.fc-popover .fc-popover-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.fc-popover .fc-popover-body::-webkit-scrollbar-track {
+    background: rgba(0, 74, 147, 0.05);
+    border-radius: 4px;
+}
+
+.fc-popover .fc-popover-body::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.fc-popover .fc-popover-body::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
 }
 
 .fc-popover .fc-popover-body .fc-event-card {
@@ -333,10 +376,92 @@
     border: 1px solid var(--border-color);
     vertical-align: top;
     transition: background-color 0.2s ease;
+    max-height: 300px;
+    overflow-y: auto;
+    position: relative;
+}
+
+/* Scrollbar styling for timetable cells */
+.timetable-grid td::-webkit-scrollbar {
+    width: 8px;
+}
+
+.timetable-grid td::-webkit-scrollbar-track {
+    background: rgba(0, 74, 147, 0.05);
+    border-radius: 4px;
+}
+
+.timetable-grid td::-webkit-scrollbar-thumb {
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.timetable-grid td::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-dark);
+}
+
+/* Firefox scrollbar styling */
+.timetable-grid td {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-color) rgba(0, 74, 147, 0.05);
 }
 
 .timetable-grid td:hover {
     background-color: rgba(0, 74, 147, 0.02);
+}
+
+/* Visual indicator for scrollable content */
+.timetable-grid td.has-scroll::after {
+    content: '';
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 30px;
+    background: linear-gradient(to top, rgba(255, 255, 255, 0.95), transparent);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.timetable-grid td.has-scroll:not(.scrolled-bottom)::after {
+    opacity: 1;
+}
+
+/* Scroll indicator icon */
+.timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
+    content: '⌄';
+    position: sticky;
+    bottom: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: block;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    text-align: center;
+    color: var(--primary-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+    background: white;
+    border-radius: 50%;
+    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
+    z-index: 10;
+    animation: bounce 2s infinite;
+    pointer-events: none;
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateX(-50%) translateY(0);
+    }
+    40% {
+        transform: translateX(-50%) translateY(-5px);
+    }
+    60% {
+        transform: translateX(-50%) translateY(-3px);
+    }
 }
 
 .timetable-grid .time-column {
@@ -730,6 +855,18 @@ body.compact-mode .list-event-card .title { font-size: 0.95rem; }
 body.compact-mode .list-event-card .meta:not(:first-of-type) { display: none; }
 body.compact-mode .list-event-card .event-tooltip { display: none; }
 
+/* Compact mode - reduce cell height for better fit */
+body.compact-mode .timetable-grid td {
+    max-height: 200px;
+}
+
+body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    font-size: 1rem;
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
     .fc-event-card,
@@ -778,6 +915,29 @@ body.compact-mode .list-event-card .event-tooltip { display: none; }
 .fc-more-link:hover {
     background-color: var(--primary-dark) !important;
     transform: scale(1.08);
+    color: #ffffff !important;
+}
+
+/* TimeGrid "+ more" links for week and day views */
+.fc-timegrid-more-link,
+.fc-timegrid .fc-more-link {
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--primary-color), #0066cc) !important;
+    padding: 0.4rem 0.6rem !important;
+    border-radius: 0.375rem !important;
+    display: inline-block !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    box-shadow: 0 2px 4px rgba(0, 74, 147, 0.2) !important;
+}
+
+.fc-timegrid-more-link:hover,
+.fc-timegrid .fc-more-link:hover {
+    background: linear-gradient(135deg, var(--primary-dark), #004a93) !important;
+    transform: scale(1.05) !important;
+    box-shadow: 0 4px 8px rgba(0, 74, 147, 0.4) !important;
     color: #ffffff !important;
 }
 
@@ -1027,6 +1187,22 @@ class CalendarManager {
                 minute: '2-digit',
                 hour12: false
             },
+            views: {
+                dayGridMonth: {
+                    dayMaxEvents: true,
+                    dayMaxEventRows: 4
+                },
+                timeGridWeek: {
+                    dayMaxEvents: true,
+                    dayMaxEventRows: 3,
+                    eventMaxStack: 3
+                },
+                timeGridDay: {
+                    dayMaxEvents: true,
+                    dayMaxEventRows: 4,
+                    eventMaxStack: 4
+                }
+            },
             events: CalendarConfig.api.events,
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
@@ -1040,32 +1216,36 @@ class CalendarManager {
     }
 
     styleMoreLinks() {
-        // Style all "+ more" links
+        // Style all "+ more" links including timeGrid views
         const moreLinks = document.querySelectorAll(
-            '.fc-daygrid-day-more-link, .fc-more-link, .fc-daygrid-day-frame a[data-date]');
+            '.fc-daygrid-day-more-link, .fc-more-link, .fc-timegrid-more-link, .fc-daygrid-day-frame a[data-date], .fc-timegrid a[aria-label*="more"]');
         moreLinks.forEach(link => {
-            if (link.textContent.includes('+')) {
-                link.style.fontSize = '1.25rem';
+            if (link.textContent.includes('+') || link.textContent.toLowerCase().includes('more')) {
+                // Check if it's a timeGrid link (smaller styling)
+                const isTimeGrid = link.closest('.fc-timegrid') !== null;
+                
+                link.style.fontSize = isTimeGrid ? '1rem' : '1.25rem';
                 link.style.fontWeight = '700';
                 link.style.color = '#ffffff';
                 link.style.backgroundColor = '#004a93';
-                link.style.padding = '0.5rem 0.75rem';
+                link.style.padding = isTimeGrid ? '0.4rem 0.6rem' : '0.5rem 0.75rem';
                 link.style.borderRadius = '0.375rem';
                 link.style.display = 'inline-block';
                 link.style.textDecoration = 'none';
                 link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
                 link.style.transition = 'all 0.2s ease';
+                link.style.boxShadow = '0 2px 4px rgba(0, 74, 147, 0.2)';
 
                 link.addEventListener('mouseenter', () => {
                     link.style.background = 'linear-gradient(135deg, #003366, #004a93)';
-                    link.style.transform = 'scale(1.08)';
+                    link.style.transform = isTimeGrid ? 'scale(1.05)' : 'scale(1.08)';
                     link.style.boxShadow = '0 4px 12px rgba(0, 74, 147, 0.4)';
                 });
 
                 link.addEventListener('mouseleave', () => {
                     link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
                     link.style.transform = 'scale(1)';
-                    link.style.boxShadow = 'none';
+                    link.style.boxShadow = '0 2px 4px rgba(0, 74, 147, 0.2)';
                 });
             }
         });
@@ -1158,8 +1338,25 @@ class CalendarManager {
     }
 
     handleEventClick(info) {
+        // Close any open popover when an event is clicked
+        this.closePopover();
+        
         this.currentEventId = info.event.id;
         this.loadEventDetails(info.event.id);
+    }
+
+    closePopover() {
+        // Find and close any open FullCalendar popovers
+        const openPopovers = document.querySelectorAll('.fc-popover');
+        openPopovers.forEach(popover => {
+            popover.remove();
+        });
+        
+        // Also remove any popover backdrops or overlays
+        const popoverBackdrops = document.querySelectorAll('.fc-popover-backdrop');
+        popoverBackdrops.forEach(backdrop => {
+            backdrop.remove();
+        });
     }
 
     async loadEventDetails(eventId) {
@@ -1976,7 +2173,7 @@ class CalendarManager {
                 <tr>
                     <th scope="row" class="time-slot">${time}</th>
                     ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
-                        <td>
+                        <td class="event-cell">
                             ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
                         </td>
                     `).join('')}
@@ -1986,6 +2183,7 @@ class CalendarManager {
 
         tbody.innerHTML = html;
         this.applyBreakLunchRowStyles();
+        this.initializeScrollIndicators();
     }
 
     groupEventsByTime(events) {
@@ -2071,6 +2269,37 @@ class CalendarManager {
                 </div>
             `;
         }).join('');
+    }
+
+    initializeScrollIndicators() {
+        // Add scroll event listeners to table cells to show/hide scroll indicators
+        const cells = document.querySelectorAll('.timetable-grid td.event-cell');
+        
+        cells.forEach(cell => {
+            // Check if cell content exceeds max height
+            if (cell.scrollHeight > cell.clientHeight) {
+                cell.classList.add('has-scroll');
+                
+                // Add scroll event listener
+                cell.addEventListener('scroll', function() {
+                    const isScrolledToBottom = Math.abs(this.scrollHeight - this.clientHeight - this.scrollTop) < 5;
+                    
+                    if (isScrolledToBottom) {
+                        this.classList.add('scrolled-bottom');
+                    } else {
+                        this.classList.remove('scrolled-bottom');
+                    }
+                });
+                
+                // Initial check
+                const isScrolledToBottom = Math.abs(cell.scrollHeight - cell.clientHeight - cell.scrollTop) < 5;
+                if (isScrolledToBottom) {
+                    cell.classList.add('scrolled-bottom');
+                }
+            } else {
+                cell.classList.remove('has-scroll', 'scrolled-bottom');
+            }
+        });
     }
 
     applyBreakLunchRowStyles() {
