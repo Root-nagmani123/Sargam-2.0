@@ -573,3 +573,5 @@ Route::prefix('faculty')->group(function () {
     Route::get('/database/export', [FeedbackController::class, 'exportDatabase'])->name('admin.feedback.database.export');
 });
 Route::get('/feedback_average', [FeedbackController::class, 'showFacultyAverage'])->name('feedback.average');
+Route::get('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');
+Route::post('/faculty_view/suggestions', [FeedbackController::class, 'getFacultySuggestions'])->name('feedback.faculty_suggestions');
