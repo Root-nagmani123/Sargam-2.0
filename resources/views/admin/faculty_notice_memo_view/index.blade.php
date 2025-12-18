@@ -128,7 +128,7 @@
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-6">
-                    <h4>Faculty Notice / Memo View</h4>
+                    <h4>Faculty Notice / Memo List</h4>
                 </div>
                 <div class="col-6">
                     <div class="d-flex justify-content-end align-items-center gap-2">
