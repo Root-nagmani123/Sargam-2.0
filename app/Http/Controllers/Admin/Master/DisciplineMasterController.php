@@ -32,7 +32,7 @@ class DisciplineMasterController extends Controller
     {
         $request->validate([
             'discipline_name' => 'required|string|max:100',
-            'mark_diduction' => 'nullable|numeric|min:0',
+            'mark_deduction' => 'nullable|numeric|min:0',
             'course_master_pk' => 'required|exists:course_master,pk',
             'active_inactive' => 'required|in:1,2',
         ]);

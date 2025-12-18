@@ -51,6 +51,7 @@
                                 <option value="" disabled selected>Select Type</option>
                                 <option value="Memo">Memo</option>
                                 <option value="Notice">Notice</option>
+                                <option value="Discipline Memo">Discipline Memo</option>
                             </select>
                         </div>
 
