@@ -1118,8 +1118,8 @@ $(document).ready(function () {
 
 function lockNameFields() {
 				$("input[name='firstName'], input[name='middlename'], input[name='lastname']")
-					.prop("readonly", true)
-					.addClass("bg-light");
+					//.prop("readonly", true)
+					//.addClass("bg-light");
 			}
 
 function fillFacultyForm(faculty) {
