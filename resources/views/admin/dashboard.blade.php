@@ -702,9 +702,10 @@ table>thead{
                                 </a>
                             </div>
                             @endif
-                            @if($notice->description != '')
+                          {{--  @if($notice->description != '')
                             {!! $notice->description !!}
                             @endif
+                            --}}
 
                         </div>
                         @endforeach

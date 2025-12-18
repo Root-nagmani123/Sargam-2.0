@@ -272,12 +272,16 @@
                                     href="{{ route('medical.exception.ot.view') }}">
                                     <span class="hide-menu">Medical Exemption</span>
                                 </a></li>
-                            {{--<li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.discipline.index') }}">
+                                    <span class="hide-menu">Displine Memo Action</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
                                     <span class="hide-menu">Memo/Notice activety</span>
-                                </a></li>--}}
+                                </a></li>
                                   <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.notice.management.user') }}">
                                     <span class="hide-menu">Memo/Notice action</span>
                                 </a></li>
+                                
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('feedback.get.studentFeedback') }}">
                                     <span class="hide-menu">Session Feedback</span>

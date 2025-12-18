@@ -11,7 +11,7 @@ class DisciplineMaster extends Model
 
     protected $fillable = [
         'discipline_name',
-        'mark_diduction',
+        'mark_deduction',
         'course_master_pk',
         'active_inactive',
         'created_date',
