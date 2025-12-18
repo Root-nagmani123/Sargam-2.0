@@ -66,6 +66,52 @@
                         </div>
                     </div>
                 </div>
+               
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">Select status</option>
+                            <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Open</option>
+                            <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Close</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                       <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
+                    </div>
+                </div>
+                </div>
+                 <div class="row">
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="from_date" class="form-label">From Date</label>
+                        <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                    </div>
+                </div>
+                <div class="col-3">
+                    <div class="mb-3">
+                        <label for="to_date" class="form-label">To Date</label>
+                        <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="mb-3 d-flex align-items-center gap-2">
+                        <a href="{{ route('memo.discipline.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle me-1"></i> Clear Filters
+                        </a>
+                    </div>
+                </div>
+                <div class="col-6 text-end">
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                        </button>
+                    </div>
+            </div>
+            </div>
             </form>
             <hr>
             <div class="card mb-3">
@@ -90,12 +136,47 @@
                             </select>
                         </div>
 
-                        <!-- Export -->
-                        <div class="col-md-5 text-md-end">
-                            <label class="form-label fw-semibold d-block">Export</label>
-                            <div class="btn-group">
-                                <button class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-file-earmark-excel me-1"></i> CSV
+
+                            <!-- Type -->
+                           
+                            <!-- Status -->
+                            <td class="status sticky-status">
+                                @if ($memo->status == 1)
+                                <span class="badge bg-success-subtle text-success">
+                                    <i class="bi bi-check-circle me-1"></i> Recorded
+                                </span>
+                                @elseif ($memo->status == 2)
+
+                                 <span class="badge bg-danger-subtle text-danger">
+                                    <i class="bi bi-x-circle me-1"></i> Memo sent
+                                </span>
+                                <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}" class="badge bg-primary-subtle text-primary ms-2 view-reason" >
+                                         View Memo
+                                    </a>
+                                  <a class="text-success d-flex align-items-center view-conversation"
+                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" 
+                                        data-id="{{ $memo->pk }}" data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}"
+>
+                                        <i class="material-icons material-symbols-rounded">chat</i>
+                                    </a>
+                                @else 
+                                <a class="text-success d-flex align-items-center view-conversation"
+                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" 
+                                        data-id="{{ $memo->pk }}" data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}"
+>
+                                        <i class="material-icons material-symbols-rounded">chat</i>
+                                    </a>
+                               
+                                <!-- <span class="badge bg-danger-subtle text-danger">
+                                    <i class="bi bi-x-circle me-1"></i> Memo Closed
+                                </span> -->
+                                @endif
+                            </td>
+                            <td class="s_name fw-medium">
+                                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training'))
+                                @if($memo->status == 1)
+                                <button class="btn btn-sm btn-primary" data-discipline="{{ $memo->pk }}" id="sendMemoBtn" >
+                                    <i class="bi bi-envelope-paper"></i> Send Memo
                                 </button>
                                 <button class="btn btn-outline-secondary btn-sm">
                                     <i class="bi bi-file-earmark-pdf me-1"></i> PDF

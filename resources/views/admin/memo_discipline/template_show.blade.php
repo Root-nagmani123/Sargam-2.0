@@ -22,7 +22,7 @@
             <hr>
 
             <p class="mb-1">SHOW CAUSE Memo</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::now()->format('d/m/Y') }} </p>
+            <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
 
             <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
                 from
@@ -63,32 +63,12 @@
             </div>
 
             <p><strong>{{ $memo->student->display_name ?? 'Student Name' }}, {{ $memo->student->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: Show Cause Memo for {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
+                Remarks: Show Cause Memo for {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
 
             <p class="text-end"><strong>{{ $memo->template->director_name ?? 'Director Name' }}</strong><br>{{ $memo->template->director_designation ?? 'Director Designation' }}</p>
 
             <!-- Exemption Table -->
-            <div class="table-responsive mb-4">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Total Exemption Have</th>
-                            <th>Total Exemption Taken</th>
-                            <th>MOD on SAT / SUN</th>
-                            <th>Exemption Balance (if any)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>3</td>
-                            <td>0</td>
-                            <td>0</td>
-                            <td>3</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
+           
             <!-- Conversation Section -->
             <h6 class="fw-bold">Conversation</h6>
             <div class="table-responsive mb-4">
@@ -166,7 +146,7 @@
 
                         <div class="col-12">
                             <div class="mb-3">
-                                <label class="form-label">Message <span class="text-muted">*</span></label>
+                                <label class="form-label">Conversation <span class="text-muted">*</span></label>
                                 <textarea class="form-control" rows="4" name="student_decip_incharge_msg"
                                     placeholder="Type your message here..."></textarea>
                             </div>
