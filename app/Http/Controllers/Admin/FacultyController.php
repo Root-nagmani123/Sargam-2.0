@@ -72,14 +72,24 @@ class FacultyController extends Controller
                 'middle_name' => $request->middlename,
                 'last_name' => $request->lastname,
                 'full_name' => $request->fullname, */
+
+                'first_name'  => $request->firstName,
+				'middle_name' => $request->middlename,
+				'last_name'   => $request->lastname,
+				'full_name'   => trim(
+					$request->firstName . ' ' .
+					($request->middlename ?? '') . ' ' .
+					$request->lastname
+				),
+
                 'gender' => $request->gender,
                 'landline_no' => $request->landline,
                 'mobile_no' => $request->mobile,
                 'country_master_pk' => $request->country,
                 'state_master_pk' => $request->state,
                 'state_district_mapping_pk' => $request->district,
-                'currentDesignation' => $request->current_designation,
-                'currentDepartment'  => $request->current_department,
+                'current_designation' => $request->current_designation,
+                'current_department'  => $request->current_department,
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
                 'residence_address' => $request->residence_address,
@@ -92,7 +102,7 @@ class FacultyController extends Controller
                 'PAN_No' => $request->pannumber,
             ];
 
-			if (!$request->faculty_id) {
+			/*if (!$request->faculty_id) {
 
 				$facultyDetails['first_name']  = $request->firstName;
 				$facultyDetails['middle_name'] = $request->middlename;
@@ -104,7 +114,7 @@ class FacultyController extends Controller
 					$request->lastname
 				);
 			}
-
+            */
 
             if(!empty($request->other_city)) {
                 $otherCity = City::create([
