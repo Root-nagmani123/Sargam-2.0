@@ -1175,7 +1175,7 @@ public function memo_notice_conversation(Request $request)
                 ->update([
                     'memo_conclusion_master_pk' => $validated['conclusion_type'],
                     'conclusion_remark' => $validated['conclusion_remark'] ?? null,
-                    'mark_of_deduction' => $validated['mark_of_deduction'] ?? '',
+                    'mark_of_deduction' => $validated['mark_of_deduction'] ?? null,
                     'decicion_taken_by' => auth()->user()->id ?? 1,
                     'decision_date' => now(),
                     'modified_date' => now(),
@@ -1185,9 +1185,9 @@ public function memo_notice_conversation(Request $request)
             DB::table('student_notice_status')
                 ->where('pk', $validated['memo_notice_id'])
                 ->update([
-                    'memo_conclusion_master_pk' => $validated['conclusion_type'],
+                    'conclusion_type_pk' => $validated['conclusion_type'],
                     'conclusion_remark' => $validated['conclusion_remark'] ?? null,
-                    'mark_of_deduction' => $validated['mark_of_deduction'] ?? '',
+                    'mark_of_deduction' => $validated['mark_of_deduction'] ?? null,
                 ]);
         }
 

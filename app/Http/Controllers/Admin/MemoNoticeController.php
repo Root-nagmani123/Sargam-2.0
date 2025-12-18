@@ -93,7 +93,7 @@ class MemoNoticeController extends Controller
             'director' => 'required|string|max:255',
             'designation' => 'required|string|max:255',
             'content' => 'required|string',
-            'memo_notice_type' => 'required|string|in:Memo,Notice',
+            'memo_notice_type' => 'required|string|in:Memo,Notice,Discipline Memo',
         ]);
 
         // Prevent Duplicate Active Memo/Notice
