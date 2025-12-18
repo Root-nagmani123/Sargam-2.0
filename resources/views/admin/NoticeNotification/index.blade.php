@@ -127,7 +127,7 @@
                             </td>
                             <td class="text-center">
                                 <div class="dropdown">
-                                    <a id="actionDropdown{{ $encId }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <a href="#" id="actionDropdown{{ $encId }}" data-bs-toggle="dropdown" aria-expanded="false" role="button">
                                         <i class="material-icons material-symbols-rounded"
                                             style="font-size:24px;cursor:pointer;">
                                             more_horiz
