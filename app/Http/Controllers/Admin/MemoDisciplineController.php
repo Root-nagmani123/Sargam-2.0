@@ -51,7 +51,10 @@ class MemoDisciplineController extends Controller
             'discipline:pk,discipline_name',
             'student:pk,display_name'
         ])
+
         ->when(hasRole('Student-OT'), function ($q) use ($courses) {
+            $q->where('student_master_pk', Auth::user()->user_id);
+            
             $q->whereIn('course_master_pk', $courses->pluck('pk'));
         })
         ->when($programNameFilter, function ($q) use ($programNameFilter) {
@@ -130,6 +133,7 @@ class MemoDisciplineController extends Controller
                     's.display_name as display_name',
                     's.generated_OT_code as generated_OT_code'
                 )
+                ->orderBy('s.display_name', 'asc')
                 ->get();
 
 
@@ -178,7 +182,7 @@ class MemoDisciplineController extends Controller
             return response()->json('Discipline and Course are required.');
         }
 
-        $discipline = DisciplineMaster::find($discipline_master_pk)->where('course_master_pk', $course_id)->first();
+        $discipline = DisciplineMaster::find($discipline_master_pk)->where('course_master_pk', $course_id)->where('active_inactive', 1)->first();
 
         if (!$discipline) {
             return response()->json('Discipline not found.');

@@ -386,7 +386,7 @@
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">Select status</option>
-                                <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Open</option>
+                                <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Recorded</option>
                                 <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Close</option>
                             </select>
                         </div>
@@ -444,7 +444,9 @@
                             <th class="text-center">Final</th>
                             <th>Remarks</th>
                             <th>Status</th>
+                            @if(! hasRole('Student-OT'))
                             <th class="text-end">Action</th>
+                            @endif
                         </tr>
                     </thead>
 
@@ -534,6 +536,7 @@
                             </td>
 
                             <!-- Action -->
+                             @if(! hasRole('Student-OT'))
                             <td class="text-end">
                                 @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin')
                                 || hasRole('Training'))
@@ -554,6 +557,7 @@
                                 <span class="text-muted small">—</span>
                                 @endif
                             </td>
+                            @endif
                         </tr>
                         @endforeach
                         @endif
