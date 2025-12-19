@@ -13,7 +13,8 @@
 
                             <!-- Dashboard Link -->
                             <li class="sidebar-item">
-                                <a class="sidebar-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
+                                <a class="sidebar-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
+                                    href="{{ route('admin.dashboard') }}">
                                     <span class="hide-menu">Dashboard</span>
                                 </a>
                             </li>
