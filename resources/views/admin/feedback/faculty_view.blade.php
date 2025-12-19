@@ -278,7 +278,7 @@
                         <div class="d-flex align-items-center">
                             <!-- Export Buttons -->
                             <div class="btn-group ms-2" role="group">
-                                <button type="button" class="btn btn-sm btn-success" onclick="exportToExcl()">
+                                <button type="button" class="btn btn-sm btn-success" onclick="exportToExcel()">
                                     <i class="fas fa-file-excel me-1"></i> Export Excel
                                 </button>
                                 <button type="button" class="btn btn-sm btn-danger" onclick="exportToPDF()">
