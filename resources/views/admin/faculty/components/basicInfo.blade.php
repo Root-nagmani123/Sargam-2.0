@@ -62,7 +62,7 @@
 
         </div>
     </div>
-    <div class="col-md-6">
+    <!--<div class="col-md-6">
         <div class="mb-3">
 
             <x-input
@@ -75,7 +75,33 @@
                 />
 
         </div>
-    </div>
+    </div>-->
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <x-input
+                        name="fullname"
+                        label="Full Name :"
+                        placeholder="Full Name"
+                        formLabelClass="form-label"
+                        value="{{ $faculty->full_name }}"
+
+                        />
+
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="mb-3">
+                    <x-input
+                        name="faculty_code"
+                        label="Faculty Code :"
+                        placeholder="Faculty Code"
+                        formLabelClass="form-label"
+                        class="bg-light"
+                        value="{{ $faculty->faculty_code }}"
+                        readonly
+                    />
+                </div>
+            </div>
     <div class="col-md-6">
         <div class="mb-3">
 
@@ -129,6 +155,28 @@
                 />
         </div>
     </div>
+    <div class="col-md-6">
+	<div class="mb-3">
+		<x-input
+			name="current_designation"
+			label="Current Designation :"
+			placeholder="Current Designation"
+			formLabelClass="form-label"
+			 value="{{ $faculty->current_designation }}"
+		/>
+	</div>
+	</div>
+    <div class="col-md-6">
+	<div class="mb-3">
+		<x-input
+			name="current_department"
+			label="Current Department :"
+			placeholder="Current Department"
+			formLabelClass="form-label"
+			 value="{{ $faculty->current_department}}"
+		/>
+	</div>
+</div>
     <div class="col-md-6">
         <div class="mb-3">
             <x-select

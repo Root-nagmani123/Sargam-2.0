@@ -68,11 +68,6 @@ class FacultyController extends Controller
 
             $facultyDetails = [
                 'faculty_type' => $request->facultyType,
-               /*  'first_name' => $request->firstName,
-                'middle_name' => $request->middlename,
-                'last_name' => $request->lastname,
-                'full_name' => $request->fullname, */
-
                 'first_name'  => $request->firstName,
 				'middle_name' => $request->middlename,
 				'last_name'   => $request->lastname,
@@ -343,6 +338,8 @@ class FacultyController extends Controller
                 'gender'        => $request->gender,
                 'landline_no'   => $request->landline,
                 'mobile_no'        => $request->mobile,
+                'current_designation'        => $request->current_designation,
+				'current_department'        => $request->current_department,
                 'country_master_pk' => $request->country,
                 'state_master_pk'   => $request->state,
                 'state_district_mapping_pk' => $request->district,
@@ -406,7 +403,8 @@ class FacultyController extends Controller
                 return redirect()->route('faculty.index')->with('error', 'Faculty not found');
             }
             //print_r($facultyDetails);die;
-            $faculty->update($facultyDetails);
+            logger()->info('DB columns', \Schema::getColumnListing('faculty_master'));
+           $faculty->update($facultyDetails);
 
             $this->generateFacultyCode($faculty, $request->facultyType);
 
@@ -448,7 +446,7 @@ class FacultyController extends Controller
                             $degreeDetails[$key]['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
                         }
                     }
-//print_r($degreeDetails); die;
+
                     FacultyQualificationMap::insert($degreeDetails);
                 }
 
@@ -471,7 +469,7 @@ class FacultyController extends Controller
                             'faculty_master_pk' => $faculty->pk
                         ];
                     }
-//print_r($experienceDetails); die;
+
                     FacultyExperienceMap::insert($experienceDetails);
                 }
 
@@ -495,18 +493,18 @@ class FacultyController extends Controller
                             'updated_date' => now(),
                         ];
                     }
-//print_r($expertiseDetails); die;
+
                     FacultyExpertiseMap::insert($expertiseDetails);
                 }
             }
             DB::commit();
-          /*  return response()->json([
+           return response()->json([
                 'status' => true,
-                'message' => 'Faculty created successfully',
+                'message' => 'Faculty updated successfully',
                 'data' => $faculty
             ]);
-*/
-             return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
+
+            // return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             dump($e);
