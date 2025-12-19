@@ -9,6 +9,26 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Sidebar navigation system initializing...');
 
     // ==========================================
+    // DataTables: global safe adjust helper
+    // ==========================================
+    function adjustAllDataTables() {
+        try {
+            if (window.jQuery && $.fn && $.fn.dataTable) {
+                const api = $.fn.dataTable.tables({ visible: true, api: true });
+                if (api && api.columns) {
+                    api.columns.adjust();
+                    if (api.responsive && api.responsive.recalc) {
+                        api.responsive.recalc();
+                    }
+                    api.draw(false);
+                }
+            }
+        } catch (err) {
+            console.warn('DataTables adjust failed (navigation-fixed):', err);
+        }
+    }
+
+    // ==========================================
     // SIDEBAR MENU LINKS: Trigger header tabs
     // ==========================================
     
@@ -140,6 +160,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Sync sidebar tabs
                 syncSidebarTab(targetId);
+
+                // After tab becomes visible, adjust DataTables to correct header widths
+                setTimeout(adjustAllDataTables, 150);
             });
         });
     }
@@ -227,6 +250,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Sync both content areas
                 syncBodyWrapperTab(activeTabId);
                 syncSidebarTab(activeTabId);
+
+                // Adjust tables after auto-activation
+                setTimeout(adjustAllDataTables, 150);
             }
         }
     }
@@ -260,6 +286,46 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeSidebarCollapse();
         initializeHeaderTabs();
         initializeScrollPersistence();
+        
+        // Observe layout width changes and adjust DataTables accordingly
+        const mainWrapper = document.getElementById('main-wrapper');
+        const bodyWrapperEl = document.querySelector('.body-wrapper');
+        if (window.ResizeObserver) {
+            const ro = new ResizeObserver(function(entries) {
+                // Debounce via requestAnimationFrame for smoother updates
+                window.requestAnimationFrame(adjustAllDataTables);
+            });
+            if (mainWrapper) ro.observe(mainWrapper);
+            if (bodyWrapperEl) ro.observe(bodyWrapperEl);
+        } else {
+            // Fallback: on window resize
+            let resizeTimer;
+            window.addEventListener('resize', function() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(adjustAllDataTables, 150);
+            });
+        }
+
+        // Also watch class and attribute changes that indicate sidebar toggling
+        if (window.MutationObserver) {
+            const mo = new MutationObserver(function(mutationsList) {
+                for (const mutation of mutationsList) {
+                    if (mutation.type === 'attributes') {
+                        const name = mutation.attributeName || '';
+                        if (name === 'class' || name === 'data-sidebartype') {
+                            // Allow transition to complete
+                            setTimeout(adjustAllDataTables, 150);
+                        }
+                    }
+                }
+            });
+            if (mainWrapper) mo.observe(mainWrapper, { attributes: true, attributeFilter: ['class'] });
+            mo.observe(document.body, { attributes: true, attributeFilter: ['data-sidebartype'] });
+        }
+
+        // Adjust on Bootstrap collapse show/hide (menus may affect available width)
+        document.addEventListener('shown.bs.collapse', function() { setTimeout(adjustAllDataTables, 100); });
+        document.addEventListener('hidden.bs.collapse', function() { setTimeout(adjustAllDataTables, 100); });
         
         // CRITICAL: Detect which section has content and activate that tab
         setTimeout(function() {

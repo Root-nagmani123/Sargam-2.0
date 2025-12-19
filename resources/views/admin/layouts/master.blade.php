@@ -452,6 +452,27 @@ document.addEventListener("DOMContentLoaded", function () {
     const sidebarmenus = document.querySelectorAll(".sidebarmenu");
     const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
 
+    // Helper: Safely adjust all DataTables after layout changes
+    function adjustAllDataTables() {
+        try {
+            if (window.jQuery && $.fn && $.fn.dataTable) {
+                // Adjust columns for all visible tables and recalc responsive layout
+                const api = $.fn.dataTable.tables({ visible: true, api: true });
+                if (api && api.columns) {
+                    api.columns.adjust();
+                    // Recalculate Responsive extension if available
+                    if (api.responsive && api.responsive.recalc) {
+                        api.responsive.recalc();
+                    }
+                    // Redraw without resetting paging
+                    api.draw(false);
+                }
+            }
+        } catch (err) {
+            console.warn('DataTables adjust failed after sidebar toggle:', err);
+        }
+    }
+
     // Apply saved sidebar type preference; do not force collapse on dashboard
     try {
         const savedType = localStorage.getItem('SidebarType');
@@ -474,6 +495,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         // Set icon to expand (collapsed state)
         if (icon) icon.textContent = "keyboard_double_arrow_right";
+        // After initial collapse state, adjust DataTables to new layout
+        setTimeout(adjustAllDataTables, 300);
     } else {
         // Sidebar should be expanded
         sidebar.classList.add("show-sidebar");
@@ -481,6 +504,8 @@ document.addEventListener("DOMContentLoaded", function () {
             el.classList.remove("close");
         });
         if (icon) icon.textContent = "keyboard_double_arrow_left";
+        // After initial expanded state, adjust DataTables to new layout
+        setTimeout(adjustAllDataTables, 300);
     }
 
     if (toggleBtn) {
@@ -504,6 +529,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
                 if (icon) icon.textContent = "keyboard_double_arrow_right";  // expand icon
             }
+
+            // Adjust DataTables after the sidebar transition to fix header widths
+            // Use a small delay to allow CSS transitions to finish
+            setTimeout(adjustAllDataTables, 300);
         });
     }
 });

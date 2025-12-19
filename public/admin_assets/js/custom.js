@@ -54,6 +54,47 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+// =============================================
+// Global DataTables alignment fixes on layout changes
+// =============================================
+document.addEventListener('DOMContentLoaded', function() {
+    function adjustAllDataTables() {
+        try {
+            if (window.jQuery && $.fn && $.fn.dataTable) {
+                const api = $.fn.dataTable.tables({ visible: true, api: true });
+                if (api && api.columns) {
+                    api.columns.adjust();
+                    if (api.responsive && api.responsive.recalc) {
+                        api.responsive.recalc();
+                    }
+                    api.draw(false);
+                }
+            }
+        } catch (err) {
+            console.warn('DataTables adjust failed (custom.js):', err);
+        }
+    }
+
+    // Adjust on window resize (debounced)
+    let resizeTimer;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(adjustAllDataTables, 150);
+    });
+
+    // Adjust when main wrapper finishes CSS transition (e.g., sidebar collapse)
+    const mainWrapper = document.getElementById('main-wrapper');
+    if (mainWrapper) {
+        mainWrapper.addEventListener('transitionend', function() {
+            // Small delay to ensure final layout
+            setTimeout(adjustAllDataTables, 100);
+        });
+    }
+
+    // Initial pass after page ready
+    setTimeout(adjustAllDataTables, 300);
+});
+
 $(document).on('change', 'input[name="styled_max_checkbox"]', function () {
     let address  = $('[name="address"]').val();
     let country  = $('[name="country"]').val();
