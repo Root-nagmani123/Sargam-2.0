@@ -55,11 +55,14 @@
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label">Group Type Name</label>
+                                <label class="form-label required">Group Type Name</label>
                                 <div id="type_name_container" class="border rounded p-3 bg-light-subtle">
                                     <div class="text-center text-muted" id="groupTypePlaceholder">
                                         Select a Group Type first
                                     </div>
+                                </div>
+                                <div class="invalid-feedback" id="type_names_error" style="display: none;">
+                                    Please select at least one Group Type Name.
                                 </div>
                             </div>
 
