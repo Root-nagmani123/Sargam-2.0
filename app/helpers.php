@@ -1,16 +1,23 @@
 <?php
+
 use Illuminate\Support\Facades\Cache;
-function view_file_link($path) {
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Auth;
+
+function view_file_link($path)
+{
     return $path ? asset('storage/' . $path) : null;
 }
 
-function format_date($date, $format = 'd-m-Y') {
+function format_date($date, $format = 'd-m-Y')
+{
     return \Carbon\Carbon::parse($date)->format($format);
 }
 
 function createDirectory($path)
 {
-    $directory = public_path('storage/'. $path);
+    $directory = public_path('storage/' . $path);
     if (!file_exists($directory)) {
         mkdir($directory, 0755, true);
     }
@@ -36,7 +43,7 @@ function hasRole($role)
     }
 
     // Step 2: Check database roles + cache
-    $roles = Cache::remember('user_roles_'.$user->pk, 10, function () use ($user) {
+    $roles = Cache::remember('user_roles_' . $user->pk, 10, function () use ($user) {
         return $user->roles()->pluck('user_role_name')->toArray();
     });
 
@@ -46,86 +53,100 @@ function service_find()
 {
     $user = Auth::user();
 
-$cacheKey = 'service_name_'.$user->user_id;
+    $cacheKey = 'service_name_' . $user->user_id;
 
-$service_name = Cache::remember($cacheKey, 600, function () use ($user) {
-    return DB::table('student_master')
-        ->join('service_master', 'student_master.service_master_pk', '=', 'service_master.pk')
-        ->where('student_master.pk', $user->user_id)
-        ->value('service_master.service_short_name');
-});
-return $service_name; 
-}
-function employee_designation_search(){
-    $user = Auth::user();
-    // print_r($user);
-$cacheKey = 'employee_designation_'.$user->user_id;
-$designation = Cache::remember($cacheKey, 600, function () use ($user) {
-    return DB::table('employee_master')
-        ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
-        ->where('employee_master.pk', $user->user_id)
-        ->value('designation_master.designation_name','designation_master.*');
-});
-return $designation;
-
-    
-}
-function get_profile_pic(){
-    $user = Auth::user();
-    $cacheKey = 'profile_pic_'.$user->user_id;
-    if($user->user_category == 'S'){
-        return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-    }else{
-$profile_pic = Cache::remember($cacheKey, 600, function () use ($user) {
-        $data = DB::table('employee_master')
-            ->where('employee_master.pk', $user->user_id)
-            ->value('profile_picture');
-            if($data == null ){
-             return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-            }else{
-                // return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
-                return asset('storage/'.$data);
-            }
+    $service_name = Cache::remember($cacheKey, 600, function () use ($user) {
+        return DB::table('student_master')
+            ->join('service_master', 'student_master.service_master_pk', '=', 'service_master.pk')
+            ->where('student_master.pk', $user->user_id)
+            ->value('service_master.service_short_name');
     });
-    return $profile_pic;
+    return $service_name;
 }
-}
-if (!function_exists('get_notice_notification_by_role')) {
- function get_notice_notification_by_role()
+function employee_designation_search()
 {
     $user = Auth::user();
-    $sessionRoles = Session::get('user_roles', []);
+    // print_r($user);
+    $cacheKey = 'employee_designation_' . $user->user_id;
+    $designation = Cache::remember($cacheKey, 600, function () use ($user) {
+        return DB::table('employee_master')
+            ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+            ->where('employee_master.pk', $user->user_id)
+            ->value('designation_master.designation_name', 'designation_master.*');
+    });
+    return $designation;
+}
+function get_profile_pic()
+{
+    $user = Auth::user();
+    $cacheKey = 'profile_pic_' . $user->user_id;
+    if ($user->user_category == 'S') {
 
-    $roleStaffFaculty = ['Internal Faculty', 'Guest Faculty', 'Training', 'Staff'];
-    $roleStudent      = ['Student-OT'];
+        $profile_pic = Cache::remember($cacheKey, 600, function () use ($user) {
 
-    $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
-    $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
+            $data = DB::table('student_master')
+                ->where('pk', $user->user_id)
+                ->value('photo_path');
 
- 
-    $commonNotices = DB::table('notices_notification')
+            if ($data == null) {
+                return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+            } else {
+                return asset('storage/form-uploads/photo/' . $data);
+            }
+        });
+
+        return $profile_pic;
+    } else {
+        $profile_pic = Cache::remember($cacheKey, 600, function () use ($user) {
+            $data = DB::table('employee_master')
+                ->where('employee_master.pk', $user->user_id)
+                ->value('profile_picture');
+            if ($data == null) {
+                return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+            } else {
+                // return 'https://images.unsplash.com/photo-1650110002977-3ee8cc5eac91?q=80&w=737&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D';
+                return asset('storage/' . $data);
+            }
+        });
+        return $profile_pic;
+    }
+}
+if (!function_exists('get_notice_notification_by_role')) {
+    function get_notice_notification_by_role()
+    {
+        $user = Auth::user();
+        $sessionRoles = Session::get('user_roles', []);
+
+        $roleStaffFaculty = ['Internal Faculty', 'Guest Faculty', 'Training', 'Staff'];
+        $roleStudent      = ['Student-OT'];
+
+        $isStaffFaculty = !empty(array_intersect($roleStaffFaculty, $sessionRoles));
+        $isStudent      = !empty(array_intersect($roleStudent, $sessionRoles));
+
+
+        $commonNotices = DB::table('notices_notification')
             ->where('target_audience', 'All')
             ->where('active_inactive', 1)
             ->where('expiry_date', '>=', date('Y-m-d'))
             ->orderBy('display_date', 'desc')
             ->get();
- 
-    // 🔥 Staff/Faculty Notices
-    if ($isStaffFaculty) {
-      
+
+        // 🔥 Staff/Faculty Notices
+        if ($isStaffFaculty) {
+
             $data = DB::table('notices_notification')
                 ->where('target_audience', 'like', '%Staff/Faculty%')
                 ->where('active_inactive', 1)
                 ->where('expiry_date', '>=', date('Y-m-d'))
                 ->orderBy('display_date', 'desc')
                 ->get();
-        
-      
-        return $commonNotices->merge($data);
-    }
 
-    // 🔥 Student OT Notices
-    if ($isStudent) {
+
+            return $commonNotices->merge($data);
+        }
+
+        // 🔥 Student OT Notices
+        if ($isStudent) {
             $roleNotices =  DB::table('notices_notification')
                 ->join('student_master_course__map as smcm', 'notices_notification.course_master_pk', '=', 'smcm.course_master_pk')
                 ->where('target_audience', 'like', '%Office trainee%')
@@ -134,16 +155,14 @@ if (!function_exists('get_notice_notification_by_role')) {
                 ->where('expiry_date', '>=', date('Y-m-d'))
                 ->orderBy('display_date', 'desc')
                 ->get();
-     
 
-        return $commonNotices->merge($roleNotices);
+
+            return $commonNotices->merge($roleNotices);
+        }
+
+        // Roles not matching → return only "All"
+        return $commonNotices;
     }
-
-    // Roles not matching → return only "All"
-    return $commonNotices;
-}
-
-
 }
 
 /**
@@ -157,6 +176,3 @@ if (!function_exists('notification')) {
         return app(\App\Services\NotificationService::class);
     }
 }
-
-
-
