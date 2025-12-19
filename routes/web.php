@@ -568,16 +568,23 @@ Route::middleware(['auth'])->group(function(){
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
+    //change password work here 
+    Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
+    
+    Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
+
+
+
+
+
+
+
 
     // Report walal route
 
     Route::get('/faculty_view', function () {
      return view('admin.feedback.faculty_view');
  })->name('admin.feedback.faculty_view');
-
-  Route::get('/change_password', function () {
-     return view('admin.password.change_password');
- })->name('admin.password.change_password');
 
   Route::get('/feedback_details', function () {
      return view('admin.feedback.feedback_details');
