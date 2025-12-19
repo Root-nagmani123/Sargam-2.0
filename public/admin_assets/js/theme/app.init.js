@@ -1,6 +1,13 @@
 var userSettings = {
   Layout: "vertical", // vertical | horizontal
-  SidebarType: "full", // full | mini-sidebar
+  // Default to collapsed on first use; persist user choice in localStorage
+  SidebarType: (function() {
+    try {
+      return localStorage.getItem('SidebarType') || "mini-sidebar";
+    } catch (e) {
+      return "mini-sidebar";
+    }
+  })(), // full | mini-sidebar
   BoxedLayout: true, // true | false
   Direction: "ltr", // ltr | rtl
   Theme: "light", // light | dark

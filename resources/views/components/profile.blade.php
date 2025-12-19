@@ -6,7 +6,7 @@
 
         <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded text-primary"
             style="font-size: 40px;">
-            keyboard_double_arrow_left
+            keyboard_double_arrow_right
         </i>
 
     </a>

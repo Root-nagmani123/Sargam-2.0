@@ -173,6 +173,53 @@ $(document).on('change', '.status-toggle', function () {
         });
     }
 });
+
+// Ensure DataTables processing overlay hides after load (especially for CourseMaster)
+$(document).ready(function() {
+    var $courseTable = $('#coursemaster-table');
+    if ($courseTable.length) {
+        // Hide on init and on every draw
+        $courseTable.on('init.dt draw.dt', function() {
+            $('#coursemaster-table_processing').hide();
+        });
+        // React to processing state changes explicitly
+        $courseTable.on('processing.dt', function (e, settings, processing) {
+            var $proc = $('#coursemaster-table_processing');
+            if ($proc.length) {
+                if (processing) {
+                    $proc.show();
+                } else {
+                    $proc.hide();
+                }
+            }
+        });
+    }
+    // Generic safety: if any _processing remains visible after ajax, hide it
+    $(document).ajaxStop(function(){
+        $("div[id$='_processing']").hide();
+    });
+});
+
+// Global DataTables processing overlay management
+// Hide the built-in "_processing" overlay once data finishes processing/drawing
+$(document).on('processing.dt', function (e, settings, processing) {
+    if (!settings || !settings.sTableId) return;
+    var procId = '#' + settings.sTableId + '_processing';
+    var $proc = $(procId);
+    if ($proc.length) {
+        if (processing) {
+            $proc.show();
+        } else {
+            $proc.hide();
+        }
+    }
+});
+
+$(document).on('init.dt draw.dt', function (e, settings) {
+    if (!settings || !settings.sTableId) return;
+    var procId = '#' + settings.sTableId + '_processing';
+    $(procId).hide();
+});
 function deleteConfirm(id) {
     Swal.fire({
         title: "Are you sure?",
