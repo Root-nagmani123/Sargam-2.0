@@ -9,8 +9,9 @@
         <div class="card-body">
             <h4>Inhouse Faculty</h4>
             <hr class="my-2">
-            <div class="table-responsive">
-               <table class="table">
+            <div class="datatables">
+                <div class="table-responsive">
+               <table class="table" id="dom_jq_event">
                     <thead>
                         <tr>
                             <th scope="col">Sl. No.</th>
@@ -35,6 +36,7 @@
 
                     </tbody>
                 </table>
+            </div>
             </div>
         </div>
     </div>
