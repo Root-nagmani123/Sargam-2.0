@@ -85,6 +85,16 @@
                                 :options="$facultyList" />
                         
                         </div>
+                        <div class="col-md-6 mt-4">
+                            <x-select 
+                                name="supportingsection" 
+                                label="Supporting Section" 
+                                placeholder="Select Supporting Section" 
+                                formLabelClass="form-label" 
+                                formSelectClass="select2"
+                                value="{{ $selectedSupportingSection ?? '' }}"
+                                :options="$supportingSectionList" />
+                        </div>
                         <div class="col-md-12 mt-4">
                             <label class="form-label">Assistant Course Coordinators</label>
                             <div id="assistant-coordinators-container">
