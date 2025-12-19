@@ -7,7 +7,7 @@ use App\Models\CoursesMaster;
 use App\Models\CourseTeamMaster;
 use Illuminate\Http\Request;
 use App\Http\Requests\ProgrammeRequest;
-use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster};
+use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster, UserRoleMaster};
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use App\DataTables\CourseMasterDataTable;
@@ -63,7 +63,8 @@ class CourseController extends Controller
             'Discipline' => 'Discipline',
             'Club Society' => 'Club Society'
         ];
-        return view('admin.programme.create', compact('facultyList', 'roleOptions'));
+        $supportingSectionList = UserRoleMaster::pluck('user_role_display_name', 'pk')->toArray();
+        return view('admin.programme.create', compact('facultyList', 'roleOptions', 'supportingSectionList'));
     }
 
     public function edit(string $id)
@@ -96,8 +97,10 @@ class CourseController extends Controller
                 'Discipline' => 'Discipline',
                 'Club Society' => 'Club Society'
             ];
+            $supportingSectionList = UserRoleMaster::pluck('user_role_display_name', 'pk')->toArray();
+            $selectedSupportingSection = $courseMasterObj->user_role_master_pk ?? '';
             
-            return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions'));
+            return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Invalid course ID');
         }

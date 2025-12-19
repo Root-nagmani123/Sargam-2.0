@@ -34,6 +34,7 @@ class ProgrammeRequest extends FormRequest
             'assistantcoursecoordinator.*' => 'required|string|max:255',
             'assistant_coordinator_role' => 'nullable|array',
             'assistant_coordinator_role.*' => 'nullable|string|max:255',
+            'supportingsection' => 'nullable|exists:user_role_master,pk',
         ];
     }
 
