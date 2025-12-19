@@ -161,44 +161,50 @@ class MemoNoticeController extends Controller
 
     // Update template
     public function update(Request $request, $id)
-    {
+{
+    try {
+        $template = MemoNoticeTemplate::findOrFail($id);
 
-        try {
-            $template = MemoNoticeTemplate::findOrFail($id);
+        $validated = $request->validate([
+            'course_master_pk' => 'nullable|integer',
+            'title' => 'required|string|max:255',
+            'director' => 'required|string|max:255',
+            'designation' => 'required|string|max:255',
+            'content' => 'required|string',
+            'memo_notice_type' => 'required|string|in:Memo,Notice,Discipline Memo',
+        ]);
 
-            // Use the correct field names from your form
-            $validated = $request->validate([
-                'course_master_pk' => 'nullable|integer',
-                'title' => 'required|string|max:255',
-                'director' => 'required|string|max:255', // Changed from director_name to director
-                'designation' => 'required|string|max:255', // Changed from director_designation to designation
-                'content' => 'required|string',
-                'memo_notice_type' => 'required|string|in:Memo,Notice',
-            ]);
+        // 🔴 Duplicate Active Memo/Notice check (excluding current record)
+        $alreadyExists = MemoNoticeTemplate::where('course_master_pk', $validated['course_master_pk'])
+            ->where('memo_notice_type', $validated['memo_notice_type'])
+            ->where('active_inactive', 1)
+            ->where('pk', '!=', $template->pk) // 🔥 current record exclude
+            ->exists();
 
-            // Map form fields to database columns
-            $updateData = [
-                'course_master_pk' => $validated['course_master_pk'] ?: null,
-                'title' => $validated['title'],
-                'director_name' => $validated['director'], // Map 'director' to 'director_name'
-                'director_designation' => $validated['designation'], // Map 'designation' to 'director_designation'
-                'content' => $validated['content'],
-                'memo_notice_type' => $validated['memo_notice_type'],
-                'updated_by' => Auth::id()
-            ];
-            $template->update($updateData);
-
-            return redirect()->route('admin.memo-notice.index')
-                ->with('success', 'Memo/Notice template updated successfully.');
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()
-                ->withErrors($e->validator)
-                ->withInput();
-        } catch (\Exception $e) {
-            \Log::error('Update error: ' . $e->getMessage());
-            return back()->withInput()->with('error', 'Error updating template: ' . $e->getMessage());
+        if ($alreadyExists) {
+            return back()->withInput()->with('error',
+                'An active ' . $validated['memo_notice_type'] . ' already exists for this course.');
         }
+
+        $template->update([
+            'course_master_pk' => $validated['course_master_pk'] ?: null,
+            'title' => $validated['title'],
+            'director_name' => $validated['director'],
+            'director_designation' => $validated['designation'],
+            'content' => $validated['content'],
+            'memo_notice_type' => $validated['memo_notice_type'],
+            'updated_by' => Auth::id(),
+        ]);
+
+        return redirect()->route('admin.memo-notice.index')
+            ->with('success', 'Memo/Notice template updated successfully.');
+
+    } catch (\Exception $e) {
+        \Log::error('Update error: ' . $e->getMessage());
+        return back()->withInput()->with('error', 'Failed to update template.' . $e->getMessage());
     }
+}
+
 
     // Delete template
     public function destroy($id)

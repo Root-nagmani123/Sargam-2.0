@@ -47,10 +47,19 @@
                         </div>
 
                         <!-- Designation -->
-                        <div class="col-6">
+                        <div class="col-3">
                             <label class="form-label">Director's Designation <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="designation"
                                 value="{{ old('designation', $template->director_designation) }}" required>
+                        </div>
+                         <div class="col-3">
+                            <label class="form-label">Memo / Notice Type <span class="text-danger">*</span></label>
+                            <select name="memo_notice_type" class="form-select" required>
+                                <option value="" disabled selected>Select Type</option>
+                                <option value="Memo" {{ old('memo_notice_type', $template->memo_notice_type) == 'Memo' ? 'selected' : '' }}>Memo</option>
+                                <option value="Notice" {{ old('memo_notice_type', $template->memo_notice_type) == 'Notice' ? 'selected' : '' }}>Notice</option>
+                                <option value="Discipline Memo" {{ old('memo_notice_type', $template->memo_notice_type) == 'Discipline Memo' ? 'selected' : '' }}>Discipline Memo</option>
+                            </select>
                         </div>
 
                         <!-- Content -->
