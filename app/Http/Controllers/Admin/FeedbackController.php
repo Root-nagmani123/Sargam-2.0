@@ -12,6 +12,12 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Exports\FacultyFeedbackExport;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 class FeedbackController extends Controller
 {
@@ -777,91 +783,97 @@ class FeedbackController extends Controller
         ]);
     }
 
-    public function exportFacultyFeedback(Request $request)
-    {
-        // Get filter parameters
-        $programId = $request->input('program_id');
-        $facultyName = $request->input('faculty_name');
-        $fromDate = $request->input('from_date');
-        $toDate = $request->input('to_date');
-        $courseType = $request->input('course_type', 'archived');
-        $facultyType = $request->input('faculty_type', []);
-        $exportType = $request->input('export_type', 'excel');
+  public function exportFacultyFeedback(Request $request)
+{
+    // Get filter parameters
+    $programId = $request->input('program_id');
+    $facultyName = $request->input('faculty_name');
+    $fromDate = $request->input('from_date');
+    $toDate = $request->input('to_date');
+    $courseType = $request->input('course_type', 'archived');
+    $facultyType = $request->input('faculty_type', []);
+    $exportType = $request->input('export_type', 'excel');
 
-        // Ensure faculty_type is always an array
-        if (is_string($facultyType)) {
-            $facultyType = [$facultyType];
-        }
+    // Ensure faculty_type is always an array
+    if (is_string($facultyType)) {
+        $facultyType = [$facultyType];
+    }
 
-        // Build query for detailed feedback data (same as facultyView)
-        $query = DB::table('topic_feedback as tf')
-            ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
-            ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
-            ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
-            ->select(
-                'tf.topic_name',
-                'cm.course_name as program_name',
-                'cm.active_inactive as program_status',
-                'cm.end_date as program_end_date',
-                'fm.full_name as faculty_name',
-                'fm.faculty_type',
-                'tt.START_DATE',
-                'tt.END_DATE',
-                DB::raw('SUM(CASE WHEN tf.content = "5" THEN 1 ELSE 0 END) as content_5'),
-                DB::raw('SUM(CASE WHEN tf.content = "4" THEN 1 ELSE 0 END) as content_4'),
-                DB::raw('SUM(CASE WHEN tf.content = "3" THEN 1 ELSE 0 END) as content_3'),
-                DB::raw('SUM(CASE WHEN tf.content = "2" THEN 1 ELSE 0 END) as content_2'),
-                DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "5" THEN 1 ELSE 0 END) as presentation_5'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "4" THEN 1 ELSE 0 END) as presentation_4'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "3" THEN 1 ELSE 0 END) as presentation_3'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "2" THEN 1 ELSE 0 END) as presentation_2'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
-                DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
-                DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND tf.remark != "" THEN tf.remark END SEPARATOR "|||") as remarks')
-            )
-            ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.presentation')
-            ->whereNotNull('tf.content')
-            ->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tt.START_DATE', 'tt.END_DATE');
+    // Define faculty type map here - BEFORE using it in the map function
+    $facultyTypeMap = [
+        '1' => 'Internal',
+        '2' => 'Guest',
+    ];
 
-        // Apply filters
-        if ($programId && $programId !== '') {
-            $query->where('cm.pk', $programId);
-        }
+    // Build query for detailed feedback data (same as facultyView)
+    $query = DB::table('topic_feedback as tf')
+        ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+        ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
+        ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+        ->select(
+            'tf.topic_name',
+            'cm.course_name as program_name',
+            'cm.active_inactive as program_status',
+            'cm.end_date as program_end_date',
+            'fm.full_name as faculty_name',
+            'fm.faculty_type',
+            'tt.START_DATE',
+            'tt.END_DATE',
+            DB::raw('SUM(CASE WHEN tf.content = "5" THEN 1 ELSE 0 END) as content_5'),
+            DB::raw('SUM(CASE WHEN tf.content = "4" THEN 1 ELSE 0 END) as content_4'),
+            DB::raw('SUM(CASE WHEN tf.content = "3" THEN 1 ELSE 0 END) as content_3'),
+            DB::raw('SUM(CASE WHEN tf.content = "2" THEN 1 ELSE 0 END) as content_2'),
+            DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "5" THEN 1 ELSE 0 END) as presentation_5'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "4" THEN 1 ELSE 0 END) as presentation_4'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "3" THEN 1 ELSE 0 END) as presentation_3'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "2" THEN 1 ELSE 0 END) as presentation_2'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
+            DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
+            DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND tf.remark != "" THEN tf.remark END SEPARATOR "|||") as remarks')
+        )
+        ->where('tf.is_submitted', 1)
+        ->whereNotNull('tf.presentation')
+        ->whereNotNull('tf.content')
+        ->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tt.START_DATE', 'tt.END_DATE');
 
-        if ($facultyName && $facultyName !== 'All Faculty') {
-            $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
-        }
+    // Apply filters
+    if ($programId && $programId !== '') {
+        $query->where('cm.pk', $programId);
+    }
 
-        if (!empty($facultyType)) {
-            $query->whereIn('fm.faculty_type', $facultyType);
-        }
+    if ($facultyName && $facultyName !== 'All Faculty') {
+        $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
+    }
 
-        if ($fromDate) {
-            $query->whereDate('tt.START_DATE', '>=', $fromDate);
-        }
+    if (!empty($facultyType)) {
+        $query->whereIn('fm.faculty_type', $facultyType);
+    }
 
-        if ($toDate) {
-            $query->whereDate('tt.END_DATE', '<=', $toDate);
-        }
+    if ($fromDate) {
+        $query->whereDate('tt.START_DATE', '>=', $fromDate);
+    }
 
-        // Course type filter
-        if ($courseType === 'archived') {
-            $query->where(function ($q) {
-                $q->where('cm.active_inactive', 0)
-                    ->orWhereDate('cm.end_date', '<', Carbon::today());
-            });
-        } elseif ($courseType === 'current') {
-            $query->where('cm.active_inactive', 1)
-                ->whereDate('cm.end_date', '>=', Carbon::today());
-        }
+    if ($toDate) {
+        $query->whereDate('tt.END_DATE', '<=', $toDate);
+    }
 
-        // Get the data
-        $feedbackData = $query->get();
+    // Course type filter
+    if ($courseType === 'archived') {
+        $query->where(function ($q) {
+            $q->where('cm.active_inactive', 0)
+                ->orWhereDate('cm.end_date', '<', Carbon::today());
+        });
+    } elseif ($courseType === 'current') {
+        $query->where('cm.active_inactive', 1)
+            ->whereDate('cm.end_date', '>=', Carbon::today());
+    }
 
-        // Process data for export
-        $processedData = $feedbackData->map(function ($item) {
+    // Get the data
+    $feedbackData = $query->get();
+
+    // Process data for export - use the $facultyTypeMap defined above
+    $processedData = $feedbackData->map(function ($item) use ($facultyTypeMap) {
         // Convert to integers
         $content_5 = (int)$item->content_5;
         $content_4 = (int)$item->content_4;
@@ -893,11 +905,7 @@ class FeedbackController extends Controller
             $remarks = array_slice($remarks, 0, 10);
         }
 
-        // Get faculty type display name (same as web view)
-        $facultyTypeMap = [
-            '1' => 'Internal',
-            '2' => 'Guest',
-        ];
+        // Get faculty type display name using the $facultyTypeMap from use()
         $facultyTypeDisplay = $facultyTypeMap[$item->faculty_type] ?? ucfirst($item->faculty_type);
 
         // Determine course status (same as web view)
@@ -910,12 +918,12 @@ class FeedbackController extends Controller
         $lectureDate = '';
         $startTime = '';
         $endTime = '';
-        
+
         if ($item->START_DATE) {
             $lectureDate = Carbon::parse($item->START_DATE)->format('d-M-Y');
             $startTime = Carbon::parse($item->START_DATE)->format('H:i');
         }
-        
+
         if ($item->END_DATE) {
             $endTime = Carbon::parse($item->END_DATE)->format('H:i');
         }
@@ -948,7 +956,7 @@ class FeedbackController extends Controller
 
     // Export based on type
     if ($exportType === 'excel') {
-        return Excel::download(new FacultyFeedbackExport($processedData), 'faculty_feedback_' . date('Y_m_d') . '.xlsx');
+        return $this->exportExcelWithDesign($processedData, $request);
     } else {
         // PDF Export with exact web view design
         $data = [
@@ -956,13 +964,12 @@ class FeedbackController extends Controller
             'filters' => [
                 'program' => $programId ? $this->getProgramName($programId) : 'All Programs',
                 'faculty_name' => $facultyName ?: 'All Faculty',
-                'date_range' => ($fromDate && $toDate) ? 
-                    Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') : 
+                'date_range' => ($fromDate && $toDate) ?
+                    Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') :
                     'All Dates',
                 'course_type' => $courseType === 'current' ? 'Current Courses' : 'Archived Courses',
-                'faculty_type' => !empty($facultyType) ? 
-                    (count($facultyType) === 2 ? 'All Types' : 
-                     (in_array('1', $facultyType) ? 'Internal' : 'Guest')) : 
+                'faculty_type' => !empty($facultyType) ?
+                    (count($facultyType) === 2 ? 'All Types' : (in_array('1', $facultyType) ? 'Internal' : 'Guest')) :
                     'All Types',
             ],
             'export_date' => now()->format('d-M-Y H:i'),
@@ -993,5 +1000,383 @@ class FeedbackController extends Controller
             ->first();
 
         return $program ? $program->course_name : 'Unknown Program';
+    }
+
+   private function exportExcelWithDesign($data, $request)
+{
+    // Create Excel file with custom design
+    $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+    $sheet = $spreadsheet->getActiveSheet();
+
+    // Set basic properties
+    $spreadsheet->getProperties()
+        ->setCreator("Sargam LMS")
+        ->setTitle("Faculty Feedback Report")
+        ->setSubject("Faculty Feedback with Comments")
+        ->setDescription("Export of faculty feedback data with detailed ratings and comments")
+        ->setKeywords("faculty feedback ratings comments")
+        ->setCategory("Report");
+
+    // Set default styles - CORRECTED LINE: Use $spreadsheet, not $sheet
+    $defaultFont = [
+        'name' => 'Arial',
+        'size' => 10,
+    ];
+
+    $spreadsheet->getDefaultStyle()->applyFromArray([
+        'font' => $defaultFont,
+    ]);
+
+    // Start row counter
+    $row = 1;
+
+    // HEADER SECTION
+    $sheet->setCellValue('A' . $row, 'Faculty Feedback with Comments (Admin View)');
+    $sheet->mergeCells('A' . $row . ':G' . $row);
+    $sheet->getStyle('A' . $row)->applyFromArray([
+        'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => 'AF2910']],
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+    ]);
+    $row++;
+
+    $sheet->setCellValue('A' . $row, 'Sargam | Lal Bahadur Shastri Institute of Management');
+    $sheet->mergeCells('A' . $row . ':G' . $row);
+    $sheet->getStyle('A' . $row)->applyFromArray([
+        'font' => ['bold' => true, 'size' => 12],
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+    ]);
+    $row++;
+
+    $sheet->setCellValue('A' . $row, 'Report Generated: ' . now()->format('d-M-Y H:i'));
+    $sheet->mergeCells('A' . $row . ':G' . $row);
+    $sheet->getStyle('A' . $row)->applyFromArray([
+        'font' => ['italic' => true],
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+    ]);
+    $row += 2;
+
+    // FILTERS SECTION
+    $sheet->setCellValue('A' . $row, 'Applied Filters');
+    $sheet->mergeCells('A' . $row . ':G' . $row);
+    $sheet->getStyle('A' . $row)->applyFromArray([
+        'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => 'AF2910']],
+        'fill' => [
+            'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+            'startColor' => ['rgb' => 'F8F9FA']
+        ],
+        'borders' => [
+            'allBorders' => [
+                'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                'color' => ['rgb' => 'D0D7DE']
+            ]
+        ],
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT],
+    ]);
+    $row++;
+
+    // Get filter values from request
+    $programId = $request->input('program_id');
+    $facultyName = $request->input('faculty_name');
+    $fromDate = $request->input('from_date');
+    $toDate = $request->input('to_date');
+    $courseType = $request->input('course_type', 'archived');
+    $facultyType = $request->input('faculty_type', []);
+
+    // Filter 1 row
+    // $sheet->setCellValue('A' . $row, 'Course Status:');
+    // $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
+    // $sheet->setCellValue('B' . $row, $courseType === 'current' ? 'Current Courses' : 'Archived Courses');
+
+    // $sheet->setCellValue('D' . $row, 'Program:');
+    // $sheet->getStyle('D' . $row)->applyFromArray(['font' => ['bold' => true]]);
+    // $sheet->setCellValue('E' . $row, $programId ? $this->getProgramName($programId) : 'All Programs');
+    // $row++;
+
+    // // Filter 2 row
+    // $sheet->setCellValue('A' . $row, 'Faculty Name:');
+    // $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
+    // $sheet->setCellValue('B' . $row, $facultyName ?: 'All Faculty');
+
+    // $sheet->setCellValue('D' . $row, 'Faculty Type:');
+    // $sheet->getStyle('D' . $row)->applyFromArray(['font' => ['bold' => true]]);
+
+    // $facultyTypeText = 'All Types';
+    // if (!empty($facultyType)) {
+    //     if (count($facultyType) === 2) {
+    //         $facultyTypeText = 'All Types';
+    //     } elseif (in_array('1', $facultyType)) {
+    //         $facultyTypeText = 'Internal';
+    //     } else {
+    //         $facultyTypeText = 'Guest';
+    //     }
+    // }
+    // $sheet->setCellValue('E' . $row, $facultyTypeText);
+    // $row++;
+
+    // // Filter 3 row
+    // $sheet->setCellValue('A' . $row, 'Date Range:');
+    // $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
+
+    // $dateRange = 'All Dates';
+    // if ($fromDate && $toDate) {
+    //     $dateRange = Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y');
+    // }
+    // $sheet->setCellValue('B' . $row, $dateRange);
+
+    // $sheet->setCellValue('D' . $row, 'Total Records:');
+    // $sheet->getStyle('D' . $row)->applyFromArray(['font' => ['bold' => true]]);
+    // $sheet->setCellValue('E' . $row, count($data));
+    // $row += 2;
+
+    // Loop through each feedback item
+    foreach ($data as $index => $item) {
+        // META INFO SECTION
+        $sheet->setCellValue('A' . $row, 'Course:');
+        $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('B' . $row, $item['Program Name']);
+        if (isset($item['Course Status'])) {
+            $sheet->setCellValue('D' . $row, $item['Course Status']);
+            $sheet->getStyle('D' . $row)->applyFromArray([
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'E9ECEF']
+                ],
+                'font' => ['size' => 9],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+            ]);
+        }
+        $row++;
+
+        $sheet->setCellValue('A' . $row, 'Faculty:');
+        $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('B' . $row, $item['Faculty Name']);
+        if (isset($item['Faculty Type'])) {
+            $sheet->setCellValue('D' . $row, $item['Faculty Type']);
+            $sheet->getStyle('D' . $row)->applyFromArray([
+                'fill' => [
+                    'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => 'E9ECEF']
+                ],
+                'font' => ['size' => 9],
+                'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+            ]);
+        }
+        $row++;
+
+        $sheet->setCellValue('A' . $row, 'Topic:');
+        $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
+        $sheet->setCellValue('B' . $row, $item['Topic']);
+        $row++;
+
+        if (!empty($item['Lecture Date'])) {
+            $sheet->setCellValue('A' . $row, 'Lecture Date:');
+            $sheet->getStyle('A' . $row)->applyFromArray(['font' => ['bold' => true]]);
+
+            $dateTimeText = $item['Lecture Date'];
+            if (!empty($item['Start Time']) && !empty($item['End Time'])) {
+                $dateTimeText .= ' (' . $item['Start Time'] . ' – ' . $item['End Time'] . ')';
+            }
+            $sheet->setCellValue('B' . $row, $dateTimeText);
+            $row++;
+        }
+        $row++;
+
+        // FEEDBACK TABLE HEADER
+        $tableStartRow = $row;
+        $sheet->setCellValue('A' . $row, 'Rating');
+        $sheet->setCellValue('B' . $row, 'Content *');
+        $sheet->setCellValue('C' . $row, 'Presentation *');
+
+        // Style table header
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray([
+            'font' => ['bold' => true],
+            'fill' => [
+                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'EEF4FB']
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'D0D7DE']
+                ]
+            ],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        // EXCELLENT ROW
+        $sheet->setCellValue('A' . $row, 'Excellent');
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
+        ]);
+        $sheet->setCellValue('B' . $row, $item['Content - Excellent']);
+        $sheet->setCellValue('C' . $row, $item['Presentation - Excellent']);
+        $this->applyTableCellStyle($sheet, 'A' . $row . ':C' . $row);
+        $row++;
+
+        // VERY GOOD ROW
+        $sheet->setCellValue('A' . $row, 'Very Good');
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
+        ]);
+        $sheet->setCellValue('B' . $row, $item['Content - Very Good']);
+        $sheet->setCellValue('C' . $row, $item['Presentation - Very Good']);
+        $this->applyTableCellStyle($sheet, 'A' . $row . ':C' . $row);
+        $row++;
+
+        // GOOD ROW
+        $sheet->setCellValue('A' . $row, 'Good');
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
+        ]);
+        $sheet->setCellValue('B' . $row, $item['Content - Good']);
+        $sheet->setCellValue('C' . $row, $item['Presentation - Good']);
+        $this->applyTableCellStyle($sheet, 'A' . $row . ':C' . $row);
+        $row++;
+
+        // AVERAGE ROW
+        $sheet->setCellValue('A' . $row, 'Average');
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
+        ]);
+        $sheet->setCellValue('B' . $row, $item['Content - Average']);
+        $sheet->setCellValue('C' . $row, $item['Presentation - Average']);
+        $this->applyTableCellStyle($sheet, 'A' . $row . ':C' . $row);
+        $row++;
+
+        // BELOW AVERAGE ROW
+        $sheet->setCellValue('A' . $row, 'Below Average');
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
+        ]);
+        $sheet->setCellValue('B' . $row, $item['Content - Below Average']);
+        $sheet->setCellValue('C' . $row, $item['Presentation - Below Average']);
+        $this->applyTableCellStyle($sheet, 'A' . $row . ':C' . $row);
+        $row++;
+
+        // PERCENTAGE ROW
+        $sheet->setCellValue('A' . $row, 'Percentage');
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
+        ]);
+        $sheet->setCellValue('B' . $row, $item['Content Percentage']);
+        $sheet->setCellValue('C' . $row, $item['Presentation Percentage']);
+        $sheet->getStyle('B' . $row . ':C' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'AF2910']],
+        ]);
+        $this->applyTableCellStyle($sheet, 'A' . $row . ':C' . $row);
+        $row++;
+
+        // TOTAL PARTICIPANTS NOTE
+        $sheet->setCellValue('A' . $row, '* is defined as Total Student Count: ' . $item['Total Participants']);
+        $sheet->mergeCells('A' . $row . ':C' . $row);
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['italic' => true, 'size' => 9],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
+        $row++;
+
+        // REMARKS SECTION
+        if (!empty($item['Remarks'])) {
+            $remarks = explode("\n", $item['Remarks']);
+            if (!empty(array_filter($remarks))) {
+                $row++;
+                $sheet->setCellValue('A' . $row, 'Remarks (' . count(array_filter($remarks)) . ')');
+                $sheet->mergeCells('A' . $row . ':C' . $row);
+                $sheet->getStyle('A' . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => [
+                        'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'AF2910']
+                    ],
+                    'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+                ]);
+                $row++;
+
+                $remarkStartRow = $row;
+                foreach ($remarks as $remarkIndex => $remark) {
+                    if (trim($remark) !== '') {
+                        $sheet->setCellValue('A' . $row, ($remarkIndex + 1) . '. ' . trim($remark));
+                        $sheet->mergeCells('A' . $row . ':C' . $row);
+                        $row++;
+                    }
+                }
+
+                // Style remarks area
+                $sheet->getStyle('A' . $remarkStartRow . ':C' . ($row - 1))->applyFromArray([
+                    'borders' => [
+                        'outline' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                            'color' => ['rgb' => 'D0D7DE']
+                        ],
+                        'inside' => [
+                            'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_NONE
+                        ]
+                    ],
+                    'alignment' => ['vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_TOP],
+                ]);
+            }
+        }
+
+        // Add separator between records (except last one)
+        if ($index < count($data) - 1) {
+            $row++;
+            $sheet->mergeCells('A' . $row . ':C' . $row);
+            $sheet->getStyle('A' . $row)->getBorders()->getTop()->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_DASHED);
+            $sheet->getStyle('A' . $row)->getBorders()->getTop()->setColor(new \PhpOffice\PhpSpreadsheet\Style\Color('DDDDDD'));
+            $row += 2;
+        }
+    }
+
+    // Set column widths
+    $sheet->getColumnDimension('A')->setWidth(25);
+    $sheet->getColumnDimension('B')->setWidth(15);
+    $sheet->getColumnDimension('C')->setWidth(15);
+    $sheet->getColumnDimension('D')->setWidth(15);
+    $sheet->getColumnDimension('E')->setWidth(20);
+    $sheet->getColumnDimension('F')->setWidth(15);
+    $sheet->getColumnDimension('G')->setWidth(15);
+
+    // Auto size for remarks
+    $sheet->getColumnDimension('A')->setAutoSize(true);
+
+    // Add footer
+    $row += 2;
+    $sheet->setCellValue('A' . $row, 'Confidential - For Internal Use Only');
+    $sheet->mergeCells('A' . $row . ':C' . $row);
+    $sheet->getStyle('A' . $row)->applyFromArray([
+        'font' => ['size' => 9, 'color' => ['rgb' => '666666']],
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+    ]);
+    $row++;
+    $sheet->setCellValue('A' . $row, 'Generated by Sargam Faculty Feedback System');
+    $sheet->mergeCells('A' . $row . ':C' . $row);
+    $sheet->getStyle('A' . $row)->applyFromArray([
+        'font' => ['size' => 9, 'color' => ['rgb' => '666666']],
+        'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+    ]);
+
+    // Create writer and save to temporary file
+    $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+    $filename = 'faculty_feedback_' . date('Y_m_d_H_i') . '.xlsx';
+    $tempFile = tempnam(sys_get_temp_dir(), 'faculty_feedback_');
+    $writer->save($tempFile);
+
+    // Return download response
+    return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
+}
+
+    private function applyTableCellStyle($sheet, $range)
+    {
+        $sheet->getStyle($range)->applyFromArray([
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
+                    'color' => ['rgb' => 'D0D7DE']
+                ]
+            ],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+        ]);
     }
 }
