@@ -67,7 +67,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (api.responsive && api.responsive.recalc) {
                         api.responsive.recalc();
                     }
-                    api.draw(false);
+                    // Only redraw client-side tables
+                    if (api.settings) {
+                        const settings = api.settings();
+                        let clientSideExists = false;
+                        for (let i = 0; i < settings.length; i++) {
+                            if (!settings[i].oFeatures.bServerSide) {
+                                clientSideExists = true;
+                                break;
+                            }
+                        }
+                        if (clientSideExists) api.draw(false);
+                    }
                 }
             }
         } catch (err) {

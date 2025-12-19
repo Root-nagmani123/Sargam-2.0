@@ -28,6 +28,22 @@
   <script src="{{asset('js/dropdown-search.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
   <script src="https://bootstrapdemos.adminmart.com/matdash/dist/assets/libs/datatables.net/js/jquery.dataTables.min.js"></script>
+  <!-- DataTables Responsive plugin -->
+  <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+  <!-- Optional: Responsive CSS (can be moved to <head> if desired) -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
+  <script>
+    // Global DataTables defaults: disable auto column width to reduce header jitter
+    (function() {
+      try {
+        if (window.jQuery && $.fn && $.fn.dataTable) {
+          $.extend(true, $.fn.dataTable.defaults, { autoWidth: false, responsive: true });
+        }
+      } catch (e) {
+        console.warn('Failed to set DataTables defaults:', e);
+      }
+    })();
+  </script>
   <script src="{{asset('admin_assets/js/datatable/datatable-basic.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/repeater-init.js')}}"></script>
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
