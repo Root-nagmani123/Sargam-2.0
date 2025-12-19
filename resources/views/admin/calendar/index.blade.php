@@ -274,8 +274,9 @@
     z-index: 10;
 }
 
+/* Make popover body scrollable for many events */
 .fc-popover .fc-popover-body {
-    max-height: 450px;
+    max-height: 300px;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 0.5rem;
@@ -1067,56 +1068,6 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     color: var(--text-muted);
     font-weight: 500;
     display: flex;
-/* Skip link visible on focus (GIGW) */
-.visually-hidden-focusable {
-    position: absolute;
-    left: -10000px;
-    top: auto;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-}
-.visually-hidden-focusable:focus {
-    position: static;
-    width: auto;
-    height: auto;
-    padding: 0.5rem 0.75rem;
-    background: #004a93;
-    color: #fff;
-    border-radius: 6px;
-    z-index: 9999;
-}
-
-/* Week Cards */
-.week-cards {
-    background: #fff;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1rem;
-}
-.week-day-card {
-    border: 1px solid var(--border-color);
-    border-left: 4px solid var(--primary-color);
-    background: #fff;
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition);
-}
-.week-day-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.16); }
-.week-day-card:focus-visible { outline: 3px solid var(--primary-color); outline-offset: 2px; }
-.week-day-events { display: flex; flex-direction: column; gap: 0.35rem; }
-.mini-event { padding: 0.25rem 0.5rem; border-radius: 8px; background: rgba(0,74,147,0.03); }
-.mini-event .mini-title { font-weight: 600; }
-.mini-event .mini-time { font-size: 0.85rem; }
-.mini-more { display: inline-block; margin-top: 0.25rem; font-weight: 700; }
-.mini-more:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
-
-@media (prefers-contrast: high) {
-    .week-day-card { border-width: 2px; }
-    .mini-event { background: #fff; border: 2px solid var(--primary-color); }
-}
-
     align-items: center;
     gap: 0.25rem;
 }
@@ -1271,7 +1222,7 @@ class CalendarManager {
             },
             views: {
                 dayGridMonth: {
-                    dayMaxEvents: false
+                    dayMaxEvents: 2 // Show max 2 events, then +x more
                 },
                 timeGridWeek: {
                     dayMaxEvents: false,
@@ -1286,8 +1237,8 @@ class CalendarManager {
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
             select: this.handleDateSelect.bind(this),
-            eventDidMount: this.setEventAccessibility.bind(this)
-            ,dayCellDidMount: this.setDayCellAccessibility.bind(this)
+            eventDidMount: this.setEventAccessibility.bind(this),
+            dayCellDidMount: this.setDayCellAccessibility.bind(this)
         });
 
         this.calendar.render();
