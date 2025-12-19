@@ -129,7 +129,6 @@
                     </div>
                     <div class="col-2">
                         <div class="text-end gap-3">
-                            <button type="reset" class="btn btn-primary">Preview</button>
                             <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">Back</a>
                         </div>
                     </div>

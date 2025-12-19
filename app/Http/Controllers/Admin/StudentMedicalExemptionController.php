@@ -138,6 +138,43 @@ class StudentMedicalExemptionController extends Controller
 }
 
 
+    /**
+     * Check if a date-time range overlaps with existing exemptions for the same student
+     * Two ranges overlap if: new_start < existing_end AND new_end > existing_start
+     */
+    private function checkOverlap($studentId, $fromDate, $toDate, $excludeId = null)
+    {
+        $query = StudentMedicalExemption::where('student_master_pk', $studentId);
+        
+        // Exclude current record when updating
+        if ($excludeId !== null) {
+            $query->where('pk', '!=', $excludeId);
+        }
+        
+        $existingExemptions = $query->get();
+        
+        $newFrom = \Carbon\Carbon::parse($fromDate);
+        // Use a far future date if to_date is null (ongoing exemption)
+        $newTo = $toDate ? \Carbon\Carbon::parse($toDate) : \Carbon\Carbon::create(2099, 12, 31, 23, 59, 59);
+        
+        foreach ($existingExemptions as $exemption) {
+            $existingFrom = \Carbon\Carbon::parse($exemption->from_date);
+            // Use a far future date if to_date is null (ongoing exemption)
+            $existingTo = $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date) : \Carbon\Carbon::create(2099, 12, 31, 23, 59, 59);
+            
+            // Check for overlap: new_start < existing_end AND new_end > existing_start
+            $overlaps = $newFrom < $existingTo && $newTo > $existingFrom;
+            
+            if ($overlaps) {
+                $existingFromFormatted = $existingFrom->format('d M Y H:i');
+                $existingToFormatted = $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d M Y H:i') : 'Ongoing';
+                return "This time range overlaps with an existing exemption for this student (from {$existingFromFormatted} to {$existingToFormatted}).";
+            }
+        }
+        
+        return null;
+    }
+
     public function store(Request $request)
 {
     
@@ -153,6 +190,20 @@ class StudentMedicalExemptionController extends Controller
         'Description' => 'nullable|string',
         'active_inactive' => 'nullable|boolean',
     ]);
+
+    // Check for overlapping time ranges for the same student
+    $overlapError = $this->checkOverlap(
+        $validated['student_master_pk'],
+        $validated['from_date'],
+        $validated['to_date']
+    );
+    
+    if ($overlapError) {
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors(['from_date' => $overlapError]);
+    }
 
     // Set default status to Active (1) if not provided
     if (!isset($validated['active_inactive'])) {
@@ -244,6 +295,21 @@ public function update(Request $request, $id)
     ]);
 
     $record = StudentMedicalExemption::findOrFail(decrypt($id));
+    
+    // Check for overlapping time ranges for the same student (excluding current record)
+    $overlapError = $this->checkOverlap(
+        $validated['student_master_pk'],
+        $validated['from_date'],
+        $validated['to_date'],
+        $record->pk
+    );
+    
+    if ($overlapError) {
+        return redirect()
+            ->back()
+            ->withInput()
+            ->withErrors(['from_date' => $overlapError]);
+    }
 
     if ($request->hasFile('Doc_upload')) {
         $file = $request->file('Doc_upload');
