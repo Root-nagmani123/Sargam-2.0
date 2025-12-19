@@ -33,7 +33,8 @@ use App\Http\Controllers\Admin\{
     OTNoticeMemoViewController,
     FacultyNoticeMemoViewController,
     NotificationController,
-    MemoDisciplineController
+    MemoDisciplineController,
+    DashboardController
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -592,22 +593,24 @@ Route::middleware(['auth'])->group(function(){
 
 //  dashboard page route
 
-  Route::get('/active-course', function () {
-     return view('admin.dashboard.active_course');
- })->name('admin.dashboard.active_course');
+//   Route::get('/active-course', function () { DashboardController:}})->name('admin.dashboard.active_course');
+    Route::get('/active-course', [DashboardController::class, 'active_course'])->name('admin.dashboard.active_course');
+    Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
+    Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
+    Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
 
-   Route::get('/incoming-course', function () {
-     return view('admin.dashboard.incoming_course');
- })->name('admin.dashboard.incoming_course');
+//    Route::get('/incoming-course', function () {
+//      return view('admin.dashboard.incoming_course');
+//  })->name('admin.dashboard.incoming_course');
  
-   Route::get('/guest-faculty', function () {
-     return view('admin.dashboard.guest_faculty');
- })->name('admin.dashboard.guest_faculty');
+//    Route::get('/guest-faculty', function () {
+//      return view('admin.dashboard.guest_faculty');
+//  })->name('admin.dashboard.guest_faculty');
 
-   Route::get('/inhouse-faculty', function () {
-     return view('admin.dashboard.inhouse_faculty');
- })->name('admin.dashboard.inhouse_faculty');
-});
+//    Route::get('/inhouse-faculty', function () {
+//      return view('admin.dashboard.inhouse_faculty');
+//  })->name('admin.dashboard.inhouse_faculty');
+// });
 
 // Feedback Database Routes
 Route::prefix('faculty')->group(function () {
@@ -620,3 +623,5 @@ Route::get('/feedback_average', [FeedbackController::class, 'showFacultyAverage'
 Route::post('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');
 Route::get('/faculty_view/suggestions', [FeedbackController::class, 'getFacultySuggestions'])->name('feedback.faculty_suggestions');
 Route::post('/faculty_view/export', [FeedbackController::class, 'exportFacultyFeedback'])->name('admin.feedback.faculty_view.export');
+
+});
