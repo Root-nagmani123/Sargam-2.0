@@ -15,6 +15,9 @@ use App\Models\FacultyMaster;
 use App\Models\Holiday;
 use App\Services\NotificationService;
 
+use Adldap\Laravel\Facades\Adldap;
+use Illuminate\Support\Facades\Auth;
+
 
 
 use Illuminate\Http\Request;
@@ -417,6 +420,58 @@ public function uploadPdf(Request $request)
 
         return response()->json(['error' => 'No file uploaded'], 400);
     }
+    function change_password(){
+    return view('admin.password.change_password');
+        
+    }
+    function submit_change_password(Request $request) {
+    $request->validate([
+        'current_password' => 'required',
+        'new_password' => 'required|min:8|confirmed',
+    ]);
+    try {
+      $user = Auth::user();
+    $username = $user->user_name;
+
+    // 🔹 Verify old password first
+  if (!Adldap::auth()->attempt($username, $request->current_password)) {
+    return back()
+        ->withErrors([
+            'current_password' => 'Current password is incorrect'
+        ]);
+}
+
+
+    // 🔹 Find LDAP user
+    $ldapUser = Adldap::search()->users()->find($username);
+
+    if (!$ldapUser) {
+        return back()->withErrors(['error' => 'LDAP user not found']);
+    }
+
+
+        // 🔹 Change password in LDAP
+        $ldapUser->setPassword($request->new_password);
+
+        // 🔹 OPTIONAL: Update local password if stored
+        $user->jbp_password = Hash::make($request->new_password);
+        $user->save();
+
+        // return redirect()
+        //     ->route('profile')
+        //     ->with('success', 'Password changed successfully');
+            return back()->with('success', 'Password changed successfully');
+ } catch (\Exception $e) {
+    return back()
+        ->withInput()
+        ->withErrors([
+            'ldap_error' => 'LDAP Error: ' . $e->getMessage()
+        ]);
+}
+   
+}
+
+
 }
 
 
