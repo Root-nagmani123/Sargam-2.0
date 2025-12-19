@@ -2,8 +2,8 @@
 
 @section('title', 'Guest Faculty - Sargam | Lal Bahadur')
 
-@section('setup_content')
-<div class="container-fluid">
+@section('content')
+ <div class="container-fluid">
     <x-breadcrum title="Guest Faculty"></x-breadcrum>
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
@@ -41,7 +41,7 @@
             </div>
         </div>
     </div>
-</div>
+ </div>
 
 
 @endsection
