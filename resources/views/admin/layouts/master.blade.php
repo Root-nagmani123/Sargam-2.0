@@ -350,7 +350,7 @@
 
 </head>
 
-<body>
+<body data-sidebartype="mini-sidebar">
     <!-- Preloader -->
 <div class="alphabet-loader" id="alphabetLoader">
     <div class="letters">
@@ -379,7 +379,7 @@
                     <!-- Home Tab -->
                     <div class="tab-pane fade show active" id="home" role="tabpanel">
                         <div class="d-flex justify-content-center w-100">
-                            <div class="container-fluid" style="max-width: 1400px;">
+                            <div class="container-fluid">
                                 @yield('content')
                             </div>
                         </div>
@@ -445,22 +445,67 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const sidebar = document.getElementById("main-wrapper"); // your main sidebar wrapper
+    const sidebar = document.getElementById("main-wrapper");
     const toggleBtn = document.getElementById("headerCollapse");
     const icon = document.getElementById("sidebarToggleIcon");
+    const body = document.body;
+    const sidebarmenus = document.querySelectorAll(".sidebarmenu");
+    const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
 
-    toggleBtn.addEventListener("click", function () {
-
-        // Toggle the sidebar class (you already have this class in your template)
-        sidebar.classList.toggle("mini-sidebar");
-
-        // Change icon according to sidebar state
-        if (sidebar.classList.contains("mini-sidebar")) {
-            icon.textContent = "keyboard_double_arrow_right";  // expand icon
+    // Apply saved sidebar type preference; do not force collapse on dashboard
+    try {
+        const savedType = localStorage.getItem('SidebarType');
+        if (savedType) {
+            body.setAttribute('data-sidebartype', savedType);
         } else {
-            icon.textContent = "keyboard_double_arrow_left";   // collapse icon
+            // Default to expanded
+            body.setAttribute('data-sidebartype', 'full');
         }
-    });
+    } catch (e) {}
+
+    // Initialize collapsed state on page load
+    const sidebarType = body.getAttribute("data-sidebartype");
+    if (sidebarType === "mini-sidebar") {
+        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
+        sidebar.classList.remove("show-sidebar");
+        // Add close class to sidebarmenu elements
+        sidebarmenus.forEach(function(el) {
+            el.classList.add("close");
+        });
+        // Set icon to expand (collapsed state)
+        if (icon) icon.textContent = "keyboard_double_arrow_right";
+    } else {
+        // Sidebar should be expanded
+        sidebar.classList.add("show-sidebar");
+        sidebarmenus.forEach(function(el) {
+            el.classList.remove("close");
+        });
+        if (icon) icon.textContent = "keyboard_double_arrow_left";
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", function () {
+            // Toggle show-sidebar class on main-wrapper
+            sidebar.classList.toggle("show-sidebar");
+            
+            // Toggle close class on sidebarmenu elements
+            sidebarmenus.forEach(function(el) {
+                el.classList.toggle("close");
+            });
+            
+            // Toggle data-sidebartype on body
+            const currentType = body.getAttribute("data-sidebartype");
+            if (currentType === "mini-sidebar") {
+                body.setAttribute("data-sidebartype", "full");
+                try { localStorage.setItem('SidebarType', 'full'); } catch (e) {}
+                if (icon) icon.textContent = "keyboard_double_arrow_left";   // collapse icon
+            } else {
+                body.setAttribute("data-sidebartype", "mini-sidebar");
+                try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
+                if (icon) icon.textContent = "keyboard_double_arrow_right";  // expand icon
+            }
+        });
+    }
 });
 </script>
 

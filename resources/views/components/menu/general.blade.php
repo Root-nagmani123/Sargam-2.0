@@ -11,10 +11,14 @@
                         <ul class="sidebar-menu" id="sidebarnav">
                             {{-- GENERAL --}}
 
+                            <!-- Dashboard Link -->
+                            <li class="sidebar-item">
+                                <a class="sidebar-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">
+                                    <span class="hide-menu">Dashboard</span>
+                                </a>
+                            </li>
+
                             <!-- Faculty Dashboard Route -->
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.dashboard') }}">
-                                    <span class="hide-menu">Dashbaord</span>
-                                </a></li>
                             @if(hasRole('Doctor'))
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('student.medical.exemption.index') }}">
@@ -110,5 +114,4 @@
         </div>
         <div class="simplebar-placeholder" style="width: 240px; height: 864px;"></div>
     </div>
-</nav>div>
 </nav>

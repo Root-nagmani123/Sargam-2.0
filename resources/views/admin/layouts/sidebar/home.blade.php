@@ -20,7 +20,7 @@
                                              @include('components.profile')
 
 
-                                             <li class="mini-nav-item {{ request()->routeIs('dashboard') ? 'selected' : '' }}"
+                                             <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                  id="mini-1">
                                                  <a href="javascript:void(0)"
                                                      class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -67,9 +67,10 @@
      </div>
  </aside>
 
- <script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Home sidebar script started');
+    const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
     // Scope to ONLY the home tab
     const homeTab = document.getElementById('home');
     if (!homeTab) {
@@ -233,6 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
             miniNavItems.forEach(function(navItem) {
                 navItem.classList.remove('selected');
             });
+
             let activeMiniId = null;
             sidebarMenus.forEach(function(nav) {
                 const activeLink = nav.querySelector('.sidebar-link.active');
@@ -252,6 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     showSidebarMenu(savedMiniId);
                     setTimeout(expandActiveMenus, 100);
                 } else if (miniNavItems.length > 0) {
+                    // Default behavior
                     showSidebarMenu(miniNavItems[0].id);
                 }
             }
