@@ -568,16 +568,23 @@ Route::middleware(['auth'])->group(function(){
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
+    //change password work here 
+    Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
+    
+    Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
+
+
+
+
+
+
+
 
     // Report walal route
 
     Route::get('/faculty_view', function () {
      return view('admin.feedback.faculty_view');
  })->name('admin.feedback.faculty_view');
-
-  Route::get('/change_password', function () {
-     return view('admin.password.change_password');
- })->name('admin.password.change_password');
 
   Route::get('/feedback_details', function () {
      return view('admin.feedback.feedback_details');
@@ -612,3 +619,4 @@ Route::prefix('faculty')->group(function () {
 Route::get('/feedback_average', [FeedbackController::class, 'showFacultyAverage'])->name('feedback.average');
 Route::post('/faculty_view', [FeedbackController::class, 'facultyView'])->name('admin.feedback.faculty_view');
 Route::get('/faculty_view/suggestions', [FeedbackController::class, 'getFacultySuggestions'])->name('feedback.faculty_suggestions');
+Route::post('/faculty_view/export', [FeedbackController::class, 'exportFacultyFeedback'])->name('admin.feedback.faculty_view.export');

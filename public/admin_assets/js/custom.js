@@ -161,7 +161,7 @@ $(document).on('change', '.status-toggle', function () {
                 `);
                  setTimeout(function() {
        location.reload();
-       
+
        //console.log(data);
     }, 1000);
             },
@@ -243,6 +243,8 @@ document.addEventListener('DOMContentLoaded', function () {
         let gender = $('select[name="gender"]').val();
         let landline = $('input[name="landline"]').val();
         let mobile = $('input[name="mobile"]').val();
+        let currentDsignation = $('input[name="current_designation"]').val();
+		let currentDepartment = $('input[name="current_department"]').val();
         let country = $('select[name="country"]').val();
         let state = $('select[name="state"]').val();
         let district = $('select[name="district"]').val();
@@ -263,6 +265,8 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('gender', gender);
         formData.append('landline', landline);
         formData.append('mobile', mobile);
+        formData.append('current_designation', currentDsignation);
+		formData.append('current_department', currentDepartment);
         formData.append('country', country);
         formData.append('state', state);
         formData.append('district', district);
@@ -907,7 +911,7 @@ function reloadStudentDetails(pageUrl = null, searchQuery = null) {
             }
             initializeStudentListSelection();
             initStudentActionTooltips();
-            
+
             // Update search results count
             updateSearchResultsCount();
         },
@@ -950,7 +954,7 @@ $(document).on('click', '.view-student', function (e) {
     window.currentGroupMappingId = groupMappingID;
     resetBulkMessageForm();
     updateSelectedOtCount();
-    
+
     // Clear search when opening modal
     $('#studentSearchInput').val('');
     $('#clearStudentSearch').hide();
@@ -973,7 +977,7 @@ $(document).on('click', '.view-student', function (e) {
             initStudentActionTooltips();
             updateSearchResultsCount();
             $('#studentDetailsModal').modal('show');
-            
+
             // Focus search input after modal is shown (one-time event)
             $('#studentDetailsModal').one('shown.bs.modal', function () {
                 $('#studentSearchInput').focus();
@@ -989,12 +993,12 @@ $(document).on('click', '.view-student', function (e) {
 function updateSearchResultsCount() {
     const searchValue = $('#studentSearchInput').val().trim();
     const countElement = $('#studentSearchResultsCount');
-    
+
     if (searchValue) {
         // Try to get count from the table
         const rowCount = $('.student-table-wrapper tbody tr').length;
         const hasNoResults = $('.student-table-wrapper tbody tr').first().find('td').text().includes('No students found');
-        
+
         if (hasNoResults) {
             countElement.text('No results found').removeClass('text-success').addClass('text-danger');
         } else {
@@ -1153,17 +1157,17 @@ let studentSearchTimeout;
 $(document).on('input', '#studentSearchInput', function () {
     const searchValue = $(this).val().trim();
     const clearBtn = $('#clearStudentSearch');
-    
+
     // Show/hide clear button
     if (searchValue.length > 0) {
         clearBtn.show();
     } else {
         clearBtn.hide();
     }
-    
+
     // Clear previous timeout
     clearTimeout(studentSearchTimeout);
-    
+
     // Set new timeout for debouncing (500ms delay)
     studentSearchTimeout = setTimeout(function () {
         if (window.currentGroupMappingId) {

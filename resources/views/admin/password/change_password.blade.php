@@ -4,13 +4,24 @@
 
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Change Password"></x-breadcrum>
+     <x-breadcrum title="Change Password" />
+    <x-session_message />
+   @if ($errors->any())
+    <div class="alert alert-danger">
+        <ul class="mb-0">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <h4>Change Password</h4>
             <hr>
 
-            <form method="POST" action="">
+            <form method="POST" action="{{ route('admin.password.submit_change_password') }}">
                 @csrf
 
                 <div class="mb-3">

@@ -111,13 +111,40 @@ width: 170px;
                 </div>
             </div>
 
-            <div class="label-sm mt-2">Address</div>
+            <!--<div class="label-sm mt-2">Address</div>
             <div class="data-line mb-2">
                 {{ $faculty->countryMaster->country_name }},
                 {{ $faculty->stateMaster->state_name }},
                 {{ $faculty->districtMaster->district_name }},
                 {{ $faculty->cityMaster->city_name }}
+            </div>-->
+            <div class="row mb-3">
+    <div class="col-md-4">
+        <div class="label-sm">Current Designation</div>
+        <div class="data-line">
+            {{ $faculty->current_designation ?? '-' }}
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="label-sm">Current Department</div>
+        <div class="data-line">
+            {{ $faculty->current_department ?? '-' }}
+        </div>
+    </div>
+
+            <div class="col-md-4">
+                <div class="label-sm">Address</div>
+                <div class="data-line">
+                    {{ $faculty->countryMaster->country_name ?? '' }},
+                    {{ $faculty->stateMaster->state_name ?? '' }},
+                    {{ $faculty->districtMaster->district_name ?? '' }},
+                    {{ $faculty->cityMaster->city_name ?? '' }}
+                </div>
             </div>
+        </div>
+
+
         </div>
 
 
