@@ -1510,6 +1510,19 @@ class CalendarManager {
         const form = document.getElementById('eventForm');
         form.reset();
 
+        // Clear validation errors
+        document.querySelectorAll('.is-invalid').forEach(el => {
+            el.classList.remove('is-invalid');
+        });
+        const typeNameContainer = document.getElementById('type_name_container');
+        const typeNameError = document.getElementById('type_names_error');
+        if (typeNameContainer) {
+            typeNameContainer.classList.remove('border-danger');
+        }
+        if (typeNameError) {
+            typeNameError.style.display = 'none';
+        }
+
         // Reset dynamic fields
         document.getElementById('group_type').innerHTML = '<option value="">Select Group Type</option>';
         document.getElementById('type_name_container').innerHTML =
@@ -1708,7 +1721,21 @@ class CalendarManager {
         });
 
         // Set up change handler
-        select.onchange = () => this.populateGroupCheckboxes(grouped[select.value] || []);
+        select.onchange = () => {
+            this.populateGroupCheckboxes(grouped[select.value] || []);
+            // Clear validation error when group type changes
+            const typeNameContainer = document.getElementById('type_name_container');
+            const typeNameError = document.getElementById('type_names_error');
+            if (typeNameContainer) {
+                typeNameContainer.classList.remove('border-danger');
+            }
+            if (typeNameError) {
+                typeNameError.style.display = 'none';
+            }
+        };
+
+        // Return grouped data for use in edit mode
+        return grouped;
     }
 
     populateGroupCheckboxes(groups) {
@@ -1722,9 +1749,20 @@ class CalendarManager {
         let html = '<div class="row g-2">';
 
         groups.forEach(group => {
-            const checked = this.selectedGroupNames === 'ALL' ||
-                (Array.isArray(this.selectedGroupNames) &&
-                    this.selectedGroupNames.includes(group.pk)) ? 'checked' : '';
+            // Convert group.pk to string for consistent comparison
+            const groupPkStr = String(group.pk);
+            
+            // Check if this group is selected (handle both string and number types)
+            let isChecked = false;
+            if (this.selectedGroupNames === 'ALL') {
+                isChecked = true;
+            } else if (Array.isArray(this.selectedGroupNames)) {
+                // Convert all selected names to strings for comparison
+                const selectedAsStrings = this.selectedGroupNames.map(String);
+                isChecked = selectedAsStrings.includes(groupPkStr);
+            }
+            
+            const checked = isChecked ? 'checked' : '';
 
             html += `
                 <div class="col-md-6">
@@ -1745,6 +1783,25 @@ class CalendarManager {
 
         html += '</div>';
         container.innerHTML = html;
+
+        // Add change event listeners to checkboxes to clear validation error
+        const checkboxes = container.querySelectorAll('input[name="type_names[]"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const typeNameContainer = document.getElementById('type_name_container');
+                const typeNameError = document.getElementById('type_names_error');
+                const checkedCount = container.querySelectorAll('input[name="type_names[]"]:checked').length;
+                
+                if (checkedCount > 0) {
+                    if (typeNameContainer) {
+                        typeNameContainer.classList.remove('border-danger');
+                    }
+                    if (typeNameError) {
+                        typeNameError.style.display = 'none';
+                    }
+                }
+            });
+        });
     }
 
     async loadSubjectNames() {
@@ -1986,6 +2043,24 @@ class CalendarManager {
             }
         }
 
+        // Group Type Name validation
+        const groupTypeCheckboxes = document.querySelectorAll('input[name="type_names[]"]:checked');
+        const typeNameContainer = document.getElementById('type_name_container');
+        const typeNameError = document.getElementById('type_names_error');
+        
+        if (groupTypeCheckboxes.length === 0) {
+            typeNameContainer.classList.add('border-danger');
+            if (typeNameError) {
+                typeNameError.style.display = 'block';
+            }
+            isValid = false;
+        } else {
+            typeNameContainer.classList.remove('border-danger');
+            if (typeNameError) {
+                typeNameError.style.display = 'none';
+            }
+        }
+
         return isValid;
     }
 
@@ -1996,7 +2071,7 @@ class CalendarManager {
             const response = await fetch(`/calendar/event-edit/${eventId}`);
             const event = await response.json();
 
-            this.populateEditForm(event);
+            await this.populateEditForm(event);
 
             // Update modal for edit
             document.getElementById('eventModalTitle').textContent = 'Edit Event';
@@ -2015,7 +2090,7 @@ class CalendarManager {
         }
     }
 
-    populateEditForm(event) {
+    async populateEditForm(event) {
         // Basic fields
         document.getElementById('Course_name').value = event.course_master_pk;
         document.getElementById('subject_module').value = event.subject_module_master_pk;
@@ -2049,24 +2124,66 @@ class CalendarManager {
         document.getElementById('ratingCheckbox').checked = event.Ratting_checkbox == 1;
         document.getElementById('bio_attendanceCheckbox').checked = event.Bio_attendance == 1;
 
-        // Trigger dependent loads
-        this.loadGroupTypesForEdit(event);
+        // Trigger dependent loads (await group types to ensure it completes)
+        await this.loadGroupTypesForEdit(event);
         this.loadSubjectNamesForEdit(event);
 
         // Store current event ID
         this.currentEventId = event.pk;
     }
 
-    loadGroupTypesForEdit(event) {
+    async loadGroupTypesForEdit(event) {
         // Set selected group names for edit
         try {
-            this.selectedGroupNames = JSON.parse(event.group_name || '[]');
+            const parsed = JSON.parse(event.group_name || '[]');
+            // Ensure all values are converted to strings for consistent comparison
+            this.selectedGroupNames = Array.isArray(parsed) ? parsed.map(String) : parsed;
         } catch {
             this.selectedGroupNames = [];
         }
 
-        // Trigger group type load
-        document.getElementById('Course_name').dispatchEvent(new Event('change'));
+        // Store the group_type value to set after loading
+        const groupTypeValue = event.course_group_type_master ? String(event.course_group_type_master) : null;
+
+        // Load group types first
+        const courseId = document.getElementById('Course_name').value;
+        if (!courseId) return;
+
+        try {
+            const response = await fetch(`${CalendarConfig.api.groupTypes}?course_id=${courseId}`);
+            const data = await response.json();
+
+            // Populate group types dropdown and store grouped data for later use
+            const groupedData = this.populateGroupTypes(data);
+
+            // Set the group_type value after dropdown is populated
+            if (groupTypeValue) {
+                const groupTypeSelect = document.getElementById('group_type');
+                
+                // Try to find matching value (handle both string and number comparisons)
+                let matchingValue = null;
+                for (let option of groupTypeSelect.options) {
+                    if (option.value === groupTypeValue || 
+                        option.value === String(groupTypeValue) || 
+                        String(option.value) === String(groupTypeValue)) {
+                        matchingValue = option.value;
+                        break;
+                    }
+                }
+                
+                if (matchingValue) {
+                    groupTypeSelect.value = matchingValue;
+                    
+                    // Use the grouped data to populate checkboxes directly with selected values
+                    const groups = groupedData[matchingValue] || [];
+                    this.populateGroupCheckboxes(groups);
+                } else {
+                    console.warn('Group type value not found in dropdown:', groupTypeValue);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading group types for edit:', error);
+        }
     }
 
     loadSubjectNamesForEdit(event) {
