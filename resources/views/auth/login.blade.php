@@ -273,16 +273,14 @@
     */
 
     .login-card-enhanced {
-        background: #ffffff;
         border-radius: 12px;
         /* Smoother corners */
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         width: 100%;
         padding: 30px 40px;
         /* More padding */
         text-align: left;
         /* Align text left for form readability */
-        height: 100vh;
+        min-height: 100%;
     }
 
     .login-card-enhanced h2 {
@@ -378,22 +376,74 @@
     #carouselExampleFade .carousel-item img {
         height: 100%;
         width: 100%;
-        object-fit: cover;
-    }
-
-    @media (max-width: 991.98px) {
-
-        #carouselExampleFade,
-        #carouselExampleFade .carousel-inner,
-        #carouselExampleFade .carousel-item {
-            height: 320px;
-        }
+        object-fit: fill;
     }
 
     .carasoul-image {
-        object-fit: cover;
+        object-fit: fill;
         width: 100%;
         height: 100vh !important;
+    }
+
+    /* --------- RESPONSIVE TWEAKS --------- */
+    @media (max-width: 991.98px) {
+        /* Stack content nicely on tablets & mobiles */
+        .login-page-wrapper {
+            align-items: flex-start;
+            padding: 24px 16px;
+        }
+
+        .login-card-enhanced {
+            padding: 24px 20px;
+            margin: 16px 0 32px;
+            min-height: auto;
+        }
+
+        /* Header logos wrap better */
+        .main-header-nav .navbar-brand {
+            flex-wrap: wrap;
+        }
+
+        /* Avoid overly tall carousel on medium devices
+           (note: carousel is already hidden < lg via d-none d-lg-block) */
+        #carouselExampleFade,
+        #carouselExampleFade .carousel-inner,
+        #carouselExampleFade .carousel-item,
+        .carasoul-image {
+            height: 70vh !important;
+        }
+    }
+
+    @media (max-width: 575.98px) {
+        /* Extra-small phones */
+        .login-card-enhanced h2 {
+            font-size: 22px;
+        }
+
+        .login-card-enhanced p {
+            font-size: 14px;
+        }
+
+        .top-header span,
+        .gigw-footer span {
+            font-size: 12px;
+        }
+
+        /* Center Government of India + Ashoka emblem + LBSNAA text on small screens */
+        .main-header-nav .container-fluid {
+            flex-direction: column;
+            justify-content: center !important;
+            align-items: center !important;
+            gap: 8px;
+        }
+
+        .main-header-nav .navbar-brand {
+            justify-content: center;
+        }
+
+        .main-header-nav .navbar-brand .lh-sm {
+            text-align: center;
+        }
     }
     </style>
 </head>
