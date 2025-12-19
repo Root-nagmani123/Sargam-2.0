@@ -388,6 +388,7 @@ Route::prefix('admin/course-memo-decision')
         Route::get('/user', 'user')->name('user');
         Route::get('/conversation_student/{id}/{type}', 'conversation_student')->name('conversation_student');
         Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
+        Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
         Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
 
     });
