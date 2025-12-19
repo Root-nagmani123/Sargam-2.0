@@ -163,19 +163,19 @@ input.is-invalid {
 
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                           <div class="col-md-3">
                                 <div class="mb-3">
-
                                     <x-input
-									name="faculty_code"
-									label="Faculty Code :"
-									placeholder="Faculty Code"
-									formLabelClass="form-label"
-									readonly
-								/>
-
+                                        name="faculty_code"
+                                        label="Faculty Code :"
+                                        placeholder="Faculty Code"
+                                        formLabelClass="form-label"
+                                        class="bg-light"
+                                        readonly
+                                    />
                                 </div>
                             </div>
+
                             <div class="col-md-6">
                                 <div class="mb-3">
 
@@ -240,8 +240,8 @@ input.is-invalid {
                                         label="Current Designation :"
                                         placeholder="Current Designation"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
+
+
                                     />
                                 </div>
                             </div>
@@ -253,8 +253,7 @@ input.is-invalid {
                                         label="Current Department :"
                                         placeholder="Current Department"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
+
                                     />
                                 </div>
                             </div>
