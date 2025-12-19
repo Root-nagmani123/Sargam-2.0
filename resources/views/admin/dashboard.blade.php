@@ -575,7 +575,7 @@ table>thead {
 
         <!-- Total Active Courses -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('programme.index') }}">
+            <a href="{{ route('admin.dashboard.active_course') }}">
                 <div class="stat-card clean-style">
                     <div class="stat-icon icon-blue">
                         <img src="{{ asset('images/groups.svg') }}" alt="">
@@ -590,7 +590,7 @@ table>thead {
 
         <!-- Upcoming Courses -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('programme.index') }}">
+            <a href="{{ route('admin.dashboard.incoming_course') }}">
                 <div class="stat-card clean-style">
                     <div class="stat-icon icon-green">
                         <img src="{{ asset('images/teachers.svg') }}" alt="">
@@ -605,7 +605,7 @@ table>thead {
 
         <!-- Total Guest Faculty -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('faculty.index') }}">
+            <a href="{{ route('admin.dashboard.guest_faculty') }}">
                 <div class="stat-card clean-style">
                     <div class="stat-icon icon-yellow">
                         <img src="{{ asset('images/classes.svg') }}" alt="">
@@ -620,7 +620,7 @@ table>thead {
 
         <!-- Total Inhouse Faculty -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <a href="{{ route('faculty.index') }}">
+            <a href="{{ route('admin.dashboard.inhouse_faculty') }}">
                 <div class="stat-card clean-style">
                     <div class="stat-icon icon-purple">
                         <img src="{{ asset('images/attendance.svg') }}" alt="">
