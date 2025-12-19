@@ -277,14 +277,14 @@
                         <span class="page-title">Faculty Feedback with Comments (Admin View)</span>
                         <div class="d-flex align-items-center">
                             <!-- Export Buttons -->
-                            <div class="btn-group ms-2" role="group">
+                            {{-- <div class="btn-group ms-2" role="group">
                                 <button type="button" class="btn btn-sm btn-success" onclick="exportToExcel()">
                                     <i class="fas fa-file-excel me-1"></i> Export Excel
                                 </button>
                                 <button type="button" class="btn btn-sm btn-danger" onclick="exportToPDF()">
                                     <i class="fas fa-file-pdf me-1"></i> Export PDF
                                 </button>
-                            </div>
+                            </div> --}}
                             <small class="text-muted ms-3">Data refreshed:
                                 {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
                         </div>
@@ -768,18 +768,19 @@
         });
 
         // Export to Excel function
+        // Export to Excel function
         function exportToExcel() {
             const loadingSpinner = document.getElementById('loadingSpinner');
             const form = document.getElementById('filterForm');
-            const pageInput = document.getElementById('pageInput');
 
-            // Show loading
+            // Show loading with specific message
             loadingSpinner.style.display = 'block';
+            loadingSpinner.querySelector('p').textContent = 'Generating Excel report...';
 
             // Create FormData for POST request
             const formData = new FormData(form);
             formData.append('export_type', 'excel');
-            formData.append('page', 'all'); // Export all pages
+            formData.append('page', 'all');
 
             // Add CSRF token
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -811,11 +812,14 @@
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
 
+                    // Reset loading message
                     loadingSpinner.style.display = 'none';
+                    loadingSpinner.querySelector('p').textContent = 'Loading feedback data...';
                 })
                 .catch(error => {
                     console.error('Error exporting to Excel:', error);
                     loadingSpinner.style.display = 'none';
+                    loadingSpinner.querySelector('p').textContent = 'Loading feedback data...';
                     alert('Error exporting to Excel. Please try again.');
                 });
         }
