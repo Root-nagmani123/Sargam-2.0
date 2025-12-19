@@ -39,8 +39,9 @@
         {{ !empty($roles) ? implode(', ', $roles) : 'No role assigned' }}
 
     </p>
-
-    <a href="#" class="text-danger fw-bold">Edit Profile</a> | <a href="{{ route('admin.password.change_password') }}" class="text-danger fw-bold">Change
+      @if(! hasRole('Student-OT'))  
+    <a href="{{ route('member.edit', Auth::user()->user_id) }}" class="text-danger fw-bold">Edit Profile</a> | <a href="{{ route('admin.password.change_password') }}" class="text-danger fw-bold">Change
         Password</a>
+        @endif
 </div>
 <hr class="my-2">
