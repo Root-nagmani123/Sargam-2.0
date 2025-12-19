@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     content.innerHTML = `
                         <div class="text-center text-muted py-4">
                             <i class="material-icons material-symbols-rounded" style="font-size: 48px;">history</i>
-                            <p class="mt-2">No older feedback available</p>
+                            <p class="mt-2">Feedback history mapping is in progress and will be completed soon.</p>
                         </div>
                     `;
                     return;
@@ -498,9 +498,9 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error:', error);
                 content.innerHTML = `
-                    <div class="alert alert-danger" role="alert">
-                        <i class="material-icons material-symbols-rounded me-2" style="vertical-align: middle;">error</i>
-                        Error loading older feedback. Please try again.
+                    <div class="text-center text-muted py-4">
+                        <i class="material-icons material-symbols-rounded" style="font-size: 48px;">history</i>
+                        <p class="mt-2">Feedback history mapping is in progress and will be completed as soon as possible.</p>
                     </div>
                 `;
             });
