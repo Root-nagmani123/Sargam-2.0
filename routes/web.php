@@ -575,9 +575,9 @@ Route::middleware(['auth'])->group(function(){
      return view('admin.feedback.faculty_view');
  })->name('admin.feedback.faculty_view');
 
-//   Route::get('/feedback_average', function () {
-//      return view('admin.feedback.faculty_average');
-//  })->name('admin.feedback.faculty_average');
+  Route::get('/change_password', function () {
+     return view('admin.password.change_password');
+ })->name('admin.password.change_password');
 
   Route::get('/feedback_details', function () {
      return view('admin.feedback.feedback_details');
