@@ -582,6 +582,24 @@ Route::middleware(['auth'])->group(function(){
   Route::get('/feedback_details', function () {
      return view('admin.feedback.feedback_details');
  })->name('admin.feedback.feedback_details');
+
+//  dashboard page route
+
+  Route::get('/active-course', function () {
+     return view('admin.dashboard.active_course');
+ })->name('admin.dashboard.active_course');
+
+   Route::get('/incoming-course', function () {
+     return view('admin.dashboard.incoming_course');
+ })->name('admin.dashboard.incoming_course');
+ 
+   Route::get('/guest-faculty', function () {
+     return view('admin.dashboard.guest_faculty');
+ })->name('admin.dashboard.guest_faculty');
+
+   Route::get('/inhouse-faculty', function () {
+     return view('admin.dashboard.inhouse_faculty');
+ })->name('admin.dashboard.inhouse_faculty');
 });
 
 // Feedback Database Routes

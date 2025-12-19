@@ -158,11 +158,6 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 40px 20px;
-        /* Replicating the subtle blue pattern */
-        background-image: url('data:image/svg+xml;utf8,<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="%23f5f7fb"/><path d="M0 0h40v40H0zM40 40h40v40H40z" fill-opacity=".05" fill="%23004a93"/><path d="M40 0h40v40H40zM0 40h40v40H0z" fill-opacity=".05" fill="%23004a93"/></svg>');
-        background-repeat: repeat;
-        background-size: 80px 80px;
     }
 
     /* Login Card - Replicating the Image Style */
@@ -276,29 +271,18 @@
      --primary-blue: #004a93;
      --accent-orange: #ff6b35; for focus) 
     */
-    .login-page-wrapper {
-        flex-grow: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 40px 20px;
-        background-image:url('https://alumni.lbsnaa.gov.in/user_assets/images/login/login-bg.webp');
-        background-size: cover;
-        background-position: center;
-        /* Light background for contrast */
-    }
 
     .login-card-enhanced {
         background: #ffffff;
         border-radius: 12px;
         /* Smoother corners */
         box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        max-width: 420px;
         width: 100%;
         padding: 30px 40px;
         /* More padding */
         text-align: left;
         /* Align text left for form readability */
+        height: 100vh;
     }
 
     .login-card-enhanced h2 {
@@ -383,6 +367,34 @@
     .forgot-password-link:hover {
         text-decoration: underline;
     }
+
+    /* Login Carousel enhancements */
+    #carouselExampleFade,
+    #carouselExampleFade .carousel-inner,
+    #carouselExampleFade .carousel-item {
+        height: 100vh !important;
+    }
+
+    #carouselExampleFade .carousel-item img {
+        height: 100%;
+        width: 100%;
+        object-fit: cover;
+    }
+
+    @media (max-width: 991.98px) {
+
+        #carouselExampleFade,
+        #carouselExampleFade .carousel-inner,
+        #carouselExampleFade .carousel-item {
+            height: 320px;
+        }
+    }
+
+    .carasoul-image {
+        object-fit: cover;
+        width: 100%;
+        height: 100vh !important;
+    }
     </style>
 </head>
 
@@ -462,70 +474,210 @@
                 </nav>
             </div>
         </div>
+        <div class="container-fluid">
+            <div class="row g-0 min-vh-100">
+                <div class="col-lg-4 col-12 d-flex align-items-center justify-content-center bg-light">
+                    <main class="login-page-wrapper flex-grow-1">
+                        <div class="login-card-enhanced">
+                            <h2 id="login-form-start" tabindex="-1">Welcome Back</h2>
+                            <p>Sign in to your account for application and status services.</p>
+                            <form action="{{route('post_login')}}" method="POST" novalidate>
+                                @csrf
 
+                                <div class="mb-3">
+                                    <label for="usernameInput" class="form-label">
+                                        <i class="fas fa-user"></i>Username <span class="required-indicator"
+                                            aria-hidden="true">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="usernameInput"
+                                        placeholder="Enter your registered username" name="username"
+                                        autocomplete="username" required aria-required="true"
+                                        aria-describedby="usernameHelp">
+                                    <small id="usernameHelp" class="form-text text-muted">Use your official registration
+                                        number or
+                                        ID.</small>
+                                </div>
 
-        <main class="login-page-wrapper flex-grow-1">
-            <div class="login-card-enhanced">
-                <h2 id="login-form-start" tabindex="-1">Welcome Back</h2>
-                <p>Sign in to your account for application and status services.</p>
-                <form action="{{route('post_login')}}" method="POST" novalidate>
-                    @csrf
+                                <div class="mb-4">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <label for="passwordInput" class="form-label">
+                                            <i class="fas fa-lock"></i>Password <span class="required-indicator"
+                                                aria-hidden="true">*</span>
+                                        </label>
+                                        <a class="forgot-password-link" href="#" aria-label="Forgot Password link">
+                                            Forgot Password?
+                                        </a>
+                                    </div>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="passwordInput"
+                                            placeholder="Enter your password" name="password" required
+                                            aria-required="true" autocomplete="current-password">
+                                        <button type="button" class="btn input-group-text" id="togglePassword"
+                                            aria-label="Toggle password visibility">
+                                            <i class="material-icons menu-icon" aria-hidden="true">visibility</i>
+                                        </button>
+                                    </div>
+                                </div>
 
-                    <div class="mb-3">
-                        <label for="usernameInput" class="form-label">
-                            <i class="fas fa-user"></i>Username <span class="required-indicator"
-                                aria-hidden="true">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="usernameInput"
-                            placeholder="Enter your registered username" name="username" autocomplete="username"
-                            required aria-required="true" aria-describedby="usernameHelp">
-                        <small id="usernameHelp" class="form-text text-muted">Use your official registration number or
-                            ID.</small>
-                    </div>
+                                <div class="d-flex align-items-center justify-content-start mb-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="" id="keepLoggedIn"
+                                            checked>
+                                        <label class="form-check-label text-muted" for="keepLoggedIn">
+                                            <i class="fas fa-history me-1"></i>Keep me logged in
+                                        </label>
+                                    </div>
+                                </div>
 
-                    <div class="mb-4">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <label for="passwordInput" class="form-label">
-                                <i class="fas fa-lock"></i>Password <span class="required-indicator"
-                                    aria-hidden="true">*</span>
-                            </label>
-                            <a class="forgot-password-link" href="#" aria-label="Forgot Password link">
-                                Forgot Password?
-                            </a>
+                                <button type="submit" class="btn btn-primary w-100 login-button-enhanced"
+                                    aria-label="Sign In to your account">
+                                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                                </button>
+
+                                <div class="text-center mt-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-shield-alt me-1"></i>Your connection is secure and encrypted.
+                                    </small>
+                                </div>
+                            </form>
+                            <hr class="my-2">
+                            <div class="text-center">
+                                <h5 class="text-muted mt-4">आज का शब्द / अब का शब्द उपलब्ध नहीं है</h5>
+                                <p>अधिग्रहण-मोचन - De-requisition</p>
+                            </div>
                         </div>
-                        <div class="input-group">
-                            <input type="password" class="form-control" id="passwordInput"
-                                placeholder="Enter your password" name="password" required aria-required="true"
-                                autocomplete="current-password">
-                            <button type="button" class="btn input-group-text" id="togglePassword"
-                                aria-label="Toggle password visibility">
-                                <i class="material-icons menu-icon" aria-hidden="true">visibility</i>
-                            </button>
+                    </main>
+                </div>
+                <div class="col-lg-8 d-none d-lg-block">
+                    <div id="carouselExampleFade" class="carousel slide carousel-fade carousel-dark"
+                        data-bs-ride="carousel" data-bs-interval="5000" data-bs-pause="hover" data-bs-touch="true"
+                        data-bs-keyboard="true" data-bs-wrap="true" aria-roledescription="carousel">
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="{{ asset('images/carasoul/1.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/2.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/3.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item" data-bs-interval="40000">
+                                <img src="{{ asset('images/carasoul/4.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/5.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/6.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/7.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/8.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/9.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/10.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/11.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/12.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/13.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/14.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/15.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/16.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/17.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/18.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/19.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/20.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/21.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/22.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/23.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/24.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/25.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/26.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/27.jpg') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
+                            </div>
                         </div>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleFade"
+                            data-bs-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleFade"
+                            data-bs-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
                     </div>
-
-                    <div class="d-flex align-items-center justify-content-start mb-4">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" value="" id="keepLoggedIn" checked>
-                            <label class="form-check-label text-muted" for="keepLoggedIn">
-                                <i class="fas fa-history me-1"></i>Keep me logged in
-                            </label>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100 login-button-enhanced"
-                        aria-label="Sign In to your account">
-                        <i class="fas fa-sign-in-alt me-2"></i>Sign In
-                    </button>
-
-                    <div class="text-center mt-3">
-                        <small class="text-muted">
-                            <i class="fas fa-shield-alt me-1"></i>Your connection is secure and encrypted.
-                        </small>
-                    </div>
-                </form>
+                </div>
             </div>
-        </main>
+        </div>
+
+
 
         <script>
         // UX Script: Password visibility toggle
@@ -549,11 +701,11 @@
             <div class="container">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-center">
                     <span class="mb-1 mb-md-0">
-                        &copy; 2004 Lal Bahadur Shastri National Academy of Administration. All rights reserved.
+                        &copy; <?php echo date('Y'); ?> LBSNAA Mussoorie,Govt of India. All Right Reserved [ Support :
+                        support[DOT]lbsnaa[AT]nic[DOT]in OR 1014(EPABX) ]
                     </span>
                     <div>
-                        <a href="#">Need Help</a>
-                        <a href="#">Terms & Policies</a>
+                        <span>Current Logged in user(s): 135.</span>
                     </div>
                 </div>
             </div>
@@ -565,6 +717,47 @@
     </script>
 
     <script>
+    // Ensure Bootstrap is present; if CDN fails, load local fallback and then init carousel
+    (function() {
+        function initCarousel() {
+            var el = document.getElementById('carouselExampleFade');
+            if (!el || !(window.bootstrap && bootstrap.Carousel)) return;
+            try {
+                var carousel = bootstrap.Carousel.getOrCreateInstance(el, {
+                    interval: 5000,
+                    ride: 'carousel',
+                    pause: 'hover',
+                    touch: true,
+                    keyboard: true,
+                    wrap: true
+                });
+                // Lazy-load images except first
+                var imgs = el.querySelectorAll('.carousel-item img');
+                imgs.forEach(function(img, idx) {
+                    if (idx > 0) img.setAttribute('loading', 'lazy');
+                    img.setAttribute('decoding', 'async');
+                });
+            } catch (e) {
+                /* swallow */ }
+        }
+
+        function ensureBootstrap(cb) {
+            if (window.bootstrap && bootstrap.Carousel) {
+                cb();
+                return;
+            }
+            var s = document.createElement('script');
+            s.src = "{{ asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}";
+            s.async = true;
+            s.onload = cb;
+            document.head.appendChild(s);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            ensureBootstrap(initCarousel);
+        });
+    })();
+
     // Function to handle password visibility toggle for both fields
     function setupPasswordToggle(toggleButtonId, passwordInputId) {
         const toggleButton = document.getElementById(toggleButtonId);
@@ -585,7 +778,7 @@
     // Setup for Password and Confirm Password fields
     setupPasswordToggle('togglePassword1', 'passwordInput');
     setupPasswordToggle('togglePassword2', 'confirmPasswordInput');
-    
+
     // Set fresh login flag when form is submitted
     document.querySelector('form').addEventListener('submit', function() {
         sessionStorage.setItem('fresh_login', 'true');

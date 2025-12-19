@@ -40,7 +40,7 @@
 
     </p>
 
-    <a href="" class="text-danger fw-bold">Edit Profile</a> | <a href="{{ route('admin.password.change_password') }}" class="text-danger fw-bold">Change
+    <a href="#" class="text-danger fw-bold">Edit Profile</a> | <a href="{{ route('admin.password.change_password') }}" class="text-danger fw-bold">Change
         Password</a>
 </div>
 <hr class="my-2">
