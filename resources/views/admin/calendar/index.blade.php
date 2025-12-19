@@ -36,6 +36,21 @@
                             Expand / Collapse
                         </button>
                     </div>
+
+                    <div class="mb-3">
+
+    <select
+            class="form-select"
+            required
+            aria-required="true">
+        <option value="" selected disabled>
+            Select Course
+        </option>
+            <option>
+            </option>
+    </select>
+</div>
+
                 </div>
                 <!-- Action Buttons -->
                 @if(hasRole('Training') || hasRole('Admin'))
@@ -327,7 +342,7 @@
     padding: 0.125rem 0.5rem;
     border-radius: 999px;
     background-color: #4e73df;
-    color: var(--primary-color);
+    color: #fff;
     font-weight: 600;
 }
 
@@ -1132,6 +1147,9 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     .timeline-event-card .event-title {
         font-size: 0.9rem;
     }
+}
+.fc-event-card {
+background:transparent !important;
 }
 </style>
 

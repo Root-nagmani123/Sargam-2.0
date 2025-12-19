@@ -244,7 +244,7 @@ $events = $events
 
 
     // Array of some sample colors
-    $colors = ['#9edcf5ff'];
+    $colors = ['#ffffff'];
 
     // Assign random color to each event
     $events = $events->map(function ($event) use ($colors) {
