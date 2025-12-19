@@ -487,8 +487,14 @@
                                 @endif
                             </td>
 
-                            <!-- Date -->
-                            <td class="1">{{ date('d-m-Y', strtotime($memo->date_)) }}</td>
+                            <!-- Session Date -->
+                            <td class="1">
+                                @if(isset($memo->session_date) && $memo->session_date)
+                                    {{ date('d-m-Y', strtotime($memo->session_date)) }}
+                                @else
+                                    {{ date('d-m-Y', strtotime($memo->date_)) }}
+                                @endif
+                            </td>
 
                             <!-- Topic -->
                             <td>{{ $memo->topic_name }}</td>
@@ -569,9 +575,11 @@
                             <!-- Conclusion -->
                             <td class="conclusion_type">
                                 @if($memo->type_notice_memo == 'Memo')
-                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                                <a href="javascript:void(0)" class="btn btn-sm btn-outline-secondary preview-memo-btn"
+                                    data-notice-id="{{ $memo->notice_id }}" data-memo-id="{{ $memo->memo_id }}" data-bs-toggle="modal"
+                                    data-bs-target="#memo_generate">
                                     Memo Generated
-                                </button>
+                                </a>
                                 @endif
                             </td>
 
@@ -855,8 +863,10 @@ $(document).ready(function() {
         $('#filterForm').submit();
     });
     
+    // Handle Generate Memo button (editable mode)
     $('.generate-memo-btn').on('click', function() {
         let memoId = $(this).data('id');
+        setModalMode('generate');
 
         $.ajax({
             url: "{{ route('memo.notice.management.get_memo_data') }}",
@@ -890,6 +900,104 @@ $(document).ready(function() {
                 alert('Something went wrong!');
             }
         });
+    });
+
+    // Handle Preview Memo button (read-only mode)
+    $('.preview-memo-btn').on('click', function() {
+        let memoId = $(this).data('memo-id');
+        // Set preview mode immediately to hide save button
+        setModalMode('preview');
+        // Also explicitly hide save button as backup
+        $('#memo_generate').find('.modal-footer').find('button[type="submit"]').hide();
+
+        if (!memoId) {
+            alert('Memo ID not found!');
+            return;
+        }
+
+        // Fetch all memo data (including notice-related data)
+        $.ajax({
+            url: "{{ route('memo.notice.management.get_generated_memo_data') }}",
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                memo_id: memoId
+            },
+            success: function(res) {
+                // Populate all modal fields from the response
+                $('#course_master_name').val(res.course_master_name || '');
+                $('#date_memo_notice').val(res.date_ || '');
+                $('#student_name').val(res.student_name || '');
+                $('#subject_master_id').val(res.subject_master_name || res.student_name || '');
+                $('#topic_id').val(res.subject_topic || '');
+                $('#student_notice_status_pk').val(res.student_notice_status_pk || '');
+                $('#course_master_pk').val(res.course_master_pk || '');
+                $('#memo_count').val(res.memo_count || '');
+
+                $('#session_name').val(res.session_name || '');
+                $('#class_session_master_pk').val(res.class_session_master_pk || '');
+                $('#faculty_name').val(res.faculty_name || '');
+                $('#student_pk').val(res.student_pk || '');
+                $('#memo_number').val(res.memo_number || '');
+
+                // Populate memo-specific fields
+                if (res.memo_type_master_pk) {
+                    $('#memo_type_master_pk').val(res.memo_type_master_pk);
+                }
+                if (res.venue_master_pk) {
+                    $('#venue').val(res.venue_master_pk);
+                }
+                if (res.date) {
+                    $('#memo_date').val(res.date);
+                }
+                if (res.start_time) {
+                    $('#meeting_time').val(res.start_time);
+                }
+                if (res.message) {
+                    $('#textarea').val(res.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error fetching memo data:', error);
+                console.error('Response:', xhr.responseText);
+                alert('Failed to load memo data. Please try again.');
+            }
+        });
+    });
+
+    // Function to set modal mode (generate or preview)
+    function setModalMode(mode) {
+        const modal = $('#memo_generate');
+        const form = modal.find('form');
+        // Use more specific selector for save button
+        const saveButton = modal.find('.modal-footer').find('button[type="submit"]');
+        const modalTitle = $('#memo_generateLabel');
+
+        if (mode === 'preview') {
+            // Preview mode: make all fields read-only
+            form.find('input[type="text"], input[type="date"], input[type="time"], textarea').prop('readonly', true);
+            form.find('select').prop('disabled', true);
+            // Hide save button in preview mode
+            saveButton.hide();
+            modalTitle.text('Preview Memo');
+        } else {
+            // Generate mode: enable editable fields
+            form.find('input, textarea').prop('readonly', false);
+            form.find('select').prop('disabled', false);
+            // Keep readonly fields as readonly
+            $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #student_name, #memo_number').prop('readonly', true);
+            // Keep non-editable selects disabled
+            form.find('select').not('#memo_type_master_pk, #venue').prop('disabled', true);
+            // Show save button in generate mode
+            saveButton.show();
+            modalTitle.text('Generate Memo');
+        }
+    }
+
+    // Reset modal when closed
+    $('#memo_generate').on('hidden.bs.modal', function() {
+        $(this).find('form')[0].reset();
+        setModalMode('generate'); // Reset to default mode
     });
 });
 </script>

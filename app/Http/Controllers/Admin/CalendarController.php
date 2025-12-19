@@ -130,12 +130,17 @@ public function store(Request $request)
         'subject_module' => 'required|integer',
         'topic' => 'nullable|string',
         'group_type' => 'required|string',
+        'type_names' => 'required|array|min:1',
+        'type_names.*' => 'required|integer',
         'faculty' => 'required|integer',
         'faculty_type' => 'required|integer',
         'vanue' => 'required|integer',
         'shift' => 'required_if:shift_type,1',
         'start_time' => 'required_if:shift_type,2',
         'end_time' => 'required_if:shift_type,2',
+    ], [
+        'type_names.required' => 'The Group type names field is required.',
+        'type_names.min' => 'Please select at least one Group type name.',
     ]);
 
     $event = new CalendarEvent();
@@ -421,6 +426,8 @@ return response()->json($event);
         'subject_module' => 'required|integer',
         'topic' => 'nullable|string',
         'group_type' => 'required|string',
+        'type_names' => 'required|array|min:1',
+        'type_names.*' => 'required|integer',
         'faculty' => 'required|integer',
         'faculty_type' => 'required|integer',
         'vanue' => 'required|integer',
@@ -429,6 +436,9 @@ return response()->json($event);
         'end_time' => 'required_if:shift_type,2',
         'start_datetime' => 'nullable|date',
         'end_datetime' => 'nullable|date',
+    ], [
+        'type_names.required' => 'The Group type names field is required.',
+        'type_names.min' => 'Please select at least one Group type name.',
     ]);
 
     $event = CalendarEvent::findOrFail($id);

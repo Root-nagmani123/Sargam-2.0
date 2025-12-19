@@ -42,17 +42,26 @@ class CourseService
         if ($isUpdate) {
             // Update existing course
             $course = CourseMaster::findOrFail(decrypt($courseId));
-            $course->update([
+            $updateData = [
                 'course_name' => $validatedData['coursename'],
                 'couse_short_name' => $validatedData['courseshortname'],
                 'course_year' => $validatedData['courseyear'],
                 'start_year' => $validatedData['startdate'],
                 'end_date' => $validatedData['enddate'],
                 'Modified_date' => now(),
-            ]);
+            ];
+            
+            // Add user_role_master_pk if provided
+            if (isset($validatedData['supportingsection']) && !empty($validatedData['supportingsection'])) {
+                $updateData['user_role_master_pk'] = $validatedData['supportingsection'];
+            } else {
+                $updateData['user_role_master_pk'] = null;
+            }
+            
+            $course->update($updateData);
         } else {
             // Create new course
-            $course = CourseMaster::create([
+            $createData = [
                 'course_name' => $validatedData['coursename'],
                 'couse_short_name' => $validatedData['courseshortname'],
                 'course_year' => $validatedData['courseyear'],
@@ -60,7 +69,14 @@ class CourseService
                 'end_date' => $validatedData['enddate'],
                 'created_date' => now(),
                 'Modified_date' => now(),
-            ]);
+            ];
+            
+            // Add user_role_master_pk if provided
+            if (isset($validatedData['supportingsection']) && !empty($validatedData['supportingsection'])) {
+                $createData['user_role_master_pk'] = $validatedData['supportingsection'];
+            }
+            
+            $course = CourseMaster::create($createData);
         }
 
         // Get old assistant coordinator IDs before deletion (only for updates)

@@ -135,8 +135,8 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">From Date <span class="text-danger">*</span></label>
-                            <input type="date" name="from_date" class="form-control col-form-label" required
+                            <label class="form-label">From Date & Time <span class="text-danger">*</span></label>
+                            <input type="datetime-local" name="from_date" class="form-control col-form-label" required
                                 value="{{ old('from_date') }}">
                         </div>
                         @error('from_date')
@@ -146,8 +146,8 @@
 
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">To Date</label>
-                            <input type="date" name="to_date" class="form-control col-form-label"
+                            <label class="form-label">To Date & Time</label>
+                            <input type="datetime-local" name="to_date" class="form-control col-form-label"
                                 value="{{ old('to_date') }}">
                         </div>
                         @error('to_date')
