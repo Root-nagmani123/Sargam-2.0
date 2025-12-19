@@ -3,6 +3,339 @@
 @section('title', 'Memo Discipline - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
+<style>
+/* GIGW Color Palette */
+:root {
+    --gigw-primary: #004a93;
+    --gigw-primary-dark: #003366;
+    --gigw-secondary: #0066cc;
+    --gigw-light-bg: #f8f9fa;
+    --gigw-border: #dee2e6;
+    --gigw-text-muted: #6c757d;
+    --gigw-success: #198754;
+    --gigw-white: #ffffff;
+}
+
+/* Enhanced Offcanvas */
+.offcanvas {
+    width: 480px !important;
+    max-width: 90vw;
+    box-shadow: -4px 0 20px rgba(0, 74, 147, 0.15);
+}
+
+.offcanvas-header {
+    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
+    color: var(--gigw-white);
+    padding: 1.5rem;
+    border-bottom: 3px solid var(--gigw-primary-dark);
+    min-height: 80px;
+}
+
+.offcanvas-title {
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: 0.3px;
+    margin-bottom: 0.25rem;
+    color: var(--gigw-white);
+}
+
+#type_side_menu {
+    font-size: 0.875rem;
+    font-weight: 500;
+    opacity: 0.95;
+    margin: 0;
+    color: var(--gigw-white);
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    display: inline-block;
+}
+
+.offcanvas .btn-close {
+    background-color: rgba(255, 255, 255, 0.3);
+    opacity: 1;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    transition: all 0.2s ease;
+}
+
+.offcanvas .btn-close:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+}
+
+.offcanvas .btn-close:focus {
+    outline: 3px solid var(--gigw-white);
+    outline-offset: 2px;
+    box-shadow: none;
+}
+
+.offcanvas-body {
+    padding: 1.5rem;
+    background-color: #fafbfc;
+}
+
+/* Enhanced Chat Body */
+.chat-body {
+    height: 480px;
+    overflow-y: auto;
+    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--gigw-border);
+    box-shadow: inset 0 2px 8px rgba(0, 74, 147, 0.05);
+    scroll-behavior: smooth;
+}
+
+.chat-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.chat-body::-webkit-scrollbar-thumb {
+    background: var(--gigw-primary);
+    border-radius: 10px;
+    transition: background 0.3s ease;
+}
+
+.chat-body::-webkit-scrollbar-thumb:hover {
+    background: var(--gigw-primary-dark);
+}
+
+/* Enhanced Chat Messages */
+.chat-message {
+    margin-bottom: 1rem;
+    animation: slideIn 0.3s ease;
+    clear: both;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.chat-message.user {
+    text-align: right;
+}
+
+.chat-message .message {
+    display: inline-block;
+    padding: 0.75rem 1rem;
+    border-radius: 1.25rem;
+    max-width: 80%;
+    word-wrap: break-word;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.chat-message .message:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-message.bot .message {
+    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+    color: #212529;
+    border: 1px solid #dee2e6;
+    border-left: 4px solid var(--gigw-primary);
+}
+
+.chat-message.user .message {
+    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
+    color: var(--gigw-white);
+    border: none;
+}
+
+/* Loading State */
+.chat-body .text-muted {
+    color: var(--gigw-text-muted) !important;
+    font-style: italic;
+    padding: 2rem;
+    text-align: center;
+}
+
+/* Accessibility Enhancements */
+.offcanvas:focus-visible {
+    outline: 3px solid var(--gigw-primary);
+    outline-offset: 2px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .offcanvas {
+        width: 100% !important;
+    }
+
+    .offcanvas-header {
+        padding: 1rem;
+        min-height: 70px;
+    }
+
+    .offcanvas-title {
+        font-size: 1.1rem;
+    }
+
+    .chat-body {
+        height: calc(100vh - 250px);
+        padding: 1rem;
+    }
+
+    .chat-message .message {
+        max-width: 85%;
+        font-size: 0.9rem;
+    }
+}
+
+/* Sticky Table Status */
+.table .sticky-status {
+    position: sticky;
+    right: 0;
+    background: #fff;
+    z-index: 10;
+    box-shadow: -4px 0 6px rgba(0, 0, 0, 0.08);
+}
+
+/* WCAG 2.1 AA Compliance */
+.offcanvas * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Chat Row Layout */
+.chat-row {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.chat-row.right {
+    justify-content: flex-end;
+}
+
+.chat-row.left {
+    justify-content: flex-start;
+}
+
+/* Message Bubble */
+.chat-bubble {
+    max-width: 80%;
+    background: #f4f5f7;
+    padding: 12px 15px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e2e2;
+}
+
+.chat-row.right .chat-bubble {
+    background: #e7f1ff;
+    border-color: #c9ddff;
+}
+
+/* Header */
+.chat-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.chat-sender {
+    color: #003e7e;
+    font-weight: 600;
+}
+
+.chat-time {
+    font-size: 11px;
+    color: #6c757d;
+}
+
+/* Message Text */
+.chat-text {
+    margin: 0;
+    font-size: 14px;
+    color: #222;
+    line-height: 1.4;
+}
+
+/* Attachments */
+.chat-attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 14px;
+    color: #004a93;
+    text-decoration: none;
+}
+
+.chat-attachment:hover {
+    text-decoration: underline;
+}
+
+/* Footer Input */
+.chat-footer {
+    background: #fff;
+}
+
+.chat-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.attachment-btn {
+    cursor: pointer;
+    color: #004a93;
+    font-size: 22px;
+}
+
+.chat-textarea {
+    resize: none;
+    height: 40px;
+    font-size: 14px;
+}
+
+.chat-send-btn {
+    height: 40px;
+    padding: 0 20px;
+}
+
+/* Scrollable message area */
+#chatBody {
+    padding-bottom: 20px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #b3b3b3 #efefef;
+}
+
+#chatBody::-webkit-scrollbar {
+    width: 8px;
+}
+
+#chatBody::-webkit-scrollbar-thumb {
+    background: #b3b3b3;
+    border-radius: 4px;
+}
+
+/* Accessibility: Focus outline */
+*:focus-visible {
+    outline: 3px solid #004a93 !important;
+    border-radius: 4px;
+}
+</style>
 <div class="container-fluid">
     <x-breadcrum title="Memo Discipline" />
     <x-session_message />
@@ -53,8 +386,8 @@
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">Select status</option>
-                                <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
-                                <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
+                                <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Open</option>
+                                <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Close</option>
                             </select>
                         </div>
                     </div>
@@ -66,130 +399,178 @@
                         </div>
                     </div>
                 </div>
-               
-                <div class="col-3">
-                    <div class="mb-3">
-                        <label for="status" class="form-label">Status</label>
-                        <select class="form-select" id="status" name="status">
-                            <option value="">Select status</option>
-                            <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Open</option>
-                            <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Close</option>
-                        </select>
+                <div class="row">
+                    <div class="col-3">
+                        <div class="mb-3">
+                            <label for="from_date" class="form-label">From Date</label>
+                            <input type="date" class="form-control" id="from_date" name="from_date"
+                                value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="mb-3">
+                            <label for="to_date" class="form-label">To Date</label>
+                            <input type="date" class="form-control" id="to_date" name="to_date"
+                                value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3 d-flex align-items-center gap-2">
+                            <a href="{{ route('memo.discipline.index') }}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-1"></i> Clear Filters
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-6 text-end">
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-funnel-fill me-1"></i> Apply Filters
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="col-3">
-                    <div class="mb-3">
-                        <label for="status" class="form-label">Status</label>
-                       <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
-                    </div>
-                </div>
-                </div>
-                 <div class="row">
-                <div class="col-3">
-                    <div class="mb-3">
-                        <label for="from_date" class="form-label">From Date</label>
-                        <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
-                    </div>
-                </div>
-                <div class="col-3">
-                    <div class="mb-3">
-                        <label for="to_date" class="form-label">To Date</label>
-                        <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="mb-3 d-flex align-items-center gap-2">
-                        <a href="{{ route('memo.discipline.index') }}" class="btn btn-secondary">
-                            <i class="bi bi-x-circle me-1"></i> Clear Filters
-                        </a>
-                    </div>
-                </div>
-                <div class="col-6 text-end">
-                    <div class="mb-3">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-funnel-fill me-1"></i> Apply Filters
-                        </button>
-                    </div>
-            </div>
-            </div>
             </form>
             <hr>
-            <div class="card mb-3">
-                <div class="card-body">
-                    <div class="row g-3 align-items-end">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-nowrap">
+                    <thead class="sticky-top">
+                        <tr>
+                            <th width="60">#</th>
+                            <th>Program</th>
+                            <th>Participant</th>
+                            <th>Date</th>
+                            <th>Discipline</th>
+                            <th class="text-center">Submitted</th>
+                            <th class="text-center">Final</th>
+                            <th>Remarks</th>
+                            <th>Status</th>
+                            <th class="text-end">Action</th>
+                        </tr>
+                    </thead>
 
-                        <!-- Search -->
-                        <div class="col-md-4">
-                            <label class="form-label fw-semibold">Search</label>
-                            <input type="text" class="form-control" placeholder="Search participant / program"
-                                id="tableSearch">
-                        </div>
+                    <tbody>
+                        @if ($memos->isEmpty())
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                <span class="fw-medium">No memo records available</span>
+                            </td>
+                        </tr>
+                        @else
+                        @foreach ($memos as $index => $memo)
+                        <tr>
+                            <!-- Serial -->
+                            <td class="fw-semibold text-muted">
+                                {{ $memos->firstItem() + $index }}
+                            </td>
 
-                        <!-- Status Filter -->
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Status</label>
-                            <select class="form-select" id="statusFilter">
-                                <option value="">All</option>
-                                <option value="1">Recorded</option>
-                                <option value="2">Memo Sent</option>
-                                <option value="3">Memo Closed</option>
-                            </select>
-                        </div>
+                            <!-- Program -->
+                            <td>
+                                <div class="fw-semibold">
+                                    {{ $memo->course->course_name ?? 'N/A' }}
+                                </div>
+                            </td>
 
+                            <!-- Participant -->
+                            <td>
+                                <div class="fw-semibold">
+                                    {{ $memo->student->display_name ?? 'N/A' }}
+                                </div>
+                            </td>
 
-                            <!-- Type -->
-                           
+                            <!-- Date -->
+                            <td class="text-muted">
+                                {{ \Carbon\Carbon::parse($memo->date)->format('d M Y') }}
+                            </td>
+
+                            <!-- Discipline -->
+                            <td>
+                                <span class="badge bg-info-subtle text-info">
+                                    {{ $memo->discipline->discipline_name ?? 'N/A' }}
+                                </span>
+                            </td>
+
+                            <!-- Marks -->
+                            <td class="text-center fw-semibold text-warning">
+                                {{ $memo->mark_deduction_submit }}
+                            </td>
+
+                            <td class="text-center fw-semibold text-danger">
+                                {{ $memo->final_mark_deduction }}
+                            </td>
+
+                            <!-- Remarks -->
+                            <td class="text-muted small">
+                                {{ $memo->remarks ?? '-' }}
+                            </td>
+
                             <!-- Status -->
-                            <td class="status sticky-status">
+                            <td>
                                 @if ($memo->status == 1)
                                 <span class="badge bg-success-subtle text-success">
                                     <i class="bi bi-check-circle me-1"></i> Recorded
                                 </span>
                                 @elseif ($memo->status == 2)
-
-                                 <span class="badge bg-danger-subtle text-danger">
-                                    <i class="bi bi-x-circle me-1"></i> Memo sent
+                                <span class="badge bg-warning-subtle text-warning">
+                                    <i class="bi bi-envelope me-1"></i> Memo Sent
                                 </span>
-                                <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}" class="badge bg-primary-subtle text-primary ms-2 view-reason" >
-                                         View Memo
+                                <div class="mt-1 d-flex gap-2">
+                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                        class="link-primary small fw-medium">
+                                        View Memo
                                     </a>
-                                  <a class="text-success d-flex align-items-center view-conversation"
-                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" 
-                                        data-id="{{ $memo->pk }}" data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}"
->
-                                        <i class="material-icons material-symbols-rounded">chat</i>
+
+                                    <a class="text-success view-conversation" data-bs-toggle="offcanvas"
+                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
+                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}">
+                                        <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                     </a>
-                                @else 
-                                <a class="text-success d-flex align-items-center view-conversation"
-                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" 
-                                        data-id="{{ $memo->pk }}" data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}"
->
-                                        <i class="material-icons material-symbols-rounded">chat</i>
-                                    </a>
-                               
-                                <!-- <span class="badge bg-danger-subtle text-danger">
-                                    <i class="bi bi-x-circle me-1"></i> Memo Closed
-                                </span> -->
+                                </div>
+                                @else
+                                <span class="badge bg-secondary-subtle text-secondary">
+                                    <i class="bi bi-lock me-1"></i> Closed
+                                </span>
                                 @endif
                             </td>
-                            <td class="s_name fw-medium">
-                                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training'))
-                                @if($memo->status == 1)
-                                <button class="btn btn-sm btn-primary" data-discipline="{{ $memo->pk }}" id="sendMemoBtn" >
-                                    <i class="bi bi-envelope-paper"></i> Send Memo
-                                </button>
-                                <button class="btn btn-outline-secondary btn-sm">
-                                    <i class="bi bi-file-earmark-pdf me-1"></i> PDF
-                                </button>
-                            </div>
-                        </div>
 
-                    </div>
+                            <!-- Action -->
+                            <td class="text-end">
+                                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin')
+                                || hasRole('Training'))
+                                @if($memo->status == 1)
+                                <button class="btn btn-sm btn-outline-primary" data-discipline="{{ $memo->pk }}"
+                                    id="sendMemoBtn">
+                                    <i class="bi bi-envelope-paper me-1"></i> Send
+                                </button>
+                                @elseif($memo->status == 2)
+                                <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                    class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-x-circle me-1"></i> Close
+                                </a>
+                                @else
+                                <span class="text-muted small">—</span>
+                                @endif
+                                @else
+                                <span class="text-muted small">—</span>
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="text-muted small">
+                    Showing {{ $memos->firstItem() ?? 0 }} to {{ $memos->lastItem() ?? 0 }}
+                    of {{ $memos->total() }} records
+                </div>
+
+                <div>
+                    {{ $memos->links('vendor.pagination.custom') }}
                 </div>
             </div>
-
-
-
         </div>
     </div>
     <!-- end Zero Configuration -->
