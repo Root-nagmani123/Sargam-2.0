@@ -126,16 +126,16 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">From Date *</label>
-                        <input type="date" name="from_date" class="form-control" value="{{ $record->from_date }}" required>
+                        <label class="form-label">From Date & Time *</label>
+                        <input type="datetime-local" name="from_date" class="form-control" value="{{ $record->from_date ? \Carbon\Carbon::parse($record->from_date)->format('Y-m-d\TH:i') : '' }}" required>
                         @error('from_date')
                             <small class="text-danger">{{ $message }}</small>
                         @enderror
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">To Date</label>
-                        <input type="date" name="to_date" class="form-control" value="{{ $record->to_date }}">
+                        <label class="form-label">To Date & Time</label>
+                        <input type="datetime-local" name="to_date" class="form-control" value="{{ $record->to_date ? \Carbon\Carbon::parse($record->to_date)->format('Y-m-d\TH:i') : '' }}">
                         @error('to_date')
                             <small class="text-danger">{{ $message }}</small>
                         @enderror

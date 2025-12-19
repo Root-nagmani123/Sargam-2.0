@@ -59,6 +59,7 @@ class CourseAttendanceNoticeMapController extends Controller
             'sm.display_name as student_name',
             'sm.pk as student_id',
             't.subject_topic as topic_name',
+            't.START_DATE as session_date',
             'cm.course_name',
             DB::raw('"Notice" as type_notice_memo')
         );
@@ -125,6 +126,7 @@ class CourseAttendanceNoticeMapController extends Controller
                 'sm.display_name as student_name',
                 'sm.pk as student_id',
                 't.subject_topic as topic_name',
+                't.START_DATE as session_date',
                 'mcm.discussion_name',
                 'cm.course_name'
             );
@@ -191,6 +193,7 @@ class CourseAttendanceNoticeMapController extends Controller
                         'sm.display_name as student_name',
                         'sm.pk as student_id',
                         't.subject_topic as topic_name',
+                        't.START_DATE as session_date',
                         'mcm.discussion_name',
                         'cm.course_name'
                     )
@@ -1880,6 +1883,69 @@ public function getMemoData(Request $request)
         'memo_date' => $memo->date_,
         'memo_count' => $memoCount,
         'memo_number' => $memo_number
+    ]);
+}
+
+public function getGeneratedMemoData(Request $request)
+{
+    $memoId = $request->memo_id;
+
+    $memo = DB::table('student_memo_status as sms')
+        ->leftJoin('student_notice_status as sns', 'sms.student_notice_status_pk', '=', 'sns.pk')
+        ->leftJoin('student_master as sm', 'sms.student_pk', '=', 'sm.pk')
+        ->leftJoin('course_master as cm', 'sms.course_master_pk', '=', 'cm.pk')
+        ->leftJoin('faculty_master as fm', 'sns.faculty_master_pk', '=', 'fm.pk')
+        ->leftJoin('subject_master as subm', 'sns.subject_master_pk', '=', 'subm.pk')
+        ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+        ->where('sms.pk', $memoId)
+        ->select(
+            'sms.*',
+            'sns.date_ as notice_date',
+            'sns.subject_topic',
+            'sns.class_session_master_pk',
+            'sns.faculty_master_pk',
+            'sm.display_name as student_name',
+            'sm.generated_OT_code',
+            'cm.course_name',
+            'fm.full_name as faculty_name',
+            'subm.subject_name',
+            't.subject_topic as topic_name'
+        )
+        ->first();
+
+    if (!$memo) {
+        return response()->json(['error' => 'Memo not found!'], 404);
+    }
+
+    // Calculate memo count
+    $memoCount = DB::table('student_memo_status')
+        ->where('student_pk', $memo->student_pk)
+        ->where('course_master_pk', $memo->course_master_pk)
+        ->count();
+
+    $memo_number = ($memo->course_name ?? '') . ' / ' . ($memoCount) . ' / ' . ($memo->generated_OT_code ?? '');
+
+    return response()->json([
+        // Memo-specific fields
+        'memo_type_master_pk' => $memo->memo_type_master_pk ?? null,
+        'venue_master_pk' => $memo->venue_master_pk ?? null,
+        'date' => $memo->date ?? null,
+        'start_time' => $memo->start_time ?? null,
+        'message' => $memo->message ?? null,
+        // Notice-related fields
+        'course_master_name' => $memo->course_name ?? '',
+        'course_master_pk' => $memo->course_master_pk ?? null,
+        'student_pk' => $memo->student_pk ?? null,
+        'student_notice_status_pk' => $memo->student_notice_status_pk ?? null,
+        'date_' => $memo->notice_date ?? $memo->date ?? '',
+        'student_name' => $memo->student_name ?? '',
+        'subject_topic' => $memo->topic_name ?? '',
+        'subject_master_name' => $memo->subject_name ?? '',
+        'class_session_master_pk' => $memo->class_session_master_pk ?? null,
+        'faculty_name' => $memo->faculty_name ?? '',
+        'memo_count' => $memoCount,
+        'memo_number' => $memo_number,
+        'session_name' => $memo->class_session_master_pk ?? ''
     ]);
 }
 
