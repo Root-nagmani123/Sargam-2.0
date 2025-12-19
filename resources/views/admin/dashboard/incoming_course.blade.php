@@ -15,12 +15,20 @@
                     <thead>
                         <tr>
                             <th scope="col">Course Name</th>
-                            <th scope="col">Instructor</th>
+                            <th scope="col">Short Name</th>
                             <th scope="col">Start Date</th>
                             <th scope="col">End Date</th>
                         </tr>
                     </thead>
                     <tbody>
+                        @foreach($active_courses as $course)
+                        <tr>
+                            <td>{{ $course->course_name }}</td>
+                            <td>{{ $course->couse_short_name }}</td>
+                            <td>{{ \Carbon\Carbon::parse($course->start_year)->format('d M Y') }}</td>
+                            <td>{{ \Carbon\Carbon::parse($course->end_date)->format('d M Y') }}</td>
+                        </tr>
+                        @endforeach
 
 
 

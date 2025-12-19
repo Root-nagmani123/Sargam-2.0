@@ -27,17 +27,29 @@ class DisciplineMasterDataTable extends DataTable
             ->addColumn('actions', function ($row) {
                 $edit = route('master.discipline.edit', encrypt($row->pk));
                 $delete = route('master.discipline.delete', encrypt($row->pk));
-
-                return '
+if($row->active_inactive == 1){
+    return '
                 <a href="'.$edit.'" title="Edit">
                     <i class="material-icons">edit</i>
                 </a>
+              
+                    <button style="border:none;background:none " disabled title="Delete">
+                        <i class="material-icons text-danger">delete</i>
+                    </button>';
+}else{
+return '
+                <a href="'.$edit.'" title="Edit">
+                    <i class="material-icons">edit</i>
+                </a>
+
                 <form action="'.$delete.'" method="POST" style="display:inline">
                     '.csrf_field().method_field('DELETE').'
                     <button onclick="return confirm(\'Delete?\')" style="border:none;background:none">
                         <i class="material-icons text-danger">delete</i>
                     </button>
                 </form>';
+}
+                
             })
 
             ->rawColumns(['status','actions']);
