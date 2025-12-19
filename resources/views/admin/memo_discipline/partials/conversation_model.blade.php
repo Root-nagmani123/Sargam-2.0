@@ -3,123 +3,240 @@
 {{-- ===================== --}}
 <style>
     /* ===============================
-   Modern Chat UI
-   =============================== */
+       WhatsApp‑style Chat UI
+       (Sargam / LBSNAA branding)
+       =============================== */
 
-.chat-container {
-    padding: 1rem;
-    max-height: 60vh;
-    overflow-y: auto;
-    background: #f8f9fa;
-}
+    .chat-wrapper {
+        display: flex;
+        flex-direction: column;
+        max-height: 85vh;
+        min-height: 80vh;
+        height: 100%;
+        overflow: hidden;
+    }
 
-/* Rows */
-.chat-row {
-    display: flex;
-    margin-bottom: 1rem;
-}
+    .chat-container {
+        padding: 1rem 1.25rem;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        /* WhatsApp-like subtle background, but in LBSNAA blues */
+        background: radial-gradient(circle at top left, #e0eafc 0, #f8f9fb 40%, #f1f5f9 100%);
+    }
 
-.chat-left {
-    justify-content: flex-start;
-}
+    /* Scrollbar (subtle) */
+    .chat-container::-webkit-scrollbar {
+        width: 6px;
+    }
 
-.chat-right {
-    justify-content: flex-end;
-}
+    .chat-container::-webkit-scrollbar-thumb {
+        background: rgba(0, 74, 147, 0.25);
+        border-radius: 3px;
+    }
 
-/* Bubble */
-.chat-bubble {
-    max-width: 70%;
-    padding: 0.75rem 1rem;
-    border-radius: 14px;
-    background: #ffffff;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    position: relative;
-}
+    /* Rows */
+    .chat-row {
+        display: flex;
+        margin-bottom: 0.65rem;
+    }
 
-.chat-right .chat-bubble {
-    background: #e7f1ff;
-}
+    .chat-left {
+        justify-content: flex-start;
+    }
 
-/* Header */
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    margin-bottom: 0.25rem;
-}
+    .chat-right {
+        justify-content: flex-end;
+    }
 
-.chat-user {
-    font-weight: 600;
-    color: #004a93;
-}
+    /* Bubble */
+    .chat-bubble {
+        max-width: 78%;
+        padding: 0.6rem 0.85rem;
+        border-radius: 16px;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+        position: relative;
+        font-size: 0.88rem;
+    }
 
-.chat-time {
-    color: #6c757d;
-}
+    /* Receiver (admin / faculty) – light */
+    .chat-left .chat-bubble {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+    }
 
-/* Text */
-.chat-text {
-    font-size: 0.9rem;
-    line-height: 1.5;
-}
+    /* Sender (current user) – LBSNAA blue */
+    .chat-right .chat-bubble {
+        background: #004a93;
+        color: #e5f1ff;
+        border: 1px solid #003366;
+    }
 
-/* Attachment */
-.chat-attachment {
-    margin-top: 0.5rem;
-}
+    .chat-right .chat-bubble .chat-user,
+    .chat-right .chat-bubble .chat-time,
+    .chat-right .chat-bubble .chat-text {
+        color: #e5f1ff;
+    }
 
-.chat-attachment a {
-    font-size: 0.8rem;
-    text-decoration: none;
-    color: #0d6efd;
-}
+    /* Bubble "tails" */
+    .chat-left .chat-bubble::after,
+    .chat-right .chat-bubble::after {
+        content: "";
+        position: absolute;
+        bottom: 0.4rem;
+        width: 10px;
+        height: 10px;
+        background: inherit;
+        transform: rotate(45deg);
+    }
 
-/* Composer */
-.chat-composer {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    border-top: 1px solid #dee2e6;
-    padding: 0.75rem;
-    background: #ffffff;
-}
+    .chat-left .chat-bubble::after {
+        left: -4px;
+        border-left: 1px solid #e2e8f0;
+        border-bottom: 1px solid #e2e8f0;
+    }
 
-.chat-input {
-    flex: 1;
-    resize: none;
-    border-radius: 20px;
-    border: 1px solid #ced4da;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.9rem;
-}
+    .chat-right .chat-bubble::after {
+        right: -4px;
+        border-right: 1px solid #003366;
+        border-bottom: 1px solid #003366;
+    }
 
-.chat-input:focus {
-    outline: none;
-    border-color: #004a93;
-}
+    /* Header (name + time) */
+    .chat-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.72rem;
+        margin-bottom: 0.15rem;
+        gap: 0.5rem;
+    }
 
-/* Buttons */
-.chat-send-btn {
-    border: none;
-    background: #004a93;
-    color: #fff;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    .chat-user {
+        font-weight: 600;
+        color: #004a93;
+    }
 
-.chat-attach-btn {
-    cursor: pointer;
-    font-size: 1.2rem;
-    color: #6c757d;
-}
+    .chat-time {
+        color: #94a3b8;
+        white-space: nowrap;
+    }
 
+    /* Text */
+    .chat-text {
+        font-size: 0.88rem;
+        line-height: 1.5;
+        color: #1f2937;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    /* Attachment */
+    .chat-attachment {
+        margin-top: 0.4rem;
+    }
+
+    .chat-attachment a {
+        font-size: 0.78rem;
+        text-decoration: none;
+        color: #ff6b35;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 999px;
+        background: rgba(255, 107, 53, 0.06);
+    }
+
+    .chat-attachment a:hover {
+        background: rgba(255, 107, 53, 0.15);
+    }
+
+    /* Composer (bottom input area) */
+    .chat-composer {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-top: 1px solid #dee2e6;
+        padding: 0.6rem 0.75rem;
+        background: #ffffff;
+    }
+
+    .chat-input {
+        flex: 1;
+        resize: none;
+        border-radius: 20px;
+        border: 1px solid #cbd5e1;
+        padding: 0.45rem 0.75rem;
+        font-size: 0.9rem;
+        max-height: 120px;
+    }
+
+    .chat-input:focus {
+        outline: none;
+        border-color: #004a93;
+        box-shadow: 0 0 0 2px rgba(0, 74, 147, 0.18);
+    }
+
+    /* Buttons */
+    .chat-send-btn {
+        border: none;
+        background: #004a93;
+        color: #fff;
+        width: 38px;
+        height: 38px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+    }
+
+    .chat-send-btn:hover {
+        background: #003366;
+    }
+
+    .chat-attach-btn {
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        transition: background 0.15s ease;
+    }
+
+    .chat-attach-btn:hover {
+        background: #e2e8f0;
+    }
+
+    /* Empty state */
+    .chat-empty-icon {
+        color: #cbd5e1;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 575.98px) {
+        .chat-wrapper {
+            max-height: 85vh;
+            min-height: 80vh;
+        }
+
+        .chat-container {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .chat-bubble {
+            max-width: 86%;
+        }
+    }
 </style>
-<div class="chat-container">
+<div class="chat-wrapper">
+    <div class="chat-container">
 
 @forelse ($conversations as $msg)
 
@@ -155,13 +272,13 @@
 
 @empty
     <div class="text-center text-muted py-5">
-        <i class="bi bi-chat-dots fs-1 d-block mb-2"></i>
+        <i class="material-icons material-symbols-rounded fs-1 d-block mb-2">chat</i>
         No conversation yet
     </div>
 @endforelse
 
-</div>
-@if($conversations->isNotEmpty())
+    </div>
+    @if($conversations->isNotEmpty())
 
     @if($conversations->last()->notice_status == 2)
 
@@ -185,7 +302,7 @@
 
             <div class="chat-composer">
                 <label class="chat-attach-btn">
-                    <i class="bi bi-paperclip"></i>
+                    <i class="material-icons material-symbols-rounded">attach_file</i>
                     <input type="file" name="attachment" hidden>
                 </label>
 
@@ -196,7 +313,7 @@
                           required></textarea>
 
                 <button type="submit" class="chat-send-btn">
-                    <i class="bi bi-send-fill"></i>
+                    <i class="material-icons material-symbols-rounded">send</i>
                 </button>
             </div>
         </form>
@@ -217,4 +334,16 @@
 
     @endif
 
-@endif
+    @endif
+</div>
+
+<script>
+    // Auto-scroll chat to latest message when partial is rendered
+    (function() {
+        const container = document.querySelector('#memoNoticeConversationModal .chat-container') ||
+            document.querySelector('.chat-container');
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    })();
+</script>
