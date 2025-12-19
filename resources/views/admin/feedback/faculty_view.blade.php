@@ -277,14 +277,14 @@
                         <span class="page-title">Faculty Feedback with Comments (Admin View)</span>
                         <div class="d-flex align-items-center">
                             <!-- Export Buttons -->
-                            {{-- <div class="btn-group ms-2" role="group">
-                                <button type="button" class="btn btn-sm btn-success" onclick="exportToExcel()">
+                            <div class="btn-group ms-2" role="group">
+                                <button type="button" class="btn btn-sm btn-success" onclick="exportToExcl()">
                                     <i class="fas fa-file-excel me-1"></i> Export Excel
                                 </button>
                                 <button type="button" class="btn btn-sm btn-danger" onclick="exportToPDF()">
                                     <i class="fas fa-file-pdf me-1"></i> Export PDF
                                 </button>
-                            </div> --}}
+                            </div>
                             <small class="text-muted ms-3">Data refreshed:
                                 {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
                         </div>
