@@ -293,6 +293,7 @@ Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('s
        Route::get('/', [CalendarController::class, 'feedbackList'])->name('get.feedbackList');
       Route::get('/event-feedback/{id}', [CalendarController::class, 'getEventFeedback']);
        Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');
+       Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('get.studentFacultyFeedback');
         Route::post('/submit-feedback', [CalendarController::class, 'submitFeedback'])->name('submit.feedback');
     });
     // MDO/Escort Exemption Routes
