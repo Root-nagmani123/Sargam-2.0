@@ -2,7 +2,14 @@
     <div class="row align-items-center">
         <div class="col-12">
             <div class="d-sm-flex align-items-center justify-space-between">
-                <h4 class="mb-4 mb-sm-0 card-title">{{ $title }}</h4>
+                <div class="d-flex align-items-center gap-2">
+                    <a onclick="window.history.back()" class="btn btn-sm btn-light-primary d-flex align-items-center gap-1" title="Go back">
+                        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M10.295 19.716a1 1 0 0 0 1.404-1.425l-5.37-5.29h13.67a1 1 0 1 0 0-2H6.336l5.359-5.358a1 1 0 0 0-1.414-1.414l-7.071 7.07a1 1 0 0 0 0 1.415l7.085 7.002Z" fill="currentColor"/>
+                        </svg>
+</a>
+                    <h4 class="mb-0 card-title">{{ $title }}</h4>
+                </div>
                 <nav aria-label="breadcrumb" class="ms-auto">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item d-flex align-items-center">
