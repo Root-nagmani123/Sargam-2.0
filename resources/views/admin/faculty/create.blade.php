@@ -1124,6 +1124,19 @@ function fillFacultyForm(faculty) {
     `);
 	}
 
+    if (faculty.Doc_uplode_path) {
+    const docURL = `/storage/${faculty.Doc_uplode_path}`;
+
+    $(".existing-document").html(`
+        <a href="${docURL}" target="_blank" class="text-primary">
+            View Existing Document
+        </a>
+    `);
+
+    // Reset preview (new upload only)
+    $("#documentPreviewPDF").addClass("d-none").attr("src", "");
+}
+
 //Qualification Details
 
     // Clear existing dynamic rows except the first template row
