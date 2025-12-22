@@ -602,8 +602,21 @@ table>thead {
                 </div>
             </a>
         </div>
-
-        <!-- Total Guest Faculty -->
+        @if(hasRole('Student-OT'))
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('medical.exception.ot.view') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-yellow">
+                        <img src="{{ asset('images/classes.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Medical Exception</div>
+                        <div class="stat-value">{{ $exemptionCount }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @else
         <div class="col-lg-3 col-md-6 col-sm-12">
             <a href="{{ route('admin.dashboard.guest_faculty') }}">
                 <div class="stat-card clean-style">
@@ -617,7 +630,24 @@ table>thead {
                 </div>
             </a>
         </div>
-
+        @endif
+        <!-- Total Guest Faculty -->
+        
+ @if(hasRole('Student-OT'))
+ <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('ot.mdo.escrot.exemption.view') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-purple">
+                        <img src="{{ asset('images/attendance.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">OT MDO/Escort</div>
+                        <div class="stat-value">{{ $MDO_count }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+ @else
         <!-- Total Inhouse Faculty -->
         <div class="col-lg-3 col-md-6 col-sm-12">
             <a href="{{ route('admin.dashboard.inhouse_faculty') }}">
@@ -631,8 +661,9 @@ table>thead {
                     </div>
                 </div>
             </a>
-
         </div>
+        @endif
+
 
     </div>
 
@@ -727,9 +758,7 @@ table>thead {
                     @php //print_r($notice); @endphp
                     <div class="mb-4 pb-2 border-bottom">
                         <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
-                        <p class="mb-1" style="font-size: 14px; line-height: 1.5; color: #333;">
-                            {!! Str::limit($notice->description, 100) !!}
-                        </p>
+                       
                         <small class="text-muted">Posted on:
                             {{ date('d M, Y', strtotime($notice->created_at)) }}</small>
                         @if($notice->document)
