@@ -1118,9 +1118,12 @@ function fillFacultyForm(faculty) {
 
     // show "view existing photo" link
     $(".existing-photo").html(`
-        <a href="${photoURL}" target="_blank" class="text-primary">
-            View Existing Photo
-        </a>
+        <a href="${photoURL}"
+            target="_blank"
+            class="text-primary d-inline-flex align-items-center gap-1">
+                View Existing Photo
+                <iconify-icon icon="lets-icons:eye" width="20" height="20"></iconify-icon>
+            </a>
     `);
 	}
 
@@ -1128,14 +1131,45 @@ function fillFacultyForm(faculty) {
     const docURL = `/storage/${faculty.Doc_uplode_path}`;
 
     $(".existing-document").html(`
-        <a href="${docURL}" target="_blank" class="text-primary">
-            View Existing Document
+        <a href="${docURL}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
+            View Existing Document <iconify-icon icon="lets-icons:eye" width="20" height="20"></iconify-icon>
         </a>
     `);
 
     // Reset preview (new upload only)
     $("#documentPreviewPDF").addClass("d-none").attr("src", "");
 }
+
+if (faculty.Professional_Memberships_doc_upload_path) {
+    const docURL = `/storage/${faculty.Professional_Memberships_doc_upload_path}`;
+
+    $(".existing-membership").html(`
+        <a href="${docURL}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
+            View Membership Document <iconify-icon icon="lets-icons:eye" width="20" height="20"></iconify-icon>
+        </a>
+    `);
+
+    // Reset preview (new upload only)
+    $("#membershipPreview").addClass("d-none").attr("src", "");
+}
+
+if (faculty.Reference_Recommendation) {
+    const docURL = `/storage/${faculty.Reference_Recommendation}`;
+
+    $(".existing-reference").html(`
+        <a href="${docURL}"
+   target="_blank"
+   class="text-primary d-inline-flex align-items-center gap-1 fw-medium">
+    View Reference Document
+    <iconify-icon icon="lets-icons:eye" width="20" height="20"></iconify-icon>
+</a>
+
+    `);
+
+    // Reset preview (new upload only)
+    $("#referencePreview").addClass("d-none").attr("src", "");
+}
+
 
 //Qualification Details
 
@@ -1155,9 +1189,13 @@ function fillFacultyForm(faculty) {
     row.find("input[name='percentage_CGPA[]']").val(q.Percentage_CGPA);
     if (q.Certifcates_upload_path) {
         row.find(".existing-certificate").html(`
-            <a href="storage/${q.Certifcates_upload_path}" target="_blank" class="text-primary">
+           <a href="storage/${q.Certifcates_upload_path}"
+            target="_blank"
+            class="text-primary d-inline-flex align-items-center gap-1 fw-medium">
                 View Existing Certificate
+                <iconify-icon icon="lets-icons:eye" width="20" height="20"></iconify-icon>
             </a>
+
         `);
     }
     });
@@ -1181,6 +1219,34 @@ function fillFacultyForm(faculty) {
 	$("input[name='accountnumber']").val(faculty.Account_No);
 	$("input[name='ifsccode']").val(faculty.IFSC_Code);
 	$("input[name='pannumber']").val(faculty.PAN_No);
+
+    if (faculty.Rech_Publi_Upload_path) {
+    const docURL = `/storage/${faculty.Rech_Publi_Upload_path}`;
+
+    $(".existing-research").html(`
+        <a href="${docURL}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1 fw-medium">
+            View Existing Document <iconify-icon icon="lets-icons:eye" width="20" height="20"></iconify-icon>
+        </a>
+    `);
+
+        // Reset preview (new upload only)
+        $("#researchPreview").addClass("d-none").attr("src", "");
+    }
+
+
+    if (faculty.Rech_Publi_Upload_path) {
+    const docURL = `/storage/${faculty.Rech_Publi_Upload_path}`;
+
+    $(".existing-research").html(`
+        <a href="${docURL}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1 fw-medium">
+            View Existing Document <iconify-icon icon="lets-icons:eye" width="20" height="20"></iconify-icon>
+        </a>
+    `);
+
+        // Reset preview (new upload only)
+        $("#researchPreview").addClass("d-none").attr("src", "");
+    }
+
 
 	if (faculty.joining_date) {
     let formattedDate = new Date(faculty.joining_date).toISOString().slice(0, 10);
