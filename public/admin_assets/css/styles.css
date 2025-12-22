@@ -17846,7 +17846,7 @@
     --bs-body-font-size: 0.875rem;
     --bs-body-font-weight: 400;
     --bs-body-line-height: 1.5;
-    --bs-body-color: #98a4ae;
+    --bs-body-color: #004a93;
     --bs-body-color-rgb: 152, 164, 174;
     --bs-body-bg: #fff;
     --bs-body-bg-rgb: 255, 255, 255;
@@ -17867,7 +17867,7 @@
     --bs-link-hover-color: #004a93;
     --bs-link-hover-color-rgb: 99, 91, 255;
     --bs-code-color: #d63384;
-    --bs-highlight-color: #98a4ae;
+    --bs-highlight-color: #004a93;
     --bs-highlight-bg: #fef3ce;
     --bs-border-width: 1px;
     --bs-border-style: solid;
@@ -17967,7 +17967,6 @@ body {
     font-size: var(--bs-body-font-size);
     font-weight: var(--bs-body-font-weight);
     line-height: var(--bs-body-line-height);
-    color: var(--bs-body-color);
     text-align: var(--bs-body-text-align);
     background-color: var(--bs-body-bg);
     -webkit-text-size-adjust: 100%;
@@ -23478,7 +23477,7 @@ fieldset:disabled .btn {
     --bs-card-spacer-x: 30px;
     --bs-card-title-spacer-y: 0.5rem;
     --bs-card-title-color: #29343d;
-    --bs-card-subtitle-color: #98a4ae;
+    --bs-card-subtitle-color: #004a93;
     --bs-card-border-width: 0px;
     --bs-card-border-color: #ebf1f6;
     --bs-card-border-radius: 12px;
