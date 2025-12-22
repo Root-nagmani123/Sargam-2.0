@@ -43,7 +43,7 @@ class FacultyController extends Controller
         { //FacultyRequest
             try {
 
-            $existingFaculty = FacultyMaster::where('mobile_no', $request->mobile)
+          /*  $existingFaculty = FacultyMaster::where('mobile_no', $request->mobile)
             ->when($request->faculty_id, function ($q) use ($request) {
                 $q->where('pk', '!=', $request->faculty_id);
             })
@@ -56,10 +56,7 @@ class FacultyController extends Controller
                 'data' => $existingFaculty
             ]);
         }
-            \Log::info($request->only([
-            'current_designation',
-            'current_department'
-        ]));
+                */
 
             DB::beginTransaction();
 
@@ -338,8 +335,8 @@ class FacultyController extends Controller
                 'gender'        => $request->gender,
                 'landline_no'   => $request->landline,
                 'mobile_no'        => $request->mobile,
-                'current_designation'        => $request->current_designation,
-				'current_department'        => $request->current_department,
+              //  'current_designation'        => $request->current_designation,
+				//'current_department'        => $request->current_department,
                 'country_master_pk' => $request->country,
                 'state_master_pk'   => $request->state,
                 'state_district_mapping_pk' => $request->district,
@@ -404,7 +401,15 @@ class FacultyController extends Controller
             }
             //print_r($facultyDetails);die;
             logger()->info('DB columns', \Schema::getColumnListing('faculty_master'));
-           $faculty->update($facultyDetails);
+           //$faculty->update($facultyDetails);
+
+           $faculty->fill($facultyDetails);
+
+            /* 🔥 Force mark fields as changed */
+            $faculty->current_designation = trim($request->current_designation);
+            $faculty->current_department  = trim($request->current_department);
+
+            $faculty->save();
 
             $this->generateFacultyCode($faculty, $request->facultyType);
 
