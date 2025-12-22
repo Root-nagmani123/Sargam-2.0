@@ -265,6 +265,11 @@
                             <span class="badge bg-success ms-2" id="submitted-count">{{ $submittedData->count() }}</span>
                         </button>
                     </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" href="{{ $otUrl }}" target="_blank">
+                            OT URL
+                        </a>
+                    </li>
                 </ul>
             </div>
 

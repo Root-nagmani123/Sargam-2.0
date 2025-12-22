@@ -9,6 +9,9 @@ use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping,CourseMaster, Fa
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Models\User;
+
+
 
 class CalendarController extends Controller
 {
@@ -647,8 +650,121 @@ public function allFeedback()
 
             $submittedData = $submittedQuery->get();
 
-            return view('admin.feedback.student_feedback', compact('pendingData', 'submittedData'));
+             $payload = [
+        'username' => auth()->user()->user_name,
+        'email'    => auth()->user()->email_id,
+    ];
+
+    $encrypted = Crypt::encryptString(json_encode($payload));
+
+    $otUrl = route('feedback.get.studentFacultyFeedback', ['data' => $encrypted]);
+
+            return view('admin.feedback.student_feedback', compact('pendingData', 'submittedData', 'otUrl'));
         } catch (\Throwable $e) {
+                logger()->error('Error in studentFeedback: ' . $e->getMessage());
+            return back()->with('error', $e->getMessage());
+        }
+    }
+public function studentFacultyFeedback( Request $request)
+    {
+        try {
+
+
+            $otUrl = '';
+            
+               $decrypted = Crypt::decryptString($request->data);
+            $data = json_decode($decrypted, true);
+
+            if (!isset($data['email'])) {
+                abort(403, 'Invalid login data');
+            }
+
+            // 👤 Find user
+            $user = User::where('email_id', $data['email'])->where('user_name', $data['username'])->first();
+
+            if (!$user) {
+                abort(403, 'User not found');
+            }
+
+            // 🔐 Auto login
+            Auth::login($user);
+
+            $student_pk = auth()->user()->user_id;
+
+            // Pending Feedback Query (from timetable table - not yet submitted)
+            $pendingQuery = DB::table('timetable as t')
+                ->select([
+                    't.pk as timetable_pk',
+                    't.subject_topic',
+                    't.Ratting_checkbox',
+                    't.feedback_checkbox',
+                    't.Remark_checkbox',
+                    't.faculty_master as faculty_pk',
+                    'f.full_name as faculty_name',
+                    'c.course_name',
+                    'v.venue_name',
+                    DB::raw('t.START_DATE as from_date'),
+                    't.class_session',
+                ])
+                ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->where('t.feedback_checkbox', 1)
+
+                // Student must NOT have submitted OR has no record
+                ->whereNotExists(function ($sub) use ($student_pk) {
+                    $sub->select(DB::raw(1))
+                        ->from('topic_feedback as tf')
+                        ->whereColumn('tf.timetable_pk', 't.pk')
+                        ->where('tf.student_master_pk', $student_pk)
+                        ->where('tf.is_submitted', 1);  // Exclude submitted feedback only
+                });
+
+
+            // Student group mapping filter for pending feedback
+            if (hasRole('Student-OT')) {
+                $pendingQuery->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
+                    ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+                    ->where('scgm.student_master_pk', $student_pk);
+            }
+
+            $pendingData = $pendingQuery->orderByDesc('t.START_DATE')->get();
+
+            // Submitted Feedback Query (from topic_feedback table)
+            $submittedQuery = DB::table('topic_feedback as tf')
+                ->select([
+                    'tf.pk as feedback_pk',
+                    'tf.timetable_pk',
+                    'tf.topic_name',
+                    'tf.presentation',
+                    'tf.content',
+                    'tf.remark',
+                    'tf.rating',
+                    'tf.is_submitted',
+                    'tf.created_date',
+                    't.subject_topic',
+                    'f.full_name as faculty_name',
+                    'c.course_name',
+                    'v.venue_name',
+                    DB::raw('t.START_DATE as from_date'),
+                    't.class_session',
+                    't.Ratting_checkbox',
+                    't.Remark_checkbox',
+                ])
+                ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+                ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+                ->leftJoin('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->where('tf.student_master_pk', $student_pk)
+                ->where('tf.is_submitted', 1)
+                ->orderByDesc('tf.created_date');
+
+
+            $submittedData = $submittedQuery->get();
+
+            return view('admin.feedback.student_feedback', compact('pendingData', 'submittedData', 'otUrl'));
+        } catch (\Throwable $e) {
+            logger()->error('Error in studentFacultyFeedback: ' . $e->getMessage());
             return back()->with('error', $e->getMessage());
         }
     }
