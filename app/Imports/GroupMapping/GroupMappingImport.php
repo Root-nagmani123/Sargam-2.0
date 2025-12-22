@@ -3,6 +3,7 @@
 namespace App\Imports\GroupMapping;
 
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\{ToCollection, WithHeadingRow, WithStartRow};
 use App\Models\{StudentMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap,StudentMasterCourseMap};
@@ -43,7 +44,13 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
                 $this->addFailure($rowNumber, $validator->errors()->all());
                 continue;
             }
+           $data_type_pk =  DB::table('group_type_master_course_master_map')
+            ->join('course_group_type_master', 'group_type_master_course_master_map.type_name', '=', 'course_group_type_master.pk')
+            ->where('course_group_type_master.type_name', $data['group_type'])
+            ->where('group_type_master_course_master_map.active_inactive', 1)
+           ->where('group_name', $data['group_name'])->select('group_type_master_course_master_map.type_name','group_type_master_course_master_map.group_name','group_type_master_course_master_map.course_name')->first();
 
+          $data_student_pk = DB::table('student_master_course__map')->where('course_master_pk',$data_type_pk->course_name)->select('student_master_pk')->first();
             // Lookup: StudentMaster
             // $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
             //     ->select('pk')->first();
@@ -53,9 +60,11 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
         'LOWER(generated_OT_code) = ?',
         [strtolower($data['otcode'])]
     )
+    ->where('pk', $data_student_pk->student_master_pk)
     ->orderBy('pk', 'desc')   // last inserted record
     ->select('pk')
     ->get();
+
                 // print_r($studentMaster);die;
                 foreach ($studentMaster as $student) {
                     $course_active_check_student = StudentMasterCourseMap::where('student_master_pk', $student['pk'])->where('active_inactive', 1)->exists();
