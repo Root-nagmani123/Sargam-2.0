@@ -479,14 +479,15 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Apply saved sidebar type preference; do not force collapse on dashboard
+    // Apply saved sidebar type preference; default to collapsed on first login
     try {
         const savedType = localStorage.getItem('SidebarType');
         if (savedType) {
             body.setAttribute('data-sidebartype', savedType);
         } else {
-            // Default to expanded
-            body.setAttribute('data-sidebartype', 'full');
+            // Default to collapsed (mini-sidebar) for new users
+            body.setAttribute('data-sidebartype', 'mini-sidebar');
+            localStorage.setItem('SidebarType', 'mini-sidebar');
         }
     } catch (e) {}
 

@@ -310,7 +310,7 @@
 
 </head>
 
-<body>
+<body data-sidebartype="mini-sidebar">
     <!-- Preloader -->
     <div class="preloader">
         <img src="{{ asset('admin_assets/images/logos/favicon.ico') }}" alt="loader" class="lds-ripple img-fluid">
@@ -374,6 +374,94 @@ document.addEventListener('DOMContentLoaded', function () {
             input.classList.remove('active');
         }
     });
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("main-wrapper");
+    const toggleBtn = document.getElementById("headerCollapse");
+    const icon = document.getElementById("sidebarToggleIcon");
+    const body = document.body;
+    const sidebarmenus = document.querySelectorAll(".sidebarmenu");
+
+    // Helper: Safely adjust all DataTables after layout changes
+    function adjustAllDataTables() {
+        try {
+            if (window.jQuery && $.fn && $.fn.dataTable) {
+                const api = $.fn.dataTable.tables({ visible: true, api: true });
+                if (api && api.columns) {
+                    api.columns.adjust();
+                    if (api.responsive && api.responsive.recalc) {
+                        api.responsive.recalc();
+                    }
+                    if (api.settings) {
+                        const settings = api.settings();
+                        let clientSideExists = false;
+                        for (let i = 0; i < settings.length; i++) {
+                            if (!settings[i].oFeatures.bServerSide) {
+                                clientSideExists = true;
+                                break;
+                            }
+                        }
+                        if (clientSideExists) api.draw(false);
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('DataTables adjust failed after sidebar toggle:', err);
+        }
+    }
+
+    // Apply saved sidebar type preference; default to collapsed on first login
+    try {
+        const savedType = localStorage.getItem('SidebarType');
+        if (savedType) {
+            body.setAttribute('data-sidebartype', savedType);
+        } else {
+            // Default to collapsed (mini-sidebar) for new users
+            body.setAttribute('data-sidebartype', 'mini-sidebar');
+            localStorage.setItem('SidebarType', 'mini-sidebar');
+        }
+    } catch (e) {}
+
+    // Initialize collapsed state on page load
+    const sidebarType = body.getAttribute("data-sidebartype");
+    if (sidebarType === "mini-sidebar") {
+        sidebar.classList.remove("show-sidebar");
+        sidebarmenus.forEach(function(el) {
+            el.classList.add("close");
+        });
+        if (icon) icon.textContent = "keyboard_double_arrow_right";
+        setTimeout(adjustAllDataTables, 300);
+    } else {
+        sidebar.classList.add("show-sidebar");
+        sidebarmenus.forEach(function(el) {
+            el.classList.remove("close");
+        });
+        if (icon) icon.textContent = "keyboard_double_arrow_left";
+        setTimeout(adjustAllDataTables, 300);
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", function () {
+            sidebar.classList.toggle("show-sidebar");
+            sidebarmenus.forEach(function(el) {
+                el.classList.toggle("close");
+            });
+            
+            const currentType = body.getAttribute("data-sidebartype");
+            if (currentType === "mini-sidebar") {
+                body.setAttribute("data-sidebartype", "full");
+                try { localStorage.setItem('SidebarType', 'full'); } catch (e) {}
+                if (icon) icon.textContent = "keyboard_double_arrow_left";
+            } else {
+                body.setAttribute("data-sidebartype", "mini-sidebar");
+                try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
+                if (icon) icon.textContent = "keyboard_double_arrow_right";
+            }
+            setTimeout(adjustAllDataTables, 300);
+        });
+    }
 });
 </script>
 </body>
