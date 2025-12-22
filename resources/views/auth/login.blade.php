@@ -376,11 +376,11 @@
     #carouselExampleFade .carousel-item img {
         height: 100%;
         width: 100%;
-        object-fit: fill;
+        object-fit: cover;
     }
 
     .carasoul-image {
-        object-fit: fill;
+        object-fit: cover;
         width: 100%;
         height: 100vh !important;
     }
@@ -604,111 +604,43 @@
                         data-bs-keyboard="true" data-bs-wrap="true" aria-roledescription="carousel">
                         <div class="carousel-inner">
                             <div class="carousel-item active">
-                                <img src="{{ asset('images/carasoul/1.jpg') }}"
+                                <img src="{{ asset('images/carasoul/1.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/2.jpg') }}"
+                                <img src="{{ asset('images/carasoul/2.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/3.jpg') }}"
+                                <img src="{{ asset('images/carasoul/3.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item" data-bs-interval="40000">
-                                <img src="{{ asset('images/carasoul/4.jpg') }}"
+                                <img src="{{ asset('images/carasoul/4.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/5.jpg') }}"
+                                <img src="{{ asset('images/carasoul/5.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/6.jpg') }}"
+                                <img src="{{ asset('images/carasoul/6.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/7.jpg') }}"
+                                <img src="{{ asset('images/carasoul/7.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/8.jpg') }}"
+                                <img src="{{ asset('images/carasoul/8.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/9.jpg') }}"
+                                <img src="{{ asset('images/carasoul/9.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                             <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/10.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/11.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/12.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/13.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/14.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/15.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/16.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/17.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/18.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/19.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/20.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/21.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/22.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/23.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/24.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/25.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/26.jpg') }}"
-                                    class="d-block w-100 img-fluid carasoul-image" alt="...">
-                            </div>
-                            <div class="carousel-item">
-                                <img src="{{ asset('images/carasoul/27.jpg') }}"
+                                <img src="{{ asset('images/carasoul/10.webp') }}"
                                     class="d-block w-100 img-fluid carasoul-image" alt="...">
                             </div>
                         </div>
