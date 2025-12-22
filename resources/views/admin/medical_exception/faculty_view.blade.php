@@ -85,18 +85,21 @@
 
             <!-- Course Summary Table -->
             <div class="table-responsive">
-                <table class="table" role="table">
+                <table class="table text-nowrap" role="table">
                     <thead>
                         <tr>
                             <th scope="col">S.No.</th>
                             <th scope="col">Course Name</th>
-                            <th scope="col">CC</th>
-                            <th scope="col">ACC</th>
                             <th scope="col">Faculty Name</th>
                             <th scope="col">Topics</th>
-                            <th scope="col">Total Students</th>
-                            <th scope="col">Students on Medical Exception</th>
-                            <th scope="col" class="text-end" style="width: 44px;">&nbsp;</th>
+                            <th scope="col">Student Name</th>
+                            <th scope="col">Medical Exception Date</th>
+                            <th scope="col">Medical Exception Time</th>
+                            <th scope="col">OT Code</th>
+                            <th scope="col">Medical Document</th>
+                            <th scope="col">Application Type</th>
+                            <th scope="col">Exemption Count</th>
+                            <th scope="col">Submitted On</th>
                         </tr>
                     </thead>
                     <tbody id="facultyAccordion">
@@ -110,60 +113,17 @@
                             <td>PRIYANKA DAS</td>
                             <td>BAGADI GAUTHAM</td>
                             <td>Phase-II 2024</td>
+                            <td>Premkumar VR</td>
+                            <td>PRIYANKA DAS</td>
+                            <td>BAGADI GAUTHAM</td>
+                            <td>Phase-II 2024</td>
                             <td>20</td>
                             <td>2</td>
-                            <td class="text-end">
-                                <i class="material-icons material-symbols-rounded accordion-caret" aria-hidden="true" title="Expand row" style="font-size:30px;">expand_more</i>
-                            </td>
-                        </tr>
-                        <tr id="row1" class="collapse accordion-collapse" data-bs-parent="#facultyAccordion">
-                            <td colspan="9">
-                                <div class="table-responsive">
-                                        <table class="table table-bordered mt-3" role="table">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th style="color: #000 !important; font-weight: bold">S.No</th>
-                                                    <th style="color: #000 !important; font-weight: bold">Student Name</th>
-                                                    <th style="color: #000 !important; font-weight: bold">Medical Exception Date</th>
-                                                    <th style="color: #000 !important; font-weight: bold">Medical Exception Time</th>
-                                                    <th style="color: #000 !important; font-weight: bold">OT Code</th>
-                                                    <th style="color: #000 !important; font-weight: bold">Medical Document</th>
-                                                    <th style="color: #000 !important; font-weight: bold">Application Type</th>
-                                                    <th style="color: #000 !important; font-weight: bold">Exemption Count</th>
-                                                    <th style="color: #000 !important; font-weight: bold">Submitted On</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td>1</td>
-                                                    <td>John Doe</td>
-                                                    <td>2024-05-01</td>
-                                                    <td>10:00 AM - 12:00 PM</td>
-                                                    <td>A01</td>
-                                                    <td><a href="#">View Document</a></td>
-                                                    <td>Medical Leave</td>
-                                                    <td>1</td>
-                                                    <td>2024-04-28 09:15 AM</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                            </td>
+
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <style>
-                .accordion-toggle { cursor: pointer; }
-                .accordion-toggle .accordion-caret {
-                    transition: transform .2s ease;
-                    color: #004a93;
-                    vertical-align: middle;
-                }
-                .accordion-toggle[aria-expanded="true"] .accordion-caret {
-                    transform: rotate(180deg);
-                }
-            </style>
         </div>
     </div>
 </div>
