@@ -2,7 +2,7 @@
 
 @section('title', 'Edit Notice notification')
 
-@section('setup_content')
+@section('content')
 
 <div class="container-fluid">
     <x-breadcrum title="Notice notification List" />

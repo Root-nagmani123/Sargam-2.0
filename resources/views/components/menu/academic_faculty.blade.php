@@ -175,7 +175,7 @@
                                     data-bs-toggle="collapse" href="#feedbackCollapse" role="button" aria-expanded="false"
                                     aria-controls="feedbackCollapse"
                                     >
-                                    <span class="hide-menu fw-bold">User Feedback</span>
+                                    <span class="hide-menu fw-bold">Session Feedback</span>
                                     <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>

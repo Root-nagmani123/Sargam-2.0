@@ -44,7 +44,7 @@ input:checked + .slider:before {
 
 </style>
 <div class="container-fluid">
-
+<x-breadcrum title="Roles"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card">

@@ -1,44 +1,33 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member - Sargam | Lal Bahadur')
+@section('title', 'User Management - Sargam | Lal Bahadur')
 @section('setup_content')
-<style>
-    .roles-cell {
-    max-height: 100px;       /* Limit the height */
-    overflow-y: auto;       /* Vertical scroll if content exceeds */
-    white-space: normal;    /* Allow wrapping */
-    word-wrap: break-word;  /* Break long words if necessary */
-    padding: 2px;
-    display: block;
-}
-
-</style>
 <div class="container-fluid">
-
+    <x-breadcrum title="Users"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="row">
-                        <div class="col-6">
-                            <h4>Users</h4>
-                        </div>
-                        <div class="col-6">
-                            <!-- <div class="float-end gap-2">
+                    <div class="col-6">
+                        <h4>Users</h4>
+                    </div>
+                    <div class="col-6">
+                        <!-- <div class="float-end gap-2">
                                 <a href="{{ route('admin.users.create') }}" class="btn btn-primary">+ Add Users</a>
                             </div> -->
-                        </div>
                     </div>
-                    <hr>
-                    <div class="table-responsive">
-                        {{ $dataTable->table(['class' => 'table']) }}
-                    </div>
+                </div>
+                <hr>
+                <div class="table-responsive">
+                    {{ $dataTable->table(['class' => 'table']) }}
+                </div>
             </div>
         </div>
         <!-- end Zero Configuration -->
     </div>
 </div>
-@endsection 
+@endsection
 @section('scripts')
-    {{ $dataTable->scripts() }}
+{{ $dataTable->scripts() }}
 @endsection

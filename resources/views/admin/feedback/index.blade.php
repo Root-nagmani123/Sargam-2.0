@@ -154,7 +154,7 @@
 </style>
 
 <div class="container-fluid">
-    <x-breadcrum title="Feedback Management" />
+    <x-breadcrum title="Session Feedback" />
     <div>
         <!-- Feedback Card -->
         <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
@@ -165,7 +165,7 @@
                         <h4 class="mb-0">
                             <i class="material-icons material-symbols-rounded me-2"
                                 style="vertical-align: middle;">feedback</i>
-                            Feedback Management
+                            Session Feedback
                         </h4>
                     </div>
                     <div class="feedback-actions">
@@ -208,11 +208,7 @@
                                 <td>{{ $event->course_name ?? '-' }}</td>
                                 <td>{{ $event->faculty_name ?? '-' }}</td>
                                 <td>{{ $event->subject_name ?? '-' }}</td>
-                                <td>
-                                    <small class="text-muted">
-                                        {{ \Illuminate\Support\Str::words($event->subject_topic, 8, '...') ?? '-' }}
-                                    </small>
-                                </td>
+                                <td>{{ \Illuminate\Support\Str::words($event->subject_topic, 8, '...') ?? '-' }}</td>
                                 <td class="text-center">
                                     <div class="dropdown">
                                         <a href="javascript:void(0)" class="px-2 text-decoration-none"
