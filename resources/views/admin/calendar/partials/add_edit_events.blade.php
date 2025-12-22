@@ -210,39 +210,81 @@
                     </section>
 
                     <!-- Additional Options -->
-                    <section class="pt-3 border-top" aria-labelledby="additionalOptionsHeading">
-                        <h3 id="additionalOptionsHeading" class="h6 text-primary mb-3">Additional Options</h3>
-                        <div class="row">
-                            <div class="col-md-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" name="feedback_checkbox"
-                                        id="feedback_checkbox" aria-controls="remarkCheckbox ratingCheckbox">
-                                    <label class="form-check-label" for="feedback_checkbox">Feedback</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" name="remarkCheckbox"
-                                        id="remarkCheckbox" disabled>
-                                    <label class="form-check-label" for="remarkCheckbox">Remark</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" name="ratingCheckbox"
-                                        id="ratingCheckbox" disabled>
-                                    <label class="form-check-label" for="ratingCheckbox">Rating</label>
-                                </div>
-                            </div>
-                            <div class="col-md-3 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1"
-                                        name="bio_attendanceCheckbox" id="bio_attendanceCheckbox">
-                                    <label class="form-check-label" for="bio_attendanceCheckbox">Bio Attendance</label>
-                                </div>
-                            </div>
+                    <section class="pt-4 border-top" aria-labelledby="additionalOptionsHeading">
+    <h3 id="additionalOptionsHeading" class="h6 text-primary mb-3">
+        <i class="bi bi-sliders me-2"></i>Additional Options
+    </h3>
+
+    <div class="row g-3">
+        <!-- Feedback Group -->
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-3">
+                    <!-- Feedback Parent -->
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="feedback_checkbox"
+                               name="feedback_checkbox"
+                               value="1"
+                               aria-controls="feedbackOptions">
+                        <label class="form-check-label fw-semibold" for="feedback_checkbox">
+                            Feedback
+                        </label>
+                    </div>
+
+                    <!-- Feedback Child Options -->
+                    <div id="feedbackOptions" class="ps-4 border-start d-none">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="remarkCheckbox"
+                                   name="remarkCheckbox"
+                                   value="1">
+                            <label class="form-check-label" for="remarkCheckbox">
+                                Remark
+                            </label>
                         </div>
-                    </section>
+
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="ratingCheckbox"
+                                   name="ratingCheckbox"
+                                   value="1">
+                            <label class="form-check-label" for="ratingCheckbox">
+                                Rating
+                            </label>
+                        </div>
+
+                        <small class="text-muted d-block mt-2">
+                            Select at least one feedback component.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bio Attendance (Independent) -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-3 d-flex align-items-center">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="bio_attendanceCheckbox"
+                               name="bio_attendanceCheckbox"
+                               value="1">
+                        <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
+                            Bio Attendance
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
                 </div>
 
                 <!-- Modal Footer -->
@@ -259,3 +301,36 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const feedbackToggle = document.getElementById('feedback_checkbox');
+    const feedbackOptions = document.getElementById('feedbackOptions');
+    const remark = document.getElementById('remarkCheckbox');
+    const rating = document.getElementById('ratingCheckbox');
+
+    feedbackToggle.addEventListener('change', function () {
+        if (this.checked) {
+            feedbackOptions.classList.remove('d-none');
+        } else {
+            feedbackOptions.classList.add('d-none');
+            remark.checked = false;
+            rating.checked = false;
+        }
+    });
+});
+</script>
+<style>
+    .form-switch .form-check-input {
+    cursor: pointer;
+}
+
+.card {
+    background-color: #ffffff;
+}
+
+.border-start {
+    border-left: 2px dashed #dee2e6 !important;
+}
+
+</style>

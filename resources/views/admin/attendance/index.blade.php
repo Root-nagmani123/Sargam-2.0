@@ -149,7 +149,7 @@ hr {
 
             <div id="attendanceTableCard">
                 <div class="table-responsive" id="attendanceTableDiv">
-                    <table id="attendanceTable" class="table text-nowrap align-middle">
+                    <table id="attendanceTable" class="table text-nowrap">
                         <thead>
                             <tr>
                                 <th class="col">#</th>

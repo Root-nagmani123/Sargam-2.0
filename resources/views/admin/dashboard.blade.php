@@ -670,7 +670,7 @@ table>thead {
     <div class="row g-4 mb-4">
         <!-- LEFT CONTENT -->
         <div class="col-lg-7">
-            <div class="content-card-modern" style="max-height:650px;">
+            <div class="content-card-modern" style="max-height:700px;">
                 <div class="content-card-header-modern">
                     <h2>Admin & Campus Summary</h2>
                 </div>

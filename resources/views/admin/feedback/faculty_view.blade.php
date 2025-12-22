@@ -148,7 +148,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <div class="container-fluid py-3">
-        <x-breadcrum title="Faculty Feedback with Comments Admin View"></x-breadcrum>
+        <x-breadcrum title="Average Rating - Course / Topic wise"></x-breadcrum>
         <div class="row g-3">
 
             <!-- LEFT FILTER PANEL -->
@@ -274,7 +274,7 @@
             <main class="col-lg-9 col-md-8">
                 <div class="card content-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span class="page-title">Faculty Feedback with Comments (Admin View)</span>
+                        <span class="page-title">Average Rating - Course / Topic wise</span>
                         <div class="d-flex align-items-center">
                             <!-- Export Buttons -->
                             <div class="btn-group ms-2" role="group">

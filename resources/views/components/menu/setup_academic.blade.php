@@ -156,33 +156,9 @@
     box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
     min-width: 250px;">
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#feedbackCollapse" role="button"
-                                    aria-expanded="false" aria-controls="feedbackCollapse">
-                                    <span class="hide-menu fw-bold">User Feedback</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">keyboard_arrow_down</i>
-                                </a>
-                            </li>
-                            <ul class="collapse list-unstyled ps-3" id="feedbackCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('feedback.get.feedbackList') }}">
-                                        <span class="hide-menu">Feedback</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('feedback.get.studentFeedback') }}">
-                                        <span class="hide-menu">Student Feedback</span>
-                                    </a></li>
-
-                            </ul>
-                            <li class="sidebar-item" style="background: #4077ad;
-    border-radius: 30px 0px 0px 30px;
-    width: 100%;
-    box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-    min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#reportCollapse" role="button" aria-expanded="false"
                                     aria-controls="reportCollapse">
-                                    <span class="hide-menu fw-bold">Report</span>
+                                    <span class="hide-menu fw-bold">Session Feedback Report</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
@@ -194,13 +170,12 @@
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.feedback.faculty_view') }}">
-                                        <span class="hide-menu">Faculty Feedback with Comments Admin View</span>
+                                        <span class="hide-menu">Average Rating - Course / Topic wise</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('feedback.average') }}">
+                                        <span class="hide-menu">Faculty Feedback Average</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('feedback.average') }}">
-                                        <span class="hide-menu">Feedback With Average New</span>
-                                    </a></li>
-                                      <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.feedback.database') }}">
                                         <span class="hide-menu">Faculty Feedback Database</span>
                                     </a></li>
@@ -273,39 +248,42 @@
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                             <ul class="collapse list-unstyled ps-3" id="otCollapse">
-                               <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
-                                    <span class="hide-menu">My Time Table</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('attendance.user_attendance.index') }}">
-                                    <span class="hide-menu">My Attendance</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('ot.mdo.escrot.exemption.view') }}">
-                                    <span class="hide-menu">MDO/Escort Duty</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('medical.exception.ot.view') }}">
-                                    <span class="hide-menu">Medical Exemption</span>
-                                </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.discipline.index') }}">
-                                    <span class="hide-menu">Displine Memo Action</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.notice.memo.view') }}">
-                                    <span class="hide-menu">Memo/Notice activety</span>
-                                </a></li>
-                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('memo.notice.management.user') }}">
-                                    <span class="hide-menu">Memo/Notice action</span>
-                                </a></li>
-                                
-                            <li class="sidebar-item"><a class="sidebar-link"
-                                    href="{{ route('feedback.get.studentFeedback') }}">
-                                    <span class="hide-menu">Session Feedback</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
-                                    <span class="hide-menu">Peer Evaluation</span>
-                                </a></li>
+                            <ul class="collapse list-unstyled ps-3" id="otCollapse">
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                                        <span class="hide-menu">My Time Table</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('attendance.user_attendance.index') }}">
+                                        <span class="hide-menu">My Attendance</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('ot.mdo.escrot.exemption.view') }}">
+                                        <span class="hide-menu">MDO/Escort Duty</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('medical.exception.ot.view') }}">
+                                        <span class="hide-menu">Medical Exemption</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('memo.discipline.index') }}">
+                                        <span class="hide-menu">Displine Memo Action</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('ot.notice.memo.view') }}">
+                                        <span class="hide-menu">Memo/Notice activety</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('memo.notice.management.user') }}">
+                                        <span class="hide-menu">Memo/Notice action</span>
+                                    </a></li>
+
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('feedback.get.studentFeedback') }}">
+                                        <span class="hide-menu">Session Feedback</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('peer.index') }}">
+                                        <span class="hide-menu">Peer Evaluation</span>
+                                    </a></li>
                             </ul>
                             @endif
                         </ul>

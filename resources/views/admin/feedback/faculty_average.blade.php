@@ -88,7 +88,7 @@
         }
     </style>
     <div class="container-fluid py-3">
-        <x-breadcrum title="Faculty Average"></x-breadcrum>
+        <x-breadcrum title="Faculty Feedback Average"></x-breadcrum>
 
         <div class="row g-3">
             <!-- LEFT FILTER PANEL -->
@@ -159,7 +159,7 @@
             <main class="col-lg-9 col-md-8">
                 <div class="card content-card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span>Feedback With Average</span>
+                        <span>Faculty Feedback Average</span>
                         <small class="text-muted">Data refreshed: {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
                     </div>
 

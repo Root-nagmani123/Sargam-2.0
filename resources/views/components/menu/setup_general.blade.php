@@ -66,7 +66,7 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#userFeedbackCollapse" role="button"
                                     aria-expanded="false" aria-controls="userFeedbackCollapse">
-                                    <span class="hide-menu fw-bold">User Feedback</span>
+                                    <span class="hide-menu fw-bold">Session Feedback</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>

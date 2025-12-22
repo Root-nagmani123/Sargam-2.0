@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-
+<x-breadcrum title="Permissions"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card">
