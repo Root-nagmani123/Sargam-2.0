@@ -569,7 +569,7 @@ table>thead {
 </style>
 
 
-<div class="container-fluid p-0">
+<div class="container-fluid">
 
     <div class="row g-4 mb-4">
 
@@ -721,7 +721,7 @@ table>thead {
                 </div>
 
                 <!-- Notice Body -->
-                <div class="card-body" style="max-height:600px; overflow-y:auto;">
+                <div class="card-body" style="max-height:400px; overflow-y:auto;">
                     @php $notices = get_notice_notification_by_role() @endphp
                     @foreach($notices as $notice)
                     @php //print_r($notice); @endphp
