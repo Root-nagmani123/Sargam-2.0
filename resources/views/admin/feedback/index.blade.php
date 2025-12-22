@@ -285,7 +285,7 @@
                         <thead style="background: linear-gradient(135deg, #004a93, #0066cc);">
                             <tr>
                                 <th>S.No.</th>
-                                <th>Rating</th>
+                                <th>Rating Count</th>
                                 <th>Remarks</th>
                                 <th style="width: 15%;">Presentation</th>
                                 <th style="width: 15%;">Content</th>
