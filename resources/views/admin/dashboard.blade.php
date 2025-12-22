@@ -752,7 +752,7 @@ table>thead {
                 </div>
 
                 <!-- Notice Body -->
-                <div class="card-body" style="max-height:400px; overflow-y:auto;">
+                <div class="card-body" style="max-height:700px; overflow-y:auto;">
                     @php $notices = get_notice_notification_by_role() @endphp
                     @foreach($notices as $notice)
                     @php //print_r($notice); @endphp
@@ -764,8 +764,8 @@ table>thead {
                         @if($notice->document)
                         <div class="mt-2">
                             <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
-                                class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-download me-1"></i>View Attachment
+                                class="btn btn-sm btn-outline-primary  text-center">
+                                <i class="material-icons material-symbols-rounded me-1">attachment</i>View Attachment
                             </a>
                         </div>
                         @endif
