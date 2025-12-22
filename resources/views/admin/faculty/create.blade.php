@@ -413,7 +413,7 @@ input.is-invalid {
 								 <div class="existing-photo"></div>
                             </div>
 
-                          <div class="col-md-6 mt-3">
+                            <div class="col-md-6 mt-3">
 
                                 <x-input
                                     type="file"
@@ -861,7 +861,7 @@ $(document).ready(function () {
     return;
 	}
 
-
+/*
     // AJAX submit for Save button
     $(document).on('click', '#saveFacultyForm', function (e) {
         e.preventDefault();
@@ -912,9 +912,9 @@ $(document).ready(function () {
                     if (response.status) {
                         window.location.href = "{{ route('faculty.index') }}";
                     }
-                    else {
+                    /*else {
                         toastr.error(response.message || "Error saving faculty.");
-                    }
+                    }*/
                 },
             error: function(xhr) {
                 var msg = (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error');
@@ -926,7 +926,7 @@ $(document).ready(function () {
             }
         });
     });
-
+*/
     // Check Email
     $('input[name="email"]').on('blur', function () {
         let email = $(this).val();
@@ -1188,22 +1188,6 @@ function fillFacultyForm(faculty) {
         </a>
     `);
 	}
-
-    if (faculty.Doc_uplode_path && faculty.Doc_uplode_path !== "") {
-
-    const docURL = `/storage/${faculty.Doc_uplode_path}`;
-
-    $(".existing-document").html(`
-            <a href="${docURL}"
-            target="_blank"
-            class="text-primary fw-semibold">
-                View Existing Document
-            </a>
-        `);
-
-        // Hide preview until user selects new file
-        $("#documentPreviewPDF").addClass("d-none").attr("src", "");
-    }
 
 //Qualification Details
 
