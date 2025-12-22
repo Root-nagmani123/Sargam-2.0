@@ -413,7 +413,7 @@ input.is-invalid {
 								 <div class="existing-photo"></div>
                             </div>
 
-                          <div class="col-md-6 mt-3">
+                            <div class="col-md-6 mt-3">
 
                                 <x-input
                                     type="file"
@@ -862,71 +862,6 @@ $(document).ready(function () {
 	}
 
 
-    // AJAX submit for Save button
-    $(document).on('click', '#saveFacultyForm', function (e) {
-        e.preventDefault();
-        var form = $('.facultyForm')[0];
-        var formData = new FormData(form);
-
-    formData.set('current_designation', $("input[name='current_designation']").val());
-    formData.set('current_department', $("input[name='current_department']").val());
-
-              // Validate required fields before submit
-        var requiredFields = [
-            'facultytype', 'firstName', 'lastname', 'gender', 'landline', 'mobile',
-            'country', 'state', 'district', 'city', 'email', 'bankname',
-            'accountnumber', 'ifsccode', 'pannumber', 'joiningdate', 'current_sector'
-        ];
-        var missing = [];
-        requiredFields.forEach(function(field) {
-            if (!formData.get(field) || formData.get(field) === 'undefined') {
-                missing.push(field);
-            }
-        });
-        if (missing.length > 0) {
-            alert('Please fill all required fields: ' + missing.join(', '));
-            return;
-        }
-
-        $.ajax({
-            url: "{{ route('faculty.store') }}",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-           success: function(response) {
-                    // Duplicate detected → Auto-fill
-                    if (response.duplicate) {
-                        fillFacultyForm(response.data);
-                        $("#faculty_id").val(response.data.pk);  // Set ID for update
-                        toastr.warning(response.message);
-
-                        $("#saveFacultyForm").prop('disabled', true);
-                        return;
-                    }
-
-                    // Normal create/update success
-                    if (response.status) {
-                        window.location.href = "{{ route('faculty.index') }}";
-                    }
-                    else {
-                        toastr.error(response.message || "Error saving faculty.");
-                    }
-                },
-            error: function(xhr) {
-                var msg = (xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Unknown error');
-                if (window.toastr) {
-                    toastr.error('Error: ' + msg);
-                } else {
-                    alert('Error: ' + msg);
-                }
-            }
-        });
-    });
-
     // Check Email
     $('input[name="email"]').on('blur', function () {
         let email = $(this).val();
@@ -1189,21 +1124,18 @@ function fillFacultyForm(faculty) {
     `);
 	}
 
-    if (faculty.Doc_uplode_path && faculty.Doc_uplode_path !== "") {
-
+    if (faculty.Doc_uplode_path) {
     const docURL = `/storage/${faculty.Doc_uplode_path}`;
 
     $(".existing-document").html(`
-            <a href="${docURL}"
-            target="_blank"
-            class="text-primary fw-semibold">
-                View Existing Document
-            </a>
-        `);
+        <a href="${docURL}" target="_blank" class="text-primary">
+            View Existing Document
+        </a>
+    `);
 
-        // Hide preview until user selects new file
-        $("#documentPreviewPDF").addClass("d-none").attr("src", "");
-    }
+    // Reset preview (new upload only)
+    $("#documentPreviewPDF").addClass("d-none").attr("src", "");
+}
 
 //Qualification Details
 
