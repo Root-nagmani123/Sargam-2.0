@@ -39,7 +39,8 @@ class FacultyController extends Controller
         return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
     }
 
-        public function store(FacultyRequest $request)
+        //public function store(FacultyRequest $request)
+        public function store(Request $request)
         { //FacultyRequest
             try {
 
