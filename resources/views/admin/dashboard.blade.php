@@ -692,28 +692,13 @@ table>thead {
                             @endphp
 
                             @if($notifications->isEmpty())
-                            <p class="text-muted">No notifications available.</p>
+                            <p>No notifications available.</p>
                             @else
-                            @foreach($notifications as $notification)
-                            <div class="mb-3 pb-3 border-bottom">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="fw-bold mb-1"
-                                        style="font-size: 1rem; color: {{ $notification->is_read ? '#6c757d' : '#1a1a1a' }};">
-                                        {{ $notification->title }}
-                                        @if(!$notification->is_read)
-                                        <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">New</span>
-                                        @endif
-                                    </h6>
-                                    <small class="text-muted">{{ $notification->created_at->format('d M, Y') }}</small>
-                                </div>
-                                <p class="mb-1" style="font-size: 0.9rem; line-height: 1.5; color: #333;">
-                                    {{ $notification->message }}
-                                </p>
-                                <small class="text-muted">
-                                    <span class="badge bg-secondary">{{ $notification->module_name }}</span>
-                                </small>
-                            </div>
-                            @endforeach
+                            <ul style="list-style-type: disc; padding-left: 20px;">
+                                @foreach($notifications as $notification)
+                                <li style="cursor: pointer;" onclick="markAsRead({{ $notification->pk }})">{{ $notification->message }}</li>
+                                @endforeach
+                            </ul>
                             @endif
                         </div>
                     </section>
