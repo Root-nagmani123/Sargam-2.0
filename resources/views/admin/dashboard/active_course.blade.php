@@ -12,7 +12,7 @@
             <hr class="my-2">
             <div class="datatables">
                 <div class="table-responsive">
-                    <table class="table" id="dom_jq_event">
+                    <table class="table" id="">
                         <thead>
                             <tr>
                                 <th scope="col">Sl. No.</th>

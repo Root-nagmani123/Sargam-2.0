@@ -662,7 +662,6 @@ public function allFeedback()
 
              $payload = [
         'username' => auth()->user()->user_name,
-        'email'    => auth()->user()->email_id,
     ];
 
     $encrypted = Crypt::encryptString(json_encode($payload));
@@ -685,12 +684,12 @@ public function studentFacultyFeedback( Request $request)
                $decrypted = Crypt::decryptString($request->data);
             $data = json_decode($decrypted, true);
 
-            if (!isset($data['email'])) {
+            if (!isset($data['username'])) {
                 abort(403, 'Invalid login data');
             }
 
             // 👤 Find user
-            $user = User::where('email_id', $data['email'])->where('user_name', $data['username'])->first();
+            $user = User::where('user_name', $data['username'])->first();
 
             if (!$user) {
                 abort(403, 'User not found');
