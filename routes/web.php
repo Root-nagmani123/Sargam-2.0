@@ -627,5 +627,4 @@ Route::post('/faculty_view/export', [FeedbackController::class, 'exportFacultyFe
 
 });
 
-
-       Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+   Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
