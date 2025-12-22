@@ -14,7 +14,7 @@
 <div class="text-center mb-3 mt-2">
     <div class="mx-auto mb-2" style="width:170px; height:170px;">
         <img src="{{ get_profile_pic() }}" onerror="this.src='{{ asset('images/dummypic.jpeg') }}';" alt="User Photo"
-            class="img-fluid rounded-circle w-100 h-100 object-fit-cover shadow-sm">
+            class="img-fluid rounded-circle w-100 h-100">
     </div>
 
     <h5 class="fw-bold mb-0 text-dark">{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</h5>
