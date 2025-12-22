@@ -151,7 +151,6 @@
                                 <a href="{{ route('student.medical.exemption.export', [
                                     'filter' => $filter,
                                     'course_filter' => $courseFilter ?? '',
-                                    'faculty_filter' => $facultyFilter ?? '',
                                     'date_filter' => $dateFilter ?? ''
                                 ]) }}" class="btn btn-success d-flex align-items-center">
                                     <i class="material-icons menu-icon material-symbols-rounded"
@@ -175,7 +174,7 @@
                     <!-- Filters Section -->
                     <div class="row mb-3 align-items-end">
                         <!-- Course Filter -->
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label for="course_filter" class="form-label fw-semibold">Course</label>
                             <select name="course_filter" id="course_filter" class="form-select">
                                 <option value="">-- All Courses --</option>
@@ -187,21 +186,8 @@
                             </select>
                         </div>
                         
-                        <!-- Faculty Filter -->
-                        <div class="col-md-3">
-                            <label for="faculty_filter" class="form-label fw-semibold">Faculty</label>
-                            <select name="faculty_filter" id="faculty_filter" class="form-select">
-                                <option value="">-- All Faculty --</option>
-                                @foreach($employees ?? [] as $employee)
-                                    <option value="{{ $employee['pk'] }}" {{ (isset($facultyFilter) && $facultyFilter == $employee['pk']) ? 'selected' : '' }}>
-                                        {{ $employee['name'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
                         <!-- Today Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-3">
                             <label for="date_filter" class="form-label fw-semibold">Date Filter</label>
                             <select name="date_filter" id="date_filter" class="form-select">
                                 <option value="">-- All Dates --</option>
@@ -227,7 +213,7 @@
                         </div>
                         
                         <!-- Active/Archive Buttons -->
-                        <div class="col-md-2 text-end">
+                        <div class="col-md-3 text-end">
                             <div class="d-flex align-items-center justify-content-end gap-2">
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                     aria-label="Course Status Filter">
@@ -237,10 +223,6 @@
                                         if ($courseFilter) {
                                             $activeParams['course_filter'] = $courseFilter;
                                             $archiveParams['course_filter'] = $courseFilter;
-                                        }
-                                        if (isset($facultyFilter) && $facultyFilter) {
-                                            $activeParams['faculty_filter'] = $facultyFilter;
-                                            $archiveParams['faculty_filter'] = $facultyFilter;
                                         }
                                         if ($dateFilter) {
                                             $activeParams['date_filter'] = $dateFilter;
@@ -348,7 +330,7 @@
                                                 search_off
                                             </i>
                                             <h5 class="text-muted mb-2">No Record Found</h5>
-                                            @if($filter || $courseFilter || (isset($facultyFilter) && $facultyFilter) || $dateFilter)
+                                            @if($filter || $courseFilter || $dateFilter)
                                                 <p class="text-muted small mb-0">
                                                     No records match the applied filters. 
                                                     <a href="{{ route('student.medical.exemption.index') }}" class="text-primary">
@@ -376,7 +358,6 @@
                                 {{ $records->appends([
                                     'filter' => $filter,
                                     'course_filter' => $courseFilter,
-                                    'faculty_filter' => $facultyFilter ?? '',
                                     'date_filter' => $dateFilter ?? ''
                                 ])->links('pagination::bootstrap-5') }}
                             </div>
@@ -562,17 +543,12 @@ $(document).ready(function() {
     function applyFilters() {
         var filter = '{{ $filter }}';
         var courseFilter = $('#course_filter').val();
-        var facultyFilter = $('#faculty_filter').val();
         var dateFilter = $('#date_filter').val();
         var url = '{{ route("student.medical.exemption.index") }}';
         var params = { filter: filter };
         
         if (courseFilter) {
             params.course_filter = courseFilter;
-        }
-        
-        if (facultyFilter) {
-            params.faculty_filter = facultyFilter;
         }
         
         if (dateFilter) {
@@ -586,11 +562,6 @@ $(document).ready(function() {
     
     // Auto-submit when course filter changes
     $('#course_filter').on('change', function() {
-        applyFilters();
-    });
-    
-    // Auto-submit when faculty filter changes
-    $('#faculty_filter').on('change', function() {
         applyFilters();
     });
     
