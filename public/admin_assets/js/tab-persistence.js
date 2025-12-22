@@ -29,6 +29,10 @@
         console.log('Fresh login detected - activating home tab');
         sessionStorage.removeItem('fresh_login'); // Clear the flag
         
+        // Clear any saved tab from localStorage to ensure fresh start
+        localStorage.removeItem(ACTIVE_TAB_KEY);
+        localStorage.removeItem('activeMainTab');
+        
         // Wait for DOM to be ready
         setTimeout(function() {
             // Only target the header nav tabs (navbar-nav), not content tabs
