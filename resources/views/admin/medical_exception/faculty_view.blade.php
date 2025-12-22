@@ -23,7 +23,7 @@
                 </div>
             </div>
             <form class="row" role="search" aria-label="Medical exception filters">
-                <div class="col-3">
+                <div class="col-5">
                     <div class="mb-3">
                         <label for="filter_course" class="form-label">Course Name</label>
                         <select name="course" id="filter_course" class="form-control"
@@ -36,47 +36,15 @@
                             records.</small>
                     </div>
                 </div>
-                <div class="col-4" aria-label="Date range">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="mb-3">
+                <div class="col-5">
+                    <div class="mb-3">
                                 <label for="filter_date_from" class="form-label">Date From</label>
                                 <input type="date" name="date_from" id="filter_date_from" class="form-control">
                             </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="filter_date_to" class="form-label">Date To</label>
-                                <input type="date" name="date_to" id="filter_date_to" class="form-control">
-                            </div>
-                        </div>
-                    </div>
                 </div>
-                <div class="col-4" aria-label="Time range">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="filter_time_from" class="form-label">Time From</label>
-                                <input type="time" name="time_from" id="filter_time_from" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="mb-3">
-                                <label for="filter_time_to" class="form-label">Time To</label>
-                                <input type="time" name="time_to" id="filter_time_to" class="form-control">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-1">
-                    <div class="mb-3">
-                        <label for="filter_ot" class="form-label">OT Code</label>
-                        <select name="ot_code" id="filter_ot" class="form-control" aria-describedby="filter_ot_help">
-                            <option value="">Select</option>
-                            <option value="A01">A01</option>
-                            <option value="A02">A02</option>
-                        </select>
-                        <small id="filter_ot_help" class="form-text text-muted">Filter by OT code.</small>
+                <div class="col-2">
+                    <div class="mb-3 d-flex align-items-end">
+                        <button type="reset" class="btn btn-primary w-100">Reset</button>
                     </div>
                 </div>
             </form>
