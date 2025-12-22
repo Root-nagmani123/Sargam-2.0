@@ -21,8 +21,10 @@
                 </a>
             @endif
 
-            <small class="d-block text-muted">
-                {{ \Carbon\Carbon::parse($msg->created_date)->format('d M Y, h:i A') }}
+            <small class="d-block text-muted 1">
+                {{ \Carbon\Carbon::parse($msg->created_date)
+                    ->timezone('Asia/Kolkata')
+                    ->format('d M Y, h:i A') }}
             </small>
         </div>
     </div>
@@ -70,7 +72,7 @@
                     <textarea name="student_decip_incharge_msg"
                               class="form-control"
                               rows="1"
-                              placeholder="Type your message..."
+                              placeholder="Type your message....."
                               required></textarea>
 
                     <button type="submit" class="btn btn-primary">
