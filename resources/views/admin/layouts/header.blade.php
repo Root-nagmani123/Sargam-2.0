@@ -439,6 +439,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const currentPath = window.location.pathname;
         console.log('Current path:', currentPath);
 
+        // Dashboard routes - HIGHEST PRIORITY
+        if (currentPath === '/dashboard' || 
+            currentPath.includes('/admin/dashboard') ||
+            currentPath === '/' || 
+            currentPath === '/admin') {
+            console.log('Route matched: Dashboard/Home tab');
+            return '#home';
+        }
+
         // Setup routes - CHECK FIRST (more specific)
         if (currentPath.includes('/admin/setup') ||
             currentPath.includes('/admin/caste') ||
@@ -497,10 +506,22 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // Determine initial tab based on current route
-    const routeTab = detectRouteTab();
-    const savedTab = localStorage.getItem('activeMainTab') || routeTab;
-    const initial = savedTab || '#home';
-    console.log('Initial tab:', initial);
+    // BUT: respect fresh_login flag - always show home after login
+    const isFromLogin = sessionStorage.getItem('fresh_login');
+    let initial;
+    
+    if (isFromLogin) {
+        console.log('Fresh login detected - forcing home tab');
+        initial = '#home';
+        sessionStorage.removeItem('fresh_login'); // Clear the flag
+        localStorage.removeItem('activeMainTab'); // Clear saved tab
+    } else {
+        const routeTab = detectRouteTab();
+        const savedTab = localStorage.getItem('activeMainTab') || routeTab;
+        initial = savedTab || '#home';
+        console.log('Initial tab:', initial);
+    }
+    
     showPane(initial);
 });
 </script>
