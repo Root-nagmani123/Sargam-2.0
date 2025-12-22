@@ -55,7 +55,7 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
     )
     ->orderBy('pk', 'desc')   // last inserted record
     ->select('pk')
-    ->first();
+    ->get();
                 // print_r($studentMaster);die;
                 foreach ($studentMaster as $student) {
                     $course_active_check_student = StudentMasterCourseMap::where('student_master_pk', $student['pk'])->where('active_inactive', 1)->exists();
