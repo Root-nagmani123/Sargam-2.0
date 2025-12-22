@@ -3,12 +3,49 @@
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
+<style>
+        :root {
+        --primary: #004a93;
+        --primary-dark: #003366;
+        --accent: #eef5ff;
+        --bg-light: #f4f6f9;
+        --text-main: #1f2937;
+        --text-muted: #6b7280;
+        --border: #e5e7eb;
+    }
+        .course-header {
+        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+        color: #fff;
+        padding: 2.75rem 1.5rem;
+        border-radius: 1rem 1rem 1rem 1rem;
+        text-align: center;
+    }
+
+    .course-header h1 {
+        font-size: 1.85rem;
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .course-header .badge {
+        background: #ffffff;
+        color: #000;
+    }
+</style>
 <div class="container-fluid">
     <a href="#calendar" class="visually-hidden-focusable" aria-label="Skip to calendar">Skip to calendar</a>
     <!-- Page Header with ARIA landmark -->
     <header aria-label="Page header">
         <x-breadcrum title="Academic TimeTable" />
     </header>
+
+        <div class="course-header mb-3">
+            <h1>IAS Academic TimeTable</h1>
+            <p class="mb-0 text-white fw-medium">
+                <span class="badge">IAS</span>
+                | <strong>Year:</strong> 2025
+            </p>
+        </div>
 
     <!-- Main Content Area -->
     <main id="main-content" role="main">
