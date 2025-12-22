@@ -26,6 +26,10 @@ use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Support\Facades\DB;
 
+use App\Models\StudentMedicalExemption;
+use App\Models\MDOEscotDutyMap;
+
+
 class UserController extends Controller
 {
     /**
@@ -74,7 +78,20 @@ class UserController extends Controller
        $total_guest_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count();    
        $total_internal_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count();    
 //   print_r($emp_data);exit;
-        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty'));
+        $exemptionCount = 0;
+        $MDO_count = 0;
+        $userId = Auth::user()->user_id;
+         if(hasRole('Student-OT')){
+             $exemptionQuery = StudentMedicalExemption::where('student_master_pk', $userId)
+                ->where('active_inactive', 1);
+            $exemptionCount = $exemptionQuery->count();
+
+              $MDO_count = MDOEscotDutyMap::where('selected_student_list', $userId)
+            ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
+            ->count();
+         }
+
+        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count'));
     }
 
     public function index(UserCredentialsDataTable $request)
