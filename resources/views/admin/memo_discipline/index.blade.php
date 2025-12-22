@@ -386,7 +386,7 @@
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">Select status</option>
-                                <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Recorded</option>
+                                <option value="2" {{ $statusFilter == '1' ? 'selected' : '' }}>Recorded</option>
                                 <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Close</option>
                             </select>
                         </div>

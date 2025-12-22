@@ -47,8 +47,15 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
             // Lookup: StudentMaster
             // $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
             //     ->select('pk')->first();
-            $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
-                ->select('pk')->get();
+            // $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
+            //     ->select('pk')->get();
+            $studentMaster = StudentMaster::whereRaw(
+        'LOWER(generated_OT_code) = ?',
+        [strtolower($data['otcode'])]
+    )
+    ->orderBy('pk', 'desc')   // last inserted record
+    ->select('pk')
+    ->get();
                 // print_r($studentMaster);die;
                 foreach ($studentMaster as $student) {
                     $course_active_check_student = StudentMasterCourseMap::where('student_master_pk', $student['pk'])->where('active_inactive', 1)->exists();

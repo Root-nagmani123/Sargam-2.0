@@ -48,7 +48,7 @@ class MemoDisciplineController extends Controller
 
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
-            'discipline:pk,discipline_name',
+            'discipline:pk,discipline_name,active_inactive',
             'student:pk,display_name'
         ])
 
@@ -77,6 +77,9 @@ class MemoDisciplineController extends Controller
         ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
             $q->whereBetween('date', [$fromDateFilter, $toDateFilter]);
         })
+         ->whereHas('discipline', function ($q) {
+        $q->where('active_inactive', 1);
+    })
         ->orderBy('pk', 'desc')
         ->paginate(10)
         ->appends($request->all());
@@ -328,6 +331,9 @@ class MemoDisciplineController extends Controller
             $attachmentPath = $request->file('attachment')
                 ->store('memo_discipline_attachments', 'public');
         }
+        if($request->role_type == 'OT'){
+           $request->role_type = 's';
+        }
      
         DB::table('discipline_message_student_decip_incharge')->insert([
             'discipline_memo_status_pk' => $request->memo_discipline_id,
@@ -350,18 +356,20 @@ class MemoDisciplineController extends Controller
         }
 
         DB::commit();
-return redirect()
-    ->route('memo.discipline.index')
-    ->with('success', 'Message sent successfully.');
+// return redirect()
+//     ->route('memo.discipline.index')
+//     ->with('success', 'Message sent successfully.');
+    return back()->with('success', 'Message sent successfully.')->withInput();
 
         // return back()->with('success', 'Message sent successfully.');
     } catch (\Throwable $e) {
         DB::rollBack();
-        return back()->with('error', 'Something went wrong.')->withInput();
+        \Log::error('Error in memoDisciplineConversationStore inner: ' . $e->getMessage());
+        return back()->with('error', 'Something went wrong. '. $e->getMessage())->withInput();
     }
     }catch(\Exception $e){
         \Log::error('Error in memoDisciplineConversationStore: ' . $e->getMessage());
-        return back()->with('error', 'An unexpected error occurred.')->withInput();
+        return back()->with('error', 'An unexpected error occurred.' . $e->getMessage())->withInput();
     }
 }
     

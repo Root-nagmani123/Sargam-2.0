@@ -836,7 +836,9 @@ public function getStudentAttendanceBytopic(Request $request)
         // Handle both integer and string status values
         $attendance = DB::table('course_student_attendance as a')
                 ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
+                ->join('student_course_group_map as scgm', 'a.group_type_master_course_master_map_pk', '=', 'scgm.group_type_master_course_master_map_pk')//ye join add krna h to check active student
                 ->where('a.timetable_pk', $topicId)
+                ->where('scgm.active_inactive', 1)//ye join add krna h to check active student
                 ->whereRaw("TRIM(a.status) REGEXP '^(2|3)$'")
                 ->whereNotNull('s.pk')
                 ->whereNotNull('s.display_name')
@@ -1517,8 +1519,28 @@ if (!$id || !is_numeric($id)) {
                 'sm.display_name as student_name'
             )
             ->get();
+  $template_details = DB::table('student_notice_status as sns')
+            ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+            ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
+            ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
+            ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
+            ->where('sns.pk', $id)
+            ->where('mnt.memo_notice_type', 'Notice')
+            ->select(
+                't.subject_topic',
+                't.venue_id',
+                't.class_session',
+                'sm.display_name',
+                'sm.generated_OT_code',
+                'cm.course_name',
+                'mnt.content',
+                'mnt.director_name',
+                'mnt.director_designation'
+            )
+            ->first();
 
     } elseif ($type == 'memo') {
+        
         $memoNotice = DB::table('memo_message_student_decip_incharge as mmsdi')
             ->leftjoin('student_memo_status as sms', 'mmsdi.student_memo_status_pk', '=', 'sms.pk')
             ->leftjoin('student_master as sm', 'sms.student_pk', '=', 'sm.pk')
@@ -1534,6 +1556,25 @@ if (!$id || !is_numeric($id)) {
             )
             ->get();
           
+             $template_details = DB::table('student_notice_status as sns')
+            ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+            ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
+            ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
+            ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
+            ->where('sns.pk', $id)
+            ->where('mnt.memo_notice_type', 'Memo')
+            ->select(
+                't.subject_topic',
+                't.venue_id',
+                't.class_session',
+                'sm.display_name',
+                'sm.generated_OT_code',
+                'cm.course_name',
+                'mnt.content',
+                'mnt.director_name',
+                'mnt.director_designation'
+            )
+            ->first();
             
     }
 // print_r($memoNotice);die;
@@ -1551,7 +1592,8 @@ if (!$id || !is_numeric($id)) {
         return $item;
     });
 
-   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type'));
+    
+   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details'));
 }
 public function memo_notice_conversation_student(Request $request)
 {
