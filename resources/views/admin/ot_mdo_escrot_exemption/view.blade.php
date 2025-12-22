@@ -84,6 +84,23 @@
 
             <hr>
 
+            <!-- Duty Type Filter -->
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="duty_type_filter" class="form-label fw-bold">Filter by Duty Type</label>
+                    <select name="duty_type_filter" id="duty_type_filter" class="form-select">
+                        <option value="">All Duty Types</option>
+                        @if(isset($allDutyTypes) && is_array($allDutyTypes))
+                            @foreach($allDutyTypes as $pk => $name)
+                                <option value="{{ $pk }}" {{ isset($dutyTypeFilter) && $dutyTypeFilter == $pk ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+            </div>
+
             @php
             // Check if this is a student login view (has student_name, ot_code, email keys)
             $isStudentView = isset($studentData) && isset($studentData['student_name']) &&
@@ -287,5 +304,26 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dutyTypeFilter = document.getElementById('duty_type_filter');
+        
+        if (dutyTypeFilter) {
+            dutyTypeFilter.addEventListener('change', function() {
+                const selectedValue = this.value;
+                const url = new URL(window.location.href);
+                
+                if (selectedValue) {
+                    url.searchParams.set('duty_type_filter', selectedValue);
+                } else {
+                    url.searchParams.delete('duty_type_filter');
+                }
+                
+                window.location.href = url.toString();
+            });
+        }
+    });
+</script>
 
 @endsection

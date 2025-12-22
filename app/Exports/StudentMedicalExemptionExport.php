@@ -11,14 +11,12 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
 {
     protected $filter;
     protected $courseFilter;
-    protected $facultyFilter;
     protected $dateFilter;
 
     public function __construct($filter = 'active', $courseFilter = null, $facultyFilter = null, $dateFilter = null)
     {
         $this->filter = $filter;
         $this->courseFilter = $courseFilter;
-        $this->facultyFilter = $facultyFilter;
         $this->dateFilter = $dateFilter;
     }
 
@@ -44,11 +42,6 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
         // Filter by specific course if selected
         if ($this->courseFilter) {
             $query->where('course_master_pk', $this->courseFilter);
-        }
-        
-        // Filter by faculty/employee if selected
-        if ($this->facultyFilter) {
-            $query->where('employee_master_pk', $this->facultyFilter);
         }
         
         // Filter by today's date if date_filter is 'today'

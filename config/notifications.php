@@ -51,6 +51,22 @@ return [
         ],
     ],
 
+    // Memo/Notice Notifications (used when type is 'memo_notice')
+    'memo_notice' => [
+        'Memo/Notice' => [
+            'route' => 'memo.notice.management.conversation_student',
+            'params' => ['id' => 'reference_pk', 'type' => 'memo'],
+        ],
+        'Memo' => [
+            'route' => 'memo.notice.management.conversation_student',
+            'params' => ['id' => 'reference_pk', 'type' => 'memo'],
+        ],
+        'MemoNotice' => [
+            'route' => 'memo.notice.management.conversation_student',
+            'params' => ['id' => 'reference_pk', 'type' => 'memo'],
+        ],
+    ],
+
     // Student Notifications
     'student' => [
         'Student' => [

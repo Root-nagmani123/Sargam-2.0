@@ -91,12 +91,38 @@ class NotificationService
      * Mark notification as read
      * 
      * @param int $notificationPk Notification primary key
+     * @param int|null $userId Optional user ID to verify ownership (for security)
      * @return bool
      */
-    public function markAsRead(int $notificationPk): bool
+    public function markAsRead(int $notificationPk, ?int $userId = null): bool
     {
-        return Notification::where('pk', $notificationPk)
-            ->update(['is_read' => 1]) > 0;
+        $query = Notification::where('pk', $notificationPk);
+        
+        // Verify notification belongs to user if userId is provided
+        if ($userId !== null) {
+            $query->where('receiver_user_id', $userId);
+        }
+        
+        // Check if notification exists and belongs to user
+        $notification = $query->first();
+        if (!$notification) {
+            return false;
+        }
+        
+        // If already read, return true (no need to update)
+        if ($notification->is_read == 1) {
+            return true;
+        }
+        
+        // Update to read status - rebuild query since first() consumed it
+        $updateQuery = Notification::where('pk', $notificationPk);
+        if ($userId !== null) {
+            $updateQuery->where('receiver_user_id', $userId);
+        }
+        $updated = $updateQuery->update(['is_read' => 1]);
+        
+        // Return true if update was successful
+        return $updated > 0;
     }
 
     /**
@@ -349,11 +375,12 @@ class NotificationService
      * Mark notification as read and get redirect URL
      * 
      * @param int $notificationPk Notification primary key
+     * @param int|null $userId Optional user ID to verify ownership (for security)
      * @return array ['success' => bool, 'redirect_url' => string|null]
      */
-    public function markAsReadAndGetRedirect(int $notificationPk): array
+    public function markAsReadAndGetRedirect(int $notificationPk, ?int $userId = null): array
     {
-        $marked = $this->markAsRead($notificationPk);
+        $marked = $this->markAsRead($notificationPk, $userId);
         $redirectUrl = $this->getRedirectUrl($notificationPk);
 
         return [

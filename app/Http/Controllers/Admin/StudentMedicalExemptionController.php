@@ -47,12 +47,6 @@ class StudentMedicalExemptionController extends Controller
            $query->where('course_master_pk', $courseFilter);
        }
        
-       // Filter by faculty/employee if selected
-       $facultyFilter = $request->get('faculty_filter');
-       if ($facultyFilter) {
-           $query->where('employee_master_pk', $facultyFilter);
-       }
-       
        // Filter by today's date if date_filter is 'today'
        $dateFilter = $request->get('date_filter');
        if ($dateFilter === 'today') {
@@ -85,10 +79,6 @@ class StudentMedicalExemptionController extends Controller
            $todayCountQuery->where('course_master_pk', $courseFilter);
        }
        
-       if ($facultyFilter) {
-           $todayCountQuery->where('employee_master_pk', $facultyFilter);
-       }
-       
        // Count exemptions valid for today
        $todayTotalCount = $todayCountQuery->where('from_date', '<=', $currentDate)
            ->where(function($q) use ($currentDate) {
@@ -105,24 +95,8 @@ class StudentMedicalExemptionController extends Controller
            $coursesQuery->where('end_date', '<', $currentDate);
        }
        $courses = $coursesQuery->orderBy('course_name', 'asc')->get();
-       
-       // Get employees/faculty for filter dropdown
-       $employees = EmployeeMaster::select('pk', 'first_name', 'last_name')
-           ->whereNotNull('first_name')
-           ->whereNotNull('last_name')
-           ->orderBy('first_name')
-           ->orderBy('last_name')
-           ->get()
-           ->map(function($employee) {
-               return [
-                   'pk' => $employee->pk,
-                   'name' => trim($employee->first_name . ' ' . $employee->last_name)
-               ];
-           })
-           ->sortBy('name')
-           ->values();
     
-        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'dateFilter', 'todayTotalCount', 'employees', 'facultyFilter'));
+        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'dateFilter', 'todayTotalCount'));
     }
 
    public function create()
@@ -391,13 +365,12 @@ public function update(Request $request, $id)
     {
         $filter = $request->get('filter', 'active');
         $courseFilter = $request->get('course_filter');
-        $facultyFilter = $request->get('faculty_filter');
         $dateFilter = $request->get('date_filter');
         
         $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
         
         return Excel::download(
-            new StudentMedicalExemptionExport($filter, $courseFilter, $facultyFilter, $dateFilter),
+            new StudentMedicalExemptionExport($filter, $courseFilter, null, $dateFilter),
             $fileName
         );
     }

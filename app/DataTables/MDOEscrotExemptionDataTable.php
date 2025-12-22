@@ -94,10 +94,26 @@ HTML;
     public function query(): QueryBuilder
     {
         $query = MDOEscotDutyMap::with([
-            'courseMaster' => fn($q) => $q->select('pk', 'course_name'),
+            'courseMaster' => fn($q) => $q->select('pk', 'course_name', 'end_date'),
             'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
             'studentMaster' => fn($q) => $q->select('pk', 'display_name')
         ])->orderBy('pk', 'desc')->newQuery();
+
+        // Filter by course status (Active/Archive)
+        $filter = request('filter', 'active'); // Default to 'active'
+        $currentDate = now()->format('Y-m-d');
+        
+        if ($filter === 'active') {
+            // Active Courses: end_date > current date
+            $query->whereHas('courseMaster', function($q) use ($currentDate) {
+                $q->where('end_date', '>', $currentDate);
+            });
+        } elseif ($filter === 'archive') {
+            // Archive Courses: end_date < current date
+            $query->whereHas('courseMaster', function($q) use ($currentDate) {
+                $q->where('end_date', '<', $currentDate);
+            });
+        }
 
         // Apply course filter if provided
         if ($courseFilter = request('course_filter')) {
@@ -122,6 +138,13 @@ HTML;
         // Apply duty type filter if provided
         if ($dutyTypeFilter = request('duty_type_filter')) {
             $query->where('mdo_duty_type_master_pk', $dutyTypeFilter);
+        }
+
+        // Apply date filter if provided
+        $dateFilter = request('date_filter');
+        if ($dateFilter === 'today') {
+            // Show records where mdo_date is today
+            $query->whereDate('mdo_date', $currentDate);
         }
 
         return $query;
