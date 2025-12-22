@@ -199,7 +199,28 @@ class NotificationReceiverService
             ->toArray();
     
         return $userIds;
-    }    
+    }
+
+    /**
+     * Get receiver user_ids for memo/notice notifications
+     * 
+     * @param array $studentPks Array of student master primary keys
+     * @return array Array of receiver user_ids
+     */
+    public function getMemoNoticeReceivers(array $studentPks): array
+    {
+        $receiverUserIds = [];
+
+        foreach ($studentPks as $studentPk) {
+            $studentUserId = $this->getStudentUserId((int) $studentPk);
+            if ($studentUserId) {
+                $receiverUserIds[] = $studentUserId;
+            }
+        }
+
+        // Remove duplicates and return
+        return array_unique(array_filter($receiverUserIds));
+    }
     
     
 }
