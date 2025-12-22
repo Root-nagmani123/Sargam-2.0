@@ -312,9 +312,11 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/user_attendance', 'index')->name('user_attendance.index');
         Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('student_mark');
+        // Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}/{student_pk}', 'OTmarkAttendanceView')->name('OT.student_mark.student');
         Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}/{student_pk}', 'OTmarkAttendanceView')->name('OT.student_mark.student');
     });
-
+    
+    Route::get('/getstudentmarks', [AttendanceController::class, 'OTmarkAttendanceData'])->name('ot.student.attendance.data');
     Route::prefix('student-medical-exemption')->name('student.medical.exemption.')->controller(StudentMedicalExemptionController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/get-students-by-course', 'getStudentsByCourse')->name('getStudentsByCourse');
