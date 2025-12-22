@@ -4,58 +4,61 @@
 
 @section('setup_content')
 
-<div class="container-fluid">
+<div class="container-fluid"> 
 <x-breadcrum title="Conversation" />
             <x-session_message />
 
             <div class="bg-white p-4 rounded shadow-sm mt-3" style="border-left: 4px solid #004a93;">
 
-                <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
-                <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
-                <hr>
+                <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
+            <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+            <hr>
 
-                <p class="mb-1">SHOW CAUSE NOTICE</p>
-                <p><strong>Date:</strong> 22/11/2013</p>
+            <p class="mb-1">SHOW CAUSE NOTICE</p>
+            <p><strong>Date:</strong> {{ \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
-                <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
-                    from
-                    following session(s)...</p>
+            <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
+                from
+                following session(s)...</p>
 
-                <div class="table-responsive mb-3">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>No. of Session(s)</th>
-                                <th>Topics</th>
-                                <th>Venue</th>
-                                <th>Session(s)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>22-11-2013</td>
-                                <td>1</td>
-                                <td>Lorem ipsum dolor sit amet.</td>
-                                <td>Lorem, ipsum.</td>
-                                <td>06:00-07:00</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+            <div class="table-responsive mb-3">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>No. of Session(s)</th>
+                            <th>Topics</th>
+                            <th>
+                                Venue
+                            </th>
+                            <th>Session(s)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
+                            <td>1</td>
+                            <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
+                            <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
+                            <td>{{ $template_details->session_time ?? '06:00-07:00' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                <div class="mb-4">
-                    <p class="fw-bold">You are advised to do the following:</p>
-                    <ul>
-                        <li>Reply to this Memo online through this <a href="#">conversation</a></li>
-                        <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
-                    </ul>
-                </div>
+            <div class="mb-4">
+                <p class="fw-bold">You are advised to do the following:</p>
+                <ul>
+                    <li>Reply to this Memo online through this <a href="#">conversation</a></li>
+                    <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
+                </ul>
+                <p>{!! $template_details->content ?? '' !!}</p>
+            </div>
 
-                <p><strong>ALBY VARGHESE, A42</strong><br>
-                    Remarks: Show Cause Notice for 22.11.13</p>
+            <p><strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
+                Remarks: Show Cause Notice for {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
 
-                <p class="text-end"><strong>Rajesh Arya</strong><br>Deputy Director Sr. & I/C Discipline 88th F.C.</p>
+            <p class="text-end"><strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}</p>
 
 
                 <h6 class="fw-bold">Conversation</h6>
@@ -127,7 +130,7 @@
 
                         <div class="text-end">
                             <button type="submit" class="btn btn-primary">Send</button>
-                            <a href="#" class="btn btn-outline-secondary">Back</a>
+                            <a href="{{ url()->previous() }}" class="btn btn-outline-secondary">Back</a>
                         </div>
                     </form>
                 </div>

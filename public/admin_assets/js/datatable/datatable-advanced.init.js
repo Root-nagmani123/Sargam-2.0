@@ -102,10 +102,7 @@ $("#multi_control").DataTable({
 // 
 var table = $("#dom_jq_event").DataTable();
 
-$("#dom_jq_event tbody").on("click", "tr", function () {
-  var data = table.row(this).data();
-  alert("You clicked on " + data[0] + "'s row");
-});
+
 
 // 
 //    Language File                            //
