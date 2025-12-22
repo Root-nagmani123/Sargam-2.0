@@ -202,29 +202,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mark active links first
         markActiveLinks();
         
-        // Ensure single-click opens the corresponding sidebar via event delegation
-        const miniNav = homeTab.querySelector('.mini-nav');
-        if (miniNav) {
-            miniNav.addEventListener('click', function(e) {
-                const li = e.target.closest('.mini-nav-item');
-                if (li && miniNav.contains(li)) {
-                    e.preventDefault();
-                    showSidebarMenu(li.id);
-                }
-            });
-            // Explicitly bind anchor clicks to ensure single-click behavior
-            const anchorLinks = miniNav.querySelectorAll('.mini-nav-item > a.mini-nav-link');
-            anchorLinks.forEach(function(anchor) {
-                anchor.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const li = this.closest('.mini-nav-item');
-                    if (li) {
-                        showSidebarMenu(li.id);
-                    }
-                });
-            });
-        }
+        // Note: Mini-nav click handling is done globally by sidebar-navigation-fixed.js
+        // No need to add event listeners here to avoid duplicate handlers
         
         // Function to restore sidebar menu visibility
         function restoreSidebarMenu() {

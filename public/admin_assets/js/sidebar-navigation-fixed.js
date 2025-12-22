@@ -68,33 +68,58 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     
     function initializeMiniNav() {
-        const miniNavItems = document.querySelectorAll('.mini-nav-item');
+        // GLOBAL SINGLE-CLICK HANDLER using event delegation
+        // This prevents multiple event listeners from causing multi-click issues
         
-        if (miniNavItems.length === 0) {
-            console.warn('No mini-nav items found');
+        const miniNavContainers = document.querySelectorAll('.mini-nav');
+        
+        if (miniNavContainers.length === 0) {
+            console.warn('No mini-nav containers found');
             return;
         }
         
-        console.log('Found', miniNavItems.length, 'mini-nav items');
+        console.log('Found', miniNavContainers.length, 'mini-nav containers');
         
-        miniNavItems.forEach(function(item) {
-            item.addEventListener('click', function(e) {
+        // Use event delegation on each container to handle all clicks
+        miniNavContainers.forEach(function(container) {
+            container.addEventListener('click', function(e) {
+                const miniNavItem = e.target.closest('.mini-nav-item');
+                
+                if (!miniNavItem || !container.contains(miniNavItem)) return;
+                
                 e.preventDefault();
                 e.stopPropagation();
                 
-                console.log('Mini-nav item clicked:', this.id);
+                const itemId = miniNavItem.id;
+                console.log('Mini-nav item clicked:', itemId);
                 
-                // Remove selected class from all mini-nav items
-                miniNavItems.forEach(function(navItem) {
+                // Remove selected class from ALL mini-nav items (across all containers)
+                document.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
                     navItem.classList.remove('selected');
                 });
                 
                 // Add selected class to clicked item
-                this.classList.add('selected');
+                miniNavItem.classList.add('selected');
+                
+                // Hide all sidebar menus
+                document.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                    nav.classList.remove('d-block');
+                    nav.style.display = 'none';
+                });
+                
+                // Show the target menu
+                const targetMenuId = 'menu-right-' + itemId;
+                const targetMenu = document.getElementById(targetMenuId);
+                if (targetMenu) {
+                    targetMenu.classList.add('d-block');
+                    targetMenu.style.display = 'block';
+                    document.body.setAttribute('data-sidebartype', 'full');
+                    console.log('Displayed menu:', targetMenuId);
+                }
                 
                 // Store active mini-nav in localStorage
-                if (this.id) {
-                    localStorage.setItem('active-mini-nav', this.id);
+                if (itemId) {
+                    localStorage.setItem('active-mini-nav', itemId);
                 }
             });
         });
@@ -105,6 +130,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const activeItem = document.getElementById(activeId);
             if (activeItem) {
                 activeItem.classList.add('selected');
+                const targetMenuId = 'menu-right-' + activeId;
+                const targetMenu = document.getElementById(targetMenuId);
+                if (targetMenu) {
+                    targetMenu.classList.add('d-block');
+                    targetMenu.style.display = 'block';
+                }
                 console.log('Restored active mini-nav:', activeId);
             }
         }

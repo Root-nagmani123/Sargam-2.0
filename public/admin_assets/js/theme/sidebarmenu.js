@@ -103,38 +103,8 @@ if ((at = "vertical")) {
           link.closest("ul").classList.add("in");
           link.closest("ul").parentElement.classList.add("selected");
         });
-      // Use event delegation for robust single-click behavior
-      var miniNavContainer = document.querySelector(".mini-nav");
-      if (miniNavContainer) {
-        miniNavContainer.addEventListener("click", function (e) {
-          var li = e.target.closest(".mini-nav-item");
-          if (!li || !miniNavContainer.contains(li)) return;
-          e.preventDefault();
-          e.stopPropagation();
-
-          var id = li.id;
-          document
-            .querySelectorAll(".mini-nav .mini-nav-item")
-            .forEach(function (navItem) {
-              navItem.classList.remove("selected");
-            });
-          li.classList.add("selected");
-
-          document
-            .querySelectorAll(".sidebarmenu nav")
-            .forEach(function (nav) {
-              nav.classList.remove("d-block");
-              nav.style.display = "none";
-            });
-
-          var target = document.getElementById("menu-right-" + id);
-          if (target) {
-            target.classList.add("d-block");
-            target.style.display = "block";
-            document.body.setAttribute("data-sidebartype", "full");
-          }
-        });
-      }
+      // Mini-nav click handling is now done globally by sidebar-navigation-fixed.js
+      // to prevent duplicate event listeners that cause multi-click issues
     }
   });
 }
