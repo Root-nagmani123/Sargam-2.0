@@ -316,7 +316,7 @@
                                                     @for ($i = 5; $i >= 1; $i--)
                                                     <input type="radio" id="content-{{ $i }}-{{ $loop->index }}"
                                                            name="content[{{ $loop->index }}]" value="{{ $i }}"
-                                                           {{ old('content.' . $loop->index) == $i ? 'checked' : '' }} required>
+                                                           {{ old('content.' . $loop->index) == $i ? 'checked' : '' }}>
                                                     <label for="content-{{ $i }}-{{ $loop->index }}">&#9733;</label>
                                                     @endfor
                                                 </div>
@@ -330,7 +330,7 @@
                                                     @for ($i = 5; $i >= 1; $i--)
                                                     <input type="radio" id="presentation-{{ $i }}-{{ $loop->index }}"
                                                            name="presentation[{{ $loop->index }}]" value="{{ $i }}"
-                                                           {{ old('presentation.' . $loop->index) == $i ? 'checked' : '' }} required>
+                                                           {{ old('presentation.' . $loop->index) == $i ? 'checked' : '' }}>
                                                     <label for="presentation-{{ $i }}-{{ $loop->index }}">&#9733;</label>
                                                     @endfor
                                                 </div>
@@ -342,7 +342,7 @@
                                                 @if ($feedback->Remark_checkbox == 1)
                                                 <textarea class="form-control form-control-sm" name="remarks[{{ $loop->index }}]"
                                                           rows="2" placeholder="Enter remarks..."
-                                                          required>{{ old('remarks.' . $loop->index) }}</textarea>
+                                                          >{{ old('remarks.' . $loop->index) }}</textarea>
                                                 @endif
                                             </td>
                                             <input type="hidden" name="timetable_pk[{{ $loop->index }}]" value="{{ $feedback->timetable_pk }}">
@@ -563,7 +563,7 @@
         $('#vertical-wizard').validate({
             rules: {
                 'timetable_pk[]': {
-                    required: true
+                    required: false
                 }
             },
             errorPlacement: function(error, element) {
