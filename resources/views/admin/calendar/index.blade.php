@@ -40,10 +40,10 @@
     </header>
 
         <div class="course-header mb-3">
-            <h1>IAS Academic TimeTable</h1>
+            <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
             <p class="mb-0 text-white fw-medium">
-                <span class="badge">IAS</span>
-                | <strong>Year:</strong> 2025
+                <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
+                | <strong>Year:</strong> {{ $courseMaster->first()->course_year ?? date('Y') }}
             </p>
         </div>
 
@@ -76,7 +76,7 @@
 
                     <div class="mb-3">
 
-    <select
+    <!-- <select
             class="form-select"
             required
             aria-required="true">
@@ -85,7 +85,7 @@
         </option>
             <option>
             </option>
-    </select>
+    </select> -->
 </div>
 
                 </div>
@@ -1873,6 +1873,7 @@ class CalendarManager {
         const facultyType = selectedOption?.dataset.faculty_type;
 
         if (facultyType) {
+           
             document.getElementById('faculty_type').value = facultyType;
             this.updateCheckboxState();
         }
@@ -1880,7 +1881,6 @@ class CalendarManager {
 
     updateCheckboxState() {
         const facultyType = document.getElementById('faculty_type').value;
-
         switch (facultyType) {
             case '1': // Internal
                 this.setCheckboxState('remarkCheckbox', false, false);
@@ -2013,6 +2013,9 @@ class CalendarManager {
             // Close modal and refresh calendar
             bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
             this.calendar.refetchEvents();
+            setTimeout(() => {
+               window.location.reload(); 
+            }, 1000);
 
         } catch (error) {
             this.showNotification(error.message, 'danger');
@@ -2167,8 +2170,47 @@ class CalendarManager {
 
         // Store current event ID
         this.currentEventId = event.pk;
+        await this.updateinternal_faculty(event.faculty_type);
+        if(event.faculty_type == 2){
+                await this.setInternalFaculty(event.internal_faculty);
+        }
+    }
+async updateinternal_faculty(facultyType) {
+    
+// console.log(facultyType + 'kkkkk');
+        switch (facultyType) {
+            case '1': // Internal
+                console.log('internal');
+              internalFacultyDiv.style.display = 'none';
+                break;
+            case '2': // Guest
+                  console.log('guest');
+               internalFacultyDiv.style.display = 'block';
+                break;
+            default: // Research/Other
+            console.log('rtyuio');
+                internalFacultyDiv.style.display = 'block';
+
+        }
+    }
+   async setInternalFaculty(internalFacultyIds) {
+
+    if (!internalFacultyIds) return;
+
+    // Agar CSV string aa rahi ho
+    if (typeof internalFacultyIds === 'array') {
+        internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
     }
 
+    const select = document.getElementById('internal_faculty');
+
+    Array.from(select.options).forEach(option => {
+        option.selected = internalFacultyIds.includes(option.value);
+    });
+
+    // Agar Choices.js / Select2 use kar rahe ho
+    select.dispatchEvent(new Event('change'));
+}
     async loadGroupTypesForEdit(event) {
         // Set selected group names for edit
         try {
