@@ -18,29 +18,45 @@ return [
     // Course/Programme Notifications
     'course' => [
         'Course' => [
-            'route' => 'programme.show',
-            'params' => ['id' => 'reference_pk'],
+            'route' => 'programme.index',
+            'params' => [],
         ],
         'Programme' => [
-            'route' => 'programme.show',
-            'params' => ['id' => 'reference_pk'],
+            'route' => 'programme.index',
+            'params' => [],
         ],
     ],
 
     // Notice Notifications
     'notice' => [
         'Notice' => [
-            'route' => 'notice.index',
+            'route' => 'admin.notice.index',
             'params' => [],
         ],
         'NoticeNotification' => [
-            'route' => 'notice.index',
+            'route' => 'admin.notice.index',
             'params' => [],
         ],
     ],
 
     // Memo Notifications
     'memo' => [
+        'Memo' => [
+            'route' => 'memo.notice.management.conversation_student',
+            'params' => ['id' => 'reference_pk', 'type' => 'memo'],
+        ],
+        'MemoNotice' => [
+            'route' => 'memo.notice.management.conversation_student',
+            'params' => ['id' => 'reference_pk', 'type' => 'memo'],
+        ],
+    ],
+
+    // Memo/Notice Notifications (used when type is 'memo_notice')
+    'memo_notice' => [
+        'Memo/Notice' => [
+            'route' => 'memo.notice.management.conversation_student',
+            'params' => ['id' => 'reference_pk', 'type' => 'memo'],
+        ],
         'Memo' => [
             'route' => 'memo.notice.management.conversation_student',
             'params' => ['id' => 'reference_pk', 'type' => 'memo'],
@@ -79,11 +95,11 @@ return [
     'group' => [
         'GroupMapping' => [
             'route' => 'group.mapping.index',
-            'params' => ['id' => 'reference_pk'],
+            'params' => [],
         ],
         'Group' => [
             'route' => 'group.mapping.index',
-            'params' => ['id' => 'reference_pk'],
+            'params' => [],
         ],
     ],
 
@@ -98,12 +114,12 @@ return [
     // MDO (Medical Duty Officer) Notifications
     'mdo' => [
         'MDO' => [
-            'route' => 'admin.mdo.index',
-            'params' => ['id' => 'reference_pk'],
+            'route' => 'mdo-escrot-exemption.index',
+            'params' => [],
         ],
         'Duty' => [
-            'route' => 'admin.mdo.index',
-            'params' => ['id' => 'reference_pk'],
+            'route' => 'mdo-escrot-exemption.index',
+            'params' => [],
         ],
     ],
 

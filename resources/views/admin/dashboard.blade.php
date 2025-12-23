@@ -691,29 +691,74 @@ table>thead {
                             $notifications = $user ? notification()->getNotifications($user->user_id, 10) : collect();
                             @endphp
 
+                            <script>
+                            // Define markAsRead function for Admin Summary notifications - Define early to ensure availability
+                            if (typeof window.markAsRead === 'undefined' || window.markAsReadDashboard === undefined) {
+                                window.markAsReadDashboard = function(notificationId, clickedElement) {
+                                    console.log('markAsReadDashboard called with notificationId:', notificationId);
+                                    
+                                    // Prevent multiple clicks
+                                    if (clickedElement && clickedElement.dataset.processing === 'true') {
+                                        return;
+                                    }
+                                    if (clickedElement) {
+                                        clickedElement.dataset.processing = 'true';
+                                    }
+                                    
+                                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                                    
+                                    fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'X-CSRF-TOKEN': csrfToken
+                                            }
+                                        })
+                                        .then(response => {
+                                            console.log('Response status:', response.status);
+                                            return response.json().then(data => {
+                                                if (!response.ok) {
+                                                    throw new Error(data.error || 'Failed to mark notification as read');
+                                                }
+                                                return data;
+                                            });
+                                        })
+                                        .then(data => {
+                                            console.log('Response data:', data);
+                                            if (data.success && data.redirect_url) {
+                                                window.location.href = data.redirect_url;
+                                            } else if (data.success) {
+                                                location.reload();
+                                            } else {
+                                                console.error('Failed to mark notification as read. Response:', data);
+                                                if (clickedElement) {
+                                                    clickedElement.dataset.processing = 'false';
+                                                }
+                                                const errorMsg = data.error || 'Unknown error occurred';
+                                                alert('Failed to mark notification as read: ' + errorMsg);
+                                            }
+                                        })
+                                        .catch(error => {
+                                            console.error('Error:', error);
+                                            if (clickedElement) {
+                                                clickedElement.dataset.processing = 'false';
+                                            }
+                                            alert('An error occurred: ' + (error.message || 'Unknown error'));
+                                        });
+                                };
+                                // Also set as markAsRead for compatibility
+                                window.markAsRead = window.markAsReadDashboard;
+                            }
+                            </script>
+
                             @if($notifications->isEmpty())
-                            <p class="text-muted">No notifications available.</p>
+                            <p>No notifications available.</p>
                             @else
-                            @foreach($notifications as $notification)
-                            <div class="mb-3 pb-3 border-bottom">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="fw-bold mb-1"
-                                        style="font-size: 1rem; color: {{ $notification->is_read ? '#6c757d' : '#1a1a1a' }};">
-                                        {{ $notification->title }}
-                                        @if(!$notification->is_read)
-                                        <span class="badge bg-primary ms-2" style="font-size: 0.7rem;">New</span>
-                                        @endif
-                                    </h6>
-                                    <small class="text-muted">{{ $notification->created_at->format('d M, Y') }}</small>
-                                </div>
-                                <p class="mb-1" style="font-size: 0.9rem; line-height: 1.5; color: #333;">
-                                    {{ $notification->message }}
-                                </p>
-                                <small class="text-muted">
-                                    <span class="badge bg-secondary">{{ $notification->module_name }}</span>
-                                </small>
-                            </div>
-                            @endforeach
+                            <ul style="list-style-type: disc; padding-left: 20px;">
+                                @foreach($notifications as $notification)
+                                <li style="cursor: pointer;" onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">{{ $notification->message }}</li>
+                                @endforeach
+                            </ul>
                             @endif
                         </div>
                     </section>
@@ -859,6 +904,62 @@ table>thead {
 
 @push('scripts')
 <script>
+// Define markAsRead function for Admin Summary notifications - Always override to ensure it works
+window.markAsRead = function(notificationId, clickedElement) {
+    console.log('markAsRead called with notificationId:', notificationId);
+    
+    // Prevent multiple clicks
+    if (clickedElement && clickedElement.dataset.processing === 'true') {
+        console.log('Already processing, ignoring click');
+        return;
+    }
+    if (clickedElement) {
+        clickedElement.dataset.processing = 'true';
+    }
+    
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    
+    fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            }
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Failed to mark notification as read');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.success && data.redirect_url) {
+                // Notification remains visible until redirect happens
+                window.location.href = data.redirect_url;
+            } else if (data.success) {
+                // If no redirect URL, just reload (notification will remain visible if not filtered)
+                location.reload();
+            } else {
+                console.error('Failed to mark notification as read:', data.error || 'Unknown error');
+                if (clickedElement) {
+                    clickedElement.dataset.processing = 'false';
+                }
+                alert('Failed to mark notification as read. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            if (clickedElement) {
+                clickedElement.dataset.processing = 'false';
+            }
+            alert('An error occurred: ' + (error.message || 'Unknown error'));
+        });
+};
+
 // Lightweight calendar interactions (vanilla JS)
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.calendar-component').forEach(function(comp) {
