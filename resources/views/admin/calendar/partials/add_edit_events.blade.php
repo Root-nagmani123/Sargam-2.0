@@ -117,7 +117,7 @@
                                     </option>
                                     @endforeach
                                 </select>
-                            </div>
+                            </div> 
 
                             <div class="col-md-6">
                                 <label for="faculty_type" class="form-label required">
@@ -131,6 +131,7 @@
                                     <option value="3">Research</option>
                                 </select>
                             </div>
+                           
 
                             <div class="col-md-6">
                                 <label for="vanue" class="form-label required">
@@ -143,6 +144,19 @@
                                     @endforeach
                                 </select>
                             </div>
+                             <div class="col-md-6" id="internalFacultyDiv">
+                                <label for="internal_faculty" class="form-label required">
+                                   Internal Faculty
+                                </label>
+                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" required aria-required="true" multiple>
+                                    <option value="">Select Faculty</option>
+                                    @foreach($internal_faculty as $faculty)
+                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                        {{ $faculty->full_name }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div> 
                         </div>
                     </section>
 
@@ -318,6 +332,43 @@ document.addEventListener('DOMContentLoaded', function () {
             rating.checked = false;
         }
     });
+    const internalFacultyDiv = document.getElementById('internalFacultyDiv');
+    const facultySelect = document.getElementById('faculty');
+    internalFacultyDiv.style.display = 'none'; // Hide initially
+    const faculty_type = document.getElementById('faculty_type');
+
+
+    // Example: Show internal faculty when a specific group type is selected
+    facultySelect.addEventListener('change', function () {
+            const facultyType = document.getElementById('faculty_type').selectedOptions[0].value;
+        updateinternal_faculty(facultyType);
+    });
+    faculty_type.addEventListener('change', function () {
+            const facultyType = document.getElementById('faculty_type').selectedOptions[0].value;
+        updateinternal_faculty(facultyType);
+    });
+   
+    updateinternal_faculty(faculty_type.selectedOptions[0].value); // Initial check
+
+
+   function  updateinternal_faculty(facultyType) {
+    
+console.log(facultyType);
+        switch (facultyType) {
+            case '1': // Internal
+                console.log('internal');
+              internalFacultyDiv.style.display = 'none';
+                break;
+            case '2': // Guest
+                  console.log('guest');
+               internalFacultyDiv.style.display = 'block';
+                break;
+            default: // Research/Other
+            console.log('rtyuio');
+                internalFacultyDiv.style.display = 'block';
+
+        }
+    }
 });
 </script>
 <style>

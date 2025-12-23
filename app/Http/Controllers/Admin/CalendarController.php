@@ -25,10 +25,15 @@ class CalendarController extends Controller
         
         $courseMaster = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now())
-            ->select('pk', 'course_name')
+            ->select('pk', 'course_name','couse_short_name','course_year')
             ->get();
     
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
+            ->select('pk', 'faculty_type', 'full_name')
+            ->orderby('full_name', 'ASC')
+            ->get();
+        $internal_faculty = FacultyMaster::where('active_inactive', 1)
+        ->where('faculty_type', 1) // Internal Faculty
             ->select('pk', 'faculty_type', 'full_name')
             ->orderby('full_name', 'ASC')
             ->get();
@@ -48,12 +53,14 @@ class CalendarController extends Controller
             ->get();
             // print_r($classSessionMaster);die;
 
+         
         return view('admin.calendar.index', compact(
             'courseMaster',
             'facultyMaster',
             'subjects',
             'venueMaster',
-            'classSessionMaster'
+            'classSessionMaster',
+            'internal_faculty'
         )); 
     }
     public function weeklyTimetable(Request $request)
@@ -146,6 +153,8 @@ public function store(Request $request)
         'type_names.min' => 'Please select at least one Group type name.',
     ]);
 
+
+    // print_r($request->all());die;
     $event = new CalendarEvent();
  $event->course_master_pk = $request->Course_name;
 $event->subject_master_pk = $request->subject_name;
@@ -155,6 +164,7 @@ $event->course_group_type_master = $request->group_type;
 $event->group_name = json_encode($request->type_names ?? []);
 $event->faculty_master = $request->faculty;
 $event->faculty_type = $request->faculty_type;
+$event->internal_faculty = json_encode($request->internal_faculty ?? []);
 $event->venue_id = $request->vanue;
 // $event->START_DATE = $request->start_datetime;
 $event->START_DATE = Carbon::parse($request->start_datetime)
