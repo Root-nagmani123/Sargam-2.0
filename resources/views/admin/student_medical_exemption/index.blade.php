@@ -151,7 +151,8 @@
                                 <a href="{{ route('student.medical.exemption.export', [
                                     'filter' => $filter,
                                     'course_filter' => $courseFilter ?? '',
-                                    'date_filter' => $dateFilter ?? ''
+                                    'date_filter' => $dateFilter ?? '',
+                                    'search' => $search ?? ''
                                 ]) }}" class="btn btn-success d-flex align-items-center">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">download</i>
@@ -173,8 +174,21 @@
                     
                     <!-- Filters Section -->
                     <div class="row mb-3 align-items-end">
+                        <!-- Search Filter -->
+                        <div class="col-md-3">
+                            <label for="search" class="form-label fw-semibold">Search</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px;">search</i>
+                                </span>
+                                <input type="text" name="search" id="search" class="form-control" 
+                                       placeholder="Search student, OT code, course..." 
+                                       value="{{ $search ?? '' }}">
+                            </div>
+                        </div>
+                        
                         <!-- Course Filter -->
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label for="course_filter" class="form-label fw-semibold">Course</label>
                             <select name="course_filter" id="course_filter" class="form-select">
                                 <option value="">-- All Courses --</option>
@@ -187,7 +201,7 @@
                         </div>
                         
                         <!-- Today Filter -->
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="date_filter" class="form-label fw-semibold">Date Filter</label>
                             <select name="date_filter" id="date_filter" class="form-select">
                                 <option value="">-- All Dates --</option>
@@ -213,7 +227,7 @@
                         </div>
                         
                         <!-- Active/Archive Buttons -->
-                        <div class="col-md-3 text-end">
+                        <div class="col-md-2 text-end">
                             <div class="d-flex align-items-center justify-content-end gap-2">
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                     aria-label="Course Status Filter">
@@ -227,6 +241,10 @@
                                         if ($dateFilter) {
                                             $activeParams['date_filter'] = $dateFilter;
                                             $archiveParams['date_filter'] = $dateFilter;
+                                        }
+                                        if (!empty($search)) {
+                                            $activeParams['search'] = $search;
+                                            $archiveParams['search'] = $search;
                                         }
                                     @endphp
                                     <a href="{{ route('student.medical.exemption.index', $activeParams) }}"
@@ -330,7 +348,7 @@
                                                 search_off
                                             </i>
                                             <h5 class="text-muted mb-2">No Record Found</h5>
-                                            @if($filter || $courseFilter || $dateFilter)
+                                            @if($filter || $courseFilter || $dateFilter || !empty($search))
                                                 <p class="text-muted small mb-0">
                                                     No records match the applied filters. 
                                                     <a href="{{ route('student.medical.exemption.index') }}" class="text-primary">
@@ -358,7 +376,8 @@
                                 {{ $records->appends([
                                     'filter' => $filter,
                                     'course_filter' => $courseFilter,
-                                    'date_filter' => $dateFilter ?? ''
+                                    'date_filter' => $dateFilter ?? '',
+                                    'search' => $search ?? ''
                                 ])->links('pagination::bootstrap-5') }}
                             </div>
                         </div>
@@ -379,16 +398,21 @@ function getFilterInfo() {
     var filter = '{{ $filter }}';
     var courseFilter = '';
     var dateFilter = '';
+    var search = '';
     
     // Get values using vanilla JS to avoid jQuery dependency
     var courseSelect = document.getElementById('course_filter');
     var dateSelect = document.getElementById('date_filter');
+    var searchInput = document.getElementById('search');
     
     if (courseSelect) {
         courseFilter = courseSelect.options[courseSelect.selectedIndex].text;
     }
     if (dateSelect) {
         dateFilter = dateSelect.options[dateSelect.selectedIndex].text;
+    }
+    if (searchInput) {
+        search = searchInput.value;
     }
     
     if (filter) {
@@ -399,6 +423,9 @@ function getFilterInfo() {
     }
     if (dateFilter && dateFilter !== '-- All Dates --') {
         info.push('Date: ' + dateFilter);
+    }
+    if (search) {
+        info.push('Search: ' + search);
     }
     
     return info.length > 0 ? '<strong>Filters Applied:</strong> ' + info.join(' | ') : '';
@@ -544,6 +571,7 @@ $(document).ready(function() {
         var filter = '{{ $filter }}';
         var courseFilter = $('#course_filter').val();
         var dateFilter = $('#date_filter').val();
+        var search = $('#search').val();
         var url = '{{ route("student.medical.exemption.index") }}';
         var params = { filter: filter };
         
@@ -553,6 +581,10 @@ $(document).ready(function() {
         
         if (dateFilter) {
             params.date_filter = dateFilter;
+        }
+        
+        if (search) {
+            params.search = search;
         }
         
         // Build URL with query parameters
@@ -568,6 +600,24 @@ $(document).ready(function() {
     // Auto-submit when date filter changes
     $('#date_filter').on('change', function() {
         applyFilters();
+    });
+    
+    // Search with debounce (submit after user stops typing for 500ms)
+    var searchTimeout;
+    $('#search').on('keyup', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            applyFilters();
+        }, 500);
+    });
+    
+    // Also allow Enter key to submit immediately
+    $('#search').on('keypress', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            clearTimeout(searchTimeout);
+            applyFilters();
+        }
     });
 });
 </script>
