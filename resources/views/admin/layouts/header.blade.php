@@ -167,7 +167,7 @@
                             </li>
                             <div id="notificationList">
                                 @php
-                                $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, true);
+                                $notifications = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
                                 @endphp
                                 @if($notifications->count() > 0)
                                 @foreach($notifications as $notification)
@@ -311,6 +311,7 @@
                     })
                     .then(response => response.json())
                     .then(data => {
+                        console.log('Controller Response:', data)
                         if (data.success && data.redirect_url) {
                             // Redirect to the appropriate module view
                             window.location.href = data.redirect_url;

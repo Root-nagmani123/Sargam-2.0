@@ -14,11 +14,24 @@ use App\Services\NotificationReceiverService;
 
 class MDOEscrotExemptionController extends Controller
 {
-    public function index(MDOEscrotExemptionDataTable $dataTable)
+    public function index(MDOEscrotExemptionDataTable $dataTable, Request $request)
     {
-        $courseMaster = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
-            ->orderBy('course_name')
+        // Filter by course status (Active/Archive)
+        $filter = $request->get('filter', 'active'); // Default to 'active'
+        $currentDate = now()->format('Y-m-d');
+        
+        // Get courses based on filter
+        $courseMasterQuery = CourseMaster::where('active_inactive', '1');
+        
+        if ($filter === 'active') {
+            // Active Courses: end_date > current date
+            $courseMasterQuery->where('end_date', '>', $currentDate);
+        } elseif ($filter === 'archive') {
+            // Archive Courses: end_date < current date
+            $courseMasterQuery->where('end_date', '<', $currentDate);
+        }
+        
+        $courseMaster = $courseMasterQuery->orderBy('course_name')
             ->pluck('course_name', 'pk')
             ->toArray();
         
@@ -35,7 +48,7 @@ class MDOEscrotExemptionController extends Controller
             ->pluck('mdo_duty_type_name', 'pk')
             ->toArray();
         
-        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('courseMaster', 'years', 'dutyTypes'));
+        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('courseMaster', 'years', 'dutyTypes', 'filter'));
     }
 
     public function create()

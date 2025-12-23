@@ -51,11 +51,20 @@ class OTMDOEscrotExemptionController extends Controller
             return redirect()->back()->with('error', 'Student record not found.');
         }
         
+        // Get duty type filter
+        $dutyTypeFilter = $request->get('duty_type_filter');
+        
         // Check student duty count in mdo_escot_duty_map
         // Compare selected_student_list = student_master.pk
-        $dutyMaps = MDOEscotDutyMap::where('selected_student_list', $userId)
-            ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
-            ->get();
+        $dutyMapsQuery = MDOEscotDutyMap::where('selected_student_list', $userId)
+            ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster']);
+        
+        // Filter by duty type if specified
+        if ($dutyTypeFilter) {
+            $dutyMapsQuery->where('mdo_duty_type_master_pk', $dutyTypeFilter);
+        }
+        
+        $dutyMaps = $dutyMapsQuery->orderBy('created_date', 'desc')->get();
         
         // Filter duty maps by course validation
         $validDutyMaps = [];
@@ -91,9 +100,23 @@ class OTMDOEscrotExemptionController extends Controller
                     'faculty_master_pk' => $dutyMap->faculty_master_pk,
                     'description' => $dutyMap->Remark ?? 'N/A',
                     'time' => ($dutyMap->Time_from ?? 'N/A') . ' - ' . ($dutyMap->Time_to ?? 'N/A'),
+                    'created_date' => $dutyMap->created_date ?? null,
                 ];
             }
         }
+        
+        // Sort by created_date in descending order
+        usort($validDutyMaps, function($a, $b) {
+            $dateA = $a['created_date'] ?? '1970-01-01 00:00:00';
+            $dateB = $b['created_date'] ?? '1970-01-01 00:00:00';
+            return strtotime($dateB) - strtotime($dateA);
+        });
+        
+        // Get all duty types for filter dropdown
+        $allDutyTypes = MDODutyTypeMaster::where('active_inactive', 1)
+            ->orderBy('mdo_duty_type_name')
+            ->pluck('mdo_duty_type_name', 'pk')
+            ->toArray();
         
         // Prepare data for view
         $studentData = [
@@ -105,7 +128,7 @@ class OTMDOEscrotExemptionController extends Controller
             'has_duties' => count($validDutyMaps) > 0,
         ];
         
-        return view('admin.ot_mdo_escrot_exemption.view', compact('studentData'));
+        return view('admin.ot_mdo_escrot_exemption.view', compact('studentData', 'allDutyTypes', 'dutyTypeFilter'));
     }
     
     /**
@@ -114,8 +137,7 @@ class OTMDOEscrotExemptionController extends Controller
     private function adminView(Request $request, $currentDate)
     {
         // Get filter parameters
-        $studentFilter = $request->get('student_filter');
-        $courseFilter = $request->get('course_filter');
+        $dutyTypeFilter = $request->get('duty_type_filter');
         
         // Get all students with category = 'S' from user_credentials
         $studentIds = DB::table('user_credentials')
@@ -125,17 +147,10 @@ class OTMDOEscrotExemptionController extends Controller
             ->unique();
         
         // Get student details
-        $studentsQuery = StudentMaster::whereIn('pk', $studentIds)
-            ->where('status', 1);
-        
-        if ($studentFilter) {
-            $studentsQuery->where(function($q) use ($studentFilter) {
-                $q->where('generated_OT_code', 'like', '%' . $studentFilter . '%')
-                  ->orWhere('display_name', 'like', '%' . $studentFilter . '%');
-            });
-        }
-        
-        $students = $studentsQuery->orderBy('display_name')->get(['pk', 'generated_OT_code', 'display_name', 'email', 'first_name', 'last_name']);
+        $students = StudentMaster::whereIn('pk', $studentIds)
+            ->where('status', 1)
+            ->orderBy('display_name')
+            ->get(['pk', 'generated_OT_code', 'display_name', 'email', 'first_name', 'last_name']);
         
         // Build the data structure with duty maps
         $studentData = [];
@@ -145,12 +160,12 @@ class OTMDOEscrotExemptionController extends Controller
             $dutyMapsQuery = MDOEscotDutyMap::where('selected_student_list', $student->pk)
                 ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster']);
             
-            // Filter by course if specified
-            if ($courseFilter) {
-                $dutyMapsQuery->where('course_master_pk', $courseFilter);
+            // Filter by duty type if specified
+            if ($dutyTypeFilter) {
+                $dutyMapsQuery->where('mdo_duty_type_master_pk', $dutyTypeFilter);
             }
             
-            $dutyMaps = $dutyMapsQuery->get();
+            $dutyMaps = $dutyMapsQuery->orderBy('created_date', 'desc')->get();
             
             // Filter by course validation
             $validDutyMaps = [];
@@ -171,11 +186,22 @@ class OTMDOEscrotExemptionController extends Controller
                         'faculty' => $faculty ? $faculty->full_name : 'N/A',
                         'description' => $dutyMap->Remark ?? 'N/A',
                         'time' => ($dutyMap->Time_from ?? 'N/A') . ' - ' . ($dutyMap->Time_to ?? 'N/A'),
+                        'created_date' => $dutyMap->created_date ?? null,
                     ];
                 }
             }
             
-            if (count($validDutyMaps) > 0 || $studentFilter || $courseFilter) {
+            // Sort by created_date in descending order
+            usort($validDutyMaps, function($a, $b) {
+                $dateA = $a['created_date'] ?? '1970-01-01 00:00:00';
+                $dateB = $b['created_date'] ?? '1970-01-01 00:00:00';
+                return strtotime($dateB) - strtotime($dateA);
+            });
+            
+            // Only add students who have matching duties
+            // If filter is applied, only show students with matching duty type
+            // If no filter, show all students with any duties
+            if (count($validDutyMaps) > 0) {
                 $studentData[] = [
                     'student_id' => $student->pk,
                     'ot_code' => $student->generated_OT_code,
@@ -187,24 +213,16 @@ class OTMDOEscrotExemptionController extends Controller
             }
         }
         
-        // Filter out students with 0 duties if no filters are applied
-        if (!$studentFilter && !$courseFilter) {
-            $studentData = array_filter($studentData, function($item) {
-                return $item['duty_count'] > 0;
-            });
-        }
-        
-        // Get all active courses for filter dropdown
-        $allCourses = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>', $currentDate)
-            ->orderBy('course_name')
-            ->get(['pk', 'course_name']);
+        // Get all duty types for filter dropdown
+        $allDutyTypes = MDODutyTypeMaster::where('active_inactive', 1)
+            ->orderBy('mdo_duty_type_name')
+            ->pluck('mdo_duty_type_name', 'pk')
+            ->toArray();
         
         return view('admin.ot_mdo_escrot_exemption.view', compact(
             'studentData',
-            'allCourses',
-            'studentFilter',
-            'courseFilter'
+            'allDutyTypes',
+            'dutyTypeFilter'
         ));
     }
 }
