@@ -263,8 +263,8 @@
                     </div>
                     
                     <div class="table-responsive">
-                        <table class="table table-bordered w-100" id="medicalExemptionTable">
-                            <thead style="background-color: #af2910;">
+                        <table class="table" id="medicalExemptionTable">
+                            <thead>
                                 <tr>
                                     <th class="col">#</th>
                                     <th class="col">Student</th>

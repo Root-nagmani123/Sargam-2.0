@@ -97,7 +97,7 @@ class LoginController extends Controller
                     }
                     Session::put('user_roles', $roles);
 
-    return redirect()->intended($this->redirectTo);
+    return redirect()->intended($this->redirectTo)->cookie(cookie()->make('fresh_login', 'true', 0));
         }
         } else {
              // 🌐 Production: LDAP authentication
@@ -119,7 +119,7 @@ class LoginController extends Controller
                
                     Session::put('user_roles', $roles);
 
-                    return redirect()->intended($this->redirectTo);
+                    return redirect()->intended($this->redirectTo)->cookie(cookie()->make('fresh_login', 'true', 0));
                 }
             // }
         }
