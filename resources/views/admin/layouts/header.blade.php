@@ -506,15 +506,33 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Helper function to get cookie value
+    function getCookie(name) {
+        const nameEQ = name + '=';
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.indexOf(nameEQ) === 0) {
+                return cookie.substring(nameEQ.length);
+            }
+        }
+        return null;
+    }
+
+    // Helper function to delete cookie
+    function deleteCookie(name) {
+        document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 UTC; path=/;';
+    }
+
     // Determine initial tab based on current route
     // BUT: respect fresh_login flag - always show home after login
-    const isFromLogin = sessionStorage.getItem('fresh_login');
+    const isFromLogin = getCookie('fresh_login');
     let initial;
     
     if (isFromLogin) {
         console.log('Fresh login detected - forcing home tab');
         initial = '#home';
-        sessionStorage.removeItem('fresh_login'); // Clear the flag
+        deleteCookie('fresh_login'); // Clear the flag
         localStorage.removeItem('activeMainTab'); // Clear saved tab
     } else {
         const routeTab = detectRouteTab();
