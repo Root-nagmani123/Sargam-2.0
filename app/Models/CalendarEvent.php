@@ -24,6 +24,7 @@ class CalendarEvent extends Model
         'group_name',
         'faculty_master',
         'faculty_type',
+        'internal_faculty',
         'venue_id',
         'class_session',
         'session_type',
