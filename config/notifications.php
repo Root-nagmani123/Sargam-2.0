@@ -16,8 +16,8 @@
 
 return [
     // Course/Programme Notifications
-    'course' => [
-        'Course' => [
+    'course_create' => [
+        'course' => [
             'route' => 'programme.index',
             'params' => [],
         ],

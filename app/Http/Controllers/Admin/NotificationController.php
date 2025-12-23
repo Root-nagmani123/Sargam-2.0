@@ -39,8 +39,10 @@ class NotificationController extends Controller
                 'error' => 'Notification not found or access denied',
             ], 404);
         }
+       
         
         $result = $this->notificationService->markAsReadAndGetRedirect($id, $userId);
+        
       
         return response()->json([
             'success' => $result['success'],

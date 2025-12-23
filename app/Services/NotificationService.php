@@ -97,7 +97,6 @@ class NotificationService
     public function markAsRead(int $notificationPk, ?int $userId = null): bool
     {
         $query = Notification::where('pk', $notificationPk);
-        
         // Verify notification belongs to user if userId is provided
         if ($userId !== null) {
             $query->where('receiver_user_id', $userId);
@@ -305,9 +304,11 @@ class NotificationService
         }
 
         $config = config('notifications', []);
+        //print_r($config);
         $type = strtolower($notification->type ?? '');
         $moduleName = $notification->module_name ?? '';
 
+       
         // Try to find route mapping by type and module
         if (isset($config[$type]) && is_array($config[$type])) {
             // Check for exact module name match
@@ -380,6 +381,7 @@ class NotificationService
      */
     public function markAsReadAndGetRedirect(int $notificationPk, ?int $userId = null): array
     {
+        //echo $notificationPk;
         $marked = $this->markAsRead($notificationPk, $userId);
         $redirectUrl = $this->getRedirectUrl($notificationPk);
 
