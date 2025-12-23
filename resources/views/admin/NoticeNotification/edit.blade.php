@@ -9,7 +9,6 @@
     <x-session_message />
 
     <div class="card">
-        <h4 class="card-title mb-0">Edit Notice notification</h4>
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul>
@@ -21,23 +20,25 @@
         @endif
 
         <div class="card-body">
+        <h4 class="card-title mb-0">Edit Notice notification</h4>
+        <hr>
             <form method="POST" action="{{ route('admin.notice.update', $encId) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
                 <div class="mb-3">
-                    <label>Notice Title <span class="text-danger">*</span></label>
+                    <label class="form-label">Notice Title <span class="text-danger">*</span></label>
                     <input type="text" name="notice_title" class="form-control"
                            value="{{ $notice->notice_title }}">
                 </div>
 
                 <div class="mb-3">
-                    <label>Description <span class="text-danger">*</span></label>
+                    <label class="form-label">Description <span class="text-danger">*</span></label>
                     <textarea id="editor" name="description" class="form-control">{!! $notice->description !!}</textarea>
                 </div>
 
                 <div class="mb-3">
-                    <label>Notice Type <span class="text-danger">*</span></label>
+                    <label class="form-label">Notice Type <span class="text-danger">*</span></label>
                     <select name="notice_type" class="form-control">
                         <option value="">Select Notice Type</option>
                         @foreach($types as $t)
@@ -47,19 +48,19 @@
                 </div>
 
                 <div class="mb-3">
-                    <label>Display Date <span class="text-danger">*</span></label>
+                    <label class="form-label">Display Date <span class="text-danger">*</span></label>
                     <input type="date" name="display_date" class="form-control"
                            value="{{ $notice->display_date }}">
                 </div>
 
                 <div class="mb-3">
-                    <label>Expiry Date <span class="text-danger">*</span></label>
+                    <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
                     <input type="date" name="expiry_date" class="form-control"
                            value="{{ $notice->expiry_date }}">
                 </div>
 
                 <div class="mb-3">
-                    <label>Document (Optional)</label>
+                    <label class="form-label">Document (Optional)</label>
                     <input type="file" name="document" class="form-control">
                     @if($notice->document)
                         <a href="{{ asset('storage/'.$notice->document) }}" target="_blank">View Document</a>
@@ -67,7 +68,7 @@
                 </div>
 
                 <div class="mb-3">
-                    <label>Target Audience <span class="text-danger">*</span></label>
+                    <label class="form-label">Target Audience <span class="text-danger">*</span></label>
                     <select name="target_audience" id="targetAudience" class="form-control">
                         <option value="">Select Target Audience</option>
                         @foreach($target as $t)
@@ -80,7 +81,7 @@
 
                 {{-- COURSE BOX --}}
                 <div class="mb-3 {{ $notice->target_audience == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
-                    <label>Select Course</label>
+                    <label class="form-label">Select Course</label>
                     <select name="course_master_pk" id="courseSelect" class="form-control">
                         <option value="">Select Course</option>
                     </select>

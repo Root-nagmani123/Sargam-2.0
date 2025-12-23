@@ -8,10 +8,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Notice List" />
     <x-session_message />
-    <div class="card">
-        <div class="card-header">
-            Create NotNotice notificationice
-        </div>
+    <div class="card" style="border-left: 4px solid #004a93;">
         @if ($errors->any())
     <div class="alert alert-danger">
         <ul>
@@ -24,21 +21,23 @@
 
 
         <div class="card-body">
+            <h4 class="card-title mb-3">Create Notice notification</h4>
+            <hr>
             <form method="POST" action="{{ route('admin.notice.store') }}" enctype="multipart/form-data">
                 @csrf
 
                 <div class="mb-3">
-                    <label>Notice Title <span class="text-danger">*</span></label>
+                    <label class="form-label">Notice Title <span class="text-danger">*</span></label>
                     <input type="text" name="notice_title" class="form-control" value="{{ old('notice_title') }}">
                 </div>
 
                 <div class="mb-3">
-                    <label>Description <span class="text-danger">*</span></label>
+                    <label class="form-label">Description <span class="text-danger">*</span></label>
                     <textarea id="editor" name="description" class="form-control">{{ old('description') }}</textarea>
                 </div>
 
                 <div class="mb-3">
-                    <label>Notice Type <span class="text-danger">*</span></label>
+                    <label class="form-label">Notice Type <span class="text-danger">*</span></label>
                     <select name="notice_type" class="form-control">
                         <option value="">Select Notice Type</option>
                         @foreach($types as $t)
@@ -48,22 +47,22 @@
                 </div>
 
                 <div class="mb-3">
-                    <label>Display Date <span class="text-danger">*</span></label>
+                    <label class="form-label">Display Date <span class="text-danger">*</span></label>
                    <input type="date" name="display_date" class="form-control" value="{{ old('display_date') }}">
                  </div>
 
                 <div class="mb-3">
-                    <label>Expiry Date <span class="text-danger">*</span></label>
+                    <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
                     <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
                 </div>
     
                 <div class="mb-3">
-                    <label>Upload Document</label>
+                    <label class="form-label">Upload Document</label>
                     <input type="file" name="document" class="form-control">
                 </div>
 
                 <div class="mb-3">
-                    <label>Target Audience <span class="text-danger">*</span></label>
+                    <label class="form-label">Target Audience <span class="text-danger">*</span></label>
                     <select name="target_audience" id="targetAudience" class="form-control">
                         <option value="">Select Target Audience</option>
                         @foreach($target as $t)
@@ -72,7 +71,7 @@
                     </select>
                 </div>
                  <div class="mb-3 d-none" id="courseBox">
-                    <label>Select Course</label>
+                    <label class="form-label">Select Course</label>
                     <select name="course_master_pk" id="courseSelect" class="form-control" >
                         <option value="">Select Course</option>
                     </select>
