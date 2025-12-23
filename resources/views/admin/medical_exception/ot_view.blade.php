@@ -65,6 +65,7 @@
 </style>
 
 <div class="container-fluid">
+    <x-breadcrum title="Medical Exception OT View"></x-breadcrum>
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="row mb-3">

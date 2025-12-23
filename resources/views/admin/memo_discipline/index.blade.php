@@ -365,71 +365,355 @@
                     </div>
                 </div>
             </div>
-            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm">
-                <div class="row">
-                    <div class="col-3">
-                        <div class="mb-3">
-                            <label for="program_name" class="form-label">Program Name</label>
-                            <select class="form-select" id="program_name" name="program_name">
-                                <option value="">Select Program</option>
-                                @foreach($courses as $course)
-                                <option value="{{ $course->pk }}"
-                                    {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}>
-                                    {{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
+            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4">
+    <div class="row g-3">
+        <!-- Program Filter -->
+        <div class="col-md-6 col-lg-3">
+            <div class="form-group">
+                <label for="program_name" class="form-label fw-semibold">
+                    <i class="bi bi-book me-1"></i>Program Name
+                </label>
+                <select class="form-select form-select-md" id="program_name" name="program_name" 
+                        aria-label="Select program">
+                    <option value="">All Programs</option>
+                    @foreach($courses as $course)
+                    <option value="{{ $course->pk }}"
+                        {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}
+                        data-course-code="{{ $course->course_code ?? '' }}">
+                        {{ $course->course_name }}
+                        @if(isset($course->course_code) && $course->course_code)
+                            ({{ $course->course_code }})
+                        @endif
+                    </option>
+                    @endforeach
+                </select>
+                <div class="form-text">Filter by academic program</div>
+            </div>
+        </div>
 
-                    <div class="col-3">
-                        <div class="mb-3">
-                            <label for="status" class="form-label">Status</label>
-                            <select class="form-select" id="status" name="status">
-                                <option value="">Select status</option>
-                                <option value="2" {{ $statusFilter == '1' ? 'selected' : '' }}>Recorded</option>
-                                <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Close</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="mb-3">
-                            <label for="status" class="form-label">Status</label>
-                            <input type="text" class="form-control" id="search" name="search" placeholder="Search..."
-                                value="{{ $searchFilter }}">
+        <!-- Status Filter -->
+        <div class="col-md-6 col-lg-2">
+            <div class="form-group">
+                <label for="status" class="form-label fw-semibold">
+                    <i class="bi bi-flag me-1"></i>Status
+                </label>
+                <select class="form-select form-select-md" id="status" name="status" aria-label="Select status">
+                    <option value="">All Status</option>
+                    <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Recorded</option>
+                    <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>
+                    <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Pending</option>
+                </select>
+                <div class="form-text">Filter by memo status</div>
+            </div>
+        </div>
+
+        <!-- Search Filter -->
+        <div class="col-md-6 col-lg-3">
+            <div class="form-group">
+                <label for="search" class="form-label fw-semibold">
+                    <i class="bi bi-search me-1"></i>Search
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0" 
+                           id="search" name="search" 
+                           placeholder="Student name, ID, or memo details..."
+                           value="{{ $searchFilter }}"
+                           aria-label="Search memos">
+                </div>
+                <div class="form-text">Search across multiple fields</div>
+            </div>
+        </div>
+
+        <!-- Date Range Filters -->
+        <div class="col-md-6 col-lg-4">
+            <div class="row g-2">
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="from_date" class="form-label fw-semibold">
+                            <i class="bi bi-calendar-event me-1"></i>From Date
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-calendar-minus text-muted"></i>
+                            </span>
+                            <input type="date" class="form-control" 
+                                   id="from_date" name="from_date"
+                                   value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}"
+                                   max="{{ \Carbon\Carbon::today()->toDateString() }}"
+                                   aria-label="Start date">
                         </div>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-3">
-                        <div class="mb-3">
-                            <label for="from_date" class="form-label">From Date</label>
-                            <input type="date" class="form-control" id="from_date" name="from_date"
-                                value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
-                        </div>
-                    </div>
-                    <div class="col-3">
-                        <div class="mb-3">
-                            <label for="to_date" class="form-label">To Date</label>
-                            <input type="date" class="form-control" id="to_date" name="to_date"
-                                value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3 d-flex align-items-center gap-2">
-                            <a href="{{ route('memo.discipline.index') }}" class="btn btn-secondary">
-                                <i class="bi bi-x-circle me-1"></i> Clear Filters
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-6 text-end">
-                        <div class="mb-3">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-funnel-fill me-1"></i> Apply Filters
-                            </button>
+                <div class="col-6">
+                    <div class="form-group">
+                        <label for="to_date" class="form-label fw-semibold">
+                            <i class="bi bi-calendar-event me-1"></i>To Date
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="bi bi-calendar-plus text-muted"></i>
+                            </span>
+                            <input type="date" class="form-control" 
+                                   id="to_date" name="to_date"
+                                   value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}"
+                                   max="{{ \Carbon\Carbon::today()->toDateString() }}"
+                                   aria-label="End date">
                         </div>
                     </div>
                 </div>
-            </form>
+                <div class="col-12">
+                    <div class="form-text">Select date range for memos</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="col-12 mt-3">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 p-3 bg-light rounded border">
+                <div class="d-flex align-items-center">
+                    <span class="me-2 text-muted">
+                        <i class="bi bi-filter-circle me-1"></i>
+                    </span>
+                    <small class="text-muted">
+                        <span id="activeFilterCount" class="badge bg-primary me-2">0</span>
+                        Active filters
+                    </small>
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button type="button" 
+                            class="btn btn-outline-secondary d-flex align-items-center"
+                            onclick="clearFilters()"
+                            aria-label="Clear all filters">
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                        Reset All
+                    </button>
+                    
+                    <a href="{{ route('memo.discipline.index') }}" 
+                       class="btn btn-outline-danger d-flex align-items-center"
+                       aria-label="Remove filters and show all">
+                        <i class="bi bi-x-circle me-2"></i>
+                        Clear Filters
+                    </a>
+                    
+                    <button type="submit" 
+                            class="btn btn-primary d-flex align-items-center"
+                            aria-label="Apply selected filters">
+                        <i class="bi bi-funnel me-2"></i>
+                        Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Summary (Optional, shows when filters are active) -->
+        @if($programNameFilter || $statusFilter || $searchFilter || ($fromDateFilter && $toDateFilter))
+        <div class="col-12">
+            <div class="alert alert-info alert-dismissible fade show mt-2" role="alert">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-info-circle me-2 fs-5"></i>
+                    <div>
+                        <strong>Active Filters:</strong>
+                        <div class="d-flex flex-wrap gap-2 mt-1">
+                            @if($programNameFilter)
+                                @php
+                                    $selectedCourse = $courses->where('pk', $programNameFilter)->first();
+                                @endphp
+                                <span class="badge bg-primary d-flex align-items-center">
+                                    Program: {{ $selectedCourse->course_name ?? 'Selected' }}
+                                    <a href="#" class="text-white ms-2" onclick="removeFilter('program_name')">
+                                        <i class="bi bi-x"></i>
+                                    </a>
+                                </span>
+                            @endif
+                            
+                            @if($statusFilter)
+                                @php
+                                    $statusLabels = ['1' => 'Pending', '2' => 'Recorded', '3' => 'Closed'];
+                                @endphp
+                                <span class="badge bg-success d-flex align-items-center">
+                                    Status: {{ $statusLabels[$statusFilter] ?? 'Selected' }}
+                                    <a href="#" class="text-white ms-2" onclick="removeFilter('status')">
+                                        <i class="bi bi-x"></i>
+                                    </a>
+                                </span>
+                            @endif
+                            
+                            @if($searchFilter)
+                                <span class="badge bg-warning text-dark d-flex align-items-center">
+                                    Search: "{{ substr($searchFilter, 0, 20) }}{{ strlen($searchFilter) > 20 ? '...' : '' }}"
+                                    <a href="#" class="text-dark ms-2" onclick="removeFilter('search')">
+                                        <i class="bi bi-x"></i>
+                                    </a>
+                                </span>
+                            @endif
+                            
+                            @if($fromDateFilter && $toDateFilter)
+                                <span class="badge bg-info d-flex align-items-center">
+                                    Date: {{ \Carbon\Carbon::parse($fromDateFilter)->format('M d') }} - {{ \Carbon\Carbon::parse($toDateFilter)->format('M d, Y') }}
+                                    <a href="#" class="text-white ms-2" onclick="removeDateFilters()">
+                                        <i class="bi bi-x"></i>
+                                    </a>
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+        @endif
+    </div>
+</form>
+
+<!-- Add this JavaScript for enhanced UX -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update active filter count
+    function updateFilterCount() {
+        const form = document.getElementById('filterForm');
+        const inputs = form.querySelectorAll('select, input[type="text"], input[type="date"]');
+        let activeCount = 0;
+        
+        inputs.forEach(input => {
+            if ((input.tagName === 'SELECT' && input.value !== '') || 
+                (input.type === 'text' && input.value.trim() !== '') ||
+                (input.type === 'date' && input.value !== '')) {
+                activeCount++;
+            }
+        });
+        
+        document.getElementById('activeFilterCount').textContent = activeCount;
+    }
+    
+    // Initialize filter count
+    updateFilterCount();
+    
+    // Update count on input change
+    document.querySelectorAll('#filterForm select, #filterForm input').forEach(input => {
+        input.addEventListener('change', updateFilterCount);
+        input.addEventListener('input', updateFilterCount);
+    });
+    
+    // Date validation
+    const fromDate = document.getElementById('from_date');
+    const toDate = document.getElementById('to_date');
+    
+    if (fromDate && toDate) {
+        fromDate.addEventListener('change', function() {
+            toDate.min = this.value;
+        });
+        
+        toDate.addEventListener('change', function() {
+            fromDate.max = this.value;
+        });
+    }
+});
+
+// Clear all filters
+function clearFilters() {
+    const form = document.getElementById('filterForm');
+    form.querySelectorAll('select').forEach(select => select.value = '');
+    form.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
+    
+    // Reset dates to today
+    const today = new Date().toISOString().split('T')[0];
+    form.querySelectorAll('input[type="date"]').forEach(input => input.value = today);
+    
+    form.submit();
+}
+
+// Remove specific filter
+function removeFilter(filterName) {
+    const input = document.querySelector(`[name="${filterName}"]`);
+    if (input) {
+        if (input.tagName === 'SELECT') {
+            input.value = '';
+        } else {
+            input.value = '';
+        }
+    }
+    document.getElementById('filterForm').submit();
+}
+
+// Remove date filters
+function removeDateFilters() {
+    document.getElementById('from_date').value = '';
+    document.getElementById('to_date').value = '';
+    document.getElementById('filterForm').submit();
+}
+</script>
+
+<style>
+.form-select:focus, .form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.input-group-text {
+    transition: all 0.2s ease;
+}
+
+.badge a {
+    text-decoration: none;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+.badge a:hover {
+    opacity: 1;
+}
+
+.alert {
+    border-left: 4px solid #0d6efd;
+}
+
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
+}
+
+.form-label {
+    color: #495057;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-text {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+@media (max-width: 768px) {
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .d-flex.gap-2 {
+        width: 100%;
+        flex-direction: column;
+    }
+}
+</style>
             <hr>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 text-nowrap">
@@ -536,7 +820,7 @@
                             </td>
 
                             <!-- Action -->
-                             @if(! hasRole('Student-OT'))
+                            @if(! hasRole('Student-OT'))
                             <td class="text-end">
                                 @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin')
                                 || hasRole('Training'))
