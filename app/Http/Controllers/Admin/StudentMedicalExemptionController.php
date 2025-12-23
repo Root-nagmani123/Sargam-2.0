@@ -59,6 +59,37 @@ class StudentMedicalExemptionController extends Controller
                  });
        }
        
+       // Search functionality
+       $search = $request->get('search');
+       if ($search && $search != '') {
+           $query->where(function($q) use ($search) {
+               // Search in student name
+               $q->whereHas('student', function($studentQuery) use ($search) {
+                   $studentQuery->where('display_name', 'like', '%' . $search . '%')
+                                ->orWhere('generated_OT_code', 'like', '%' . $search . '%');
+               })
+               // Search in course name
+               ->orWhereHas('course', function($courseQuery) use ($search) {
+                   $courseQuery->where('course_name', 'like', '%' . $search . '%');
+               })
+               // Search in employee name
+               ->orWhereHas('employee', function($employeeQuery) use ($search) {
+                   $employeeQuery->where('first_name', 'like', '%' . $search . '%')
+                                 ->orWhere('last_name', 'like', '%' . $search . '%');
+               })
+               // Search in category name
+               ->orWhereHas('category', function($categoryQuery) use ($search) {
+                   $categoryQuery->where('exemp_category_name', 'like', '%' . $search . '%');
+               })
+               // Search in speciality name
+               ->orWhereHas('speciality', function($specialityQuery) use ($search) {
+                   $specialityQuery->where('speciality_name', 'like', '%' . $search . '%');
+               })
+               // Search in OPD category
+               ->orWhere('opd_category', 'like', '%' . $search . '%');
+           });
+       }
+       
        $records = $query->orderBy('pk', 'desc')->paginate(10);
        
        // Calculate total exemption count for today
@@ -79,6 +110,30 @@ class StudentMedicalExemptionController extends Controller
            $todayCountQuery->where('course_master_pk', $courseFilter);
        }
        
+       // Apply search filter to count query as well
+       if ($search && $search != '') {
+           $todayCountQuery->where(function($q) use ($search) {
+               $q->whereHas('student', function($studentQuery) use ($search) {
+                   $studentQuery->where('display_name', 'like', '%' . $search . '%')
+                                ->orWhere('generated_OT_code', 'like', '%' . $search . '%');
+               })
+               ->orWhereHas('course', function($courseQuery) use ($search) {
+                   $courseQuery->where('course_name', 'like', '%' . $search . '%');
+               })
+               ->orWhereHas('employee', function($employeeQuery) use ($search) {
+                   $employeeQuery->where('first_name', 'like', '%' . $search . '%')
+                                 ->orWhere('last_name', 'like', '%' . $search . '%');
+               })
+               ->orWhereHas('category', function($categoryQuery) use ($search) {
+                   $categoryQuery->where('exemp_category_name', 'like', '%' . $search . '%');
+               })
+               ->orWhereHas('speciality', function($specialityQuery) use ($search) {
+                   $specialityQuery->where('speciality_name', 'like', '%' . $search . '%');
+               })
+               ->orWhere('opd_category', 'like', '%' . $search . '%');
+           });
+       }
+       
        // Count exemptions valid for today
        $todayTotalCount = $todayCountQuery->where('from_date', '<=', $currentDate)
            ->where(function($q) use ($currentDate) {
@@ -96,7 +151,8 @@ class StudentMedicalExemptionController extends Controller
        }
        $courses = $coursesQuery->orderBy('course_name', 'asc')->get();
     
-        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'dateFilter', 'todayTotalCount'));
+        $search = $request->get('search', '');
+        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'dateFilter', 'todayTotalCount', 'search'));
     }
 
    public function create()
@@ -366,11 +422,12 @@ public function update(Request $request, $id)
         $filter = $request->get('filter', 'active');
         $courseFilter = $request->get('course_filter');
         $dateFilter = $request->get('date_filter');
+        $search = $request->get('search');
         
         $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
         
         return Excel::download(
-            new StudentMedicalExemptionExport($filter, $courseFilter, null, $dateFilter),
+            new StudentMedicalExemptionExport($filter, $courseFilter, $search, $dateFilter),
             $fileName
         );
     }
