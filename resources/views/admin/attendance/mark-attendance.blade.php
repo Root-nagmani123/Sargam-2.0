@@ -77,8 +77,11 @@
                         <h4 class="card-title">Attendance</h4>
                         <div class="">
                             <a href="{{ route('attendance.index') }}" class="btn btn-secondary">Back</a>
+                            <a href="{{ route('attendance.export', ['group_pk' => $group_pk, 'course_pk' => $course_pk, 'timetable_pk' => $courseGroup->timetable_pk]) }}" class="btn btn-success">
+                                <i class="bi bi-file-earmark-excel"></i> Export to Excel
+                            </a>
                             @if($currentPath === 'mark')
-                            <button type="submit" class="btn btn-primary ">save</button>
+                            <button type="submit" class="btn btn-primary">save</button>
                             
                             @endif
                         </div>
