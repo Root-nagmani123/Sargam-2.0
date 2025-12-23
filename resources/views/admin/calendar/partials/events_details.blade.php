@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <div class="d-flex flex-column w-100">
+                <div class="d-flex flex-column w-100"> 
                     <div class="d-flex justify-content-between align-items-center">
                         <h3 class="modal-title h5 mb-0" id="eventDetailsTitle">
                             <span id="eventTitle">Event</span>
