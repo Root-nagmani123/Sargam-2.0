@@ -20,24 +20,33 @@
         rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
-    <title>Login - LBSNAA</title>
+    <title>Login - Sargam | Lal Bahadur Shastri National Academy of Administration</title>
 
     <style>
-    /* GIGW Color Palette Focus (High Contrast) */
+    /* GIGW Color Palette Focus (High Contrast) - Enhanced */
     :root {
         --primary-blue: #004a93;
         /* Used for main branding and primary action */
-        --primary-blue-light: #e0eafc;
+        --primary-blue-light: #e8f1f8;
         /* Light background pattern */
         --primary-blue-dark: #003366;
-        --text-primary: #212529;
-        --text-secondary: #6c757d;
-        --accent-orange: #ff6b35;
-        /* High-contrast focus/accessibility */
-        --border-color: #dee2e6;
+        --primary-blue-darker: #002147;
+        --text-primary: #1a1a1a;
+        --text-secondary: #5a6c7d;
+        --accent-orange: #ff6600;
+        /* High-contrast focus/accessibility - GIGW compliant */
+        --accent-gold: #ffa500;
+        --border-color: #e0e6ed;
+        --border-light: #f0f3f7;
         --success-color: #28a745;
         --error-color: #dc3545;
-        --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+        --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+        --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+        --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+        --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.15);
     }
 
     * {
@@ -46,14 +55,30 @@
         box-sizing: border-box;
     }
 
-    body {
-        font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-        line-height: 1.6;
-        color: var(--text-primary);
-        background: linear-gradient(135deg, #f5f7fb 0%, #ffffff 100%);
-        min-height: calc(100% - 56px);
+    html {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    #main-wrapper {
+        height: 100vh;
+        overflow: hidden;
         display: flex;
         flex-direction: column;
+    }
+
+    body {
+        font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.65;
+        color: var(--text-primary);
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 50%, #f0f4f8 100%);
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        letter-spacing: 0.01em;
     }
 
     /* GIGW - Skip to Content & Focus Styles */
@@ -89,13 +114,14 @@
         box-shadow: 0 0 0 1px var(--primary-blue) !important;
     }
 
-    /* GIGW Top Header Bar (Blue) - Enhanced */
+    /* GIGW Top Header Bar (Blue) - Enhanced Modern Design */
     .gigw-header-top {
-        background: linear-gradient(90deg, var(--primary-blue) 0%, #003d7a 100%);
+        background: linear-gradient(135deg, var(--primary-blue) 0%, #003d7a 50%, var(--primary-blue-dark) 100%);
         color: white;
-        padding: 6px 0;
+        padding: 8px 0;
         font-size: 13px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+        border-bottom: 2px solid rgba(255, 255, 255, 0.1);
     }
 
     .gigw-header-top a {
@@ -112,14 +138,15 @@
         background-color: rgba(255, 255, 255, 0.25);
     }
 
-    /* Main Header (Logo Bar) - Modern Design */
+    /* Main Header (Logo Bar) - Modern Glassmorphism Design */
     .main-header-nav {
         background: white;
-        border-bottom: 1px solid var(--border-color);
-        padding: 12px 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--border-light);
+        padding: 16px 0;
+        box-shadow: var(--shadow-md);
+        backdrop-filter: blur(12px);
         background-color: rgba(255, 255, 255, 0.98);
+        transition: var(--transition-smooth);
     }
 
     .logo-text {
@@ -208,26 +235,30 @@
 
     /* Main Content & Background Pattern */
     .login-page-wrapper {
-        flex-grow: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 20px;
+        padding: 10px;
+        height: 100%;
+        overflow-y: auto;
     }
 
     /* Login Card - Modern Glassmorphism & Enhanced Design */
     .login-card-image {
-        background: white;
-        border: 1px solid rgba(0, 74, 147, 0.1);
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        max-width: 480px;
+        background: rgba(255, 255, 255, 0.95);
+        border: 1px solid rgba(0, 74, 147, 0.08);
+        border-radius: 16px;
+        box-shadow: var(--shadow-xl);
+        max-width: 500px;
         width: 100%;
-        padding: 40px;
+        padding: 32px;
         text-align: center;
         transition: var(--transition-smooth);
         position: relative;
         overflow: hidden;
+        backdrop-filter: blur(10px);
+        max-height: 95vh;
+        overflow-y: auto;
     }
 
     .login-card-image::before {
@@ -236,8 +267,9 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, var(--primary-blue) 0%, var(--accent-orange) 100%);
+        height: 5px;
+        background: linear-gradient(90deg, var(--primary-blue) 0%, #0066cc 33%, var(--accent-orange) 66%, var(--accent-gold) 100%);
+        box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
     }
 
     .login-card-image:hover {
@@ -248,9 +280,14 @@
     .login-card-image h2 {
         color: var(--primary-blue);
         font-weight: 700;
-        font-size: 28px;
-        margin-bottom: 8px;
-        letter-spacing: -0.5px;
+        font-size: 32px;
+        margin-bottom: 10px;
+        letter-spacing: -0.8px;
+        line-height: 1.2;
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .login-card-image p {
@@ -264,11 +301,12 @@
     .form-label {
         display: block;
         text-align: left;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
         font-weight: 600;
         color: var(--text-primary);
         font-size: 14px;
         transition: color 0.2s;
+        letter-spacing: 0.02em;
     }
 
     .form-label i {
@@ -277,18 +315,21 @@
     }
 
     .form-control {
-        padding: 12px 16px;
-        border-radius: 8px;
-        border: 1.5px solid var(--border-color);
+        padding: 14px 18px;
+        border-radius: 10px;
+        border: 2px solid var(--border-color);
         font-size: 15px;
         transition: var(--transition-smooth);
-        background-color: #f8f9fa;
+        background-color: #f8fafb;
+        font-weight: 400;
+        line-height: 1.5;
     }
 
     .form-control:focus {
         background-color: white;
         border-color: var(--primary-blue);
-        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1) !important;
+        box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.12), 0 4px 12px rgba(0, 74, 147, 0.08) !important;
+        transform: translateY(-1px);
     }
 
     .form-control::placeholder {
@@ -301,15 +342,15 @@
     }
 
     .password-toggle-btn {
-        background-color: #f8f9fa;
-        border: 1.5px solid var(--border-color);
+        background-color: #f8fafb;
+        border: 2px solid var(--border-color);
         border-left: none;
-        border-radius: 0 8px 8px 0;
+        border-radius: 0 10px 10px 0;
         color: var(--text-secondary);
-        padding: 0 14px;
+        padding: 0 16px;
         cursor: pointer;
         transition: var(--transition-smooth);
-        font-size: 18px;
+        font-size: 20px;
     }
 
     .password-toggle-btn:hover {
@@ -329,16 +370,17 @@
         border: none;
         color: white;
         font-weight: 700;
-        padding: 12px 0;
+        padding: 16px 0;
         transition: var(--transition-smooth);
-        margin-top: 24px;
-        border-radius: 8px;
+        margin-top: 28px;
+        border-radius: 12px;
         cursor: pointer;
-        font-size: 16px;
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 15px rgba(0, 74, 147, 0.2);
+        font-size: 17px;
+        letter-spacing: 0.8px;
+        box-shadow: 0 6px 20px rgba(0, 74, 147, 0.25);
         position: relative;
         overflow: hidden;
+        text-transform: uppercase;
     }
 
     .login-button::before {
@@ -357,9 +399,9 @@
     }
 
     .login-button:hover {
-        background: linear-gradient(135deg, var(--primary-blue-dark) 0%, #002a5a 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 74, 147, 0.3);
+        background: linear-gradient(135deg, var(--primary-blue-dark) 0%, var(--primary-blue-darker) 100%);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(0, 74, 147, 0.35);
     }
 
     .login-button:active {
@@ -375,13 +417,14 @@
 
     /* GIGW Footer - Enhanced */
     .gigw-footer {
-        background: linear-gradient(90deg, var(--primary-blue) 0%, #003d7a 100%);
-        color: #e0e0e0;
-        padding: 16px 0;
+        background: linear-gradient(135deg, var(--primary-blue) 0%, #003d7a 50%, var(--primary-blue-dark) 100%);
+        color: #e8eef3;
+        padding: 20px 0;
         font-size: 13px;
         text-align: center;
         margin-top: auto;
-        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.12);
+        border-top: 2px solid rgba(255, 255, 255, 0.1);
     }
 
     .gigw-footer a {
@@ -425,18 +468,20 @@
 
     /* Additional Modern Form Enhancements */
     .form-check-input {
-        width: 20px;
-        height: 20px;
-        margin-top: 2px;
-        border: 1.5px solid var(--border-color);
-        border-radius: 4px;
+        width: 22px;
+        height: 22px;
+        margin-top: 1px;
+        border: 2px solid var(--border-color);
+        border-radius: 6px;
         cursor: pointer;
         transition: var(--transition-smooth);
+        background-color: white;
     }
 
     .form-check-input:checked {
         background-color: var(--primary-blue);
         border-color: var(--primary-blue);
+        box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
     }
 
     .form-check-input:focus {
@@ -468,14 +513,15 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 8px;
         color: var(--success-color);
-        font-weight: 500;
+        font-weight: 600;
         font-size: 13px;
-        margin-top: 16px;
-        padding: 8px 12px;
-        background: rgba(40, 167, 69, 0.08);
-        border-radius: 6px;
+        margin-top: 18px;
+        padding: 10px 16px;
+        background: linear-gradient(135deg, rgba(40, 167, 69, 0.08) 0%, rgba(40, 167, 69, 0.12) 100%);
+        border-radius: 8px;
+        border: 1px solid rgba(40, 167, 69, 0.15);
     }
 
     .security-badge i {
@@ -499,14 +545,15 @@
     .login-card-enhanced {
         border-radius: 12px;
         width: 100%;
-        padding: 40px;
+        padding: 32px;
         text-align: left;
         position: relative;
-        overflow: hidden;
+        overflow-y: auto;
         background: white;
         border: 1px solid rgba(0, 74, 147, 0.1);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
         animation: slideInUp 0.5s ease-out;
+        max-height: 95vh;
     }
 
     @keyframes slideInUp {
@@ -526,17 +573,23 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, var(--primary-blue) 0%, var(--accent-orange) 100%);
+        height: 5px;
+        background: linear-gradient(90deg, var(--primary-blue) 0%, #0066cc 33%, var(--accent-orange) 66%, var(--accent-gold) 100%);
+        box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
     }
 
     .login-card-enhanced h2 {
         color: var(--primary-blue);
         font-weight: 700;
-        font-size: 28px;
-        margin-bottom: 6px;
+        font-size: 32px;
+        margin-bottom: 10px;
         text-align: center;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.8px;
+        line-height: 1.2;
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .login-card-enhanced p {
@@ -559,14 +612,15 @@
 
     /* Input Group Text */
     .input-group-text {
-        background-color: #f8f9fa;
+        background-color: #f8fafb;
         border-left: none;
         cursor: pointer;
         color: var(--text-secondary);
-        border-radius: 0 8px 8px 0;
+        border-radius: 0 10px 10px 0;
         transition: var(--transition-smooth);
-        border: 1.5px solid var(--border-color);
+        border: 2px solid var(--border-color);
         border-left: none;
+        padding: 0 16px;
     }
 
     .input-group-text:hover {
@@ -579,16 +633,17 @@
         background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
         border: none;
         font-weight: 700;
-        padding: 12px;
-        border-radius: 8px;
+        padding: 16px;
+        border-radius: 12px;
         transition: var(--transition-smooth);
         color: white;
-        font-size: 16px;
-        letter-spacing: 0.5px;
-        box-shadow: 0 4px 15px rgba(0, 74, 147, 0.2);
+        font-size: 17px;
+        letter-spacing: 0.8px;
+        box-shadow: 0 6px 20px rgba(0, 74, 147, 0.25);
         cursor: pointer;
         position: relative;
         overflow: hidden;
+        text-transform: uppercase;
     }
 
     .login-button-enhanced::before {
@@ -607,9 +662,9 @@
     }
 
     .login-button-enhanced:hover {
-        background: linear-gradient(135deg, var(--primary-blue-dark) 0%, #002a5a 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 74, 147, 0.3);
+        background: linear-gradient(135deg, var(--primary-blue-dark) 0%, var(--primary-blue-darker) 100%);
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(0, 74, 147, 0.35);
     }
 
     .login-button-enhanced:active {
@@ -620,22 +675,39 @@
     .forgot-password-link {
         color: var(--primary-blue) !important;
         text-decoration: none;
-        font-weight: 500;
+        font-weight: 600;
         font-size: 14px;
         transition: var(--transition-smooth);
+        position: relative;
+        padding-bottom: 2px;
+    }
+
+    .forgot-password-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: var(--primary-blue);
+        transition: width 0.3s ease;
+    }
+
+    .forgot-password-link:hover::after,
+    .forgot-password-link:focus::after {
+        width: 100%;
     }
 
     .forgot-password-link:hover,
     .forgot-password-link:focus {
         color: var(--primary-blue-dark) !important;
-        text-decoration: underline;
     }
 
     /* Carousel Enhancements */
     #carouselExampleFade,
     #carouselExampleFade .carousel-inner,
     #carouselExampleFade .carousel-item {
-        height: calc(100% - 56px) !important;
+        height: 100% !important;
     }
 
     #carouselExampleFade .carousel-item img {
@@ -647,7 +719,7 @@
     .carasoul-image {
         object-fit: cover;
         width: 100%;
-        height: 100vh !important;
+        height: 100% !important;
         animation: zoomIn 0.5s ease-out;
     }
 
@@ -665,19 +737,23 @@
     /* Carousel Controls - GIGW Accessible */
     .carousel-control-prev,
     .carousel-control-next {
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(0, 0, 0, 0.4);
         border-radius: 50%;
-        width: 48px;
-        height: 48px;
+        width: 56px;
+        height: 56px;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: var(--transition-smooth);
+        backdrop-filter: blur(4px);
+        border: 2px solid rgba(255, 255, 255, 0.2);
     }
 
     .carousel-control-prev:hover,
     .carousel-control-next:hover {
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 74, 147, 0.85);
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: scale(1.1);
     }
 
     .carousel-control-prev-icon,
@@ -686,9 +762,24 @@
     }
 
     /* Responsive Design - Tablet & Mobile */
+    /* Container Management */
+    .container-fluid {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .container-fluid .row {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .container-fluid .row > div {
+        height: 100%;
+    }
+
     @media (max-width: 991.98px) {
         .login-page-wrapper {
-            padding: 16px;
+            padding: 10px;
         }
 
         .main-header-nav .navbar-brand {
@@ -698,12 +789,17 @@
 
     @media (max-width: 575.98px) {
         .login-card-enhanced {
-            padding: 24px 16px;
-            border-radius: 8px;
+            padding: 20px 16px;
+            border-radius: 12px;
+            max-height: 92vh;
+        }
+
+        .login-page-wrapper {
+            padding: 8px;
         }
 
         .login-card-enhanced h2 {
-            font-size: 24px;
+            font-size: 26px;
         }
 
         .login-card-enhanced p {
@@ -716,12 +812,12 @@
 
         .form-control {
             font-size: 14px;
-            padding: 10px 12px;
+            padding: 12px 14px;
         }
 
         .login-button-enhanced {
-            padding: 10px;
-            font-size: 15px;
+            padding: 14px;
+            font-size: 16px;
         }
 
         /* Center Government of India + Ashoka emblem + LBSNAA text on small screens */
@@ -743,6 +839,228 @@
         .top-header span,
         .gigw-footer span {
             font-size: 12px;
+        }
+    }
+
+    /* Additional Modern Enhancements */
+    
+    /* Smooth Page Load Animation */
+    @keyframes fadeInPage {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    body {
+        animation: fadeInPage 0.4s ease-out;
+    }
+
+    /* Input Placeholder Animation */
+    .form-control::placeholder {
+        transition: var(--transition-smooth);
+    }
+
+    .form-control:focus::placeholder {
+        opacity: 0.6;
+        transform: translateX(4px);
+    }
+
+    /* Label Highlight on Focus */
+    .form-control:focus ~ .form-label,
+    .form-control:not(:placeholder-shown) ~ .form-label {
+        color: var(--primary-blue);
+    }
+
+    /* Enhanced Card Shadow on Scroll */
+    .login-card-enhanced {
+        transform: translateY(0);
+    }
+
+    /* Improved Link Underline Effect */
+    .gigw-footer a {
+        position: relative;
+        padding-bottom: 2px;
+    }
+
+    .gigw-footer a::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 1px;
+        background: var(--accent-orange);
+        transition: width 0.3s ease;
+    }
+
+    .gigw-footer a:hover::after {
+        width: 100%;
+    }
+
+    /* Loading Spinner for Button */
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .spinner-border {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        vertical-align: text-bottom;
+        border: 0.2em solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+    }
+
+    /* Micro-interaction: Scale on Click */
+    .btn:active,
+    .form-check-input:active {
+        transform: scale(0.97);
+    }
+
+    /* Enhanced Skip Link Accessibility */
+    .skip-to-content:focus {
+        top: 0;
+        outline: 4px solid var(--accent-orange);
+        outline-offset: 3px;
+        z-index: 10000;
+        font-weight: 600;
+    }
+
+    /* Logo Hover Effect */
+    .navbar-brand img,
+    .brand-link img {
+        transition: var(--transition-smooth);
+    }
+
+    .navbar-brand:hover img,
+    .brand-link:hover img {
+        transform: scale(1.02);
+        filter: brightness(1.05);
+    }
+
+    /* Enhanced Form Validation Visual Feedback */
+    .form-control.is-valid {
+        border-color: var(--success-color);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.15);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.5rem) center;
+        background-size: calc(0.75em + 1rem) calc(0.75em + 1rem);
+        padding-right: calc(1.5em + 1.5rem);
+    }
+
+    .form-control.is-invalid {
+        border-color: var(--error-color);
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.5rem) center;
+        background-size: calc(0.75em + 1rem) calc(0.75em + 1rem);
+        padding-right: calc(1.5em + 1.5rem);
+    }
+
+    /* Pulse Animation for Security Badge */
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.7;
+        }
+    }
+
+    .security-badge i {
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* Enhanced Dropdown Styling */
+    .language-dropdown .dropdown-menu {
+        border-radius: 8px;
+        border: 1px solid var(--border-light);
+        box-shadow: var(--shadow-lg);
+        padding: 8px 0;
+        margin-top: 8px;
+    }
+
+    .language-dropdown .dropdown-item {
+        padding: 10px 20px;
+        transition: var(--transition-smooth);
+        border-radius: 4px;
+        margin: 0 8px;
+    }
+
+    .language-dropdown .dropdown-item:hover {
+        background: var(--primary-blue-light);
+        color: var(--primary-blue);
+    }
+
+    /* Modern Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: #f1f3f5;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--primary-blue);
+        border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-blue-dark);
+    }
+
+    /* Enhanced Focus Indicator - WCAG 2.1 AAA Compliant */
+    *:focus-visible {
+        outline: 3px solid var(--accent-orange);
+        outline-offset: 3px;
+    }
+
+    /* Reduce Motion for Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+
+    /* High Contrast Mode Support */
+    @media (prefers-contrast: high) {
+        .login-card-enhanced {
+            border: 3px solid var(--primary-blue);
+        }
+
+        .form-control {
+            border-width: 3px;
+        }
+
+        .login-button-enhanced {
+            border: 3px solid white;
+        }
+    }
+
+    /* Dark Mode Preparation (for future enhancement) */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --border-color: #3a3a3a;
         }
     }
     </style>
@@ -792,16 +1110,11 @@
                         <a class="navbar-brand d-flex align-items-center gap-3 text-decoration-none" href="#"
                             aria-label="Government of India Home">
 
-                            <img src="https://www.shutterstock.com/image-vector/indian-national-emblem-ashokas-lion-600nw-2534959015.jpg"
-                                alt="State Emblem of India" width="60" class="img-fluid">
-
                             <div class="d-flex flex-column lh-sm">
-                                <span class="fw-semibold text-dark" style="font-size: 1.1rem;">
-                                    Government of India
-                                </span>
-                                <small class="text-muted" style="font-size: 0.9rem;">
-                                    Lal Bahadur Shastri National Academy of Administration
-                                </small>
+                               <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png"
+                                    alt="Lal Bahadur Shastri National Academy of Administration"
+                                    class="brand-logo img-fluid d-none d-lg-block d-dark-none" width="300"
+                                    height="auto">
                             </div>
                         </a>
 
@@ -812,10 +1125,7 @@
                                 aria-label="Login to LBSNAA Portal">
 
                                 <!-- Light Mode Logo -->
-                                <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png"
-                                    alt="Lal Bahadur Shastri National Academy of Administration"
-                                    class="brand-logo img-fluid d-none d-lg-block d-dark-none" width="230"
-                                    height="auto">
+                                
 
                                 <!-- Dark Mode Logo -->
                                 <img src="https://upload.wikimedia.org/wikipedia/en/thumb/9/95/Digital_India_logo.svg/1200px-Digital_India_logo.svg.png"
@@ -834,10 +1144,10 @@
                 </nav>
             </div>
         </div>
-        <div class="container-fluid">
-            <div class="row g-0 min-vh-100">
+        <div class="container-fluid" style="flex: 1; display: flex; flex-direction: column;">
+            <div class="row g-0" style="flex: 1;">
                 <div class="col-lg-4 col-12 d-flex align-items-center justify-content-center bg-light">
-                    <main class="login-page-wrapper flex-grow-1">
+                    <main class="login-page-wrapper">
                         <div class="login-card-enhanced">
                             <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="LBSNAA Logo - Dark Mode"
                                 class="img-fluid" style="width: 550px;">

@@ -12,22 +12,42 @@
     const TAB_TIMESTAMP_KEY = 'sargam_tab_timestamp';
 
     /**
+     * Helper function to get cookie value by name
+     */
+    function getCookie(name) {
+        const nameEQ = name + '=';
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.indexOf(nameEQ) === 0) {
+                return cookie.substring(nameEQ.length);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Helper function to delete cookie
+     */
+    function deleteCookie(name) {
+        document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 UTC; path=/;';
+    }
+
+    /**
      * Force activate only the Home tab in the HEADER navigation
      * BUT: Only on fresh login, not on regular navigation
      */
     function forceActivateHomeTab() {
         // Check if this is a fresh login or just regular navigation
-        const isFromLogin = sessionStorage.getItem('fresh_login');
+        const isFromLogin = getCookie('fresh_login');
         
         if (!isFromLogin) {
             console.log('Not from login - skipping force home activation');
-            // Clear the flag for next time
-            sessionStorage.removeItem('fresh_login');
             return; // Don't force home tab on regular navigation
         }
         
         console.log('Fresh login detected - activating home tab');
-        sessionStorage.removeItem('fresh_login'); // Clear the flag
+        deleteCookie('fresh_login'); // Clear the flag
         
         // Clear any saved tab from localStorage to ensure fresh start
         localStorage.removeItem(ACTIVE_TAB_KEY);
