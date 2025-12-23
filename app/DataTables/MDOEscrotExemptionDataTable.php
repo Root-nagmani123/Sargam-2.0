@@ -17,6 +17,7 @@ class MDOEscrotExemptionDataTable extends DataTable
             ->addIndexColumn()
             ->editColumn('mdo_date', fn($row) => format_date($row->mdo_date) ?? 'N/A')
             ->editColumn('student_name', fn($row) => $row->studentMaster->display_name ?? 'N/A')
+            ->editColumn('ot_code', fn($row) => $row->studentMaster->generated_OT_code ?? 'N/A')
             ->editColumn('Time_from', fn($row) => $row->Time_from ?? 'N/A')
             ->editColumn('Time_to', fn($row) => $row->Time_to ?? 'N/A')
             ->editColumn('course_name', fn($row) => optional($row->courseMaster)->course_name ?? 'N/A')
@@ -25,6 +26,11 @@ class MDOEscrotExemptionDataTable extends DataTable
             ->filterColumn('student_name', function ($query, $keyword) {
                 $query->whereHas('studentMaster', function ($q) use ($keyword) {
                     $q->where('display_name', 'like', "%{$keyword}%");
+                });
+            })
+            ->filterColumn('ot_code', function ($query, $keyword) {
+                $query->whereHas('studentMaster', function ($q) use ($keyword) {
+                    $q->where('generated_OT_code', 'like', "%{$keyword}%");
                 });
             })
             ->filterColumn('course_name', function ($query, $keyword) {
@@ -43,7 +49,8 @@ class MDOEscrotExemptionDataTable extends DataTable
                 if (!empty($searchValue)) {
                     $query->where(function ($subQuery) use ($searchValue) {
                         $subQuery->whereHas('studentMaster', function ($studentQuery) use ($searchValue) {
-                            $studentQuery->where('display_name', 'like', "%{$searchValue}%");
+                            $studentQuery->where('display_name', 'like', "%{$searchValue}%")
+                                         ->orWhere('generated_OT_code', 'like', "%{$searchValue}%");
                         })
                         ->orWhereHas('courseMaster', function ($courseQuery) use ($searchValue) {
                             $courseQuery->where('course_name', 'like', "%{$searchValue}%");
@@ -88,7 +95,7 @@ class MDOEscrotExemptionDataTable extends DataTable
 </div>
 HTML;
             })
-            ->rawColumns(['student_name', 'course_name', 'mdo_name', 'actions']);
+            ->rawColumns(['student_name', 'ot_code', 'course_name', 'mdo_name', 'actions']);
     }
 
     public function query(): QueryBuilder
@@ -96,8 +103,8 @@ HTML;
         $query = MDOEscotDutyMap::with([
             'courseMaster' => fn($q) => $q->select('pk', 'course_name', 'end_date'),
             'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
-            'studentMaster' => fn($q) => $q->select('pk', 'display_name')
-        ])->orderBy('pk', 'desc')->newQuery();
+            'studentMaster' => fn($q) => $q->select('pk', 'display_name', 'generated_OT_code')
+        ])->orderBy('created_date', 'desc')->newQuery();
 
         // Filter by course status (Active/Archive)
         $filter = request('filter', 'active'); // Default to 'active'
@@ -181,6 +188,7 @@ public function html(): HtmlBuilder
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_date')->title('Date')->orderable(false)->searchable(false),
             Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('ot_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(false),

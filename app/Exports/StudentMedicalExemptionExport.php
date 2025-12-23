@@ -12,11 +12,13 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
     protected $filter;
     protected $courseFilter;
     protected $dateFilter;
+    protected $search;
 
-    public function __construct($filter = 'active', $courseFilter = null, $facultyFilter = null, $dateFilter = null)
+    public function __construct($filter = 'active', $courseFilter = null, $search = null, $dateFilter = null)
     {
         $this->filter = $filter;
         $this->courseFilter = $courseFilter;
+        $this->search = $search;
         $this->dateFilter = $dateFilter;
     }
 
@@ -52,6 +54,36 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
                       $q->where('to_date', '>=', $currentDate)
                         ->orWhereNull('to_date');
                   });
+        }
+        
+        // Search functionality
+        if ($this->search && $this->search != '') {
+            $query->where(function($q) {
+                // Search in student name
+                $q->whereHas('student', function($studentQuery) {
+                    $studentQuery->where('display_name', 'like', '%' . $this->search . '%')
+                                 ->orWhere('generated_OT_code', 'like', '%' . $this->search . '%');
+                })
+                // Search in course name
+                ->orWhereHas('course', function($courseQuery) {
+                    $courseQuery->where('course_name', 'like', '%' . $this->search . '%');
+                })
+                // Search in employee name
+                ->orWhereHas('employee', function($employeeQuery) {
+                    $employeeQuery->where('first_name', 'like', '%' . $this->search . '%')
+                                  ->orWhere('last_name', 'like', '%' . $this->search . '%');
+                })
+                // Search in category name
+                ->orWhereHas('category', function($categoryQuery) {
+                    $categoryQuery->where('exemp_category_name', 'like', '%' . $this->search . '%');
+                })
+                // Search in speciality name
+                ->orWhereHas('speciality', function($specialityQuery) {
+                    $specialityQuery->where('speciality_name', 'like', '%' . $this->search . '%');
+                })
+                // Search in OPD category
+                ->orWhere('opd_category', 'like', '%' . $this->search . '%');
+            });
         }
         
         $data = $query->orderBy('pk', 'desc')->get();

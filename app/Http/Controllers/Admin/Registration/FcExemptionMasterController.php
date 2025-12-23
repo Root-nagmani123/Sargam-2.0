@@ -250,6 +250,7 @@ class FcExemptionMasterController extends Controller
             ->when($appType, function ($query, $appType) {
                 return $query->where('d.application_type', $appType);
             })
+            ->orderBy('d.created_date', 'desc')
             ->get();
 
 
