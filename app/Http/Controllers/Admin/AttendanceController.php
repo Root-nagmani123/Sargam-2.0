@@ -299,12 +299,17 @@ $currentPath = $segments[1] ?? null;
                 ? Carbon::parse($courseGroup->timetable->START_DATE)->format('d-m-Y') 
                 : 'N/A';
             $sessionTime = optional($courseGroup->timetable)->class_session ?? 'N/A';
+            
+            // Pass timetable information for exemption checking
+            $timetable = $courseGroup->timetable;
+            $timetableDate = $timetable ? $timetable->START_DATE : null;
+            $timetableClassSession = $timetable ? $timetable->class_session : null;
 
             // Generate filename
             $filename = 'Attendance_' . str_replace(' ', '_', $courseName) . '_' . date('YmdHis') . '.xlsx';
 
             return Excel::download(
-                new AttendanceDataExport($students, $courseName, $topicName, $facultyName, $topicDate, $sessionTime),
+                new AttendanceDataExport($students, $courseName, $topicName, $facultyName, $topicDate, $sessionTime, $course_pk, $group_pk, $timetable_pk, $timetableDate, $timetableClassSession),
                 $filename
             );
         } catch (\Exception $e) {
