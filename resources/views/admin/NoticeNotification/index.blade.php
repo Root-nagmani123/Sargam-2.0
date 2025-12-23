@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid">
     <x-breadcrum title="Notice notification List"></x-breadcrum>
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <div class="row">
                 <div class="col-6">

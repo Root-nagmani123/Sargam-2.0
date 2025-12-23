@@ -36,4 +36,9 @@ return [
     'from' => env('TWILIO_FROM'),
 ],
 
+'moodle' => [
+        'key' => env('MOODLE_SHARED_KEY'),
+        'iv'  => env('MOODLE_SHARED_IV'),
+    ],
+
 ];
