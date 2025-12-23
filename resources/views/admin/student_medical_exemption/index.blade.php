@@ -252,7 +252,7 @@
                                     <th class="col">Student</th>
                                     <th class="col">OT Code</th>
                                     <th class="col">Course</th>
-                                    <th class="col">Faculty</th>
+                                    <th class="col">Assigned by</th>
                                     <th class="col">Category</th>
                                     <th class="col">Medical Speciality</th>
                                     <th class="col">From-To</th>
