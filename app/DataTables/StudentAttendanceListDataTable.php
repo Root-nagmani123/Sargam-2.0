@@ -9,7 +9,6 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
-use Carbon\Carbon;
 
 class StudentAttendanceListDataTable extends DataTable
 {
@@ -106,13 +105,16 @@ class StudentAttendanceListDataTable extends DataTable
             ['timetable_pk', '=', $this->timetable_pk]
         ])->first();
 
+        // First check if attendance is already marked with this status value
         $checked = ($courseStudent && $courseStudent->status == $value) ? 'checked' : '';
+        
+        // Even if attendance is marked, we should still check for duty/exemption to show radio buttons
+        // But only if this radio button is not already checked
+        if (!$checked) {
+            $timetable = Timetable::select('START_DATE', 'class_session')->where('pk', $this->timetable_pk)->first();
             
-        if (!$courseStudent && !$checked) {
-            $timetable = Timetable::with('classSession')->where('pk', $this->timetable_pk)->first();
-            
-            if(!empty($timetable) && !empty($timetable->START_DATE)) {
-                // Handle Medical Exemption (value 6) - stored in StudentMedicalExemption table (date only, no time)
+            if(!empty($timetable)) {
+                // Handle Medical Exemption (value 6) - stored in StudentMedicalExemption table
                 if ($value == 6) {
                     $medicalExemption = StudentMedicalExemption::where([
                         ['course_master_pk', '=', $this->course_pk],
@@ -121,21 +123,32 @@ class StudentAttendanceListDataTable extends DataTable
                     ])
                     ->where(function($query) use ($timetable) {
                         $query->where(function($q) use ($timetable) {
-                            // Check if date falls within the exemption period
-                            $q->where('from_date', '<=', $timetable->START_DATE)
+                            // Check if date falls within the exemption period (date only)
+                            $q->whereDate('from_date', '<=', $timetable->START_DATE)
                               ->where(function($subQ) use ($timetable) {
                                   $subQ->whereNull('to_date')
-                                       ->orWhere('to_date', '>=', $timetable->START_DATE);
+                                       ->orWhereDate('to_date', '>=', $timetable->START_DATE);
                               });
                         });
                     })->first();
 
                     if ($medicalExemption) {
-                        $checked = 'checked';
+                        // Extract time from from_date and to_date, then check time overlap with class_session
+                        $exemptionTimeFrom = $medicalExemption->from_date ? date('H:i:s', strtotime($medicalExemption->from_date)) : null;
+                        $exemptionTimeTo = $medicalExemption->to_date ? date('H:i:s', strtotime($medicalExemption->to_date)) : null;
+                        
+                        if ($exemptionTimeFrom && $exemptionTimeTo) {
+                            // Check if class_session time overlaps with medical exemption time range
+                            if ($this->checkTimeOverlap($timetable->class_session, $exemptionTimeFrom, $exemptionTimeTo)) {
+                                $checked = 'checked';
+                            }
+                        } else {
+                            // If times are not available, just check date match
+                            $checked = 'checked';
+                        }
                     }
                 } else {
                     // Handle MDO, Escort, and Other exemptions (values 4, 5, 7) - stored in MDOEscotDutyMap
-                    // Check date and time overlap with session time
                     $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
                     
                     match ($value) {
@@ -146,31 +159,17 @@ class StudentAttendanceListDataTable extends DataTable
                     };
 
                     if ($dutyType !== null && $dutyType > 0) {
-                        $mdoEscotRecords = MDOEscotDutyMap::where([
+                        $mdoEscot = MDOEscotDutyMap::where([
                             ['course_master_pk', '=', $this->course_pk],
                             ['mdo_duty_type_master_pk', '=', $dutyType],
                             ['selected_student_list', '=', $studentId]
                         ])
-                        ->whereDate('mdo_date', '=', $timetable->START_DATE)
-                        ->get();
+                        ->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
 
-                        // Get manual session time if classSession is not available (for manual sessions)
-                        $manualSessionTime = null;
-                        if (empty($timetable->classSession) && !empty($timetable->class_session)) {
-                            $manualSessionTime = $timetable->class_session;
-                        }
-
-                        // Check if any record has time overlap with session time
-                        foreach ($mdoEscotRecords as $mdoEscot) {
-                            if ($this->checkTimeOverlap(
-                                $timetable->classSession?->start_time,
-                                $timetable->classSession?->end_time,
-                                $mdoEscot->Time_from,
-                                $mdoEscot->Time_to,
-                                $manualSessionTime
-                            )) {
+                        if ($mdoEscot) {
+                            // Check if class_session time overlaps with duty Time_from and Time_to
+                            if ($this->checkTimeOverlap($timetable->class_session, $mdoEscot->Time_from, $mdoEscot->Time_to)) {
                                 $checked = 'checked';
-                                break;
                             }
                         }
                     }
@@ -236,85 +235,55 @@ class StudentAttendanceListDataTable extends DataTable
      */
     protected function hasExemptionOrDuty(int $studentId): bool
     {
-        $timetable = Timetable::with('classSession')->where('pk', $this->timetable_pk)->first();
+        $timetable = Timetable::select('START_DATE', 'class_session')->where('pk', $this->timetable_pk)->first();
         
-        if (empty($timetable) || empty($timetable->START_DATE)) {
+        if (empty($timetable)) {
             return false;
         }
 
         $timetableDate = $timetable->START_DATE;
         $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
 
-        // Get manual session time if classSession is not available (for manual sessions)
-        $manualSessionTime = null;
-        if (empty($timetable->classSession) && !empty($timetable->class_session)) {
-            $manualSessionTime = $timetable->class_session;
-        }
-
         // Check for MDO duty (value 4)
         if (!empty($mdoDutyTypes['mdo'])) {
-            $mdoDutyRecords = MDOEscotDutyMap::where([
+            $mdoDuty = MDOEscotDutyMap::where([
                 ['course_master_pk', '=', $this->course_pk],
                 ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
                 ['selected_student_list', '=', $studentId]
-            ])->whereDate('mdo_date', '=', $timetableDate)->get();
+            ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-            foreach ($mdoDutyRecords as $mdoDuty) {
-                if ($this->checkTimeOverlap(
-                    $timetable->classSession?->start_time,
-                    $timetable->classSession?->end_time,
-                    $mdoDuty->Time_from,
-                    $mdoDuty->Time_to,
-                    $manualSessionTime
-                )) {
-                    return true;
-                }
+            if ($mdoDuty && $this->checkTimeOverlap($timetable->class_session, $mdoDuty->Time_from, $mdoDuty->Time_to)) {
+                return true;
             }
         }
 
         // Check for Escort duty (value 5)
         if (!empty($mdoDutyTypes['escort'])) {
-            $escortDutyRecords = MDOEscotDutyMap::where([
+            $escortDuty = MDOEscotDutyMap::where([
                 ['course_master_pk', '=', $this->course_pk],
                 ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
                 ['selected_student_list', '=', $studentId]
-            ])->whereDate('mdo_date', '=', $timetableDate)->get();
+            ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-            foreach ($escortDutyRecords as $escortDuty) {
-                if ($this->checkTimeOverlap(
-                    $timetable->classSession?->start_time,
-                    $timetable->classSession?->end_time,
-                    $escortDuty->Time_from,
-                    $escortDuty->Time_to,
-                    $manualSessionTime
-                )) {
-                    return true;
-                }
+            if ($escortDuty && $this->checkTimeOverlap($timetable->class_session, $escortDuty->Time_from, $escortDuty->Time_to)) {
+                return true;
             }
         }
 
         // Check for Other Exemption (value 7)
         if (!empty($mdoDutyTypes['other'])) {
-            $otherExemptionRecords = MDOEscotDutyMap::where([
+            $otherExemption = MDOEscotDutyMap::where([
                 ['course_master_pk', '=', $this->course_pk],
                 ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
                 ['selected_student_list', '=', $studentId]
-            ])->whereDate('mdo_date', '=', $timetableDate)->get();
+            ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-            foreach ($otherExemptionRecords as $otherExemption) {
-                if ($this->checkTimeOverlap(
-                    $timetable->classSession?->start_time,
-                    $timetable->classSession?->end_time,
-                    $otherExemption->Time_from,
-                    $otherExemption->Time_to,
-                    $manualSessionTime
-                )) {
-                    return true;
-                }
+            if ($otherExemption && $this->checkTimeOverlap($timetable->class_session, $otherExemption->Time_from, $otherExemption->Time_to)) {
+                return true;
             }
         }
 
-        // Check for Medical Exemption (value 6) - date only, no time
+        // Check for Medical Exemption (value 6)
         $medicalExemption = StudentMedicalExemption::where([
             ['course_master_pk', '=', $this->course_pk],
             ['student_master_pk', '=', $studentId],
@@ -322,118 +291,166 @@ class StudentAttendanceListDataTable extends DataTable
         ])
         ->where(function($query) use ($timetableDate) {
             $query->where(function($q) use ($timetableDate) {
-                // Check if date falls within the exemption period
-                $q->where('from_date', '<=', $timetableDate)
+                // Check if date falls within the exemption period (date only)
+                $q->whereDate('from_date', '<=', $timetableDate)
                   ->where(function($subQ) use ($timetableDate) {
                       $subQ->whereNull('to_date')
-                           ->orWhere('to_date', '>=', $timetableDate);
+                           ->orWhereDate('to_date', '>=', $timetableDate);
                   });
             });
-        })->exists();
+        })->first();
 
         if ($medicalExemption) {
-            return true;
+            // Extract time from from_date and to_date, then check time overlap with class_session
+            $exemptionTimeFrom = $medicalExemption->from_date ? date('H:i:s', strtotime($medicalExemption->from_date)) : null;
+            $exemptionTimeTo = $medicalExemption->to_date ? date('H:i:s', strtotime($medicalExemption->to_date)) : null;
+            
+            if ($exemptionTimeFrom && $exemptionTimeTo) {
+                // Check if class_session time overlaps with medical exemption time range
+                if ($this->checkTimeOverlap($timetable->class_session, $exemptionTimeFrom, $exemptionTimeTo)) {
+                    return true;
+                }
+            } else {
+                // If times are not available, just check date match
+                return true;
+            }
         }
 
         return false;
     }
 
     /**
-     * Check if two time ranges overlap
+     * Check if class_session time overlaps with duty Time_from and Time_to
+     * Returns true if class session time falls within duty time range
      * 
-     * @param string|null $sessionStart Session start time (H:i:s format) or null for manual sessions
-     * @param string|null $sessionEnd Session end time (H:i:s format) or null for manual sessions
-     * @param string|null $exemptionStart Exemption start time (H:i format)
-     * @param string|null $exemptionEnd Exemption end time (H:i format)
-     * @param string|null $manualSessionTime Manual session time string (e.g., "13:05 - 14:00" or "01:05 PM - 02:00 PM")
+     * @param string|null $classSession - Can be "10:35 AM - 11:30 AM" format or ClassSessionMaster PK
+     * @param string|null $dutyTimeFrom - Duty time from (H:i format, e.g., "14:05:00")
+     * @param string|null $dutyTimeTo - Duty time to (H:i format, e.g., "15:07:00")
      * @return bool
      */
-    protected function checkTimeOverlap(?string $sessionStart, ?string $sessionEnd, ?string $exemptionStart, ?string $exemptionEnd, ?string $manualSessionTime = null): bool
+    protected function checkTimeOverlap(?string $classSession, ?string $dutyTimeFrom, ?string $dutyTimeTo): bool
     {
-        // If exemption times are not available, fall back to date-only check (return true)
-        if (empty($exemptionStart) || empty($exemptionEnd)) {
-            return true; // If no exemption time info, consider it overlapping (date match is enough)
+        if (empty($classSession) || empty($dutyTimeFrom) || empty($dutyTimeTo)) {
+            return false;
         }
 
-        // Parse session times - either from classSession relationship or manual session string
-        $parsedSessionStart = null;
-        $parsedSessionEnd = null;
+        // Parse class_session to get start and end times
+        $classSessionTimes = $this->parseClassSession($classSession);
+        if (!$classSessionTimes) {
+            return false;
+        }
 
-        if (!empty($sessionStart) && !empty($sessionEnd)) {
-            // Normal session with classSession relationship
-            $parsedSessionStart = $sessionStart;
-            $parsedSessionEnd = $sessionEnd;
-        } elseif (!empty($manualSessionTime)) {
-            // Manual session - parse the time string
-            // Format examples: "13:05 - 14:00" or "01:05 PM - 02:00 PM"
-            $parsedTimes = $this->parseManualSessionTime($manualSessionTime);
-            if ($parsedTimes) {
-                $parsedSessionStart = $parsedTimes['start'];
-                $parsedSessionEnd = $parsedTimes['end'];
+        $classStartTime = $classSessionTimes['start'];
+        $classEndTime = $classSessionTimes['end'];
+
+        // Convert duty times to seconds for comparison
+        $dutyStartSeconds = $this->timeToSeconds($dutyTimeFrom);
+        $dutyEndSeconds = $this->timeToSeconds($dutyTimeTo);
+        $classStartSeconds = $this->timeToSeconds($classStartTime);
+        $classEndSeconds = $this->timeToSeconds($classEndTime);
+
+        if ($dutyStartSeconds === false || $dutyEndSeconds === false || 
+            $classStartSeconds === false || $classEndSeconds === false) {
+            return false;
+        }
+
+        // Check if class session time overlaps with duty time range
+        // Class session time should overlap with duty Time_from and Time_to for radio to reflect
+        // Example: class_session (10:35 to 11:30) does NOT overlap with duty (14:05 to 15:07), so no radio
+        // But if class_session (14:10 to 14:50) overlaps with duty (14:05 to 15:07), radio will reflect
+        return ($classStartSeconds <= $dutyEndSeconds && $classEndSeconds >= $dutyStartSeconds);
+    }
+
+    /**
+     * Parse class_session string to extract start and end times
+     * Handles formats like: "10:35 AM - 11:30 AM", "10:35 - 11:30", "10:35:00 - 11:30:00"
+     * Also handles if class_session is a PK reference to ClassSessionMaster
+     * 
+     * @param string|null $classSession
+     * @return array|null Returns ['start' => 'HH:MM', 'end' => 'HH:MM'] or null
+     */
+    protected function parseClassSession(?string $classSession): ?array
+    {
+        if (empty($classSession)) {
+            return null;
+        }
+
+        // Check if class_session is a numeric ID (PK reference to ClassSessionMaster)
+        if (is_numeric($classSession)) {
+            $classSessionMaster = \App\Models\ClassSessionMaster::find($classSession);
+            if ($classSessionMaster && $classSessionMaster->start_time && $classSessionMaster->end_time) {
+                return [
+                    'start' => date('H:i', strtotime($classSessionMaster->start_time)),
+                    'end' => date('H:i', strtotime($classSessionMaster->end_time))
+                ];
+            }
+            return null;
+        }
+
+        // Parse string format like "10:35 AM - 11:30 AM" or "10:35 - 11:30"
+        // Handle both "to" and "-" separators
+        $separators = [' - ', ' to ', '-'];
+        $timeParts = null;
+        
+        foreach ($separators as $separator) {
+            if (strpos($classSession, $separator) !== false) {
+                $parts = explode($separator, $classSession);
+                if (count($parts) === 2) {
+                    $timeParts = [
+                        'start' => trim($parts[0]),
+                        'end' => trim($parts[1])
+                    ];
+                    break;
+                }
             }
         }
 
-        // If session times are still not available, fall back to date-only check (return true)
-        if (empty($parsedSessionStart) || empty($parsedSessionEnd)) {
-            return true; // If no session time info, consider it overlapping (date match is enough)
+        if (!$timeParts) {
+            return null;
         }
 
+        // Convert times to H:i format (24-hour)
         try {
-            // Convert times to Carbon instances for comparison (normalize to same date for comparison)
-            $baseDate = Carbon::today();
-            $sessionStartTime = Carbon::parse($baseDate->format('Y-m-d') . ' ' . $parsedSessionStart);
-            $sessionEndTime = Carbon::parse($baseDate->format('Y-m-d') . ' ' . $parsedSessionEnd);
+            $startTime = date('H:i', strtotime($timeParts['start']));
+            $endTime = date('H:i', strtotime($timeParts['end']));
             
-            // Handle Time_from and Time_to which may be in H:i format
-            $exemptionStartTime = Carbon::parse($baseDate->format('Y-m-d') . ' ' . $exemptionStart);
-            $exemptionEndTime = Carbon::parse($baseDate->format('Y-m-d') . ' ' . $exemptionEnd);
-
-            // Two time ranges overlap if: start1 < end2 AND start2 < end1
-            return $exemptionStartTime->lt($sessionEndTime) && $exemptionEndTime->gt($sessionStartTime);
+            return [
+                'start' => $startTime,
+                'end' => $endTime
+            ];
         } catch (\Exception $e) {
-            // If time parsing fails, fall back to date-only check
-            return true;
+            return null;
         }
     }
 
     /**
-     * Parse manual session time string to extract start and end times
+     * Convert time string to seconds for easy comparison
+     * Handles formats: "H:i:s", "H:i", "h:i A", etc.
      * 
-     * @param string $manualSessionTime Manual session time string (e.g., "13:05 - 14:00" or "01:05 PM - 02:00 PM")
-     * @return array|null Array with 'start' and 'end' keys in H:i format, or null if parsing fails
+     * @param string|null $time
+     * @return int|false Returns seconds since midnight or false on error
      */
-    protected function parseManualSessionTime(string $manualSessionTime): ?array
+    protected function timeToSeconds(?string $time): int|false
     {
-        // Remove extra spaces and split by common delimiters
-        $cleaned = trim($manualSessionTime);
-        
-        // Try splitting by " - " (common format)
-        if (strpos($cleaned, ' - ') !== false) {
-            $parts = explode(' - ', $cleaned);
-        } elseif (strpos($cleaned, '-') !== false) {
-            $parts = explode('-', $cleaned);
-        } else {
-            return null;
+        if (empty($time)) {
+            return false;
         }
-
-        if (count($parts) !== 2) {
-            return null;
-        }
-
-        $start = trim($parts[0]);
-        $end = trim($parts[1]);
 
         try {
-            // Convert to 24-hour format if in 12-hour format
-            $startTime = Carbon::parse($start);
-            $endTime = Carbon::parse($end);
+            // Try to parse the time string
+            $timestamp = strtotime($time);
+            if ($timestamp === false) {
+                return false;
+            }
 
-            return [
-                'start' => $startTime->format('H:i:s'),
-                'end' => $endTime->format('H:i:s')
-            ];
+            // Extract hours, minutes, seconds
+            $hours = (int)date('H', $timestamp);
+            $minutes = (int)date('i', $timestamp);
+            $seconds = (int)date('s', $timestamp);
+
+            return ($hours * 3600) + ($minutes * 60) + $seconds;
         } catch (\Exception $e) {
-            return null;
+            return false;
         }
     }
 
