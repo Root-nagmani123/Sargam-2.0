@@ -9,6 +9,8 @@ use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimeta
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
 use App\DataTables\StudentAttendanceListDataTable;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\AttendanceDataExport;
 
 class AttendanceController extends Controller
 {
@@ -254,6 +256,60 @@ $currentPath = $segments[1] ?? null;
         } catch (\Exception $e) {
             \Log::error('Error fetching attendance data: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
+        }
+    }
+
+    public function export($group_pk, $course_pk, $timetable_pk)
+    {
+        try {
+            $courseGroup = CourseGroupTimetableMapping::with([
+                'course:pk,course_name',
+                'timetable',
+                'timetable.faculty:pk,full_name',
+                'timetable.classSession:pk,start_time,end_time'
+            ])
+                ->where('group_pk', $group_pk)
+                ->where('Programme_pk', $course_pk)
+                ->where('timetable_pk', $timetable_pk)
+                ->first();
+
+            if (!$courseGroup) {
+                return redirect()->back()->with('error', 'Course group not found.');
+            }
+
+            // Get the same data as the DataTable
+            $groupTypeMaster = GroupTypeMasterCourseMasterMap::where('pk', $group_pk)
+                ->where('course_name', $course_pk)
+                ->firstOrFail();
+
+            $students = StudentCourseGroupMap::with([
+                'studentsMaster:display_name,generated_OT_code,pk',
+                'attendance' => fn($q) => $q->where('course_master_pk', $course_pk)
+                                          ->where('group_type_master_course_master_map_pk', $group_pk)
+                                          ->where('timetable_pk', $timetable_pk)
+            ])
+            ->where('group_type_master_course_master_map_pk', $groupTypeMaster->pk)
+            ->get();
+
+            // Prepare export data
+            $courseName = optional($courseGroup->course)->course_name ?? 'N/A';
+            $topicName = optional($courseGroup->timetable)->subject_topic ?? 'N/A';
+            $facultyName = optional($courseGroup->timetable)->faculty->full_name ?? 'N/A';
+            $topicDate = !empty(optional($courseGroup->timetable)->START_DATE) 
+                ? Carbon::parse($courseGroup->timetable->START_DATE)->format('d-m-Y') 
+                : 'N/A';
+            $sessionTime = optional($courseGroup->timetable)->class_session ?? 'N/A';
+
+            // Generate filename
+            $filename = 'Attendance_' . str_replace(' ', '_', $courseName) . '_' . date('YmdHis') . '.xlsx';
+
+            return Excel::download(
+                new AttendanceDataExport($students, $courseName, $topicName, $facultyName, $topicDate, $sessionTime),
+                $filename
+            );
+        } catch (\Exception $e) {
+            \Log::error('Error exporting attendance data: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while exporting attendance data: ' . $e->getMessage());
         }
     }
 

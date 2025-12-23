@@ -309,6 +309,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('mark');
         Route::post('/save', 'save')->name('save');
+        Route::get('/export/{group_pk}/{course_pk}/{timetable_pk}', 'export')->name('export');
 
         Route::get('/user_attendance', 'index')->name('user_attendance.index');
         Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}', 'markAttendanceView')->name('student_mark');
