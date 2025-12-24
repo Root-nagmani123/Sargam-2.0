@@ -249,14 +249,14 @@ class FacultyController extends Controller
                 'data' => $faculty
             ]);*/
 
-                return response()->json([
-                'status' => true,
-                'message' => $request->faculty_id
-                    ? 'Faculty updated successfully'
-                    : 'Faculty created successfully',
-                'redirect' => route('faculty.index'),
-                'data' => $faculty
-            ]);
+            return response()->json([
+			'status' => true,
+			'message' => $request->faculty_id
+				? 'Faculty updated successfully'
+				: 'Faculty created successfully',
+			'redirect' => route('faculty.index'),
+			'data' => $faculty
+		]);
 
              //return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
