@@ -39,8 +39,8 @@ class FacultyController extends Controller
         return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
     }
 
-        //public function store(FacultyRequest $request)
-        public function store(Request $request)
+        public function store(FacultyRequest $request)
+       // public function store(Request $request)
         { //FacultyRequest
             try {
 
@@ -243,18 +243,27 @@ class FacultyController extends Controller
                 }
             }
             DB::commit();
-            return response()->json([
+            /*return response()->json([
                 'status' => true,
                 'message' => 'Faculty created successfully',
                 'data' => $faculty
+            ]);*/
+
+                return response()->json([
+                'status' => true,
+                'message' => $request->faculty_id
+                    ? 'Faculty updated successfully'
+                    : 'Faculty created successfully',
+                'redirect' => route('faculty.index'),
+                'data' => $faculty
             ]);
 
-            // return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
+             //return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            dump($e->getLine());
-            dd('' . $e->getMessage());
-            return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
+           // dump($e->getLine());
+           // dd('' . $e->getMessage());
+            return redirect()->back()->with('error', ' controller Something went wrong: ' . $e->getMessage());
         }
     }
 
