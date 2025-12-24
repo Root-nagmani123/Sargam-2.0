@@ -336,6 +336,28 @@ document.addEventListener('DOMContentLoaded', function () {
     internalFacultyDiv.style.display = 'none'; // Hide initially
     const faculty_type = document.getElementById('faculty_type');
 
+    // Initialize Select2 when modal is shown
+    $('#eventModal').on('shown.bs.modal', function () {
+        if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
+            $('#internal_faculty').select2({
+                placeholder: 'Select Internal Faculty',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#eventModal')
+            });
+        }
+        
+        // Update visibility based on current faculty type selection
+        updateinternal_faculty(faculty_type.value);
+    });
+
+    // Destroy Select2 when modal is hidden to prevent conflicts
+    $('#eventModal').on('hidden.bs.modal', function () {
+        if ($('#internal_faculty').hasClass('select2-hidden-accessible')) {
+            $('#internal_faculty').select2('destroy');
+        }
+    });
+
     // Example: Show internal faculty when a specific group type is selected
     facultySelect.addEventListener('change', function () {
         const facultyType = document.getElementById('faculty_type').value;
@@ -357,28 +379,10 @@ document.addEventListener('DOMContentLoaded', function () {
             case '2': // Guest
                 console.log('guest');
                 internalFacultyDiv.style.display = 'block';
-                // Reinitialize Select2 after showing the div
-                if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
-                    $('#internal_faculty').select2({
-                        placeholder: 'Select Internal Faculty',
-                        allowClear: true,
-                        width: '100%',
-                        dropdownParent: $('#eventModal')
-                    });
-                }
                 break;
             default: // Research/Other
                 console.log('rtyuio');
                 internalFacultyDiv.style.display = 'block';
-                // Reinitialize Select2 after showing the div
-                if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
-                    $('#internal_faculty').select2({
-                        placeholder: 'Select Internal Faculty',
-                        allowClear: true,
-                        width: '100%',
-                        dropdownParent: $('#eventModal')
-                    });
-                }
         }
     }
 });
