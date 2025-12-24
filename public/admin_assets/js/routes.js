@@ -1,4 +1,8 @@
-let baseUrl = window.location.origin;
+//let baseUrl = window.location.origin;
+const baseUrl = document
+    .querySelector('meta[name="app-url"]')
+    .getAttribute('content');
+
 const routes = {
     'toggleStatus': baseUrl + '/admin/toggle-status',
     'groupMappingExcelUpload': baseUrl + '/group-mapping/import-group-mapping',
