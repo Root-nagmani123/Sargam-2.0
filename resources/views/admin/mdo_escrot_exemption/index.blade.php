@@ -88,7 +88,7 @@
                         </div>
                         
                         <!-- Year Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label for="year_filter" class="form-label fw-semibold">Year:</label>
                             <select id="year_filter" class="form-select">
                                 <option value="">-- All Years --</option>
@@ -109,17 +109,20 @@
                             </select>
                         </div>
                         
-                        <!-- Date Filter -->
+                        <!-- From Date Filter -->
                         <div class="col-md-2">
-                            <label for="date_filter" class="form-label fw-semibold">Date Filter:</label>
-                            <select id="date_filter" class="form-select">
-                                <option value="">-- All Dates --</option>
-                                <option value="today" {{ request('date_filter') === 'today' ? 'selected' : '' }}>Today</option>
-                            </select>
+                            <label for="from_date_filter" class="form-label fw-semibold">From Date:</label>
+                            <input type="date" id="from_date_filter" class="form-control" value="{{ request('from_date_filter') }}">
+                        </div>
+                        
+                        <!-- To Date Filter -->
+                        <div class="col-md-2">
+                            <label for="to_date_filter" class="form-label fw-semibold">To Date:</label>
+                            <input type="date" id="to_date_filter" class="form-control" value="{{ request('to_date_filter') }}">
                         </div>
                         
                         <!-- Time From Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label for="time_from_filter" class="form-label fw-semibold">Time From:</label>
                             <input type="time" id="time_from_filter" class="form-control">
                         </div>
@@ -133,7 +136,15 @@
                     
                     <!-- Active/Archive Buttons Row -->
                     <div class="row mb-3">
-                        <div class="col-md-12 text-end">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-block">&nbsp;</label>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary fs-6 px-3 py-2 d-inline-flex align-items-center">
+                                    <i class="bi bi-list-check me-2"></i> Total Records: <strong class="ms-1" id="total-records-count">0</strong>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
                             <label class="form-label fw-semibold d-block">&nbsp;</label>
                             <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                 aria-label="Course Status Filter">
@@ -161,9 +172,13 @@
                                         $activeParams['time_to_filter'] = request('time_to_filter');
                                         $archiveParams['time_to_filter'] = request('time_to_filter');
                                     }
-                                    if (request('date_filter')) {
-                                        $activeParams['date_filter'] = request('date_filter');
-                                        $archiveParams['date_filter'] = request('date_filter');
+                                    if (request('from_date_filter')) {
+                                        $activeParams['from_date_filter'] = request('from_date_filter');
+                                        $archiveParams['from_date_filter'] = request('from_date_filter');
+                                    }
+                                    if (request('to_date_filter')) {
+                                        $activeParams['to_date_filter'] = request('to_date_filter');
+                                        $archiveParams['to_date_filter'] = request('to_date_filter');
                                     }
                                 @endphp
                                 <a href="{{ route('mdo-escrot-exemption.index', $activeParams) }}"
@@ -199,9 +214,15 @@
 <script>
 $(document).ready(function() {
     var table = $('#mdoescot-table').DataTable();
+    
+    // Update total records count on initial load and after each draw
+    table.on('draw.dt', function() {
+        var info = table.page.info();
+        $('#total-records-count').text(info.recordsFiltered || info.recordsTotal || 0);
+    });
 
     // Reload DataTable on filter change
-    $('#course_filter, #year_filter, #duty_type_filter, #date_filter').on('change', function() {
+    $('#course_filter, #year_filter, #duty_type_filter, #from_date_filter, #to_date_filter').on('change', function() {
         table.ajax.reload();
     });
 
@@ -218,7 +239,8 @@ $(document).ready(function() {
         data.duty_type_filter = $('#duty_type_filter').val();
         data.time_from_filter = $('#time_from_filter').val();
         data.time_to_filter = $('#time_to_filter').val();
-        data.date_filter = $('#date_filter').val();
+        data.from_date_filter = $('#from_date_filter').val();
+        data.to_date_filter = $('#to_date_filter').val();
     });
 
     // Print / Download functionality

@@ -25,14 +25,19 @@ class CalendarController extends Controller
 
         $courseMaster = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now())
-            ->select('pk', 'course_name')
+            ->select('pk', 'course_name','couse_short_name','course_year')
             ->get();
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
             ->select('pk', 'faculty_type', 'full_name')
             ->orderby('full_name', 'ASC')
             ->get();
-
+        $internal_faculty = FacultyMaster::where('active_inactive', 1)
+        ->where('faculty_type', 1) // Internal Faculty
+            ->select('pk', 'faculty_type', 'full_name')
+            ->orderby('full_name', 'ASC')
+            ->get();
+    
         $subjects = SubjectModuleMaster::where('active_inactive', 1)
             ->select('pk', 'module_name')
             ->get();
@@ -48,13 +53,15 @@ class CalendarController extends Controller
             ->get();
         // print_r($classSessionMaster);die;
 
+         
         return view('admin.calendar.index', compact(
             'courseMaster',
             'facultyMaster',
             'subjects',
             'venueMaster',
-            'classSessionMaster'
-        ));
+            'classSessionMaster',
+            'internal_faculty'
+        )); 
     }
     public function weeklyTimetable(Request $request)
     {
@@ -155,6 +162,7 @@ class CalendarController extends Controller
         $event->group_name = json_encode($request->type_names ?? []);
         $event->faculty_master = $request->faculty;
         $event->faculty_type = $request->faculty_type;
+        $event->internal_faculty = json_encode($request->internal_faculty ?? []);
         $event->venue_id = $request->vanue;
         // $event->START_DATE = $request->start_datetime;
         $event->START_DATE = Carbon::parse($request->start_datetime)

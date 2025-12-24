@@ -147,11 +147,16 @@ HTML;
             $query->where('mdo_duty_type_master_pk', $dutyTypeFilter);
         }
 
-        // Apply date filter if provided
-        $dateFilter = request('date_filter');
-        if ($dateFilter === 'today') {
-            // Show records where mdo_date is today
-            $query->whereDate('mdo_date', $currentDate);
+        // Apply date range filter if provided
+        $fromDateFilter = request('from_date_filter');
+        $toDateFilter = request('to_date_filter');
+        
+        if ($fromDateFilter) {
+            $query->whereDate('mdo_date', '>=', $fromDateFilter);
+        }
+        
+        if ($toDateFilter) {
+            $query->whereDate('mdo_date', '<=', $toDateFilter);
         }
 
         return $query;
