@@ -151,7 +151,8 @@
                                 <a href="{{ route('student.medical.exemption.export', [
                                     'filter' => $filter,
                                     'course_filter' => $courseFilter ?? '',
-                                    'date_filter' => $dateFilter ?? '',
+                                    'from_date_filter' => request('from_date_filter') ?? '',
+                                    'to_date_filter' => request('to_date_filter') ?? '',
                                     'search' => $search ?? ''
                                 ]) }}" class="btn btn-success d-flex align-items-center">
                                     <i class="material-icons menu-icon material-symbols-rounded"
@@ -175,7 +176,7 @@
                     <!-- Filters Section -->
                     <div class="row mb-3 align-items-end">
                         <!-- Search Filter -->
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="search" class="form-label fw-semibold">Search</label>
                             <div class="input-group">
                                 <span class="input-group-text">
@@ -188,7 +189,7 @@
                         </div>
                         
                         <!-- Course Filter -->
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label for="course_filter" class="form-label fw-semibold">Course</label>
                             <select name="course_filter" id="course_filter" class="form-select">
                                 <option value="">-- All Courses --</option>
@@ -200,34 +201,30 @@
                             </select>
                         </div>
                         
-                        <!-- Today Filter -->
+                        <!-- From Date Filter -->
                         <div class="col-md-2">
-                            <label for="date_filter" class="form-label fw-semibold">Date Filter</label>
-                            <select name="date_filter" id="date_filter" class="form-select">
-                                <option value="">-- All Dates --</option>
-                                <option value="today" {{ $dateFilter === 'today' ? 'selected' : '' }}>Today</option>
-                            </select>
-                            @if($dateFilter === 'today')
-                                <div class="mt-2">
-                                    <span class="badge bg-primary fs-6 px-3 py-2 d-inline-flex align-items-center">
-                                        <i class="bi bi-calendar-check me-1"></i> Total Today: <strong class="ms-1">{{ $todayTotalCount }}</strong>
-                                    </span>
-                                </div>
-                            @endif
+                            <label for="from_date_filter" class="form-label fw-semibold">From Date</label>
+                            <input type="date" name="from_date_filter" id="from_date_filter" class="form-control" value="{{ request('from_date_filter') }}">
+                        </div>
+                        
+                        <!-- To Date Filter -->
+                        <div class="col-md-2">
+                            <label for="to_date_filter" class="form-label fw-semibold">To Date</label>
+                            <input type="date" name="to_date_filter" id="to_date_filter" class="form-control" value="{{ request('to_date_filter') }}">
                         </div>
                         
                         <!-- Reset Button -->
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label class="form-label fw-semibold d-block">&nbsp;</label>
                             <a href="{{ route('student.medical.exemption.index', ['filter' => 'active']) }}"
                                 class="btn btn-outline-danger w-100 fw-semibold"
                                 title="Reset all filters">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                             </a>
                         </div>
                         
                         <!-- Active/Archive Buttons -->
-                        <div class="col-md-2 text-end">
+                        <div class="col-md-3 text-end">
                             <div class="d-flex align-items-center justify-content-end gap-2">
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                     aria-label="Course Status Filter">
@@ -238,9 +235,13 @@
                                             $activeParams['course_filter'] = $courseFilter;
                                             $archiveParams['course_filter'] = $courseFilter;
                                         }
-                                        if ($dateFilter) {
-                                            $activeParams['date_filter'] = $dateFilter;
-                                            $archiveParams['date_filter'] = $dateFilter;
+                                        if (request('from_date_filter')) {
+                                            $activeParams['from_date_filter'] = request('from_date_filter');
+                                            $archiveParams['from_date_filter'] = request('from_date_filter');
+                                        }
+                                        if (request('to_date_filter')) {
+                                            $activeParams['to_date_filter'] = request('to_date_filter');
+                                            $archiveParams['to_date_filter'] = request('to_date_filter');
                                         }
                                         if (!empty($search)) {
                                             $activeParams['search'] = $search;
@@ -258,6 +259,17 @@
                                         <i class="bi bi-archive me-1"></i> Archive
                                     </a>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Total Records Count Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary fs-6 px-3 py-2 d-inline-flex align-items-center">
+                                    <i class="bi bi-list-check me-2"></i> Total Records: <strong class="ms-1">{{ $records->total() }}</strong>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -348,7 +360,7 @@
                                                 search_off
                                             </i>
                                             <h5 class="text-muted mb-2">No Record Found</h5>
-                                            @if($filter || $courseFilter || $dateFilter || !empty($search))
+                                            @if($filter || $courseFilter || request('from_date_filter') || request('to_date_filter') || !empty($search))
                                                 <p class="text-muted small mb-0">
                                                     No records match the applied filters. 
                                                     <a href="{{ route('student.medical.exemption.index') }}" class="text-primary">
@@ -376,7 +388,8 @@
                                 {{ $records->appends([
                                     'filter' => $filter,
                                     'course_filter' => $courseFilter,
-                                    'date_filter' => $dateFilter ?? '',
+                                    'from_date_filter' => request('from_date_filter') ?? '',
+                                    'to_date_filter' => request('to_date_filter') ?? '',
                                     'search' => $search ?? ''
                                 ])->links('pagination::bootstrap-5') }}
                             </div>
@@ -397,19 +410,24 @@ function getFilterInfo() {
     var info = [];
     var filter = '{{ $filter }}';
     var courseFilter = '';
-    var dateFilter = '';
+    var fromDateFilter = '';
+    var toDateFilter = '';
     var search = '';
     
     // Get values using vanilla JS to avoid jQuery dependency
     var courseSelect = document.getElementById('course_filter');
-    var dateSelect = document.getElementById('date_filter');
+    var fromDateInput = document.getElementById('from_date_filter');
+    var toDateInput = document.getElementById('to_date_filter');
     var searchInput = document.getElementById('search');
     
     if (courseSelect) {
         courseFilter = courseSelect.options[courseSelect.selectedIndex].text;
     }
-    if (dateSelect) {
-        dateFilter = dateSelect.options[dateSelect.selectedIndex].text;
+    if (fromDateInput && fromDateInput.value) {
+        fromDateFilter = fromDateInput.value;
+    }
+    if (toDateInput && toDateInput.value) {
+        toDateFilter = toDateInput.value;
     }
     if (searchInput) {
         search = searchInput.value;
@@ -421,8 +439,11 @@ function getFilterInfo() {
     if (courseFilter && courseFilter !== '-- All Courses --') {
         info.push('Course: ' + courseFilter);
     }
-    if (dateFilter && dateFilter !== '-- All Dates --') {
-        info.push('Date: ' + dateFilter);
+    if (fromDateFilter || toDateFilter) {
+        var dateRange = [];
+        if (fromDateFilter) dateRange.push('From: ' + fromDateFilter);
+        if (toDateFilter) dateRange.push('To: ' + toDateFilter);
+        info.push('Date Range: ' + dateRange.join(' - '));
     }
     if (search) {
         info.push('Search: ' + search);
@@ -570,7 +591,8 @@ $(document).ready(function() {
     function applyFilters() {
         var filter = '{{ $filter }}';
         var courseFilter = $('#course_filter').val();
-        var dateFilter = $('#date_filter').val();
+        var fromDateFilter = $('#from_date_filter').val();
+        var toDateFilter = $('#to_date_filter').val();
         var search = $('#search').val();
         var url = '{{ route("student.medical.exemption.index") }}';
         var params = { filter: filter };
@@ -579,8 +601,12 @@ $(document).ready(function() {
             params.course_filter = courseFilter;
         }
         
-        if (dateFilter) {
-            params.date_filter = dateFilter;
+        if (fromDateFilter) {
+            params.from_date_filter = fromDateFilter;
+        }
+        
+        if (toDateFilter) {
+            params.to_date_filter = toDateFilter;
         }
         
         if (search) {
@@ -597,8 +623,8 @@ $(document).ready(function() {
         applyFilters();
     });
     
-    // Auto-submit when date filter changes
-    $('#date_filter').on('change', function() {
+    // Auto-submit when date filters change
+    $('#from_date_filter, #to_date_filter').on('change', function() {
         applyFilters();
     });
     
