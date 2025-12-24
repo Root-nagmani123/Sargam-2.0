@@ -1384,7 +1384,7 @@ class FeedbackController extends Controller
     {
 
 
-        \Log::info('Feedback Details Request: ', $request->all());
+        // \Log::info('Feedback Details Request: ', $request->all());
         try {
             // Get filter parameters with defaults
             $programId = $request->input('program_id', '');

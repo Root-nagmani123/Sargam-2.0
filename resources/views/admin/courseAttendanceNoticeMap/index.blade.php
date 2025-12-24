@@ -1,4 +1,6 @@
 @extends('admin.layouts.master')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
 
 @section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
@@ -14,6 +16,14 @@
     --gigw-text-muted: #6c757d;
     --gigw-success: #198754;
     --gigw-white: #ffffff;
+}
+
+.blink {
+    animation: blinker 1s linear infinite;
+}
+
+@keyframes blinker {
+    50% { opacity: 0; }
 }
 
 /* Enhanced Offcanvas */
@@ -333,7 +343,6 @@
     outline: 3px solid #004a93 !important;
     border-radius: 4px;
 }
-
 </style>
 <div class="container-fluid">
        <x-breadcrum title="Notice /Memo Management" />
@@ -498,7 +507,9 @@
 
                             <!-- Topic -->
                             <td>{{ $memo->topic_name }}</td>
-
+@php
+$noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
+@endphp
                             <!-- Conversations -->
                             <td class="conversation">
                                 <div class="d-flex align-items-center gap-2 flex-nowrap">
@@ -514,6 +525,19 @@
                                     </span>
                                     @endif
                                     @endif
+                                    @if(isset($noticeCount[$noticeKey]) && ($noticeCount[$noticeKey] >= 2) && $memo->type_notice_memo != 'Memo')
+                                            <span class="position-relative d-inline-block ms-2">
+                                                <!-- Bell Icon -->
+                                                <i class="bi bi-bell-fill text-warning blink" 
+                                                title="{{ $noticeCount[$noticeKey] }} notices sent, please send memo"></i>
+
+                                                <!-- Count Badge -->
+                                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                                    {{ $noticeCount[$noticeKey] }}
+                                                </span>
+                                            </span>
+                                        @endif
+
                                     @php 
                                     $role = session()->get('role_name');
                                     @endphp
