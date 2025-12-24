@@ -632,9 +632,9 @@ table>thead {
         </div>
         @endif
         <!-- Total Guest Faculty -->
-        
- @if(hasRole('Student-OT'))
- <div class="col-lg-3 col-md-6 col-sm-12">
+
+        @if(hasRole('Student-OT'))
+        <div class="col-lg-3 col-md-6 col-sm-12">
             <a href="{{ route('ot.mdo.escrot.exemption.view') }}">
                 <div class="stat-card clean-style">
                     <div class="stat-icon icon-purple">
@@ -647,7 +647,7 @@ table>thead {
                 </div>
             </a>
         </div>
- @else
+        @else
         <!-- Total Inhouse Faculty -->
         <div class="col-lg-3 col-md-6 col-sm-12">
             <a href="{{ route('admin.dashboard.inhouse_faculty') }}">
@@ -670,7 +670,7 @@ table>thead {
     <div class="row g-4 mb-4">
         <!-- LEFT CONTENT -->
         <div class="col-lg-7">
-            <div class="content-card-modern" style="max-height:700px;">
+            <div class="content-card-modern" style="height:700px; overflow-y:auto;">
                 <div class="content-card-header-modern">
                     <h2>Admin & Campus Summary</h2>
                 </div>
@@ -696,7 +696,7 @@ table>thead {
                             if (typeof window.markAsRead === 'undefined' || window.markAsReadDashboard === undefined) {
                                 window.markAsReadDashboard = function(notificationId, clickedElement) {
                                     console.log('markAsReadDashboard called with notificationId:', notificationId);
-                                    
+
                                     // Prevent multiple clicks
                                     if (clickedElement && clickedElement.dataset.processing === 'true') {
                                         return;
@@ -704,9 +704,10 @@ table>thead {
                                     if (clickedElement) {
                                         clickedElement.dataset.processing = 'true';
                                     }
-                                    
-                                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-                                    
+
+                                    const csrfToken = document.querySelector('meta[name="csrf-token"]')
+                                        ?.getAttribute('content') || '{{ csrf_token() }}';
+
                                     fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
                                             method: 'POST',
                                             headers: {
@@ -718,7 +719,8 @@ table>thead {
                                             console.log('Response status:', response.status);
                                             return response.json().then(data => {
                                                 if (!response.ok) {
-                                                    throw new Error(data.error || 'Failed to mark notification as read');
+                                                    throw new Error(data.error ||
+                                                        'Failed to mark notification as read');
                                                 }
                                                 return data;
                                             });
@@ -730,7 +732,8 @@ table>thead {
                                             } else if (data.success) {
                                                 location.reload();
                                             } else {
-                                                console.error('Failed to mark notification as read. Response:', data);
+                                                console.error('Failed to mark notification as read. Response:',
+                                                    data);
                                                 if (clickedElement) {
                                                     clickedElement.dataset.processing = 'false';
                                                 }
@@ -756,7 +759,9 @@ table>thead {
                             @else
                             <ul style="list-style-type: disc; padding-left: 20px;">
                                 @foreach($notifications as $notification)
-                                <li style="cursor: pointer;" onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">{{ $notification->message }}</li>
+                                <li style="cursor: pointer;"
+                                    onclick="window.markAsReadDashboard({{ $notification->pk }}, this)">
+                                    {{ $notification->message }}</li>
                                 @endforeach
                             </ul>
                             @endif
@@ -787,23 +792,23 @@ table>thead {
         <!-- RIGHT NOTICE PANEL -->
         <div class="col-lg-5">
 
-            <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card shadow-sm border-0 rounded-4 h-100" style="max-height:700px; overflow-y:auto;">
                 <!-- Notice Header -->
                 <div class="card-header bg-danger text-white rounded-top-4 py-3">
                     <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
-                        <i class="bi bi-megaphone-fill me-2"></i>
+                        <i class="material-icons material-symbols-rounded me-2">campaign</i>
                         Notices
                     </h5>
                 </div>
 
                 <!-- Notice Body -->
-                <div class="card-body" style="max-height:700px; overflow-y:auto;">
+                <div class="card-body" style="overflow-y:auto;">
                     @php $notices = get_notice_notification_by_role() @endphp
                     @foreach($notices as $notice)
                     @php //print_r($notice); @endphp
                     <div class="mb-4 pb-2 border-bottom">
                         <h6 class="fw-bold">{{ $notice->notice_title }}</h6>
-                       
+
                         <small class="text-muted">Posted on:
                             {{ date('d M, Y', strtotime($notice->created_at)) }}</small>
                         @if($notice->document)
@@ -907,7 +912,7 @@ table>thead {
 // Define markAsRead function for Admin Summary notifications - Always override to ensure it works
 window.markAsRead = function(notificationId, clickedElement) {
     console.log('markAsRead called with notificationId:', notificationId);
-    
+
     // Prevent multiple clicks
     if (clickedElement && clickedElement.dataset.processing === 'true') {
         console.log('Already processing, ignoring click');
@@ -916,9 +921,10 @@ window.markAsRead = function(notificationId, clickedElement) {
     if (clickedElement) {
         clickedElement.dataset.processing = 'true';
     }
-    
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-    
+
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+        '{{ csrf_token() }}';
+
     fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
             method: 'POST',
             headers: {

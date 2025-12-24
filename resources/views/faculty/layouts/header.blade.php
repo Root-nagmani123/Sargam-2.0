@@ -430,12 +430,66 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('activeMainTab', targetId);
     }
 
+    // Activate default submenu for a pane; for Home, navigate to Dashboard
+    function activateDefaultSubmenuForPane(targetId) {
+        const candidatePanes = document.querySelectorAll(`#mainNavbarContent ${targetId}`);
+        if (!candidatePanes || candidatePanes.length === 0) return;
+
+        // Prefer the pane that contains sidebar menus
+        let pane = null;
+        candidatePanes.forEach(p => {
+            if (!pane && p.querySelector('.sidebarmenu')) pane = p;
+        });
+        // Fallback to the first if none matched
+        if (!pane) pane = candidatePanes[0];
+
+        // If Home tab, ensure Dashboard route loads by default
+        if (targetId === '#home') {
+            const dashboardUrl = '{{ route("admin.dashboard") }}';
+            try {
+                const dashPath = new URL(dashboardUrl, window.location.origin).pathname;
+                if (dashboardUrl && window.location.pathname !== dashPath) {
+                    window.location.href = dashboardUrl;
+                    return; // Navigation will handle content; skip submenu activation
+                }
+            } catch (e) {
+                // Fallback redirect
+                if (dashboardUrl) {
+                    window.location.href = dashboardUrl;
+                    return;
+                }
+            }
+        }
+
+        // Find first mini-nav item and show its corresponding sidebar menu
+        const firstMini = pane.querySelector('.mini-nav .mini-nav-item');
+        if (firstMini) {
+            // Mark selected
+            pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
+            firstMini.classList.add('selected');
+
+            const targetMenuId = 'menu-right-' + firstMini.id;
+            const allMenus = pane.querySelectorAll('.sidebarmenu nav');
+            allMenus.forEach(nav => { nav.classList.remove('d-block'); nav.style.display = 'none'; });
+            // Avoid CSS.escape for broader browser compatibility
+            const safeId = targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
+            const targetMenu = pane.querySelector(`#${safeId}`);
+            if (targetMenu) {
+                targetMenu.classList.add('d-block');
+                targetMenu.style.display = 'block';
+                document.body.setAttribute('data-sidebartype', 'full');
+            }
+        }
+    }
+
     tabLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
             const target = this.getAttribute('href');
             showPane(target);
             history.replaceState(null, '', target);
+            // Ensure default content within the activated tab
+            activateDefaultSubmenuForPane(target);
         });
     });
 
@@ -443,6 +497,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const savedTab = localStorage.getItem('activeMainTab');
     const initial = savedTab || window.location.hash || '#home';
     showPane(initial);
+    // Apply default submenu/content for initial tab
+    activateDefaultSubmenuForPane(initial);
 });
 </script>
 <!-- 🌟 Header End -->
