@@ -77,7 +77,7 @@
                     <!-- Filters Section -->
                     <div class="row mb-3 align-items-end">
                         <!-- Course Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-4 mb-3">
                             <label for="course_filter" class="form-label fw-semibold">Course:</label>
                             <select id="course_filter" class="form-select">
                                 <option value="">-- All Courses --</option>
@@ -88,7 +88,7 @@
                         </div>
                         
                         <!-- Year Filter -->
-                        <div class="col-md-1">
+                        <div class="col-md-4 mb-3">
                             <label for="year_filter" class="form-label fw-semibold">Year:</label>
                             <select id="year_filter" class="form-select">
                                 <option value="">-- All Years --</option>
@@ -99,7 +99,7 @@
                         </div>
                         
                         <!-- Duty Type Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-4 mb-3">
                             <label for="duty_type_filter" class="form-label fw-semibold">Duty type:</label>
                             <select id="duty_type_filter" class="form-select">
                                 <option value="">-- All Duty Types --</option>
@@ -110,25 +110,25 @@
                         </div>
                         
                         <!-- From Date Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-3 mb-3">
                             <label for="from_date_filter" class="form-label fw-semibold">From Date:</label>
                             <input type="date" id="from_date_filter" class="form-control" value="{{ request('from_date_filter') }}">
                         </div>
                         
                         <!-- To Date Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-3 mb-3">
                             <label for="to_date_filter" class="form-label fw-semibold">To Date:</label>
                             <input type="date" id="to_date_filter" class="form-control" value="{{ request('to_date_filter') }}">
                         </div>
                         
                         <!-- Time From Filter -->
-                        <div class="col-md-1">
+                        <div class="col-md-3 mb-3">
                             <label for="time_from_filter" class="form-label fw-semibold">Time From:</label>
                             <input type="time" id="time_from_filter" class="form-control">
                         </div>
                         
                         <!-- Time To Filter -->
-                        <div class="col-md-2">
+                        <div class="col-md-3 mb-3">
                             <label for="time_to_filter" class="form-label fw-semibold">Time To:</label>
                             <input type="time" id="time_to_filter" class="form-control">
                         </div>

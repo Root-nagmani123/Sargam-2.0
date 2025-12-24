@@ -214,7 +214,7 @@
                         </div>
                         
                         <!-- Reset Button -->
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <label class="form-label fw-semibold d-block">&nbsp;</label>
                             <a href="{{ route('student.medical.exemption.index', ['filter' => 'active']) }}"
                                 class="btn btn-outline-danger w-100 fw-semibold"
@@ -224,7 +224,7 @@
                         </div>
                         
                         <!-- Active/Archive Buttons -->
-                        <div class="col-md-3 text-end">
+                        <div class="col-md-2 text-end">
                             <div class="d-flex align-items-center justify-content-end gap-2">
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                     aria-label="Course Status Filter">
@@ -376,8 +376,8 @@
                                 @endforelse
                             </tbody>
                         </table>
-
-                        <!-- Pagination -->
+                    </div>
+                       <!-- Pagination -->
                         @if($records->total() > 0)
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <div>
@@ -395,7 +395,6 @@
                             </div>
                         </div>
                         @endif
-                    </div>
             </div>
         </div>
     </div>
