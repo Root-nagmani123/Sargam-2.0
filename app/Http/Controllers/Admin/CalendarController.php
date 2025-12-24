@@ -25,7 +25,7 @@ class CalendarController extends Controller
 
         $courseMaster = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now())
-            ->select('pk', 'course_name','couse_short_name','course_year')
+            ->select('pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
@@ -33,11 +33,11 @@ class CalendarController extends Controller
             ->orderby('full_name', 'ASC')
             ->get();
         $internal_faculty = FacultyMaster::where('active_inactive', 1)
-        ->where('faculty_type', 1) // Internal Faculty
+            ->where('faculty_type', 1) // Internal Faculty
             ->select('pk', 'faculty_type', 'full_name')
             ->orderby('full_name', 'ASC')
             ->get();
-    
+
         $subjects = SubjectModuleMaster::where('active_inactive', 1)
             ->select('pk', 'module_name')
             ->get();
@@ -53,7 +53,7 @@ class CalendarController extends Controller
             ->get();
         // print_r($classSessionMaster);die;
 
-         
+
         return view('admin.calendar.index', compact(
             'courseMaster',
             'facultyMaster',
@@ -61,7 +61,7 @@ class CalendarController extends Controller
             'venueMaster',
             'classSessionMaster',
             'internal_faculty'
-        )); 
+        ));
     }
     public function weeklyTimetable(Request $request)
     {
@@ -976,46 +976,61 @@ class CalendarController extends Controller
         $studentId = auth()->user()->user_id;
         $now = now();
 
-        foreach ($request->timetable_pk as $i => $ttPk) {
+        // 👇 If individual button clicked
+        if ($request->has('submit_index')) {
+            $indexes = [$request->submit_index];
+        }
+        // 👇 Bulk submit
+        else {
+            $indexes = array_keys($request->timetable_pk);
+        }
+
+        $inserted = 0;
+
+        foreach ($indexes as $i) {
 
             $content      = $request->content[$i] ?? null;
             $presentation = $request->presentation[$i] ?? null;
             $remarks      = $request->remarks[$i] ?? null;
 
+            // ⛔ Skip empty rows
             if (empty($content) && empty($presentation) && empty($remarks)) {
                 continue;
             }
 
-            $rowRules = [];
-
-            if (!empty($content)) {
-                $rowRules["content.$i"] = 'in:1,2,3,4,5';
+            // ✅ Validate only filled fields
+            $rules = [];
+            if ($content) {
+                $rules["content.$i"] = 'in:1,2,3,4,5';
+            }
+            if ($presentation) {
+                $rules["presentation.$i"] = 'in:1,2,3,4,5';
+            }
+            if ($remarks) {
+                $rules["remarks.$i"] = 'string|max:255';
             }
 
-            if (!empty($presentation)) {
-                $rowRules["presentation.$i"] = 'in:1,2,3,4,5';
-            }
-
-            if (!empty($remarks)) {
-                $rowRules["remarks.$i"] = 'string|max:255';
-            }
-
-            if (!empty($rowRules)) {
-                $request->validate($rowRules);
+            if ($rules) {
+                $request->validate($rules);
             }
 
             DB::table('topic_feedback')->insert([
-                'timetable_pk'      => $ttPk,
+                'timetable_pk'      => $request->timetable_pk[$i],
                 'student_master_pk' => $studentId,
                 'topic_name'        => $request->topic_name[$i] ?? '',
                 'faculty_pk'        => $request->faculty_pk[$i] ?? null,
                 'content'           => $content,
                 'presentation'      => $presentation,
-                'rating'            => $request->rating[$i] ?? null,
                 'remark'            => $remarks,
                 'created_date'      => $now,
                 'modified_date'     => $now,
             ]);
+
+            $inserted++;
+        }
+
+        if ($inserted === 0) {
+            return back()->withErrors(['error' => 'Please fill at least one feedback before submitting.']);
         }
 
         return back()->with('success', 'Feedback submitted successfully!');
