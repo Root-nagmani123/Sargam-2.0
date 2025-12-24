@@ -134,6 +134,15 @@
                         </div>
                     </div>
                     
+                    <!-- Reset Filter Button Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <button type="button" class="btn btn-outline-secondary px-4 py-2 shadow-sm" id="resetFilters">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                    
                     <!-- Active/Archive Buttons Row -->
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -229,6 +238,12 @@ $(document).ready(function() {
     // Reload DataTable on time filter change
     $('#time_from_filter, #time_to_filter').on('change', function() {
         table.ajax.reload();
+    });
+
+    // Reset Filters functionality
+    $('#resetFilters').on('click', function() {
+        // Redirect to the base route with active filter to clear all URL parameters and reset filters
+        window.location.href = '{{ route("mdo-escrot-exemption.index", ["filter" => "active"]) }}';
     });
 
     // Pass all filters to server

@@ -217,18 +217,7 @@ class CourseController extends Controller
             // Fetch assistant coordinator faculties using PKs
             $assistantCoordinatorFaculties = FacultyMaster::whereIn('pk', $assistantCoordinatorPks)->get();
             
-            // Debug logging for assistant coordinators
-            \Log::info('Assistant Coordinator Debug:', [
-                'assistant_coordinator_pks' => $assistantCoordinatorPks,
-                'faculties_found_count' => $assistantCoordinatorFaculties->count(),
-                'faculties_data' => $assistantCoordinatorFaculties->map(function($faculty) {
-                    return [
-                        'pk' => $faculty->pk,
-                        'full_name' => $faculty->full_name,
-                        'photo_uplode_path' => $faculty->photo_uplode_path
-                    ];
-                })->toArray()
-            ]);
+          
             
             // Map assistant coordinators with their names, photos and roles
             $assistantCoordinatorsData = [];
@@ -236,11 +225,7 @@ class CourseController extends Controller
                 if ($coordinator->Assistant_Coordinator_name) {
                     $assistantFaculty = $assistantCoordinatorFaculties->firstWhere('pk', $coordinator->Assistant_Coordinator_name);
                     
-                    \Log::info('Mapping Assistant Coordinator:', [
-                        'coordinator_pk' => $coordinator->Assistant_Coordinator_name,
-                        'faculty_found' => $assistantFaculty ? 'Yes' : 'No',
-                        'photo_path' => $assistantFaculty ? $assistantFaculty->photo_uplode_path : 'NULL'
-                    ]);
+                 
                     
                     $assistantCoordinatorsData[] = [
                         'name' => $assistantFaculty ? $assistantFaculty->full_name : 'Not Assigned',
