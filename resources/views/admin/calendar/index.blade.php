@@ -1270,6 +1270,7 @@ class CalendarManager {
             dayMaxEvents: false,
             moreLinkClick: 'popover',
             eventOrder: 'start,title',
+            displayEventTime: true,
             eventTimeFormat: {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -1277,7 +1278,8 @@ class CalendarManager {
             },
             views: {
                 dayGridMonth: {
-                    dayMaxEvents: 2 // Show max 2 events, then +x more
+                    dayMaxEvents: 2, // Show max 2 events, then +x more
+                    displayEventEnd: true
                 },
                 timeGridWeek: {
                     dayMaxEvents: false,

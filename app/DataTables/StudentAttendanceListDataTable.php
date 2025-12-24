@@ -50,8 +50,16 @@ class StudentAttendanceListDataTable extends DataTable
     {
         $groupTypeMaster = GroupTypeMasterCourseMasterMap::where('pk', $this->group_pk)
             ->where('course_name', $this->course_pk)
+            ->first();
 
-            ->firstOrFail();
+        if (!$groupTypeMaster) {
+            // Return an empty query to avoid throwing ModelNotFoundException
+            return StudentCourseGroupMap::with([
+                'studentsMaster:display_name,generated_OT_code,pk',
+                'attendance' => fn($q) => $q->where('course_master_pk', $this->course_pk)
+                                          ->where('group_type_master_course_master_map_pk', $this->group_pk)
+            ])->whereRaw('1=0');
+        }
 
         return StudentCourseGroupMap::with([
                 'studentsMaster:display_name,generated_OT_code,pk',

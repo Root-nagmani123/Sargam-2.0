@@ -164,6 +164,7 @@ hr {
                             </tr>
                         </thead>
                         <tbody>
+                            @if(hasRole('Admin') || hasRole('Training'))
                             <tr id="defaultMessageRow">
                                 <td colspan="9" class="text-center py-5">
                                     <div class="text-muted">
@@ -171,6 +172,16 @@ hr {
                                     </div>
                                 </td>
                             </tr>
+                            @endif 
+                            @if(hasRole('Internal Faculty'))
+                            <tr id="defaultMessageRow">
+                                <td colspan="9" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <p class="mb-2" style="font-size: 1rem;">Apply filter to see attendance.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endif
                         </tbody>
                     </table>
                 </div>
