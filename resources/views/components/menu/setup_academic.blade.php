@@ -269,12 +269,12 @@
                                         <span class="hide-menu">Displine Memo Action</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('ot.notice.memo.view') }}">
-                                        <span class="hide-menu">Memo/Notice activety</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('memo.notice.management.user') }}">
                                         <span class="hide-menu">Memo/Notice action</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('ot.notice.memo.view') }}">
+                                        <span class="hide-menu">Memo / Notice History</span>
                                     </a></li>
 
                                 <li class="sidebar-item"><a class="sidebar-link"

@@ -513,6 +513,7 @@ class CalendarController extends Controller
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
             ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
             ->join('subject_master as s', 't.subject_master_pk', '=', 's.pk')
+            ->leftJoin('topic_feedback as tf', 'tf.timetable_pk', '=', 't.pk')
             ->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('topic_feedback as tf')
@@ -524,7 +525,9 @@ class CalendarController extends Controller
                 'f.full_name as faculty_name',
                 's.subject_name',
                 't.subject_topic',
-            ]);
+                DB::raw('ROUND(AVG(tf.rating), 1) as average_rating'),
+            ])
+            ->groupBy('t.pk', 'c.course_name', 'f.full_name', 's.subject_name', 't.subject_topic');
 
         // ✅ Faculty ko sirf apna data dikhana
         if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
@@ -533,8 +536,26 @@ class CalendarController extends Controller
 
         // ✅ Admin ko sabka dikhe
         $events = $query->orderByDesc('t.pk')->paginate(10);
+        $activeEvents = $events; // For blade compatibility
+        $archivedEvents = null; // Provided to avoid undefined variable in blade
 
-        return view('admin.feedback.index', compact('events'));
+        // Filters: courses, faculties, subjects (for dropdowns)
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->select(['pk as id', 'course_name as name'])
+            ->orderBy('course_name')
+            ->get();
+
+        $faculties = FacultyMaster::where('active_inactive', 1)
+            ->select(['pk as id', 'full_name as name'])
+            ->orderBy('full_name')
+            ->get();
+
+        $subjects = SubjectMaster::where('active_inactive', 1)
+            ->select(['pk as id', 'subject_name as name'])
+            ->orderBy('subject_name')
+            ->get();
+
+        return view('admin.feedback.index', compact('activeEvents', 'archivedEvents', 'events', 'courses', 'faculties', 'subjects'));
     }
     public function getEventFeedback($id)
     {
