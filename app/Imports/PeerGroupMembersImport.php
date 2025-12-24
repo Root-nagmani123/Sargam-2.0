@@ -149,7 +149,7 @@ class PeerGroupMembersImport implements ToCollection, WithStartRow
             }
         }
 
-        \Log::info("Import completed: {$importedCount} records imported, {$skippedCount} skipped for group {$this->groupId}");
+        // \Log::info("Import completed: {$importedCount} records imported, {$skippedCount} skipped for group {$this->groupId}");
     }
 
     private function generateMemberPk()
