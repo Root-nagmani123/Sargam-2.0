@@ -289,8 +289,12 @@ class CourseAttendanceNoticeMapController extends Controller
         $currentPage,
         ['path' => request()->url(), 'query' => request()->query()]
     );
-
-    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter'));
+$noticeCount = $memos->groupBy(function($item) {
+    return $item->student_pk . '_' . $item->course_master_pk;
+})->map(function ($group) {
+    return $group->where('type_notice_memo', 'Notice')->count();
+});
+    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount'));
 }
 
     public function exportPdf(Request $request)
@@ -716,6 +720,7 @@ $memo_conclusion_master = collect(); // default empty collection
                 'mmsdi.*',
                 'sms.pk as notice_id',
                 'sms.communication_status as notice_status',
+                'sms.communication_status',
                 
                 'sm.pk as student_id',
                 'sm.display_name as student_name'
@@ -1129,8 +1134,10 @@ public function memo_notice_conversation(Request $request)
     // ✅ Fixed: Get validated data
     $validated = $validator->validated();
 
-    // File upload
+    // // File upload
+    // print_r($request->all());
     // print_r($validated);die;
+
     $filePath = null;
     if ($request->hasFile('document')) {
         $file = $request->file('document');

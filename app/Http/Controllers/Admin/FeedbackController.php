@@ -394,34 +394,54 @@ class FeedbackController extends Controller
             $content_1 = (int)$item->content_1;
 
             // Calculate presentation percentage
-            $presentationWeightedSum = (5 * $presentation_5) +
+            // ================= PRESENTATION =================
+            $presentationWeightedSum =
+                (5 * $presentation_5) +
                 (4 * $presentation_4) +
                 (3 * $presentation_3) +
                 (2 * $presentation_2) +
                 (1 * $presentation_1);
 
-            $presentationTotal = $presentation_5 + $presentation_4 +
+            $presentationTotal =
+                $presentation_5 + $presentation_4 +
                 $presentation_3 + $presentation_2 +
                 $presentation_1;
 
-            $presentationPercentage = $presentationTotal > 0
-                ? round(($presentationWeightedSum / ($presentationTotal * 5)) * 100, 2)
+            // dynamic max rating used
+            $presentationMaxRating = 0;
+            if ($presentation_5 > 0) $presentationMaxRating = 5;
+            elseif ($presentation_4 > 0) $presentationMaxRating = 4;
+            elseif ($presentation_3 > 0) $presentationMaxRating = 3;
+            elseif ($presentation_2 > 0) $presentationMaxRating = 2;
+            elseif ($presentation_1 > 0) $presentationMaxRating = 1;
+
+            $presentationPercentage = ($presentationTotal > 0 && $presentationMaxRating > 0)
+                ? round(($presentationWeightedSum / ($presentationTotal * $presentationMaxRating)) * 100, 2)
                 : 0;
 
-            // Calculate content percentage
-            $contentWeightedSum = (5 * $content_5) +
+            $contentWeightedSum =
+                (5 * $content_5) +
                 (4 * $content_4) +
                 (3 * $content_3) +
                 (2 * $content_2) +
                 (1 * $content_1);
 
-            $contentTotal = $content_5 + $content_4 +
+            $contentTotal =
+                $content_5 + $content_4 +
                 $content_3 + $content_2 +
                 $content_1;
 
-            $contentPercentage = $contentTotal > 0
-                ? round(($contentWeightedSum / ($contentTotal * 5)) * 100, 2)
+            $contentMaxRating = 0;
+            if ($content_5 > 0) $contentMaxRating = 5;
+            elseif ($content_4 > 0) $contentMaxRating = 4;
+            elseif ($content_3 > 0) $contentMaxRating = 3;
+            elseif ($content_2 > 0) $contentMaxRating = 2;
+            elseif ($content_1 > 0) $contentMaxRating = 1;
+
+            $contentPercentage = ($contentTotal > 0 && $contentMaxRating > 0)
+                ? round(($contentWeightedSum / ($contentTotal * $contentMaxRating)) * 100, 2)
                 : 0;
+
 
             return [
                 'faculty_pk' => $item->faculty_pk,
@@ -618,13 +638,56 @@ class FeedbackController extends Controller
             $presentation_1 = (int)$item->presentation_1;
 
             // Calculate percentages
-            $contentWeightedSum = (5 * $content_5) + (4 * $content_4) + (3 * $content_3) + (2 * $content_2) + (1 * $content_1);
-            $contentTotal = $content_5 + $content_4 + $content_3 + $content_2 + $content_1;
-            $contentPercentage = $contentTotal > 0 ? round(($contentWeightedSum / ($contentTotal * 5)) * 100, 2) : 0;
+            // $contentWeightedSum = (5 * $content_5) + (4 * $content_4) + (3 * $content_3) + (2 * $content_2) + (1 * $content_1);
+            // $contentTotal = $content_5 + $content_4 + $content_3 + $content_2 + $content_1;
+            // $contentPercentage = $contentTotal > 0 ? round(($contentWeightedSum / ($contentTotal * 5)) * 100, 2) : 0;
 
-            $presentationWeightedSum = (5 * $presentation_5) + (4 * $presentation_4) + (3 * $presentation_3) + (2 * $presentation_2) + (1 * $presentation_1);
-            $presentationTotal = $presentation_5 + $presentation_4 + $presentation_3 + $presentation_2 + $presentation_1;
-            $presentationPercentage = $presentationTotal > 0 ? round(($presentationWeightedSum / ($presentationTotal * 5)) * 100, 2) : 0;
+            // $presentationWeightedSum = (5 * $presentation_5) + (4 * $presentation_4) + (3 * $presentation_3) + (2 * $presentation_2) + (1 * $presentation_1);
+            // $presentationTotal = $presentation_5 + $presentation_4 + $presentation_3 + $presentation_2 + $presentation_1;
+            // $presentationPercentage = $presentationTotal > 0 ? round(($presentationWeightedSum / ($presentationTotal * 5)) * 100, 2) : 0;
+            $contentWeightedSum =
+                (5 * $content_5) +
+                (4 * $content_4) +
+                (3 * $content_3) +
+                (2 * $content_2) +
+                (1 * $content_1);
+
+            $contentTotal =
+                $content_5 + $content_4 + $content_3 + $content_2 + $content_1;
+
+            // find max rating actually used
+            $contentMaxRating = 0;
+            if ($content_5 > 0) $contentMaxRating = 5;
+            elseif ($content_4 > 0) $contentMaxRating = 4;
+            elseif ($content_3 > 0) $contentMaxRating = 3;
+            elseif ($content_2 > 0) $contentMaxRating = 2;
+            elseif ($content_1 > 0) $contentMaxRating = 1;
+
+            $contentPercentage = ($contentTotal > 0 && $contentMaxRating > 0)
+                ? round(($contentWeightedSum / ($contentTotal * $contentMaxRating)) * 100, 2)
+                : 0;
+
+            $presentationWeightedSum =
+                (5 * $presentation_5) +
+                (4 * $presentation_4) +
+                (3 * $presentation_3) +
+                (2 * $presentation_2) +
+                (1 * $presentation_1);
+
+            $presentationTotal =
+                $presentation_5 + $presentation_4 + $presentation_3 + $presentation_2 + $presentation_1;
+
+            // find max rating actually used
+            $presentationMaxRating = 0;
+            if ($presentation_5 > 0) $presentationMaxRating = 5;
+            elseif ($presentation_4 > 0) $presentationMaxRating = 4;
+            elseif ($presentation_3 > 0) $presentationMaxRating = 3;
+            elseif ($presentation_2 > 0) $presentationMaxRating = 2;
+            elseif ($presentation_1 > 0) $presentationMaxRating = 1;
+
+            $presentationPercentage = ($presentationTotal > 0 && $presentationMaxRating > 0)
+                ? round(($presentationWeightedSum / ($presentationTotal * $presentationMaxRating)) * 100, 2)
+                : 0;
 
             // Process remarks
             $remarks = [];
@@ -888,13 +951,55 @@ class FeedbackController extends Controller
             $presentation_1 = (int)$item->presentation_1;
 
             // Calculate percentages (same as web view)
-            $contentWeightedSum = (5 * $content_5) + (4 * $content_4) + (3 * $content_3) + (2 * $content_2) + (1 * $content_1);
-            $contentTotal = $content_5 + $content_4 + $content_3 + $content_2 + $content_1;
-            $contentPercentage = $contentTotal > 0 ? round(($contentWeightedSum / ($contentTotal * 5)) * 100, 2) : 0;
+            // ================= PRESENTATION =================
+            $presentationWeightedSum =
+                (5 * $presentation_5) +
+                (4 * $presentation_4) +
+                (3 * $presentation_3) +
+                (2 * $presentation_2) +
+                (1 * $presentation_1);
 
-            $presentationWeightedSum = (5 * $presentation_5) + (4 * $presentation_4) + (3 * $presentation_3) + (2 * $presentation_2) + (1 * $presentation_1);
-            $presentationTotal = $presentation_5 + $presentation_4 + $presentation_3 + $presentation_2 + $presentation_1;
-            $presentationPercentage = $presentationTotal > 0 ? round(($presentationWeightedSum / ($presentationTotal * 5)) * 100, 2) : 0;
+            $presentationTotal =
+                $presentation_5 + $presentation_4 +
+                $presentation_3 + $presentation_2 +
+                $presentation_1;
+
+            // dynamic max rating used
+            $presentationMaxRating = 0;
+            if ($presentation_5 > 0) $presentationMaxRating = 5;
+            elseif ($presentation_4 > 0) $presentationMaxRating = 4;
+            elseif ($presentation_3 > 0) $presentationMaxRating = 3;
+            elseif ($presentation_2 > 0) $presentationMaxRating = 2;
+            elseif ($presentation_1 > 0) $presentationMaxRating = 1;
+
+            $presentationPercentage = ($presentationTotal > 0 && $presentationMaxRating > 0)
+                ? round(($presentationWeightedSum / ($presentationTotal * $presentationMaxRating)) * 100, 2)
+                : 0;
+
+
+            $contentWeightedSum =
+                (5 * $content_5) +
+                (4 * $content_4) +
+                (3 * $content_3) +
+                (2 * $content_2) +
+                (1 * $content_1);
+
+            $contentTotal =
+                $content_5 + $content_4 +
+                $content_3 + $content_2 +
+                $content_1;
+
+            $contentMaxRating = 0;
+            if ($content_5 > 0) $contentMaxRating = 5;
+            elseif ($content_4 > 0) $contentMaxRating = 4;
+            elseif ($content_3 > 0) $contentMaxRating = 3;
+            elseif ($content_2 > 0) $contentMaxRating = 2;
+            elseif ($content_1 > 0) $contentMaxRating = 1;
+
+            $contentPercentage = ($contentTotal > 0 && $contentMaxRating > 0)
+                ? round(($contentWeightedSum / ($contentTotal * $contentMaxRating)) * 100, 2)
+                : 0;
+
 
             // Process remarks (same as web view)
             $remarks = [];
@@ -1384,7 +1489,7 @@ class FeedbackController extends Controller
     {
 
 
-        \Log::info('Feedback Details Request: ', $request->all());
+        // \Log::info('Feedback Details Request: ', $request->all());
         try {
             // Get filter parameters with defaults
             $programId = $request->input('program_id', '');
@@ -2030,63 +2135,63 @@ class FeedbackController extends Controller
         return response()->download($tempFile, $filename)->deleteFileAfterSend(true);
     }
 
-   private function exportPdfFeedbackDetails($data, $request)
-{
-    // Add serial numbers to data
-    $data = $data->map(function ($item, $index) {
-        $item['S.No.'] = $index + 1;
-        return $item;
-    });
+    private function exportPdfFeedbackDetails($data, $request)
+    {
+        // Add serial numbers to data
+        $data = $data->map(function ($item, $index) {
+            $item['S.No.'] = $index + 1;
+            return $item;
+        });
 
-    // Get filter values for PDF
-    $programId = $request->input('program_id');
-    $facultyName = $request->input('faculty_name');
-    $fromDate = $request->input('from_date');
-    $toDate = $request->input('to_date');
-    $courseType = $request->input('course_type', 'current');
-    $facultyType = $request->input('faculty_type', []);
+        // Get filter values for PDF
+        $programId = $request->input('program_id');
+        $facultyName = $request->input('faculty_name');
+        $fromDate = $request->input('from_date');
+        $toDate = $request->input('to_date');
+        $courseType = $request->input('course_type', 'current');
+        $facultyType = $request->input('faculty_type', []);
 
-    $pdfData = [
-        'data' => $data,
-        'filters' => [
-            'course_status' => $courseType === 'current' ? 'Current Courses' : 'Archived Courses',
-            'program' => $programId ? $this->getProgramName($programId) : 'All Programs',
-            'faculty_name' => $facultyName ?: 'All Faculty',
-            'faculty_type' => !empty($facultyType) ? 
-                (count($facultyType) === 2 ? 'All Types' : (in_array('1', $facultyType) ? 'Internal' : 'Guest')) : 
-                'All Types',
-            'date_range' => ($fromDate && $toDate) ? 
-                Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') : 
-                'All Dates',
-            'total_records' => count($data),
-        ],
-        'export_date' => now()->format('d-M-Y H:i'),
-        'rating_colors' => [
-            '5' => '#198754', // Green
-            '4' => '#20c997', // Light green
-            '3' => '#ffc107', // Yellow
-            '2' => '#fd7e14', // Orange
-            '1' => '#dc3545', // Red
-        ],
-    ];
+        $pdfData = [
+            'data' => $data,
+            'filters' => [
+                'course_status' => $courseType === 'current' ? 'Current Courses' : 'Archived Courses',
+                'program' => $programId ? $this->getProgramName($programId) : 'All Programs',
+                'faculty_name' => $facultyName ?: 'All Faculty',
+                'faculty_type' => !empty($facultyType) ?
+                    (count($facultyType) === 2 ? 'All Types' : (in_array('1', $facultyType) ? 'Internal' : 'Guest')) :
+                    'All Types',
+                'date_range' => ($fromDate && $toDate) ?
+                    Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') :
+                    'All Dates',
+                'total_records' => count($data),
+            ],
+            'export_date' => now()->format('d-M-Y H:i'),
+            'rating_colors' => [
+                '5' => '#198754', // Green
+                '4' => '#20c997', // Light green
+                '3' => '#ffc107', // Yellow
+                '2' => '#fd7e14', // Orange
+                '1' => '#dc3545', // Red
+            ],
+        ];
 
-    // Load PDF view
-    $pdf = PDF::loadView('admin.feedback.feedback_details_pdf', $pdfData)
-        ->setPaper('a4', 'landscape')
-        ->setOptions([
-            'defaultFont' => 'Arial',
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true,
-            'isPhpEnabled' => true,
-            'dpi' => 96,
-            'margin_top' => 20,
-            'margin_right' => 10,
-            'margin_bottom' => 15,
-            'margin_left' => 10,
-        ]);
+        // Load PDF view
+        $pdf = PDF::loadView('admin.feedback.feedback_details_pdf', $pdfData)
+            ->setPaper('a4', 'landscape')
+            ->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => true,
+                'dpi' => 96,
+                'margin_top' => 20,
+                'margin_right' => 10,
+                'margin_bottom' => 15,
+                'margin_left' => 10,
+            ]);
 
-    return $pdf->download('feedback_details_' . date('Y_m_d_H_i') . '.pdf');
-}
+        return $pdf->download('feedback_details_' . date('Y_m_d_H_i') . '.pdf');
+    }
 
     // private function getProgramName($programId)
     // {
