@@ -280,7 +280,11 @@ $currentPath = $segments[1] ?? null;
             // Get the same data as the DataTable
             $groupTypeMaster = GroupTypeMasterCourseMasterMap::where('pk', $group_pk)
                 ->where('course_name', $course_pk)
-                ->firstOrFail();
+                ->first();
+
+            if (!$groupTypeMaster) {
+                return redirect()->back()->with('error', 'Group mapping not found for the selected course and group.');
+            }
 
             $students = StudentCourseGroupMap::with([
                 'studentsMaster:display_name,generated_OT_code,pk',
