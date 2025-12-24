@@ -28,6 +28,6 @@ class StudentCourseGroupMap extends Model
 
     function attendance()
     {
-        return $this->hasMany(CourseStudentAttendance::class, 'pk', 'Student_master_pk');
+        return $this->hasMany(CourseStudentAttendance::class, 'Student_master_pk', 'student_master_pk');
     }
 }

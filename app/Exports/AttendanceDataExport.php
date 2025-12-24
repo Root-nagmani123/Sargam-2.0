@@ -137,54 +137,52 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
             }
 
             // Get attendance status from saved record or determine based on exemptions
-            // Priority: Medical/Other Exemptions > Saved Attendance > MDO/Escort Duties > Default Present
+            // Priority: Saved Attendance (Medical/Other) > Saved Attendance (MDO/Escort/Present/Late/Absent) > Exemptions from Tables > Default Present
             $attendanceStatus = 'Not Marked';
             $mdoDuty = 'No';
             $escortDuty = 'No';
             $medicalExempt = 'No';
             $otherExempt = 'No';
             
-            // First, check if Medical or Other exemption is selected (from saved attendance or exemptions)
-            $hasMedicalFromAttendance = false;
-            $hasOtherFromAttendance = false;
-            
             if ($attendance) {
+                // Use saved attendance status - this takes priority
                 $status = $attendance->status;
-                if ($status == 6) {
-                    $hasMedicalFromAttendance = true;
-                } elseif ($status == 7) {
-                    $hasOtherFromAttendance = true;
-                }
-            }
-            
-            // If Medical or Other exemption is selected (either from saved attendance or from exemptions table), show "Not Marked"
-            if ($hasMedicalFromAttendance || $hasMedicalExempt) {
-                $attendanceStatus = 'Not Marked';
-                $medicalExempt = 'Yes';
-            } elseif ($hasOtherFromAttendance || $hasOtherExempt) {
-                $attendanceStatus = 'Not Marked';
-                $otherExempt = 'Yes';
-            } elseif ($attendance) {
-                // Use saved attendance status (for Present, Late, Absent, MDO, Escort)
-                $status = $attendance->status;
-                $attendanceStatus = match ($status) {
-                    1 => 'Present',
-                    2 => 'Late',
-                    3 => 'Absent',
-                    4 => 'Present',
-                    5 => 'Present',
-                    default => 'Present',
-                };
                 
-                // Set duty flags based on saved status
-                if ($status == 4) {
-                    $mdoDuty = 'Yes';
-                } elseif ($status == 5) {
-                    $escortDuty = 'Yes';
+                // Handle Medical (6) and Other (7) exemptions - show "Not Marked"
+                if ($status == 6) {
+                    $attendanceStatus = 'Not Marked';
+                    $medicalExempt = 'Yes';
+                } elseif ($status == 7) {
+                    $attendanceStatus = 'Not Marked';
+                    $otherExempt = 'Yes';
+                } else {
+                    // Handle Present, Late, Absent, MDO (4), Escort (5)
+                    $attendanceStatus = match ($status) {
+                        1 => 'Present',
+                        2 => 'Late',
+                        3 => 'Absent',
+                        4 => 'Present', // MDO Duty
+                        5 => 'Present', // Escort Duty
+                        default => 'Present',
+                    };
+                    
+                    // Set duty flags based on saved status
+                    if ($status == 4) {
+                        $mdoDuty = 'Yes';
+                    } elseif ($status == 5) {
+                        $escortDuty = 'Yes';
+                    }
                 }
             } else {
-                // No saved attendance - check exemptions/duties
-                if ($hasMdoDuty) {
+                // No saved attendance - check exemptions/duties from tables
+                // If Medical or Other exemption exists, show "Not Marked"
+                if ($hasMedicalExempt) {
+                    $attendanceStatus = 'Not Marked';
+                    $medicalExempt = 'Yes';
+                } elseif ($hasOtherExempt) {
+                    $attendanceStatus = 'Not Marked';
+                    $otherExempt = 'Yes';
+                } elseif ($hasMdoDuty) {
                     $attendanceStatus = 'Present';
                     $mdoDuty = 'Yes';
                 } elseif ($hasEscortDuty) {
