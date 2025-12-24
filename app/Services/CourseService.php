@@ -32,7 +32,8 @@ class CourseService
     public function createOrUpdateCourse(array $validatedData, ?string $courseId = null): CourseMaster
     {
         // Normalize dates
-        $validatedData['courseyear'] = date('Y', strtotime($validatedData['courseyear']));
+        // For courseyear, it's already a year value (validated as date_format:Y), so use it directly
+        $validatedData['courseyear'] = (int) $validatedData['courseyear'];
         $validatedData['startdate'] = date('Y-m-d', strtotime($validatedData['startdate']));
         $validatedData['enddate'] = date('Y-m-d', strtotime($validatedData['enddate']));
 
