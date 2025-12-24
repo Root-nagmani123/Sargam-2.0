@@ -16,6 +16,7 @@ class SubjectMasterController extends Controller
             $q->where('subject_name', 'like', "%$search%")
               ->orWhere('sub_short_name', 'like', "%$search%");
         })
+        ->orderBy('created_date', 'desc')
         ->paginate(10)
         ->appends(['search' => $search]);
         

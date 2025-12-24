@@ -10,7 +10,7 @@ class SubjectModuleController extends Controller
 {
     public function index()
     {
-        $modules = SubjectModuleMaster::paginate(10);
+        $modules = SubjectModuleMaster::orderBy('created_date', 'desc')->paginate(10);
         return view('admin.subject_module.index', compact('modules'));
     }
 
