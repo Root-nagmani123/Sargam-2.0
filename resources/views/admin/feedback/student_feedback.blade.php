@@ -487,134 +487,134 @@
                                             <p style="margin-top:10px; font-weight:500;">Submitting...</p>
                                         </div>
                                     </div>
-                     </div>
-                     </div>
+                                </div>
+                            </div>
+                            <div class="text-end mt-3 mb-4 me-4">
+                                <button type="submit" class="bulk-feedback-submit-btn">
+                                    Submit All Feedback
+                                </button>
+                            </div>
+
+                        </form>
+                    @else
+                        <div class="text-center py-5">
+                            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
+                            <h5 class="mt-3">No pending feedback</h5>
+                            <p class="text-muted">All feedback has been submitted.</p>
                         </div>
-                          </div>
-                           </div>
-        <div class="text-end mt-3 mb-4 me-4">
-            <button type="submit" class="bulk-feedback-submit-btn">
-                Submit All Feedback
-            </button>
-        </div>
+                    @endif
+                </div>
 
-        </form>
-    @else
-        <div class="text-center py-5">
-            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
-            <h5 class="mt-3">No pending feedback</h5>
-            <p class="text-muted">All feedback has been submitted.</p>
-        </div>
-        @endif
-    </div>
+                <!-- Submitted Feedback Tab -->
+                <div class="tab-pane fade" id="submitted-tab-pane" role="tabpanel" aria-labelledby="submitted-tab"
+                    tabindex="0">
+                    <div class="card-body mb-4 p-0">
+                        <div class="table-responsive">
+                            <table class="table rounded-3 overflow-hidden align-middle mb-0 table-bordered">
+                                <thead class="bg-success text-white">
+                                    <tr>
+                                        <th class="text-center text-white">S.No.</th>
+                                        <th class="text-center text-white">Date &amp; Time</th>
+                                        <th class="text-center text-white">Topic Detail</th>
+                                        <th class="text-center text-white">Faculty Name</th>
+                                        <th class="text-center text-white">Content Rating</th>
+                                        <th class="text-center text-white">Presentation Rating</th>
+                                        <th class="text-center text-white">Remarks</th>
+                                        <th class="text-center text-white">Submitted On</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="submitted-feedback-body">
+                                    @if ($submittedData->count() > 0)
+                                        @php $submittedIndex = 0; @endphp
+                                        @foreach ($submittedData as $feedback)
+                                            <tr class="text-center">
+                                                <td class="text-center">{{ ++$submittedIndex }}</td>
+                                                <td>
+                                                    {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
+                                                    <br>
+                                                    <small class="text-muted">{{ $feedback->class_session }}</small>
+                                                </td>
+                                                <td>{{ $feedback->subject_topic }}</td>
+                                                <td>{{ $feedback->faculty_name }}</td>
 
-    <!-- Submitted Feedback Tab -->
-    <div class="tab-pane fade" id="submitted-tab-pane" role="tabpanel" aria-labelledby="submitted-tab"
-        tabindex="0">
-        <div class="card-body mb-4 p-0">
-            <div class="table-responsive">
-                <table class="table rounded-3 overflow-hidden align-middle mb-0 table-bordered">
-                    <thead class="bg-success text-white">
-                        <tr>
-                            <th class="text-center text-white">S.No.</th>
-                            <th class="text-center text-white">Date &amp; Time</th>
-                            <th class="text-center text-white">Topic Detail</th>
-                            <th class="text-center text-white">Faculty Name</th>
-                            <th class="text-center text-white">Content Rating</th>
-                            <th class="text-center text-white">Presentation Rating</th>
-                            <th class="text-center text-white">Remarks</th>
-                            <th class="text-center text-white">Submitted On</th>
-                        </tr>
-                    </thead>
-                    <tbody id="submitted-feedback-body">
-                        @if ($submittedData->count() > 0)
-                            @php $submittedIndex = 0; @endphp
-                            @foreach ($submittedData as $feedback)
-                                <tr class="text-center">
-                                    <td class="text-center">{{ ++$submittedIndex }}</td>
-                                    <td>
-                                        {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
-                                        <br>
-                                        <small class="text-muted">{{ $feedback->class_session }}</small>
-                                    </td>
-                                    <td>{{ $feedback->subject_topic }}</td>
-                                    <td>{{ $feedback->faculty_name }}</td>
-
-                                    {{-- Content Rating --}}
-                                    <td>
-                                        @if ($feedback->Ratting_checkbox == 1 && $feedback->content)
-                                            <div class="star-rating-display">
-                                                @for ($i = 1; $i <= 5; $i++)
-                                                    @if ($i <= $feedback->content)
-                                                        <span class="text-warning">★</span>
+                                                {{-- Content Rating --}}
+                                                <td>
+                                                    @if ($feedback->Ratting_checkbox == 1 && $feedback->content)
+                                                        <div class="star-rating-display">
+                                                            @for ($i = 1; $i <= 5; $i++)
+                                                                @if ($i <= $feedback->content)
+                                                                    <span class="text-warning">★</span>
+                                                                @else
+                                                                    <span class="text-secondary">★</span>
+                                                                @endif
+                                                            @endfor
+                                                            <br>
+                                                            <small
+                                                                class="text-muted">({{ $feedback->content }}/5)</small>
+                                                        </div>
                                                     @else
-                                                        <span class="text-secondary">★</span>
+                                                        <span class="text-muted">N/A</span>
                                                     @endif
-                                                @endfor
-                                                <br>
-                                                <small class="text-muted">({{ $feedback->content }}/5)</small>
-                                            </div>
-                                        @else
-                                            <span class="text-muted">N/A</span>
-                                        @endif
-                                    </td>
+                                                </td>
 
-                                    {{-- Presentation Rating --}}
-                                    <td>
-                                        @if ($feedback->Ratting_checkbox == 1 && $feedback->presentation)
-                                            <div class="star-rating-display">
-                                                @for ($i = 1; $i <= 5; $i++)
-                                                    @if ($i <= $feedback->presentation)
-                                                        <span class="text-warning">★</span>
+                                                {{-- Presentation Rating --}}
+                                                <td>
+                                                    @if ($feedback->Ratting_checkbox == 1 && $feedback->presentation)
+                                                        <div class="star-rating-display">
+                                                            @for ($i = 1; $i <= 5; $i++)
+                                                                @if ($i <= $feedback->presentation)
+                                                                    <span class="text-warning">★</span>
+                                                                @else
+                                                                    <span class="text-secondary">★</span>
+                                                                @endif
+                                                            @endfor
+                                                            <br>
+                                                            <small
+                                                                class="text-muted">({{ $feedback->presentation }}/5)</small>
+                                                        </div>
                                                     @else
-                                                        <span class="text-secondary">★</span>
+                                                        <span class="text-muted">N/A</span>
                                                     @endif
-                                                @endfor
-                                                <br>
-                                                <small class="text-muted">({{ $feedback->presentation }}/5)</small>
-                                            </div>
-                                        @else
-                                            <span class="text-muted">N/A</span>
-                                        @endif
-                                    </td>
+                                                </td>
 
-                                    {{-- Remarks --}}
-                                    <td style="min-width: 180px;">
-                                        @if ($feedback->Remark_checkbox == 1 && $feedback->remark)
-                                            <div class="remarks-text" style="max-height: 60px; overflow-y: auto;">
-                                                {{ $feedback->remark }}
-                                            </div>
-                                        @else
-                                            <span class="text-muted">N/A</span>
-                                        @endif
-                                    </td>
+                                                {{-- Remarks --}}
+                                                <td style="min-width: 180px;">
+                                                    @if ($feedback->Remark_checkbox == 1 && $feedback->remark)
+                                                        <div class="remarks-text"
+                                                            style="max-height: 60px; overflow-y: auto;">
+                                                            {{ $feedback->remark }}
+                                                        </div>
+                                                    @else
+                                                        <span class="text-muted">N/A</span>
+                                                    @endif
+                                                </td>
 
-                                    {{-- Submitted Date --}}
-                                    <td>
-                                        {{ \Carbon\Carbon::parse($feedback->created_date)->format('d-m-Y') }}
-                                        <br>
-                                        <small class="text-muted">
-                                            {{ \Carbon\Carbon::parse($feedback->created_date)->format('h:i A') }}
-                                        </small>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        @else
-                            <tr>
-                                <td colspan="8" class="text-center py-5">
-                                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
-                                    <h5 class="mt-3">No submitted feedback yet</h5>
-                                    <p class="text-muted">Your submitted feedback will appear here.</p>
-                                </td>
-                            </tr>
-                        @endif
-                    </tbody>
-                </table>
+                                                {{-- Submitted Date --}}
+                                                <td>
+                                                    {{ \Carbon\Carbon::parse($feedback->created_date)->format('d-m-Y') }}
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        {{ \Carbon\Carbon::parse($feedback->created_date)->format('h:i A') }}
+                                                    </small>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @else
+                                        <tr>
+                                            <td colspan="8" class="text-center py-5">
+                                                <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                                                <h5 class="mt-3">No submitted feedback yet</h5>
+                                                <p class="text-muted">Your submitted feedback will appear here.</p>
+                                            </td>
+                                        </tr>
+                                    @endif
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-    </div>
-    </div>
     </div>
 
     <!-- Footer -->
