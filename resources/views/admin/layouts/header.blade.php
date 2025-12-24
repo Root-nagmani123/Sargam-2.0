@@ -436,48 +436,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('activeMainTab', targetId);
     }
 
-    // Activate default submenu for a pane; for Home, navigate to Dashboard
-    function activateDefaultSubmenuForPane(targetId) {
-        const candidatePanes = document.querySelectorAll(`#mainNavbarContent ${targetId}`);
-        if (!candidatePanes || candidatePanes.length === 0) return;
-
-        // Prefer the pane that contains sidebar menus
-        let pane = null;
-        candidatePanes.forEach(p => {
-            if (!pane && p.querySelector('.sidebarmenu')) pane = p;
-        });
-        // Fallback to the first if none matched
-        if (!pane) pane = candidatePanes[0];
-
-        // If Home tab, ensure Dashboard route loads by default
-        if (targetId === '#home') {
-            const dashboardUrl = '{{ route("admin.dashboard") }}';
-            if (dashboardUrl && window.location.pathname !== new URL(dashboardUrl, window.location.origin).pathname) {
-                window.location.href = dashboardUrl;
-                return; // Navigation will handle content; skip submenu activation
-            }
-        }
-
-        // Find first mini-nav item and show its corresponding sidebar menu
-        const firstMini = pane.querySelector('.mini-nav .mini-nav-item');
-        if (firstMini) {
-            // Mark selected
-            pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
-            firstMini.classList.add('selected');
-
-            const targetMenuId = 'menu-right-' + firstMini.id;
-            const allMenus = pane.querySelectorAll('.sidebarmenu nav');
-            allMenus.forEach(nav => { nav.classList.remove('d-block'); nav.style.display = 'none'; });
-            // Avoid CSS.escape for broader browser compatibility
-            const targetMenu = pane.querySelector(`#${targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1')}`);
-            if (targetMenu) {
-                targetMenu.classList.add('d-block');
-                targetMenu.style.display = 'block';
-                document.body.setAttribute('data-sidebartype', 'full');
-            }
-        }
-    }
-
     function detectRouteTab() {
         const currentPath = window.location.pathname;
         console.log('Current path:', currentPath);
