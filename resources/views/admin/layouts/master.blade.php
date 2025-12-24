@@ -370,7 +370,7 @@
     <div id="main-wrapper">
          @include('admin.layouts.header')
         <div class="page-wrapper">
-            
+
            @include('admin.layouts.sidebar')
             @include('admin.layouts.aside')
             <div class="body-wrapper">
@@ -519,12 +519,12 @@ document.addEventListener("DOMContentLoaded", function () {
         toggleBtn.addEventListener("click", function () {
             // Toggle show-sidebar class on main-wrapper
             sidebar.classList.toggle("show-sidebar");
-            
+
             // Toggle close class on sidebarmenu elements
             sidebarmenus.forEach(function(el) {
                 el.classList.toggle("close");
             });
-            
+
             // Toggle data-sidebartype on body
             const currentType = body.getAttribute("data-sidebartype");
             if (currentType === "mini-sidebar") {
