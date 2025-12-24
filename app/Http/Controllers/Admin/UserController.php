@@ -94,10 +94,45 @@ class UserController extends Controller
         return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count'));
     }
 
-    public function index(UserCredentialsDataTable $request)
-    {
-        return $request->render('admin.user_management.users.index');
+   public function index(Request $request)
+{
+    $perPage = $request->input('per_page', 10); // Default 10 items per page
+    $search = $request->input('search');
+
+    $usersQuery = DB::table('user_credentials as uc')
+        ->leftJoin('employee_role_mapping as erm', 'erm.user_credentials_pk', '=', 'uc.pk')
+        ->leftJoin('user_role_master as urm', 'urm.pk', '=', 'erm.user_role_master_pk')
+        ->select(
+            'uc.pk',
+            'uc.user_name',
+            'uc.first_name',
+            'uc.last_name',
+            'uc.email_id',
+            'uc.mobile_no',
+            DB::raw("GROUP_CONCAT(urm.user_role_display_name SEPARATOR ', ') as roles")
+        )
+        ->groupBy(
+            'uc.pk',
+            'uc.user_name',
+            'uc.first_name',
+            'uc.last_name',
+            'uc.email_id',
+            'uc.mobile_no'
+        );
+
+    if ($search) {
+        $usersQuery->where(function($q) use ($search) {
+            $q->where('uc.user_name', 'like', "%$search%")
+              ->orWhere('uc.first_name', 'like', "%$search%")
+              ->orWhere('uc.last_name', 'like', "%$search%")
+              ->orWhere('uc.email_id', 'like', "%$search%");
+        });
     }
+
+    $users = $usersQuery->paginate($perPage)->withQueryString();
+
+    return view('admin.user_management.users.index', compact('users', 'perPage', 'search'));
+}
 
     /**
      * Show the form for creating a new user.
