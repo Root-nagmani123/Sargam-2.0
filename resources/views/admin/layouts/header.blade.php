@@ -436,67 +436,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('activeMainTab', targetId);
     }
 
-    function detectRouteTab() {
-        const currentPath = window.location.pathname;
-        console.log('Current path:', currentPath);
-
-        // Dashboard routes - HIGHEST PRIORITY
-        if (currentPath === '/dashboard' || 
-            currentPath.includes('/admin/dashboard') ||
-            currentPath === '/' || 
-            currentPath === '/admin') {
-            console.log('Route matched: Dashboard/Home tab');
-            return '#home';
-        }
-
-        // Setup routes - CHECK FIRST (more specific)
-        if (currentPath.includes('/admin/setup') ||
-            currentPath.includes('/admin/caste') ||
-            currentPath.includes('/admin/category') ||
-            currentPath.includes('/admin/religion') ||
-            currentPath.includes('/admin/state') ||
-            currentPath.includes('/admin/district') ||
-            currentPath.includes('/admin/building') ||
-            currentPath.includes('/admin/hostel') ||
-            currentPath.includes('/admin/designation') ||
-            currentPath.includes('/admin/department') ||
-            currentPath.includes('/admin/stream') ||
-            currentPath.includes('/admin/section') ||
-            currentPath.includes('/admin/subject') ||
-            currentPath.includes('/admin/venueMaster') ||
-            currentPath.includes('/admin/building-floor-room')) {
-            console.log('Route matched: Setup tab');
-            return '#tab-setup';
-        }
-
-        // Academics routes
-        if (currentPath.includes('/admin/faculty') ||
-            currentPath.includes('/admin/academics') ||
-            currentPath.includes('/admin/course') ||
-            currentPath.includes('/admin/batch')) {
-            console.log('Route matched: Academics tab');
-            return '#tab-academics';
-        }
-
-        // Communications routes
-        if (currentPath.includes('/admin/communications') ||
-            currentPath.includes('/admin/notices')) {
-            console.log('Route matched: Communications tab');
-            return '#tab-communications';
-        }
-
-        // Material Management routes
-        if (currentPath.includes('/admin/material') ||
-            currentPath.includes('/admin/inventory')) {
-            console.log('Route matched: Material Management tab');
-            return '#tab-material-management';
-        }
-
-        // Default to home
-        console.log('Route matched: Home tab (default)');
-        return '#home';
-    }
-
     tabLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             e.preventDefault();
