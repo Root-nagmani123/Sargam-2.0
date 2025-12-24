@@ -47,16 +47,29 @@ class StudentMedicalExemptionController extends Controller
            $query->where('course_master_pk', $courseFilter);
        }
        
-       // Filter by today's date if date_filter is 'today'
-       $dateFilter = $request->get('date_filter');
-       if ($dateFilter === 'today') {
-           // Show records where today's date falls within the exemption period
-           // from_date <= today AND (to_date >= today OR to_date IS NULL)
-           $query->where('from_date', '<=', $currentDate)
-                 ->where(function($q) use ($currentDate) {
-                     $q->where('to_date', '>=', $currentDate)
-                       ->orWhereNull('to_date');
-                 });
+       // Filter by date range
+       $fromDateFilter = $request->get('from_date_filter');
+       $toDateFilter = $request->get('to_date_filter');
+       
+       if ($fromDateFilter || $toDateFilter) {
+           // Filter records where the exemption period overlaps with the selected date range
+           if ($fromDateFilter && $toDateFilter) {
+               // Both dates provided: exemption period overlaps if (to_date >= from_date_filter OR to_date IS NULL) AND from_date <= to_date_filter
+               $query->where(function($q) use ($fromDateFilter, $toDateFilter) {
+                   $q->where('to_date', '>=', $fromDateFilter)
+                     ->orWhereNull('to_date');
+               })
+               ->where('from_date', '<=', $toDateFilter);
+           } elseif ($fromDateFilter) {
+               // Only from_date provided: show records where to_date >= from_date_filter OR to_date IS NULL
+               $query->where(function($q) use ($fromDateFilter) {
+                   $q->where('to_date', '>=', $fromDateFilter)
+                     ->orWhereNull('to_date');
+               });
+           } elseif ($toDateFilter) {
+               // Only to_date provided: show records where from_date <= to_date_filter
+               $query->where('from_date', '<=', $toDateFilter);
+           }
        }
        
        // Search functionality
@@ -92,56 +105,6 @@ class StudentMedicalExemptionController extends Controller
        
        $records = $query->orderBy('pk', 'desc')->paginate(10);
        
-       // Calculate total exemption count for today
-       $todayCountQuery = StudentMedicalExemption::with(['student', 'category', 'speciality', 'course', 'employee']);
-       
-       // Apply same filters as main query for accurate count
-       if ($filter === 'active') {
-           $todayCountQuery->whereHas('course', function($q) use ($currentDate) {
-               $q->where('end_date', '>', $currentDate);
-           });
-       } elseif ($filter === 'archive') {
-           $todayCountQuery->whereHas('course', function($q) use ($currentDate) {
-               $q->where('end_date', '<', $currentDate);
-           });
-       }
-       
-       if ($courseFilter) {
-           $todayCountQuery->where('course_master_pk', $courseFilter);
-       }
-       
-       // Apply search filter to count query as well
-       if ($search && $search != '') {
-           $todayCountQuery->where(function($q) use ($search) {
-               $q->whereHas('student', function($studentQuery) use ($search) {
-                   $studentQuery->where('display_name', 'like', '%' . $search . '%')
-                                ->orWhere('generated_OT_code', 'like', '%' . $search . '%');
-               })
-               ->orWhereHas('course', function($courseQuery) use ($search) {
-                   $courseQuery->where('course_name', 'like', '%' . $search . '%');
-               })
-               ->orWhereHas('employee', function($employeeQuery) use ($search) {
-                   $employeeQuery->where('first_name', 'like', '%' . $search . '%')
-                                 ->orWhere('last_name', 'like', '%' . $search . '%');
-               })
-               ->orWhereHas('category', function($categoryQuery) use ($search) {
-                   $categoryQuery->where('exemp_category_name', 'like', '%' . $search . '%');
-               })
-               ->orWhereHas('speciality', function($specialityQuery) use ($search) {
-                   $specialityQuery->where('speciality_name', 'like', '%' . $search . '%');
-               })
-               ->orWhere('opd_category', 'like', '%' . $search . '%');
-           });
-       }
-       
-       // Count exemptions valid for today
-       $todayTotalCount = $todayCountQuery->where('from_date', '<=', $currentDate)
-           ->where(function($q) use ($currentDate) {
-               $q->where('to_date', '>=', $currentDate)
-                 ->orWhereNull('to_date');
-           })
-           ->count();
-       
        // Get courses filtered by Active/Archive status for dropdown
        $coursesQuery = CourseMaster::where('active_inactive', '1');
        if ($filter === 'active') {
@@ -152,7 +115,7 @@ class StudentMedicalExemptionController extends Controller
        $courses = $coursesQuery->orderBy('course_name', 'asc')->get();
     
         $search = $request->get('search', '');
-        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'dateFilter', 'todayTotalCount', 'search'));
+        return view('admin.student_medical_exemption.index', compact('records', 'filter', 'courses', 'courseFilter', 'search'));
     }
 
    public function create()
@@ -421,13 +384,14 @@ public function update(Request $request, $id)
     {
         $filter = $request->get('filter', 'active');
         $courseFilter = $request->get('course_filter');
-        $dateFilter = $request->get('date_filter');
+        $fromDateFilter = $request->get('from_date_filter');
+        $toDateFilter = $request->get('to_date_filter');
         $search = $request->get('search');
         
         $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
         
         return Excel::download(
-            new StudentMedicalExemptionExport($filter, $courseFilter, $search, $dateFilter),
+            new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter),
             $fileName
         );
     }

@@ -11,15 +11,17 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
 {
     protected $filter;
     protected $courseFilter;
-    protected $dateFilter;
+    protected $fromDateFilter;
+    protected $toDateFilter;
     protected $search;
 
-    public function __construct($filter = 'active', $courseFilter = null, $search = null, $dateFilter = null)
+    public function __construct($filter = 'active', $courseFilter = null, $search = null, $fromDateFilter = null, $toDateFilter = null)
     {
         $this->filter = $filter;
         $this->courseFilter = $courseFilter;
         $this->search = $search;
-        $this->dateFilter = $dateFilter;
+        $this->fromDateFilter = $fromDateFilter;
+        $this->toDateFilter = $toDateFilter;
     }
 
     public function collection()
@@ -46,14 +48,25 @@ class StudentMedicalExemptionExport implements FromCollection, WithHeadings
             $query->where('course_master_pk', $this->courseFilter);
         }
         
-        // Filter by today's date if date_filter is 'today'
-        if ($this->dateFilter === 'today') {
-            // Show records where today's date falls within the exemption period
-            $query->where('from_date', '<=', $currentDate)
-                  ->where(function($q) use ($currentDate) {
-                      $q->where('to_date', '>=', $currentDate)
-                        ->orWhereNull('to_date');
-                  });
+        // Filter by date range
+        if ($this->fromDateFilter || $this->toDateFilter) {
+            if ($this->fromDateFilter && $this->toDateFilter) {
+                // Both dates provided: exemption period overlaps if (to_date >= from_date_filter OR to_date IS NULL) AND from_date <= to_date_filter
+                $query->where(function($q) {
+                    $q->where('to_date', '>=', $this->fromDateFilter)
+                      ->orWhereNull('to_date');
+                })
+                ->where('from_date', '<=', $this->toDateFilter);
+            } elseif ($this->fromDateFilter) {
+                // Only from_date provided: show records where to_date >= from_date_filter OR to_date IS NULL
+                $query->where(function($q) {
+                    $q->where('to_date', '>=', $this->fromDateFilter)
+                      ->orWhereNull('to_date');
+                });
+            } elseif ($this->toDateFilter) {
+                // Only to_date provided: show records where from_date <= to_date_filter
+                $query->where('from_date', '<=', $this->toDateFilter);
+            }
         }
         
         // Search functionality
