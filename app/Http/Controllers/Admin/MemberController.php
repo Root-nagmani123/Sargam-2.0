@@ -106,7 +106,7 @@ class MemberController extends Controller
     {
         $this->validateEmpId($request);
 
-        \Log::info('Saving Step 3 Data', $request->all());
+        // og::info('Saving Step 3 Data', $request->all());
 
         return EmployeeMaster::find((int) $request->emp_id);
     }

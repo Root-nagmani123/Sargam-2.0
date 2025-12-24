@@ -151,155 +151,171 @@
             </div>
 
             <!-- Reply Form -->
-            @if($memoNotice->isEmpty() || $memoNotice->first()->notice_status == 1)
-            <div class="border p-3 bg-light rounded">
-                <form id="memo_notice_conversation" method="POST" enctype="multipart/form-data"
-                    action="{{ route('memo.notice.management.memo_notice_conversation') }}">
+          
+           @if($memoNotice->isEmpty() || $memoNotice->first()->notice_status == 1)
+
+                    <div class="border p-3 bg-light rounded">
+                    <form id="memo_notice_conversation" method="POST" enctype="multipart/form-data"
+                        action="{{ route('memo.notice.management.memo_notice_conversation') }}">
                     @csrf
 
                     <div class="row g-3 mb-3">
+
+                        <!-- Hidden -->
+                        <input type="hidden" name="type" value="{{ $type }}">
+                        <input type="hidden" name="memo_notice_id" value="{{ $id }}">
+
+                        <!-- Date -->
                         <div class="col-md-6">
-                            <input type="hidden" name="type" value="{{ $type }}">
-                            <input type="hidden" name="memo_notice_id" value="{{ $id }}">
                             <label class="form-label">Select Date</label>
                             <input type="date" class="form-control" id="current_date" name="date" readonly>
                         </div>
+
+                        <!-- Time -->
                         <div class="col-md-6">
                             <label class="form-label">Select Time</label>
                             <input type="time" class="form-control" id="current_time" name="time" readonly>
                         </div>
 
+                        <!-- Message -->
                         <div class="col-12">
-                            <div class="mb-3">
-                                <label class="form-label">Message <span class="text-muted">*</span></label>
-                                <textarea class="form-control" rows="4" name="message"
-                                    placeholder="Type your message here..."></textarea>
-                            </div>
+                            <label class="form-label">Message *</label>
+                            <textarea class="form-control" rows="4" name="message">{{ old('message') }}</textarea>
+                            @error('message') <small class="text-danger">{{ $message }}</small> @enderror
                         </div>
 
+                        <!-- Upload -->
                         <div class="col-6">
-                            <div class="mb-3">
-                                <label class="form-label">Upload Document (if any)</label>
-                                <input type="file" class="form-control" name="document" accept=".jpg,.jpeg,.png,.pdf">
-                                <small class="text-muted">Less than 1 MB type (jpg,jpeg,png,pdf)</small>
-
-
-                            </div>
+                            <label class="form-label">Upload Document</label>
+                            <input type="file" class="form-control" name="document" accept=".jpg,.jpeg,.png,.pdf">
                         </div>
 
+                        <!-- Status -->
                         <div class="col-6">
-                            <div class="mb-3">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" name="status" id="status">
-                                    <option value="1">OPEN</option>
-                                    <option value="2">CLOSED</option>
-                                </select>
-                            </div>
+                            <label class="form-label">Status</label>
+                            <select class="form-select" name="status" id="status">
+                                <option value="1" {{ old('status') == 1 ? 'selected' : '' }}>OPEN</option>
+                                <option value="2" {{ old('status') == 2 ? 'selected' : '' }}>CLOSED</option>
+                            </select>
                         </div>
-                        @if($type == 'memo' || $type == 'notice' )
-                       
 
-                        <div id="conclusion_div" style="display: none;">
-                            <div class="col-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Conclusion Type</label>
-                                    <select class="form-select" name="conclusion_type" id="conclusion_type">
-                                        <option value="">Select Conclusion Type</option>
-                                        @foreach($memo_conclusion_master as $conclusion)
-                                        <option value="{{ $conclusion->pk }}">{{ $conclusion->discussion_name }}
-                                        </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="mb-3" id="deduction_div" style="display: none;">
-                                        <label class="form-label">Mark of Deduction</label>
-                                        <input type="number" class="form-control" name="mark_of_deduction"
-                                            placeholder="Enter number of deduction">
-                                    </div>
-                            </div>
-                            
-                            <div class="col-6">
-
-                                <div class="mb-3">
-                                    <label class="form-label">Conclusion Remark</label>
-                                    <textarea class="form-control" rows="4" name="conclusion_remark"
-                                        placeholder="Type your conclusion message here..."></textarea>
-                                    <small class="text-muted">This will be sent to the student as a conclusion of the
-                                        memo.</small>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
-                    @endif
+                    {{-- ================= CONCLUSION SECTION ================= --}}
+                    @if($type == 'memo' || $type == 'notice')
 
+                    <div class="row g-3 mt-3" id="conclusion_div"
+                        style="{{ old('status') == 2 ? '' : 'display:none;' }}">
+
+                        <!-- Conclusion Type -->
+                        <div class="col-6">
+                            <label class="form-label">Conclusion Type</label>
+                            <select class="form-select" name="conclusion_type" id="conclusion_type">
+                                <option value="">Select Conclusion Type</option>
+                                @foreach($memo_conclusion_master as $conclusion)
+                                    <option value="{{ $conclusion->pk }}"
+                                            {{ old('conclusion_type') == $conclusion->pk ? 'selected' : '' }}>
+                                        {{ $conclusion->discussion_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Mark of Deduction -->
+                        <div class="col-6">
+                            <div id="deduction_div"
+                                style="{{ old('conclusion_type') == 2 ? '' : 'display:none;' }}">
+                                <label class="form-label">Mark of Deduction</label>
+                                <input type="number" class="form-control"
+                                    name="mark_of_deduction"
+                                    step="0.01" min="0"
+                                    value="{{ old('mark_of_deduction') }}">
+                                @error('mark_of_deduction')
+                                    <small class="text-danger">{{ $message }}</small>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <!-- Conclusion Remark -->
+                        <div class="col-12">
+                            <label class="form-label">Conclusion Remark</label>
+                            <textarea class="form-control" rows="3"
+                                    name="conclusion_remark">{{ old('conclusion_remark') }}</textarea>
+                        </div>
+
+                    </div>
+                    @endif
 
                     <hr>
-                    <div class="gap-2 text-end">
+                    <div class="text-end">
                         <button type="submit" class="btn btn-primary">Send</button>
-                        <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
+                        <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">Back</a>
                     </div>
-                </form>
-                @endif
-                @if( isset($memoNotice->first()->notice_status) && $memoNotice->first()->notice_status == 2 )
+
+                    </form>
+                    </div>
+                    @endif
+                    @if((isset($memoNotice->first()->communication_status) && ($memoNotice->first()->communication_status == 2)))
+                        <div class="alert alert-warning mt-3">
+                    <strong>Memo Closed:</strong> This memo has been closed. You cannot reply to it.
+                </div>
+                    @else if( isset($memoNotice->first()->notice_status) && ($memoNotice->first()->notice_status == 2) )
                 <div class="alert alert-warning mt-3">
                     <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
-                    @endif
                 </div>
+                 @endif
             </div>
         </div>
     </div>
     @endsection
     @section('scripts')
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var statusSelector = document.getElementById('status');
-        var conclusionDiv = document.getElementById('conclusion_div');
-        var conclusionTypeSelector = document.getElementById('conclusion_type');
+    @section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
 
-        if (statusSelector) {
-            statusSelector.addEventListener('change', function() {
-                // Show or hide the conclusion section based on the selected status
-                if (this.value == '2') {
-                    conclusionDiv.style.display = 'block';
-                } else {
-                    conclusionDiv.style.display = 'none';
-                }
-            });
+    const status = document.getElementById('status');
+    const conclusionDiv = document.getElementById('conclusion_div');
+    const conclusionType = document.getElementById('conclusion_type');
+    const deductionDiv = document.getElementById('deduction_div');
 
-            // Default check on page load
-            if (statusSelector.value == '2') {
-                conclusionDiv.style.display = 'block';
+    function toggleConclusion() {
+        if (status && status.value == '2') {
+            conclusionDiv.style.display = 'flex';
+        } else {
+            conclusionDiv.style.display = 'none';
+        }
+    }
+
+    function toggleDeduction() {
+        if (!conclusionType) return;
+
+        const selectedText = conclusionType.options[conclusionType.selectedIndex].text;
+
+        if (selectedText === 'Marks Deduction') {
+            deductionDiv.style.display = 'block';
+        } else {
+            deductionDiv.style.display = 'none';
+            if (deductionDiv.querySelector('input')) {
+                deductionDiv.querySelector('input').value = '';
             }
         }
-        if(conclusionTypeSelector ){
-            conclusionTypeSelector.addEventListener('change', function() {
-            var selectedOption = this.options[this.selectedIndex];
-            var discussionName = selectedOption.text;
+    }
 
-          if(discussionName === 'Marks Deduction'){
-                // If 'Others' is selected, make the conclusion remark required
-                  document.getElementById('deduction_div').style.display = 'block';
-            } else {
-                // Otherwise, remove the required attribute
-                document.getElementById('deduction_div').style.display = 'none';
-            }
-        });
-        }
+    // Events
+    if (status) status.addEventListener('change', toggleConclusion);
+    if (conclusionType) conclusionType.addEventListener('change', toggleDeduction);
 
-        // Set date and time fields
-        const now = new Date();
-        const date = now.toISOString().split('T')[0];
-        const hours = String(now.getHours()).padStart(2, '0');
-        const minutes = String(now.getMinutes()).padStart(2, '0');
-        const time = `${hours}:${minutes}`;
+    // On page load
+    toggleConclusion();
+    toggleDeduction();
 
-        document.getElementById('current_date').value = date;
-        document.getElementById('current_time').value = time;
-       
-    });
+    // Set current date & time
+    const now = new Date();
+    document.getElementById('current_date').value = now.toISOString().split('T')[0];
+    document.getElementById('current_time').value =
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0');
 
-    </script>
+});
+</script>
     @endsection
