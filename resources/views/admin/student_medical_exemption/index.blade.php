@@ -214,17 +214,17 @@
                         </div>
                         
                         <!-- Reset Button -->
-                        <div class="col-md-2">
+                        <div class="col-md-1">
                             <label class="form-label fw-semibold d-block">&nbsp;</label>
                             <a href="{{ route('student.medical.exemption.index', ['filter' => 'active']) }}"
                                 class="btn btn-outline-danger w-100 fw-semibold"
                                 title="Reset all filters">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset
                             </a>
                         </div>
                         
                         <!-- Active/Archive Buttons -->
-                        <div class="col-md-2 text-end">
+                        <div class="col-md-3 text-end">
                             <div class="d-flex align-items-center justify-content-end gap-2">
                                 <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                     aria-label="Course Status Filter">
@@ -259,6 +259,17 @@
                                         <i class="bi bi-archive me-1"></i> Archive
                                     </a>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Total Records Count Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary fs-6 px-3 py-2 d-inline-flex align-items-center">
+                                    <i class="bi bi-list-check me-2"></i> Total Records: <strong class="ms-1">{{ $records->total() }}</strong>
+                                </span>
                             </div>
                         </div>
                     </div>
