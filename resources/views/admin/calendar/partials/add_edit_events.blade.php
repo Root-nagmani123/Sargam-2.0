@@ -149,7 +149,6 @@
                                    Internal Faculty
                                 </label>
                                 <select name="internal_faculty[]" id="internal_faculty" class="form-control" required aria-required="true" multiple>
-                                    <option value="">Select Faculty</option>
                                     @foreach($internal_faculty as $faculty)
                                     <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
                                         {{ $faculty->full_name }}
@@ -337,36 +336,53 @@ document.addEventListener('DOMContentLoaded', function () {
     internalFacultyDiv.style.display = 'none'; // Hide initially
     const faculty_type = document.getElementById('faculty_type');
 
+    // Initialize Select2 when modal is shown
+    $('#eventModal').on('shown.bs.modal', function () {
+        if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
+            $('#internal_faculty').select2({
+                placeholder: 'Select Internal Faculty',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#eventModal')
+            });
+        }
+        
+        // Update visibility based on current faculty type selection
+        updateinternal_faculty(faculty_type.value);
+    });
+
+    // Destroy Select2 when modal is hidden to prevent conflicts
+    $('#eventModal').on('hidden.bs.modal', function () {
+        if ($('#internal_faculty').hasClass('select2-hidden-accessible')) {
+            $('#internal_faculty').select2('destroy');
+        }
+    });
 
     // Example: Show internal faculty when a specific group type is selected
     facultySelect.addEventListener('change', function () {
-            const facultyType = document.getElementById('faculty_type').selectedOptions[0].value;
+        const facultyType = document.getElementById('faculty_type').value;
         updateinternal_faculty(facultyType);
     });
     faculty_type.addEventListener('change', function () {
-            const facultyType = document.getElementById('faculty_type').selectedOptions[0].value;
+        const facultyType = this.value;
         updateinternal_faculty(facultyType);
     });
-   
-    updateinternal_faculty(faculty_type.selectedOptions[0].value); // Initial check
-
 
    function  updateinternal_faculty(facultyType) {
     
-console.log(facultyType);
+        console.log(facultyType);
         switch (facultyType) {
             case '1': // Internal
                 console.log('internal');
-              internalFacultyDiv.style.display = 'none';
+                internalFacultyDiv.style.display = 'none';
                 break;
             case '2': // Guest
-                  console.log('guest');
-               internalFacultyDiv.style.display = 'block';
+                console.log('guest');
+                internalFacultyDiv.style.display = 'block';
                 break;
             default: // Research/Other
-            console.log('rtyuio');
+                console.log('rtyuio');
                 internalFacultyDiv.style.display = 'block';
-
         }
     }
 });
