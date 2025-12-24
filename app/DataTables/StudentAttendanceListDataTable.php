@@ -70,14 +70,20 @@ class StudentAttendanceListDataTable extends DataTable
             ->orderBy(1)
             ->parameters([
                 'paging' => false,           
-                'searching' => true,         
+                'searching' => false,         
                 'info' => false,             
                 'scrollY' => '100vh',        
                 'scrollCollapse' => true,
                 'responsive' => true,
                 'scrollX' => true,
                 'autoWidth' => false,
-                'order' => [],
+                'paginationType' => 'full_numbers',
+
+                'language' => [
+                    'search' => '_INPUT_',
+                    'searchPlaceholder' => 'Search OT Name or OT Code...'
+                ],
+
             ]);
     }
 

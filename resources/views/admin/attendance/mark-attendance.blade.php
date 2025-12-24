@@ -87,7 +87,7 @@
                         </div>
                     </div>
                     <hr>
-                    {!! $dataTable->table(['class' => 'table  table-bordered table-striped table-hover']) !!}
+                    {!! $dataTable->table(['class' => 'table']) !!}
                 </div>
             </div>
         </div>

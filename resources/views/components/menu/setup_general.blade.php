@@ -74,11 +74,11 @@
                             <ul class="collapse list-unstyled ps-3" id="userFeedbackCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('feedback.get.feedbackList') }}">
-                                        <span class="hide-menu">Feedback</span>
+                                        <span class="hide-menu">Feedback History</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('feedback.get.studentFeedback') }}">
-                                        <span class="hide-menu">Student Feedback</span>
+                                        <span class="hide-menu">Session Feedback</span>
                                     </a></li>
 
                             </ul>
