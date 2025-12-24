@@ -328,7 +328,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     $('#saveFacultyForm').click(function (e) {
         e.preventDefault();
-		e.stopPropagation();
+
         const formData = new FormData();
         // remove all error class
         $('label.text-danger').removeClass('text-danger');
