@@ -327,7 +327,8 @@ document.addEventListener('DOMContentLoaded', function () {
     $('input[name="firstName"], input[name="middlename"], input[name="lastname"]').on('input', updateFullName);
 
     $('#saveFacultyForm').click(function (e) {
-
+        e.preventDefault();
+		e.stopPropagation();
         const formData = new FormData();
         // remove all error class
         $('label.text-danger').removeClass('text-danger');
@@ -529,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function () {
             success: function (response) {
 
                 // Handle success response
-                if (response.status) {
+                /*if (response.status) {
                     toastr.options = {
                         timeOut: 50, // 1.5 seconds
                         onHidden: function () {
@@ -541,7 +542,13 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 } else {
                     toastr.error(response.message);
-                }
+                }*/
+               if (response.status) {
+					toastr.success(response.message);
+
+					window.location.href = routes.facultyIndexUrl;
+				}
+
             },
             error: function (error) {
                 console.log('Error:', error);
