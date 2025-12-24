@@ -137,15 +137,28 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
             }
 
             // Get attendance status from saved record or determine based on exemptions
-            // Priority: Saved Attendance (Medical/Other) > Saved Attendance (MDO/Escort/Present/Late/Absent) > Exemptions from Tables > Default Present
+            // Priority: Exemptions from Tables > Saved Attendance (Medical/Other) > Saved Attendance (MDO/Escort/Present/Late/Absent) > Default Present
             $attendanceStatus = 'Not Marked';
             $mdoDuty = 'No';
             $escortDuty = 'No';
             $medicalExempt = 'No';
             $otherExempt = 'No';
             
-            if ($attendance) {
-                // Use saved attendance status - this takes priority
+            // First, check exemptions from tables (these take priority)
+            if ($hasMedicalExempt) {
+                $attendanceStatus = 'Not Marked';
+                $medicalExempt = 'Yes';
+            } elseif ($hasOtherExempt) {
+                $attendanceStatus = 'Not Marked';
+                $otherExempt = 'Yes';
+            } elseif ($hasMdoDuty) {
+                $attendanceStatus = 'Not Marked';
+                $mdoDuty = 'Yes';
+            } elseif ($hasEscortDuty) {
+                $attendanceStatus = 'Not Marked';
+                $escortDuty = 'Yes';
+            } elseif ($attendance) {
+                // No exemptions from tables, check saved attendance
                 $status = $attendance->status;
                 
                 // Handle Medical (6) and Other (7) exemptions - show "Not Marked"
@@ -157,41 +170,33 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
                     $otherExempt = 'Yes';
                 } else {
                     // Handle Present, Late, Absent, MDO (4), Escort (5)
-                    $attendanceStatus = match ($status) {
-                        1 => 'Present',
-                        2 => 'Late',
-                        3 => 'Absent',
-                        4 => 'Present', // MDO Duty
-                        5 => 'Present', // Escort Duty
-                        default => 'Present',
-                    };
-                    
-                    // Set duty flags based on saved status
-                    if ($status == 4) {
-                        $mdoDuty = 'Yes';
-                    } elseif ($status == 5) {
-                        $escortDuty = 'Yes';
+                    // Ensure Late (2) and Absent (3) are properly displayed
+                    switch ($status) {
+                        case 1:
+                            $attendanceStatus = 'Present';
+                            break;
+                        case 2:
+                            $attendanceStatus = 'Late';
+                            break;
+                        case 3:
+                            $attendanceStatus = 'Absent';
+                            break;
+                        case 4:
+                            $attendanceStatus = 'Not Marked'; // MDO Duty
+                            $mdoDuty = 'Yes';
+                            break;
+                        case 5:
+                            $attendanceStatus = 'Not Marked'; // Escort Duty
+                            $escortDuty = 'Yes';
+                            break;
+                        default:
+                            $attendanceStatus = 'Present';
+                            break;
                     }
                 }
             } else {
-                // No saved attendance - check exemptions/duties from tables
-                // If Medical or Other exemption exists, show "Not Marked"
-                if ($hasMedicalExempt) {
-                    $attendanceStatus = 'Not Marked';
-                    $medicalExempt = 'Yes';
-                } elseif ($hasOtherExempt) {
-                    $attendanceStatus = 'Not Marked';
-                    $otherExempt = 'Yes';
-                } elseif ($hasMdoDuty) {
-                    $attendanceStatus = 'Present';
-                    $mdoDuty = 'Yes';
-                } elseif ($hasEscortDuty) {
-                    $attendanceStatus = 'Present';
-                    $escortDuty = 'Yes';
-                } else {
-                    // No attendance and no exemptions - default to Present
-                    $attendanceStatus = 'Present';
-                }
+                // No saved attendance and no exemptions from tables - default to Present
+                $attendanceStatus = 'Present';
             }
 
             $row = [
@@ -360,15 +365,36 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
             ]);
 
         // Apply header row style (row 1)
-        return [
-            1 => [
+        $sheet->getStyle("A1:{$lastColumn}1")
+            ->applyFromArray([
                 'font' => ['bold' => true],
                 'fill' => [
                     'fillType'   => Fill::FILL_SOLID,
                     'startColor' => ['rgb' => 'FFCC00'], // Light Yellow
                 ],
-            ],
-        ];
+            ]);
+
+        // Apply fill color to "Yes" fields in exemption columns
+        // Column E = MDO Duty, F = Escort Duty, G = Medical Exemption, H = Other Exemption
+        $exemptionColumns = ['E', 'F', 'G', 'H'];
+
+        // Iterate through data rows (starting from row 2, as row 1 is header)
+        for ($row = 2; $row <= $lastRow; $row++) {
+            foreach ($exemptionColumns as $column) {
+                $cellValue = $sheet->getCell($column . $row)->getValue();
+                if (strtoupper(trim($cellValue ?? '')) === 'YES') {
+                    $sheet->getStyle($column . $row)
+                        ->applyFromArray([
+                            'fill' => [
+                                'fillType'   => Fill::FILL_SOLID,
+                                'startColor' => ['rgb' => '90EE90'], // Light Green
+                            ],
+                        ]);
+                }
+            }
+        }
+
+        return [];
     }
 }
 
