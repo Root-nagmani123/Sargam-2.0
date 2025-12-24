@@ -18,10 +18,13 @@
                                     <span class="hide-menu">Dashboard</span>
                                 </a>
                             </li>
+                            @if(hasRole('Admin') || hasRole('Training'))
+                            <!-- Notice Notification Route -->
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.notice.index') }}">
                                         <span class="hide-menu">Notice Notifications</span>
                                     </a></li>
+                                    @endif
 
                             <!-- Faculty Dashboard Route -->
                             @if(hasRole('Doctor'))
