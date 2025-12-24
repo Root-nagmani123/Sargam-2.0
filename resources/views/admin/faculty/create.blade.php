@@ -848,10 +848,6 @@ input.is-invalid {
 
 </script>
 <script>
-const appUrl = document
-    .querySelector('meta[name="app-url"]')
-    .getAttribute('content');
-
 let isMobileDuplicate = false;
 $(document).ready(function () {
 
@@ -1115,7 +1111,7 @@ function fillFacultyForm(faculty) {
 
 
 	if (faculty.photo_uplode_path) {
-    const photoURL = `${appUrl}/storage/${faculty.photo_uplode_path}`;
+    const photoURL = `/storage/${faculty.photo_uplode_path}`;
 
     // show inside <img id="photoPreview">
     $("#photoPreview").attr("src", photoURL);
@@ -1132,7 +1128,7 @@ function fillFacultyForm(faculty) {
 	}
 
     if (faculty.Doc_uplode_path) {
-    const docURL = `${appUrl}/storage/${faculty.Doc_uplode_path}`;
+    const docURL = `/storage/${faculty.Doc_uplode_path}`;
 
     $(".existing-document").html(`
         <a href="${docURL}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
@@ -1145,7 +1141,7 @@ function fillFacultyForm(faculty) {
 }
 
 if (faculty.Professional_Memberships_doc_upload_path) {
-    const docURL = `${appUrl}/storage/${faculty.Professional_Memberships_doc_upload_path}`;
+    const docURL = `/storage/${faculty.Professional_Memberships_doc_upload_path}`;
 
     $(".existing-membership").html(`
         <a href="${docURL}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1">
@@ -1158,7 +1154,7 @@ if (faculty.Professional_Memberships_doc_upload_path) {
 }
 
 if (faculty.Reference_Recommendation) {
-    const docURL = `${appUrl}/storage/${faculty.Reference_Recommendation}`;
+    const docURL = `/storage/${faculty.Reference_Recommendation}`;
 
     $(".existing-reference").html(`
         <a href="${docURL}"
@@ -1225,7 +1221,7 @@ if (faculty.Reference_Recommendation) {
 	$("input[name='pannumber']").val(faculty.PAN_No);
 
     if (faculty.Rech_Publi_Upload_path) {
-    const docURL = `${appUrl}/storage/${faculty.Rech_Publi_Upload_path}`;
+    const docURL = `/storage/${faculty.Rech_Publi_Upload_path}`;
 
     $(".existing-research").html(`
         <a href="${docURL}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1 fw-medium">
@@ -1239,7 +1235,7 @@ if (faculty.Reference_Recommendation) {
 
 
     if (faculty.Rech_Publi_Upload_path) {
-    const docURL = `${appUrl}/storage/${faculty.Rech_Publi_Upload_path}`;
+    const docURL = `/storage/${faculty.Rech_Publi_Upload_path}`;
 
     $(".existing-research").html(`
         <a href="${docURL}" target="_blank" class="text-primary d-inline-flex align-items-center gap-1 fw-medium">
@@ -1286,7 +1282,7 @@ if (faculty.Reference_Recommendation) {
     $('#suggestionList').hide();
 
     // GET full faculty details
-    /*$.ajax({
+    $.ajax({
         url: "/faculty/details/" + id,
         type: "GET",
         success: function (faculty) {
@@ -1294,15 +1290,7 @@ if (faculty.Reference_Recommendation) {
 
 
         }
-    });*/
-    $.ajax({
-    url: routes.facultyIndexUrl + "details/" + id,
-    type: "GET",
-    success: function (faculty) {
-        fillFacultyForm(faculty);
-    }
-});
-
+    });
 });
 
 
