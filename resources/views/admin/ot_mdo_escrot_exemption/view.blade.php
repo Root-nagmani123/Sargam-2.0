@@ -99,6 +99,11 @@
                         @endif
                     </select>
                 </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="button" id="clearFilterBtn" class="btn btn-outline-secondary px-4 py-2 shadow-sm">
+                        <i class="material-icons menu-icon material-symbols-rounded me-1" style="font-size: 18px; vertical-align: middle;">refresh</i> Clear Filter
+                    </button>
+                </div>
             </div>
 
             @php
@@ -308,6 +313,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const dutyTypeFilter = document.getElementById('duty_type_filter');
+        const clearFilterBtn = document.getElementById('clearFilterBtn');
         
         if (dutyTypeFilter) {
             dutyTypeFilter.addEventListener('change', function() {
@@ -320,6 +326,14 @@
                     url.searchParams.delete('duty_type_filter');
                 }
                 
+                window.location.href = url.toString();
+            });
+        }
+        
+        if (clearFilterBtn) {
+            clearFilterBtn.addEventListener('click', function() {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('duty_type_filter');
                 window.location.href = url.toString();
             });
         }

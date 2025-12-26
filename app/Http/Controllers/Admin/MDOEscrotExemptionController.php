@@ -222,4 +222,16 @@ class MDOEscrotExemptionController extends Controller
             return response()->json(['status' => false, 'message' => 'Error occurred while updating MDO/Escort Exemption.']);
         }
     }
+
+    public function destroy($id)
+    {
+        try {
+            $mdoDutyType = MDOEscotDutyMap::findOrFail($id);
+            $mdoDutyType->delete();
+
+            return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO/Escort Exemption deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('mdo-escrot-exemption.index')->with('error', 'Error occurred while deleting MDO/Escort Exemption.');
+        }
+    }
 }
