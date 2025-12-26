@@ -1525,6 +1525,7 @@ class CalendarManager {
         document.getElementById('eventVanue').textContent = data.venue_name || '';
         document.getElementById('eventclasssession').textContent = data.class_session || '';
         document.getElementById('eventgroupname').textContent = data.group_name || '';
+        document.getElementById('internal_faculty_name_show').textContent = data.internal_faculty_names ? data.internal_faculty_names.join(', ') : 'N/A';
 
         // Set edit/delete button data
         const editBtn = document.getElementById('editEventBtn');
@@ -2161,7 +2162,9 @@ class CalendarManager {
             document.getElementById('shift').value = event.class_session;
             this.toggleShiftFields();
         }
-
+       
+                await this.updateinternal_faculty(event.faculty_type);
+        
         // Checkboxes
         document.getElementById('fullDayCheckbox').checked = event.full_day == 1;
         document.getElementById('feedback_checkbox').checked = event.feedback_checkbox == 1;
@@ -2176,43 +2179,65 @@ class CalendarManager {
 
         // Store current event ID
         this.currentEventId = event.pk;
-        await this.updateinternal_faculty(event.faculty_type);
+       
         if(event.faculty_type == 2){
                 await this.setInternalFaculty(event.internal_faculty);
         }
     }
 async updateinternal_faculty(facultyType) {
-    
-// console.log(facultyType + 'kkkkk');
-        switch (facultyType) {
-            case '1': // Internal
-                console.log('internal');
-              internalFacultyDiv.style.display = 'none';
-                break;
-            case '2': // Guest
-                  console.log('guest');
-               internalFacultyDiv.style.display = 'block';
-                break;
-            default: // Research/Other
-            console.log('rtyuio');
-                internalFacultyDiv.style.display = 'block';
+    console.log(facultyType, typeof facultyType);
+    facultyType = parseInt(facultyType, 10);
 
+        switch (facultyType) {
+            case 1: // Internal
+                console.log('internal.');
+                internalFacultyDiv.style.display = 'none';
+                break;
+            case 2: // Guest
+                console.log('guest..');
+                internalFacultyDiv.style.display = 'block';
+                break;
+            default:
+                console.log('default...');
+                internalFacultyDiv.style.display = 'none';
         }
     }
    async setInternalFaculty(internalFacultyIds) {
 
     if (!internalFacultyIds) return;
+    console.log('Setting internal faculty IDs:', internalFacultyIds);
 
     // Agar CSV string aa rahi ho
-    if (typeof internalFacultyIds === 'array') {
+   // Normalize internalFacultyIds properly
+if (typeof internalFacultyIds === 'string') {
+    try {
+        // Case: '["4","23"]'
+        internalFacultyIds = JSON.parse(internalFacultyIds);
+    } catch (e) {
+        // Case: '4,23'
         internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
     }
+}
 
-    const select = document.getElementById('internal_faculty');
+internalFacultyIds = internalFacultyIds.map(id => String(id).trim());
 
-    Array.from(select.options).forEach(option => {
-        option.selected = internalFacultyIds.includes(option.value);
-    });
+const select = document.getElementById('internal_faculty');
+
+// Clear old selections
+Array.from(select.options).forEach(option => {
+    option.selected = false;
+});
+
+// Apply correct selections
+Array.from(select.options).forEach(option => {
+    const optionValue = String(option.value);
+    option.selected = internalFacultyIds.includes(optionValue);
+});
+
+// Refresh Select2 if used
+$('#internal_faculty').trigger('change');
+
+
 
     // Agar Choices.js / Select2 use kar rahe ho
     select.dispatchEvent(new Event('change'));
