@@ -338,10 +338,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const facultySelect = document.getElementById('faculty');
     internalFacultyDiv.style.display = 'none'; // Hide initially
     // const faculty_type = document.getElementById('faculty_type');
-    let faculty_type = $('#faculty option:selected').data('faculty_type');
 
     // Initialize Select2 when modal is shown
     $('#eventModal').on('shown.bs.modal', function() {
+    
+
         if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
             $('#internal_faculty').select2({
                 placeholder: 'Select Internal Faculty',
@@ -351,8 +352,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Update visibility based on current faculty type selection
-        updateinternal_faculty(faculty_type);
     });
 
     // Destroy Select2 when modal is hidden to prevent conflicts
@@ -364,30 +363,29 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Example: Show internal faculty when a specific group type is selected
     facultySelect.addEventListener('change', function() {
+        console.log(facultySelect, typeof facultySelect);
         facultyType = $('#faculty option:selected').data('faculty_type');
-        updateinternal_faculty(facultyType);
+        updateinternal_faculty_data(facultyType, console.log('changed second'+facultyType));
     });
     faculty_type.addEventListener('change', function() {
+        console.log(faculty_type, typeof faculty_type);
         const facultyType = this.value;
-        updateinternal_faculty(facultyType);
+        updateinternal_faculty_data(facultyType, console.log('changed thired'+facultyType));
     });
 
-    function updateinternal_faculty(facultyType) {
+    function updateinternal_faculty_data(facultyType, logMessage) {
         console.log(facultyType, typeof facultyType);
+        console.log(logMessage);
 
         switch (facultyType) {
             case 1: // Internal
                 console.log('internal');
                 internalFacultyDiv.style.display = 'none';
                 break;
-
             case 2: // Guest
                 console.log('guest');
                 internalFacultyDiv.style.display = 'block';
-
-
                 break;
-
             default:
                 console.log('default');
                 internalFacultyDiv.style.display = 'none';

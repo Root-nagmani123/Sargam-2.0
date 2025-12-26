@@ -35,6 +35,7 @@ class CalendarEvent extends Model
         'ratting_checkbox',
         'remark_checkbox',
         'bio_attendance',
+        'Faculty_feedback',
         'active_inactive',
         'created_date',
         'modified_date',
