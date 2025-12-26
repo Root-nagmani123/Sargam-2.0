@@ -14,8 +14,8 @@
         --border: #e5e7eb;
     }
         .course-header {
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-        color: #fff;
+        background: #fff;
+        color: #af2910;
         padding: 2.75rem 1.5rem;
         border-radius: 1rem 1rem 1rem 1rem;
         text-align: center;
@@ -24,12 +24,15 @@
     .course-header h1 {
         font-size: 1.85rem;
         font-weight: 600;
-        color: #fff;
+        color: #af2910;
     }
 
     .course-header .badge {
         background: #ffffff;
         color: #000;
+    }
+    body .text-muted {
+        color: #000 !important;
     }
 </style>
 <div class="container-fluid">
@@ -123,7 +126,7 @@
                                     <div class="col-md-6 text-center">
                                         <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
                                         <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
-                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
+                                            <i class="material-icons me-1" aria-hidden="true">date_range</i> —
                                         </p>
                                     </div>
 
@@ -132,15 +135,15 @@
                                             <div class="btn-group mb-2" role="group" aria-label="Week navigation">
                                                 <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
                                                     aria-label="Previous week">
-                                                    <i class="bi bi-chevron-left"></i>
+                                                    <i class="material-icons material-symbols-rounded">chevron_left</i>
                                                 </button>
                                                 <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
                                                     aria-label="Current week">
-                                                    <i class="bi bi-calendar-check me-2"></i>Today
+                                                    <i class="material-icons me-2" aria-hidden="true">calendar_today</i>Today
                                                 </button>
                                                 <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
                                                     aria-label="Next week">
-                                                    <i class="bi bi-chevron-right"></i>
+                                                    <i class="material-icons material-symbols-rounded">chevron_right</i>
                                                 </button>
                                             </div>
 
@@ -2165,6 +2168,7 @@ class CalendarManager {
         document.getElementById('remarkCheckbox').checked = event.Remark_checkbox == 1;
         document.getElementById('ratingCheckbox').checked = event.Ratting_checkbox == 1;
         document.getElementById('bio_attendanceCheckbox').checked = event.Bio_attendance == 1;
+        document.getElementById('facultyReviewRating').checked = event.Faculty_feedback == 1;
 
         // Trigger dependent loads (await group types to ensure it completes)
         await this.loadGroupTypesForEdit(event);

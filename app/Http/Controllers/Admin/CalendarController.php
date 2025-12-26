@@ -187,6 +187,7 @@ class CalendarController extends Controller
         $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
         $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
         $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
+        $event->Faculty_feedback = $request->has('facultyReviewRating') ? 1 : 0;
         $event->active_inactive = $request->active_inactive ?? 1;
 
         $event->save();
