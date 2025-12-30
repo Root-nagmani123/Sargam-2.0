@@ -75,18 +75,20 @@
                     </div>
 
                     <div class="mb-3">
-
-    <!-- <select
-            class="form-select"
-            required
-            aria-required="true">
-        <option value="" selected disabled>
-            Select Course
-        </option>
-            <option>
-            </option>
-    </select> -->
-</div>
+                        <select
+                            class="form-select"
+                            id="courseFilter"
+                            aria-label="Filter by course"
+                            style="min-width: 200px;">
+                            <option value="">All Courses</option>
+                            @foreach($courseMaster as $course)
+                                <option value="{{ $course->pk }}" 
+                                    {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
+                                    {{ $course->course_name }} ({{ $course->couse_short_name }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
                 </div>
                 <!-- Action Buttons -->
@@ -1229,6 +1231,8 @@ class CalendarManager {
         this.currentEventId = null;
         this.selectedGroupNames = 'ALL';
         this.listViewWeekOffset = 0; // Track week offset for list view
+        this.selectedCourseId = null;
+        this.courses = @json($courseMaster);
         this.init();
     }
 
@@ -1244,6 +1248,13 @@ class CalendarManager {
 
     initFullCalendar() {
         const calendarEl = document.getElementById('calendar');
+        
+        // Get initial course ID from filter dropdown
+        const courseFilter = document.getElementById('courseFilter');
+        this.selectedCourseId = courseFilter && courseFilter.value ? courseFilter.value : null;
+        
+        // Update course header with initial selection
+        this.updateCourseHeader();
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridDay',
@@ -1290,7 +1301,9 @@ class CalendarManager {
                     eventMaxStack: 8
                 }
             },
-            events: CalendarConfig.api.events,
+            events: (info, successCallback, failureCallback) => {
+                this.fetchEvents(info, successCallback, failureCallback);
+            },
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
             select: this.handleDateSelect.bind(this),
@@ -1301,6 +1314,80 @@ class CalendarManager {
         this.calendar.render();
         this.styleMoreLinks();
         this.applyDenseMode();
+    }
+
+    fetchEvents(info, successCallback, failureCallback) {
+        // Build URL with course filter
+        let url = CalendarConfig.api.events;
+        const params = new URLSearchParams();
+        
+        if (info.start) {
+            params.append('start', info.start.toISOString().split('T')[0]);
+        }
+        if (info.end) {
+            params.append('end', info.end.toISOString().split('T')[0]);
+        }
+        if (this.selectedCourseId) {
+            params.append('course_id', this.selectedCourseId);
+        }
+        
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+
+        fetch(url, {
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            successCallback(data);
+        })
+        .catch(error => {
+            console.error('Error fetching events:', error);
+            failureCallback(error);
+        });
+    }
+
+    updateCourseHeader() {
+        const headerTitle = document.querySelector('.course-header h1');
+        const headerBadge = document.querySelector('.course-header .badge');
+        const headerYear = document.querySelector('.course-header p');
+        
+        if (!this.selectedCourseId) {
+            // If "All Courses" selected, show default message
+            if (headerTitle) {
+                headerTitle.textContent = 'All Courses';
+            }
+            if (headerBadge) {
+                headerBadge.textContent = 'All';
+            }
+            if (headerYear) {
+                headerYear.innerHTML = `
+                    <span class="badge">All</span>
+                    | <strong>Year:</strong> ${new Date().getFullYear()}
+                `;
+            }
+            return;
+        }
+
+        const selectedCourse = this.courses.find(c => c.pk == this.selectedCourseId);
+        if (selectedCourse) {
+            if (headerTitle) {
+                headerTitle.textContent = selectedCourse.course_name || 'Course Name';
+            }
+            if (headerBadge) {
+                headerBadge.textContent = selectedCourse.couse_short_name || 'Course Code';
+            }
+            if (headerYear) {
+                headerYear.innerHTML = `
+                    <span class="badge">${selectedCourse.couse_short_name || 'Course Code'}</span>
+                    | <strong>Year:</strong> ${selectedCourse.course_year || new Date().getFullYear()}
+                `;
+            }
+        }
     }
 
     styleMoreLinks() {
@@ -1567,6 +1654,15 @@ class CalendarManager {
         document.getElementById('type_name_container').innerHTML =
             '<div class="text-center text-muted">Select a Group Type first</div>';
 
+        // Pre-select Course Name based on course filter
+        const courseFilter = document.getElementById('courseFilter');
+        const courseNameField = document.getElementById('Course_name');
+        if (courseFilter && courseNameField && courseFilter.value) {
+            courseNameField.value = courseFilter.value;
+            // Trigger change event to load group types for the selected course
+            courseNameField.dispatchEvent(new Event('change'));
+        }
+
         // Update button text
         document.getElementById('eventModalTitle').textContent = 'Add Calendar Event';
         document.querySelector('.btn-text').textContent = 'Add Event';
@@ -1652,6 +1748,27 @@ class CalendarManager {
 
         // Density toggle
         document.getElementById('toggleDensityBtn')?.addEventListener('click', () => this.toggleDensity());
+
+        // Course filter change
+        document.getElementById('courseFilter')?.addEventListener('change', (e) => {
+            this.handleCourseFilterChange(e.target.value);
+        });
+    }
+
+    handleCourseFilterChange(courseId) {
+        this.selectedCourseId = courseId || null;
+        this.updateCourseHeader();
+        
+        // Refresh calendar events
+        if (this.calendar) {
+            this.calendar.refetchEvents();
+        }
+        
+        // If in list view, reload it
+        const listViewEl = document.getElementById('eventListView');
+        if (listViewEl && !listViewEl.classList.contains('d-none')) {
+            this.loadListView();
+        }
     }
 
     initDensity() {
@@ -2365,7 +2482,22 @@ async updateinternal_faculty(facultyType) {
 
     async loadListView() {
         try {
-            const response = await fetch(CalendarConfig.api.events);
+            // Build URL with course filter
+            let url = CalendarConfig.api.events;
+            const params = new URLSearchParams();
+            if (this.selectedCourseId) {
+                params.append('course_id', this.selectedCourseId);
+            }
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+            
+            const response = await fetch(url, {
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            });
             const events = await response.json();
 
             // Calculate week start date based on offset
