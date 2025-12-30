@@ -41,6 +41,10 @@
     <link id="color" rel="stylesheet" href="{{asset('admin_assets/css/color-1.css')}}" media="screen">
     <!-- Responsive css-->
     <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/responsive.css')}}">
+    <!-- Mobile-First Responsive css-->
+    <link rel="stylesheet" type="text/css" href="{{asset('css/mobile-responsive.css')}}">
+    <!-- Custom css-->
+    <link rel="stylesheet" type="text/css" href="{{asset('css/custom.css')}}">
 </head>
 
 <body>
