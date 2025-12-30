@@ -133,7 +133,7 @@
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <input type="hidden" name="role_type" value="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'f' : 'OT' }}">
+                            <input type="hidden" name="role_type" value="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction')) ? 'f' : 'OT' }}">
                             <input type="hidden" name="created_by" value="{{ auth()->user()->user_id }}">
                             <input type="hidden" name="memo_discipline_id" value="{{ $memo->pk }}">
                             <label class="form-label">Select Date</label>
@@ -161,7 +161,7 @@
 
                             </div>
                         </div>
-                        @if(hasRole('Admin') || hasRole('Training') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                        @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
                         <div class="col-6">
                             <div class="mb-3">
                                 <label class="form-label">Status</label>

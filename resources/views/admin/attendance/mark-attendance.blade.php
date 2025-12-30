@@ -12,7 +12,7 @@ table.table-bordered.dataTable td:nth-child(4) {
 <form action="{{ route('attendance.save') }}" method="post">
     @csrf
     <div class="container-fluid">
-        @if(hasRole('Admin') || hasRole('Training'))
+        @if(hasRole('Admin') || hasRole('Training-Induction'))
         <x-breadcrum title="Mark Attendance Of Officer Trainees" />
         <x-session_message />
         @endif 
@@ -28,7 +28,7 @@ table.table-bordered.dataTable td:nth-child(4) {
         {{-- Session Summary --}}
         <div class="card shadow mb-4">
             <div class="card-body">
-                @if(hasRole('Admin') || hasRole('Training'))
+                @if(hasRole('Admin') || hasRole('Training-Induction'))
                 <h5 class="mb-3">Through this page you can manage Attendance of Officer Trainees</h5>
                 
                 <hr>

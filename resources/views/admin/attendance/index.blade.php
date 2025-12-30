@@ -164,7 +164,7 @@ hr {
                             </tr>
                         </thead>
                         <tbody>
-                            @if(hasRole('Admin') || hasRole('Training'))
+                            @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <tr id="defaultMessageRow">
                                 <td colspan="9" class="text-center py-5">
                                     <div class="text-muted">
