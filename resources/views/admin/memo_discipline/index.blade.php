@@ -813,6 +813,11 @@ function removeDateFilters() {
                                     </a>
                                 </div>
                                 @else
+                                <a class="text-success view-conversation" data-bs-toggle="offcanvas"
+                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
+                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}">
+                                        <i class="material-icons material-symbols-rounded fs-5">chat</i>
+                                    </a>
                                 <span class="badge bg-secondary-subtle text-secondary">
                                     <i class="bi bi-lock me-1"></i> Closed
                                 </span>

@@ -117,7 +117,7 @@
                                     </option>
                                     @endforeach
                                 </select>
-                            </div> 
+                            </div>
 
                             <div class="col-md-6">
                                 <label for="faculty_type" class="form-label required">
@@ -131,7 +131,7 @@
                                     <option value="3">Research</option>
                                 </select>
                             </div>
-                           
+
 
                             <div class="col-md-6">
                                 <label for="vanue" class="form-label required">
@@ -144,18 +144,19 @@
                                     @endforeach
                                 </select>
                             </div>
-                             <div class="col-md-6" id="internalFacultyDiv">
+                            <div class="col-md-6" id="internalFacultyDiv">
                                 <label for="internal_faculty" class="form-label required">
-                                   Internal Faculty
+                                    Internal Faculty
                                 </label>
-                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" required aria-required="true" multiple>
+                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" required
+                                    aria-required="true" multiple>
                                     @foreach($internal_faculty as $faculty)
                                     <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
                                         {{ $faculty->full_name }}
                                     </option>
                                     @endforeach
                                 </select>
-                            </div> 
+                            </div>
                         </div>
                     </section>
 
@@ -224,79 +225,74 @@
 
                     <!-- Additional Options -->
                     <section class="pt-4 border-top" aria-labelledby="additionalOptionsHeading">
-    <h3 id="additionalOptionsHeading" class="h6 text-primary mb-3">
-        <i class="bi bi-sliders me-2"></i>Additional Options
-    </h3>
+                        <h3 id="additionalOptionsHeading" class="h6 text-primary mb-3">
+                            <i class="bi bi-sliders me-2"></i>Additional Options
+                        </h3>
 
-    <div class="row g-3">
-        <!-- Feedback Group -->
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
-                <div class="card-body p-3">
-                    <!-- Feedback Parent -->
-                    <div class="form-check form-switch mb-3">
-                        <input class="form-check-input"
-                               type="checkbox"
-                               id="feedback_checkbox"
-                               name="feedback_checkbox"
-                               value="1"
-                               aria-controls="feedbackOptions">
-                        <label class="form-check-label fw-semibold" for="feedback_checkbox">
-                            Feedback
-                        </label>
-                    </div>
+                        <div class="row g-3">
+                            <!-- Feedback Group -->
+                            <div class="col-md-8">
+                                <div class="card border-0 shadow-sm rounded-4 h-100">
+                                    <div class="card-body p-3">
+                                        <!-- Feedback Parent -->
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="feedback_checkbox"
+                                                name="feedback_checkbox" value="1" aria-controls="feedbackOptions">
+                                            <label class="form-check-label fw-semibold" for="feedback_checkbox">
+                                                Feedback
+                                            </label>
+                                        </div>
 
-                    <!-- Feedback Child Options -->
-                    <div id="feedbackOptions" class="ps-4 border-start d-none">
-                        <div class="form-check mb-2">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   id="remarkCheckbox"
-                                   name="remarkCheckbox"
-                                   value="1">
-                            <label class="form-check-label" for="remarkCheckbox">
-                                Remark
-                            </label>
+                                        <!-- Feedback Child Options -->
+                                        <div id="feedbackOptions" class="ps-4 border-start d-none">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="remarkCheckbox"
+                                                    name="remarkCheckbox" value="1">
+                                                <label class="form-check-label" for="remarkCheckbox">
+                                                    Remark
+                                                </label>
+                                            </div>
+
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="ratingCheckbox"
+                                                    name="ratingCheckbox" value="1">
+                                                <label class="form-check-label" for="ratingCheckbox">
+                                                    Rating
+                                                </label>
+                                            </div>
+                                            <div class="form-check" id="facultyReviewRatingDiv">
+                                                <input class="form-check-input" type="checkbox" id="facultyReviewRating"
+                                                    name="facultyReviewRating" value="1">
+                                                <label class="form-check-label" for="facultyReviewRating">
+                                                    Internal Faculty Feedback<span class="text-muted fs-6">internal
+                                                        faculty can give feedback to guest faculty</span>
+                                                </label>
+                                            </div>
+
+                                            <small class="text-muted d-block mt-2">
+                                                Select at least one feedback component.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bio Attendance (Independent) -->
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm rounded-4 h-100">
+                                    <div class="card-body p-3 d-flex align-items-center">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="bio_attendanceCheckbox"
+                                                name="bio_attendanceCheckbox" value="1">
+                                            <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
+                                                Bio Attendance
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   id="ratingCheckbox"
-                                   name="ratingCheckbox"
-                                   value="1">
-                            <label class="form-check-label" for="ratingCheckbox">
-                                Rating
-                            </label>
-                        </div>
-
-                        <small class="text-muted d-block mt-2">
-                            Select at least one feedback component.
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bio Attendance (Independent) -->
-        <div class="col-md-4">
-            <div class="card border-0 shadow-sm rounded-4 h-100">
-                <div class="card-body p-3 d-flex align-items-center">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input"
-                               type="checkbox"
-                               id="bio_attendanceCheckbox"
-                               name="bio_attendanceCheckbox"
-                               value="1">
-                        <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
-                            Bio Attendance
-                        </label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+                    </section>
 
                 </div>
 
@@ -316,15 +312,22 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
     const feedbackToggle = document.getElementById('feedback_checkbox');
     const feedbackOptions = document.getElementById('feedbackOptions');
     const remark = document.getElementById('remarkCheckbox');
     const rating = document.getElementById('ratingCheckbox');
+    const faculty_review_rating = document.getElementById('facultyReviewRatingDiv');
 
-    feedbackToggle.addEventListener('change', function () {
+    feedbackToggle.addEventListener('change', function() {
         if (this.checked) {
             feedbackOptions.classList.remove('d-none');
+            if (internalFacultyDiv.style.display === 'block') {
+                faculty_review_rating.classList.remove('d-none');
+            } else {
+                faculty_review_rating.classList.add('d-none');
+            }
+
         } else {
             feedbackOptions.classList.add('d-none');
             remark.checked = false;
@@ -334,10 +337,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const internalFacultyDiv = document.getElementById('internalFacultyDiv');
     const facultySelect = document.getElementById('faculty');
     internalFacultyDiv.style.display = 'none'; // Hide initially
-    const faculty_type = document.getElementById('faculty_type');
+    // const faculty_type = document.getElementById('faculty_type');
 
     // Initialize Select2 when modal is shown
-    $('#eventModal').on('shown.bs.modal', function () {
+    $('#eventModal').on('shown.bs.modal', function() {
+    
+
         if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
             $('#internal_faculty').select2({
                 placeholder: 'Select Internal Faculty',
@@ -346,49 +351,50 @@ document.addEventListener('DOMContentLoaded', function () {
                 dropdownParent: $('#eventModal')
             });
         }
-        
-        // Update visibility based on current faculty type selection
-        updateinternal_faculty(faculty_type.value);
+
     });
 
     // Destroy Select2 when modal is hidden to prevent conflicts
-    $('#eventModal').on('hidden.bs.modal', function () {
+    $('#eventModal').on('hidden.bs.modal', function() {
         if ($('#internal_faculty').hasClass('select2-hidden-accessible')) {
             $('#internal_faculty').select2('destroy');
         }
     });
 
     // Example: Show internal faculty when a specific group type is selected
-    facultySelect.addEventListener('change', function () {
-        const facultyType = document.getElementById('faculty_type').value;
-        updateinternal_faculty(facultyType);
+    facultySelect.addEventListener('change', function() {
+        console.log(facultySelect, typeof facultySelect);
+        facultyType = $('#faculty option:selected').data('faculty_type');
+        updateinternal_faculty_data(facultyType, console.log('changed second'+facultyType));
     });
-    faculty_type.addEventListener('change', function () {
+    faculty_type.addEventListener('change', function() {
+        console.log(faculty_type, typeof faculty_type);
         const facultyType = this.value;
-        updateinternal_faculty(facultyType);
+        updateinternal_faculty_data(facultyType, console.log('changed thired'+facultyType));
     });
 
-   function  updateinternal_faculty(facultyType) {
-    
-        console.log(facultyType);
+    function updateinternal_faculty_data(facultyType, logMessage) {
+        console.log(facultyType, typeof facultyType);
+        console.log(logMessage);
+
         switch (facultyType) {
-            case '1': // Internal
+            case 1: // Internal
                 console.log('internal');
                 internalFacultyDiv.style.display = 'none';
                 break;
-            case '2': // Guest
+            case 2: // Guest
                 console.log('guest');
                 internalFacultyDiv.style.display = 'block';
                 break;
-            default: // Research/Other
-                console.log('rtyuio');
-                internalFacultyDiv.style.display = 'block';
+            default:
+                console.log('default');
+                internalFacultyDiv.style.display = 'none';
         }
     }
 });
 </script>
 <style>
-    .form-switch .form-check-input {
+.form-switch .form-check-input {
     cursor: pointer;
 }
 
@@ -399,5 +405,4 @@ document.addEventListener('DOMContentLoaded', function () {
 .border-start {
     border-left: 2px dashed #dee2e6 !important;
 }
-
 </style>

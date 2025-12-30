@@ -58,7 +58,7 @@ public function store(Request $request)
 
     public function edit($id)
     {
-        print_r(decrypt($id));
+        // print_r(decrypt($id));
         $exemptionCategory = ExemptionCategoryMaster::findOrFail(decrypt($id));
         // print_r($category);die;
         return view('admin.master.exemption_categories_master.create_edit', compact('exemptionCategory'));

@@ -259,7 +259,7 @@
                         <div class="alert alert-warning mt-3">
                     <strong>Memo Closed:</strong> This memo has been closed. You cannot reply to it.
                 </div>
-                    @else if( isset($memoNotice->first()->notice_status) && ($memoNotice->first()->notice_status == 2) )
+                    @elseif( isset($memoNotice->first()->notice_status) && ($memoNotice->first()->notice_status == 2) )
                 <div class="alert alert-warning mt-3">
                     <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
                 </div>
@@ -268,7 +268,6 @@
         </div>
     </div>
     @endsection
-    @section('scripts')
     @section('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function () {

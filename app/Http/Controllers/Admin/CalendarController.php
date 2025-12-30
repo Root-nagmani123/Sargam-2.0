@@ -187,6 +187,7 @@ class CalendarController extends Controller
         $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
         $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
         $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
+        $event->Faculty_feedback = $request->has('facultyReviewRating') ? 1 : 0;
         $event->active_inactive = $request->active_inactive ?? 1;
 
         $event->save();
@@ -371,6 +372,7 @@ class CalendarController extends Controller
 
         $event = DB::table('timetable')
             ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+           
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
             ->where('timetable.pk', $eventId)
             ->select(
@@ -381,13 +383,19 @@ class CalendarController extends Controller
                 'timetable.END_DATE',
                 'faculty_master.full_name as faculty_name',
                 'venue_master.venue_name as venue_name',
-                'timetable.group_name'
+                'timetable.group_name',
+                'timetable.internal_faculty'
             )
             ->first();
         $groupIds = json_decode($event->group_name, true);
         $groupNames = DB::table('group_type_master_course_master_map')
             ->whereIn('pk', $groupIds)
             ->pluck('group_name');
+
+          $internal_faculty_id = json_decode($event->internal_faculty, true);
+        $internal_faculty_names = DB::table('faculty_master')
+            ->whereIn('pk', $internal_faculty_id)
+            ->pluck('full_name');
 
         if ($event) {
             return response()->json([
@@ -399,6 +407,7 @@ class CalendarController extends Controller
                 'venue_name' => $event->venue_name ?? '',
                 'class_session' => $event->class_session ?? '',
                 'group_name' => $groupNames ?? '',
+                'internal_faculty_names' => $internal_faculty_names ?? '',
             ]);
         } else {
             return response()->json(['error' => 'Event not found'], 404);
@@ -465,6 +474,7 @@ class CalendarController extends Controller
         $event->group_name = json_encode($request->type_names ?? []);
         $event->faculty_master = $request->faculty;
         $event->faculty_type = $request->faculty_type;
+        $event->internal_faculty = json_encode($request->internal_faculty ?? []);
         $event->venue_id = $request->vanue;
         $event->START_DATE = $request->start_datetime;
         $event->END_DATE = $request->start_datetime;
@@ -481,6 +491,7 @@ class CalendarController extends Controller
         }
         $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
         $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
+        $event->Faculty_feedback = $request->has('facultyReviewRating') ? 1 : 0;
         $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
         $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
         $event->active_inactive = $request->active_inactive ?? 1;
