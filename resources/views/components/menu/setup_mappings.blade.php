@@ -11,7 +11,7 @@
                         <ul class="sidebar-menu" id="sidebarnav">
                           
                             <li class="nav-section" role="listitem">
-                                @if(hasRole('Admin') || hasRole('Training'))
+                                @if(hasRole('Admin') || hasRole('Training-Induction'))
 
                                 <!-- Main Container with Improved Layout -->
                                 <div class="d-flex align-items-center justify-content-between w-100 mt-4">

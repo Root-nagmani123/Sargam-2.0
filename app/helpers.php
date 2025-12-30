@@ -49,6 +49,24 @@ function hasRole($role)
 
     return in_array($role, $roles);
 }
+function get_Role_by_course()
+{
+    $user = Auth::user();
+    $sessionRoles = Session::get('user_roles', []);
+    if (empty($sessionRoles)) {
+        return [];
+    }
+    $cacheKey = 'role_by_course_' . $user->user_id;
+    $role_course = Cache::remember($cacheKey, 600, function () use ($user, $sessionRoles) {
+        return DB::table('course_master as cm')
+            ->join('user_role_master as urm', 'cm.user_role_master_pk', '=', 'urm.pk')
+            ->whereIn('urm.user_role_name', $sessionRoles)
+            ->pluck('cm.pk')
+            ->toArray();
+    });
+    return $role_course;
+}
+
 function service_find()
 {
     $user = Auth::user();
