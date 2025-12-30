@@ -602,6 +602,19 @@ table>thead {
                 </div>
             </a>
         </div>
+                <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard.upcoming_events') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-green">
+                        <img src="{{ asset('images/teachers.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Upcoming Events</div>
+                        <div class="stat-value">2</div>
+                    </div>
+                </div>
+            </a>
+        </div>
         @if(hasRole('Student-OT'))
         <div class="col-lg-3 col-md-6 col-sm-12">
             <a href="{{ route('medical.exception.ot.view') }}">
