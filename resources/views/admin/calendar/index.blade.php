@@ -93,7 +93,7 @@
 
                 </div>
                 <!-- Action Buttons -->
-                @if(hasRole('Training') || hasRole('Admin'))
+                @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP'))
                 <button type="button" class="btn btn-primary px-4" id="createEventButton" data-bs-toggle="modal"
                     data-bs-target="#eventModal">
                     <i class="bi bi-plus-circle me-2" aria-hidden="true"></i> Add New Event
@@ -1540,7 +1540,7 @@ class CalendarManager {
     }
 
     handleDateSelect(info) {
-        if (!@json(hasRole('Training') || hasRole('Admin'))) return;
+        if (!@json(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP')) ) return;
 
         this.resetEventForm();
         this.setFormDate(info.start);

@@ -22,10 +22,16 @@ class CalendarController extends Controller
 
         // print_r(auth()->user());die;
 
+        $data_course_id =  get_Role_by_course();
+                          
 
         $courseMaster = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>', now())
-            ->select('pk', 'course_name', 'couse_short_name', 'course_year')
+            ->where('end_date', '>', now());
+            if($data_course_id != '')
+            {
+                $courseMaster = $courseMaster->whereIn('pk',$data_course_id);
+            }
+            $courseMaster = $courseMaster->select('pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
@@ -211,7 +217,7 @@ class CalendarController extends Controller
     public function fullCalendarDetails(Request $request)
     {
         // print_r(Auth::user());die;
-
+ $data_course_id =  get_Role_by_course();
         $event = new CalendarEvent();
 
         $events = DB::table('timetable')
@@ -228,6 +234,12 @@ class CalendarController extends Controller
                 ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
                 ->where('student_course_group_map.student_master_pk', $student_pk);
         }
+         if($data_course_id != '')
+            {
+                // $courseMaster = $courseMaster->whereIn('pk',$data_course_id);
+                $events = $events->whereIn('timetable.course_master_pk',$data_course_id);
+
+            }
 
         // Internal / Guest Faculty
         if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {

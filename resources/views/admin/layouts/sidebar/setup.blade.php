@@ -31,7 +31,7 @@
                                                             dashboard_customize
                                                         </i>
                                                         <span class="mini-nav-title">
-                                                            @if(hasRole('Admin') || hasRole('Training'))
+                                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
                                                             Training
                                                             @elseif(hasRole('Internal Faculty') || hasRole('Guest
                                                             Faculty') || hasRole('Student-OT'))
@@ -49,7 +49,7 @@
                                                 </a>
                                             </li>
 
-                                            @if(hasRole('Admin') || hasRole('Training'))
+                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"

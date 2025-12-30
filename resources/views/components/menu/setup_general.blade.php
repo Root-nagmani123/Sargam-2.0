@@ -12,7 +12,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
-                             @if(hasRole('Admin') || hasRole('Training'))
+                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->
@@ -40,6 +40,9 @@
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
                                     <span class="hide-menu">Attendance</span>
                                 </a></li>
+                            
+                              
+                                @if(! hasRole('Training-MCTP'))
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('send.notice.management.index') }}">
                                     <span class="hide-menu">Send Direct Notice</span>
@@ -52,6 +55,7 @@
                                     href="{{ route('memo.discipline.index') }}">
                                     <span class="hide-menu">Send Discipline Memo</span>
                                 </a></li>
+                                @endif
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('admin.memo-notice.index') }}">
                                     <span class="hide-menu">Memo / Notice Template</span>

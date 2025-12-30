@@ -18,7 +18,7 @@
                                     <span class="hide-menu">Dashboard</span>
                                 </a>
                             </li>
-                            @if(hasRole('Admin') || hasRole('Training'))
+                            @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <!-- Notice Notification Route -->
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.notice.index') }}">
