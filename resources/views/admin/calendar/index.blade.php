@@ -84,15 +84,16 @@
                         </div>
                     </div>
                     <!-- Course Filter -->
-                    <div class="ms-lg-3">
+
+                    <div class="mb-3">
                         <select
-                            class="form-select form-select-sm"
+                            class="form-select"
                             id="courseFilter"
                             aria-label="Filter by course"
-                            style="min-width: 220px;">
+                            style="min-width: 200px;">
                             <option value="">All Courses</option>
                             @foreach($courseMaster as $course)
-                                <option value="{{ $course->pk }}"
+                                <option value="{{ $course->pk }}" 
                                     {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
                                     {{ $course->course_name }} ({{ $course->couse_short_name }})
                                 </option>
@@ -1274,9 +1275,6 @@ class CalendarManager {
         const courseFilter = document.getElementById('courseFilter');
         this.selectedCourseId = courseFilter && courseFilter.value ? courseFilter.value : null;
         
-        console.log('Initial selectedCourseId:', this.selectedCourseId);
-        console.log('Course filter value:', courseFilter?.value);
-        
         // Update course header with initial selection
         this.updateCourseHeader();
 
@@ -1784,9 +1782,7 @@ class CalendarManager {
     }
 
     handleCourseFilterChange(courseId) {
-        console.log('Course filter changed to:', courseId);
         this.selectedCourseId = courseId || null;
-        console.log('selectedCourseId set to:', this.selectedCourseId);
         this.updateCourseHeader();
         
         // Refresh calendar events
@@ -1797,7 +1793,6 @@ class CalendarManager {
         // If in list view, reload it
         const listViewEl = document.getElementById('eventListView');
         if (listViewEl && !listViewEl.classList.contains('d-none')) {
-            console.log('Reloading list view...');
             this.loadListView();
         }
     }
@@ -2537,8 +2532,6 @@ $('#internal_faculty').trigger('change');
 
     async loadListView() {
         try {
-            console.log('loadListView called with selectedCourseId:', this.selectedCourseId);
-            
             // Build URL with course filter
             let url = CalendarConfig.api.events;
             const params = new URLSearchParams();
@@ -2548,8 +2541,6 @@ $('#internal_faculty').trigger('change');
             if (params.toString()) {
                 url += '?' + params.toString();
             }
-            
-            console.log('Fetching from URL:', url);
             
             const response = await fetch(url, {
                 headers: {
