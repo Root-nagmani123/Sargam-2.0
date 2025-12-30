@@ -245,6 +245,11 @@ class CalendarController extends Controller
         }
 
 
+        // Filter by course if provided
+        if ($request->has('course_id') && $request->course_id) {
+            $events = $events->where('timetable.course_master_pk', $request->course_id);
+        }
+
         $events = $events
             ->whereDate('START_DATE', '>=', $request->start)
             ->whereDate('END_DATE', '<=', $request->end)
