@@ -1,0 +1,778 @@
+/* ========================================
+   MOBILE-FIRST RESPONSIVE STYLES
+   Base styles are for mobile (320px+)
+   Desktop styles use min-width media queries
+   ======================================== */
+
+/* ========== BASE MOBILE STYLES ========== */
+
+/* Reset and base */
+* {
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    font-size: 14px;
+    overflow-x: hidden;
+}
+
+/* Container - Mobile First */
+.container {
+    width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+/* Grid - Mobile First (Stack by default) */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+}
+
+[class*="col-"] {
+    width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+}
+
+/* ========== TOP HEADER (GOVT BAR) ========== */
+.top-header {
+    padding: 8px 0;
+    font-size: 11px;
+}
+
+.top-header .container {
+    padding: 0 10px;
+}
+
+.top-header .row {
+    margin: 0;
+}
+
+.top-header .col-md-3,
+.top-header .col-md-9 {
+    width: 100%;
+    padding: 5px 0;
+}
+
+.top-header img {
+    height: 20px;
+}
+
+.top-header .nav {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.top-header .nav-item {
+    margin: 0;
+}
+
+.top-header span[style*="font-size: 12px"],
+.top-header span[style*="font-size: 14px"] {
+    font-size: 11px !important;
+}
+
+/* Hide on mobile */
+.d-none.d-md-block {
+    display: none !important;
+}
+
+/* ========== HEADER / NAVIGATION ========== */
+.header {
+    padding: 10px 0;
+}
+
+.navbar {
+    padding: 0;
+}
+
+.navbar-brand {
+    margin-right: 8px !important;
+}
+
+.navbar-brand img {
+    height: 50px !important;
+    max-width: 100%;
+}
+
+.navbar .vr {
+    display: none;
+}
+
+.navbar-toggler {
+    padding: 4px 8px;
+    font-size: 1.2rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.navbar-collapse {
+    margin-top: 15px;
+}
+
+.navbar-nav {
+    width: 100%;
+}
+
+.navbar-nav .nav-item {
+    margin: 5px 0;
+    text-align: center;
+}
+
+.navbar-nav .nav-link {
+    margin: 0 !important;
+    padding: 12px 15px;
+}
+
+.navbar-nav .btn {
+    width: 100%;
+    margin: 10px 0 !important;
+}
+
+/* ========== CONTENT AREAS ========== */
+.academy-box {
+    margin: 1.5rem 0.5rem;
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+.card,
+.card-body {
+    margin-bottom: 1rem;
+}
+
+.card-icon-box {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+/* ========== FORMS ========== */
+.form-control,
+.form-select {
+    font-size: 14px;
+    padding: 10px 12px;
+}
+
+.form-label {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.btn {
+    font-size: 14px;
+    padding: 10px 20px;
+}
+
+/* Stack form columns on mobile */
+.row.g-3 [class*="col-md-"] {
+    margin-bottom: 15px;
+}
+
+/* ========== TABLES ========== */
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table {
+    font-size: 12px;
+    min-width: 600px;
+}
+
+.table th,
+.table td {
+    padding: 8px;
+    white-space: nowrap;
+}
+
+/* DataTables on Mobile */
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+    font-size: 12px;
+    margin: 10px 0;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    width: 100%;
+    margin-left: 0 !important;
+    margin-top: 5px;
+}
+
+/* ========== MODALS ========== */
+.modal-dialog {
+    margin: 10px;
+}
+
+.modal-content {
+    border-radius: 8px;
+}
+
+.modal-header,
+.modal-footer {
+    padding: 12px 15px;
+}
+
+.modal-body {
+    padding: 15px;
+}
+
+/* ========== ALERTS & NOTICES ========== */
+.alert {
+    font-size: 13px;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+}
+
+.notice-box {
+    padding: 0.75rem;
+    margin: 1rem 0;
+}
+
+/* ========== FOOTER ========== */
+footer {
+    padding: 1.5rem 0;
+    font-size: 13px;
+    margin-top: auto;
+}
+
+footer .container {
+    padding: 0 15px;
+}
+
+footer .row > div {
+    margin-bottom: 15px;
+}
+
+/* ========== ACCESSIBILITY PANEL ========== */
+#uw-main {
+    width: 100% !important;
+    max-width: 320px;
+    right: 0;
+    left: auto !important;
+}
+
+.uwaw-features__item {
+    font-size: 13px;
+    padding: 10px;
+}
+
+/* ========== UTILITIES ========== */
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mb-mobile {
+    margin-bottom: 1rem;
+}
+
+.px-mobile {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
+/* ========== TABLET (576px and up) ========== */
+@media (min-width: 576px) {
+    body {
+        font-size: 15px;
+    }
+
+    .container {
+        max-width: 540px;
+    }
+
+    .navbar-brand img {
+        height: 60px !important;
+    }
+
+    .academy-box {
+        margin: 2rem 1rem;
+        padding: 1.5rem;
+    }
+
+    .table {
+        font-size: 13px;
+    }
+
+    .form-control,
+    .form-select,
+    .btn {
+        font-size: 15px;
+    }
+
+    footer {
+        font-size: 14px;
+    }
+
+    /* Show 2 columns for md-6 */
+    .col-sm-6 {
+        width: 50%;
+    }
+
+    .col-sm-12 {
+        width: 100%;
+    }
+}
+
+/* ========== TABLET LANDSCAPE / SMALL DESKTOP (768px and up) ========== */
+@media (min-width: 768px) {
+    body {
+        font-size: 16px;
+    }
+
+    .container {
+        max-width: 720px;
+    }
+
+    /* Show top government bar */
+    .d-none.d-md-block {
+        display: block !important;
+    }
+
+    .top-header .col-md-3 {
+        width: 25%;
+    }
+
+    .top-header .col-md-9 {
+        width: 75%;
+    }
+
+    .top-header .nav {
+        flex-direction: row;
+        gap: 0;
+    }
+
+    .top-header img {
+        height: 30px;
+    }
+
+    .top-header span[style*="font-size: 11px"] {
+        font-size: 12px !important;
+    }
+
+    /* Header */
+    .navbar-brand img {
+        height: 70px !important;
+    }
+
+    .navbar .vr {
+        display: block;
+    }
+
+    .navbar-collapse {
+        margin-top: 0;
+    }
+
+    .navbar-nav .nav-item {
+        text-align: left;
+    }
+
+    .navbar-nav .nav-link {
+        padding: 8px 16px;
+        margin: 0 4px !important;
+    }
+
+    .navbar-nav .btn {
+        width: auto;
+        margin: 0 !important;
+        margin-left: 16px !important;
+    }
+
+    /* Grid columns */
+    .col-md-1 { width: 8.333333%; }
+    .col-md-2 { width: 16.666667%; }
+    .col-md-3 { width: 25%; }
+    .col-md-4 { width: 33.333333%; }
+    .col-md-5 { width: 41.666667%; }
+    .col-md-6 { width: 50%; }
+    .col-md-7 { width: 58.333333%; }
+    .col-md-8 { width: 66.666667%; }
+    .col-md-9 { width: 75%; }
+    .col-md-10 { width: 83.333333%; }
+    .col-md-11 { width: 91.666667%; }
+    .col-md-12 { width: 100%; }
+
+    /* Content */
+    .academy-box {
+        margin: 3rem auto;
+        padding: 2rem;
+    }
+
+    .table {
+        font-size: 14px;
+    }
+
+    .table th,
+    .table td {
+        padding: 12px;
+    }
+
+    /* Modal */
+    .modal-dialog {
+        margin: 30px auto;
+        max-width: 500px;
+    }
+}
+
+/* ========== DESKTOP (992px and up) ========== */
+@media (min-width: 992px) {
+    .container {
+        max-width: 960px;
+    }
+
+    .navbar-brand img {
+        height: 80px !important;
+    }
+
+    .navbar-nav .nav-link {
+        margin: 0 8px !important;
+    }
+
+    .navbar-nav .btn {
+        margin-left: 16px !important;
+    }
+
+    /* Grid columns */
+    .col-lg-1 { width: 8.333333%; }
+    .col-lg-2 { width: 16.666667%; }
+    .col-lg-3 { width: 25%; }
+    .col-lg-4 { width: 33.333333%; }
+    .col-lg-5 { width: 41.666667%; }
+    .col-lg-6 { width: 50%; }
+    .col-lg-7 { width: 58.333333%; }
+    .col-lg-8 { width: 66.666667%; }
+    .col-lg-9 { width: 75%; }
+    .col-lg-10 { width: 83.333333%; }
+    .col-lg-11 { width: 91.666667%; }
+    .col-lg-12 { width: 100%; }
+
+    .academy-box {
+        max-width: 1200px;
+    }
+
+    .modal-dialog {
+        max-width: 600px;
+    }
+}
+
+/* ========== LARGE DESKTOP (1200px and up) ========== */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1140px;
+    }
+
+    /* Grid columns */
+    .col-xl-1 { width: 8.333333%; }
+    .col-xl-2 { width: 16.666667%; }
+    .col-xl-3 { width: 25%; }
+    .col-xl-4 { width: 33.333333%; }
+    .col-xl-5 { width: 41.666667%; }
+    .col-xl-6 { width: 50%; }
+    .col-xl-7 { width: 58.333333%; }
+    .col-xl-8 { width: 66.666667%; }
+    .col-xl-9 { width: 75%; }
+    .col-xl-10 { width: 83.333333%; }
+    .col-xl-11 { width: 91.666667%; }
+    .col-xl-12 { width: 100%; }
+
+    .modal-dialog {
+        max-width: 800px;
+    }
+}
+
+/* ========== EXTRA LARGE DESKTOP (1400px and up) ========== */
+@media (min-width: 1400px) {
+    .container {
+        max-width: 1320px;
+    }
+}
+
+/* ========== SIDEBAR NAVIGATION MOBILE FIXES ========== */
+/* Hide entire sidebar panel on mobile */
+.side-mini-panel,
+.side-mini-panel.with-vertical,
+.sidebar-nav,
+.sidebar-nav.simplebar-scrollable-y,
+.mini-nav,
+.mini-nav-ul,
+.mini-nav-ul.simplebar-scrollable-y {
+    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* ========== BOTTOM NAVIGATION TABS FOR MOBILE ========== */
+/* Move tabs to bottom on mobile */
+@media (max-width: 991px) {
+    /* Topbar adjustments for mobile */
+    .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 99;
+    }
+
+    /* Main navigation container - move to bottom */
+    .nav-container {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: 0;
+        background: white;
+        border-top: 2px solid #e5e5e5;
+        box-shadow: 0 -2px 16px rgba(0, 0, 0, 0.1);
+        z-index: 997;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* Navigation tabs styling for bottom bar */
+    .nav-container .navbar-nav {
+        width: 100%;
+        height: auto !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 8px 0 !important;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        gap: 0 !important;
+        border-radius: 0 !important;
+    }
+
+    .nav-container .navbar-nav .nav-item {
+        flex: 1;
+        text-align: center;
+        min-width: 60px;
+    }
+
+    .nav-container .navbar-nav .nav-link {
+        padding: 8px 4px !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        font-size: 12px;
+        gap: 4px !important;
+        height: 50px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease;
+    }
+
+    .nav-container .navbar-nav .nav-link.active {
+        color: #004a93;
+        border-bottom-color: #004a93;
+        background: rgba(0, 74, 147, 0.05);
+    }
+
+    .nav-container .navbar-nav .nav-link:hover {
+        background: rgba(0, 74, 147, 0.08);
+    }
+
+    /* Hide nav link spans on mobile */
+    .nav-container .navbar-nav .nav-link span {
+        white-space: nowrap;
+    }
+
+    /* Adjust main content area to accommodate bottom tabs */
+    .body-wrapper,
+    .tab-content {
+        padding-bottom: calc(56px + env(safe-area-inset-bottom)) !important;
+    }
+
+    /* Dropdown menus on mobile */
+    .nav-container .dropdown-menu {
+        position: fixed;
+        bottom: calc(56px + env(safe-area-inset-bottom));
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: 12px 12px 0 0;
+        max-height: 50vh;
+        overflow-y: auto;
+        z-index: 998;
+    }
+
+    /* Hide navbar collapse on mobile */
+    .navbar-collapse {
+        display: none !important;
+    }
+
+    /* Show nav container with bottom tabs */
+    .nav-container {
+        display: block !important;
+    }
+}
+
+@media (max-width: 991px) {
+    /* Hide sidebar by default on tablet and below */
+    .sidebar-nav,
+    .sidebar-nav.simplebar-scrollable-y,
+    .mini-nav-ul.simplebar-scrollable-y {
+        display: none !important;
+    }
+
+    /* Only show when explicitly opened */
+    .sidebar-nav.d-block,
+    .sidebar-nav.show {
+        display: block !important;
+    }
+}
+
+/* ========== MOBILE SPECIFIC IMPROVEMENTS ========== */
+@media (max-width: 991px) {
+    /* Page wrapper takes full width without sidebar */
+    .page-wrapper {
+        width: 100% !important;
+        margin-left: 0 !important;
+        padding-left: 0 !important;
+    }
+
+    .body-wrapper {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+}
+
+@media (max-width: 767px) {
+    /* Touch-friendly buttons */
+    .btn,
+    .nav-link,
+    a[role="button"] {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Better spacing for mobile */
+    .mt-5,
+    .my-5 {
+        margin-top: 2rem !important;
+    }
+
+    .mb-5,
+    .my-5 {
+        margin-bottom: 2rem !important;
+    }
+
+    .pt-5,
+    .py-5 {
+        padding-top: 2rem !important;
+    }
+
+    .pb-5,
+    .py-5 {
+        padding-bottom: 2rem !important;
+    }
+
+    /* Reduce padding in cards for mobile */
+    .card-body {
+        padding: 1rem;
+    }
+
+    /* Full-width buttons on mobile */
+    .btn-block {
+        width: 100%;
+        display: block;
+    }
+
+    /* Better accordion spacing */
+    .accordion-item {
+        margin-bottom: 10px;
+    }
+
+    .accordion-button {
+        font-size: 14px;
+        padding: 12px 15px;
+    }
+
+    .accordion-body {
+        font-size: 13px;
+        padding: 15px;
+    }
+}
+
+/* ========== LANDSCAPE MODE FIXES ========== */
+@media (max-height: 500px) and (orientation: landscape) {
+    .navbar-brand img {
+        height: 40px !important;
+    }
+
+    .top-header {
+        display: none !important;
+    }
+
+    .header {
+        padding: 5px 0;
+    }
+}
+
+/* ========== PRINT STYLES ========== */
+@media print {
+    .navbar,
+    .top-header,
+    footer,
+    .btn,
+    #uw-main {
+        display: none !important;
+    }
+
+    body {
+        font-size: 12pt;
+        color: #000;
+        background: white;
+    }
+
+    .container {
+        max-width: 100%;
+    }
+
+    .academy-box {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        page-break-inside: avoid;
+    }
+}
+
+/* ========== HIGH CONTRAST MODE ========== */
+@media (prefers-contrast: high) {
+    .btn {
+        border: 2px solid;
+    }
+
+    .card,
+    .academy-box {
+        border: 2px solid #000;
+    }
+}
+
+/* ========== REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

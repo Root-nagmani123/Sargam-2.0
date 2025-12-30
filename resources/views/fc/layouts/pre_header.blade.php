@@ -5,6 +5,7 @@
 <!-- Icon library (Bootstrap Icons or Lucide) -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
+<link href="{{asset('css/mobile-responsive.css')}}" rel="stylesheet">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link
@@ -24,26 +25,39 @@ body {
     background-repeat: no-repeat;
     background-size: cover;
     display: flex;
-        flex-direction: column;
-        min-height: 100vh;
+    flex-direction: column;
+    min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .top-header {
     background-color: #004a93;
     color: white;
-    padding: 5px 15px;
+    padding: 8px 0;
+}
+
+@media (max-width: 767px) {
+    .top-header {
+        display: none !important;
+    }
 }
 
 .academy-box {
     max-width: 1200px;
-    margin: 3rem auto;
+    margin: 1.5rem 0.5rem;
     background: white;
     border-radius: 10px;
     box-shadow: 0 0 12px rgba(0, 0, 0, 0.08);
-    padding: 2rem;
-    border-left: 4px solid #004a93;
     padding: 1rem;
+    border-left: 4px solid #004a93;
     border-radius: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .academy-box {
+        margin: 3rem auto;
+        padding: 2rem;
+    }
 }
 
 .card-icon-box {
@@ -158,6 +172,14 @@ p {
     border: 2px solid #e5e7eb;
     padding-top: 0.5rem;
     padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 767px) {
+    .card {
+        border-radius: 8px;
+        padding: 0.5rem;
+    }
 }
 
 .card-header {
