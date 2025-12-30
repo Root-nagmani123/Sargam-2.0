@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('setup_content')
-    <div class="container-fluid">
-        <x-breadcrum title="Peer Evaluation Form"></x-breadcrum>
+    <div class="card p-3">
+        <h4 class="mb-4">Peer Evaluation Form</h4>
 
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show">
@@ -66,7 +66,7 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table">
+                            <table class="table table-bordered table-striped align-middle text-center">
                                 <thead class="">
                                     <tr>
                                         <th width="60">Sr.No</th>
@@ -76,7 +76,7 @@
                                             <th>
                                                 {{ $column->column_name }}
                                                 <br>
-                                                <small >(1-{{ $selectedGroup->max_marks }})</small>
+                                                <small class="text-muted">(1-{{ $selectedGroup->max_marks }})</small>
                                             </th>
                                         @endforeach
                                     </tr>
@@ -89,7 +89,7 @@
                                                 <strong>{{ $member->first_name }}</strong>
                                                 @if ($member->user_id)
                                                     <br>
-                                                    <small > - {{ $member->ot_code }}</small>
+                                                    <small class="text-muted"> - {{ $member->ot_code }}</small>
                                                 @endif
                                             </td>
                                             <td>
@@ -105,7 +105,7 @@
                                                         value="0" 
                                                         required
                                                         onchange="validateScore(this)">
-                                                    <small >1-10</small>
+                                                    <small class="text-muted">1-10</small>
                                                 </td>
                                             @endforeach
                                         </tr>

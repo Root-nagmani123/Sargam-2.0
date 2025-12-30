@@ -476,15 +476,11 @@ class PeerEvaluationController extends Controller
     {
         $groups = DB::table('peer_groups')
             ->select(
-                'peer_groups.id',
-                'peer_groups.group_name',
-                'peer_groups.course_id',
-                'peer_groups.created_at',
-                'peer_groups.updated_at',
+                'peer_groups.*',
                 DB::raw('COUNT(peer_group_members.id) as member_count')
             )
             ->leftJoin('peer_group_members', 'peer_groups.id', '=', 'peer_group_members.group_id')
-            ->groupBy('peer_groups.id', 'peer_groups.group_name', 'peer_groups.course_id', 'peer_groups.created_at', 'peer_groups.updated_at')
+            ->groupBy('peer_groups.id')
             ->get();
 
         $allUsers = DB::table('fc_registration_master')
