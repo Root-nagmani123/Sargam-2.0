@@ -594,9 +594,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
 
-    //    Route::get('/incoming-course', function () {
-    //      return view('admin.dashboard.incoming_course');
-    //  })->name('admin.dashboard.incoming_course');
+       Route::get('/upcoming-events', function () {
+         return view('admin.dashboard.upcoming_events');
+     })->name('admin.dashboard.upcoming_events');
 
     //    Route::get('/guest-faculty', function () {
     //      return view('admin.dashboard.guest_faculty');
