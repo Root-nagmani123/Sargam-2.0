@@ -52,6 +52,13 @@
                                 <span id="eventVanue" class="ms-1"></span>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="detail-item">
+                                <i class="bi bi-geo-alt-fill text-primary me-2" aria-hidden="true"></i>
+                                <strong>Internal Faculty:</strong>
+                                <span id="internal_faculty_name_show" class="ms-1"></span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-4 pt-3 border-top">

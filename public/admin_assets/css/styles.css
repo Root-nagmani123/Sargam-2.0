@@ -39015,7 +39015,7 @@ ul {
     }
 
     html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .topbar {
-        width: calc(100% - 80px);
+        width: 100%;
     }
 
     html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
