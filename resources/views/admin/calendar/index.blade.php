@@ -115,7 +115,7 @@
 @endif
 
                 <!-- Right Action -->
-                @if(hasRole('Training') || hasRole('Admin'))
+                @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP'))
                 <div class="d-flex justify-content-end">
                     <button type="button"
                         class="btn btn-primary btn-sm px-4 d-flex align-items-center gap-2"
@@ -1657,7 +1657,7 @@ class CalendarManager {
     }
 
     handleDateSelect(info) {
-        if (!@json(hasRole('Training') || hasRole('Admin'))) return;
+        if (!@json(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP')) ) return;
 
         this.resetEventForm();
         this.setFormDate(info.start);

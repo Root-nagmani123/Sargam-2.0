@@ -12,7 +12,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Home -->
                             <!-- ---------------------------------- -->
-                             @if(hasRole('Admin') || hasRole('Training'))
+                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
                             <li class="nav-section" role="listitem">
 
                                 <!-- Main Container with Improved Layout -->

@@ -45,10 +45,11 @@
                                     data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
                                     id="setup-tab">
 
-                                    @if(hasRole('Admin') || hasRole('Training'))
-                                        <span>Setup</span>
-                                    @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Student-OT'))
-                                        <span>Academics</span>
+                                    @if(hasRole('Admin') || hasRole('Training-Induction'))
+                                    <span>Setup</span>
+                                    @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
+                                    hasRole('Student-OT'))
+                                    <span>Academics</span>
                                     @else
                                         <span>Setup</span>
                                     @endif

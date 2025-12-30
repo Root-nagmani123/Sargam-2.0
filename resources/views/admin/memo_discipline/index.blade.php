@@ -352,7 +352,7 @@
 
                         <!-- Add Group Mapping -->
                         @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') ||
-                        hasRole('Training'))
+                        hasRole('Training-Induction'))
                         <a href="{{ route('memo.discipline.create') }}"
                             class="btn btn-primary d-flex align-items-center">
                             <i class="material-icons menu-icon material-symbols-rounded"
@@ -808,14 +808,14 @@ function removeDateFilters() {
 
                                     <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}">
+                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
                                         <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                     </a>
                                 </div>
                                 @else
                                 <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training')) ? 'admin' : 'OT' }}">
+                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
                                         <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                     </a>
                                 <span class="badge bg-secondary-subtle text-secondary">
@@ -828,7 +828,7 @@ function removeDateFilters() {
                             @if(! hasRole('Student-OT'))
                             <td class="text-end">
                                 @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin')
-                                || hasRole('Training'))
+                                || hasRole('Training-Induction'))
                                 @if($memo->status == 1)
                                 <button class="btn btn-sm btn-outline-primary" data-discipline="{{ $memo->pk }}"
                                     id="sendMemoBtn">

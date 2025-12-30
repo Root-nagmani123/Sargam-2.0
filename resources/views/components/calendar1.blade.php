@@ -410,7 +410,7 @@ textarea:focus {
                 <i class="bi bi-list-ul me-1"></i> List
             </button>
         </div>
-        @if(hasRole('Training') || hasRole('Admin'))
+        @if(hasRole('Training-Induction') || hasRole('Admin'))
         <button type="button" class="btn btn-primary btn-sm" id="createEventupperButton">
             <i class="bi bi-plus-circle me-1"></i> Add Event
         </button>
@@ -685,7 +685,7 @@ textarea:focus {
                     </div>
                     <div>
                        
-                        @if(hasRole('Training') || hasRole('Admin'))
+                        @if(hasRole('Training-Induction') || hasRole('Admin'))
                         <button type="button" class="btn btn-sm btn-primary me-1" id="editEventBtn">
                             <i class="bi bi-pencil me-1"></i> Edit
                         </button>
@@ -1351,7 +1351,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             $('#start_datetime').val(startDateTime);
             $('#start_datetime').prop('readonly', true);
-            @if(hasRole('Training') || hasRole('Admin'))
+            @if(hasRole('Training-Induction') || hasRole('Admin'))
             $('#eventModal').modal('show');
             @endif
             $('#fullDayCheckbox').off('change').on('change', function() {

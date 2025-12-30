@@ -193,7 +193,7 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
         ]) . '" class="btn btn-primary btn-sm">Send Notice</a>';
-        }else if(hasRole('Training') || hasRole('Staff') || hasRole('Admin')){
+        }else if(hasRole('Training-Induction') || hasRole('Staff') || hasRole('Admin')){
              return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
