@@ -1,4 +1,4 @@
-<nav class="sidebar-nav simplebar-scrollable-y" id="menu-right-mini-10" data-simplebar="init">
+<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-setup-mini-7" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
             <div class="simplebar-height-auto-observer"></div>

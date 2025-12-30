@@ -685,12 +685,7 @@ table>thead {
         <div class="col-lg-7">
             <div class="content-card-modern" style="height:700px; overflow-y:auto;">
                 <div class="content-card-header-modern">
-                    @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Staff'))
-                    <h2>Notification & Time Table</h2>
-                    @endif
-                    @if(hasRole('Admin') || hasRole('Training'))
                     <h2>Admin & Campus Summary</h2>
-                    @endif
                 </div>
                 <div class="content-card-body-modern">
                     <!-- Admin Summary / Notifications -->
@@ -785,7 +780,7 @@ table>thead {
                             @endif
                         </div>
                     </section>
-                    @if(hasRole('Admin') || hasRole('Training'))
+
                     <!-- Campus Summary -->
                     <section aria-labelledby="campus-summary-title" style="overflow-y:auto; max-height:250px;">
                         <h2 id="campus-summary-title"
@@ -803,52 +798,6 @@ table>thead {
                             </ul>
                         </div>
                     </section>
-
-                    @endif
-
-                    @if(hasRole('Student-OT') || hasRole('Training') || hasRole('Admin') || hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Staff'))
-                    <section class="h-100">
-                        <div class="row">
-                            <div class="col-6"><h4 id="campus-summary-title"
-                            style="color: #1a1a1a !important;font-size:24px;line-height:28px;">
-                            Time Table
-                        </h4></div>
-                        <div class="col-6 text-end">
-                            <a href="{{ route('calendar.index') }}" class="btn btn-outline-primary" id="calendar">View All</a>
-                        </div>
-                        </div>
-                        
-                        <div class="divider-modern"></div>
-                        <div class="table-responsive">
-                            <table class="table table-bordered text-nowrap align-middle">
-                                <tr>
-                                    <th style="color: #af2910 !important;">S.No.</th>
-                                    <th style="color: #af2910 !important;">Topics</th>
-                                    <th style="color: #af2910 !important;">Date</th>
-                                    <th style="color: #af2910 !important;">Time</th>
-                                    <th style="color: #af2910 !important;">Venue</th>
-                                    <th style="color: #af2910 !important;">Faculty</th>
-                                </tr>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Contribution of Manufacturing for Viksit Bharat (C&I-2)</td>
-                                    <td>20-06-2024</td>
-                                    <td>10:00 AM - 11:00 AM</td>
-                                    <td>Room 1</td>
-                                    <td>Ms. Anjali</td>
-                                </tr>
-                                <tr>
-                                    <td>1</td>
-                                    <td>Contribution of Manufacturing for Viksit Bharat (C&I-2)</td>
-                                    <td>20-06-2024</td>
-                                    <td>10:00 AM - 11:00 AM</td>
-                                    <td>Room 1</td>
-                                    <td>Ms. Anjali</td>
-                                </tr>
-                            </table>
-                        </div>
-                    </section>
-                    @endif
                 </div>
             </div>
         </div>

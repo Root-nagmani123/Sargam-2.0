@@ -405,37 +405,6 @@
         </div>
     </div>
 
-    <!-- Mobile/Small-screen sidebar backdrop -->
-    <div class="dark-transparent" id="sidebarBackdrop"></div>
-
-    <!-- Mobile Bottom Navigation -->
-    <nav class="mobile-bottom-nav" id="mobileBottomNav">
-        <a href="#home" class="mobile-nav-item active" data-bs-toggle="tab" role="tab">
-            <i class="material-icons material-symbols-rounded">home</i>
-            <span>Home</span>
-        </a>
-        <a href="#tab-setup" class="mobile-nav-item" data-bs-toggle="tab" role="tab">
-            @if(hasRole('Admin') || hasRole('Training'))
-                <i class="material-icons material-symbols-rounded">settings</i>
-                <span>Setup</span>
-            @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Student-OT'))
-                <i class="material-icons material-symbols-rounded">school</i>
-                <span>Academics</span>
-            @else
-                <i class="material-icons material-symbols-rounded">settings</i>
-                <span>Setup</span>
-            @endif
-        </a>
-        <a href="#tab-communications" class="mobile-nav-item" data-bs-toggle="tab" role="tab">
-            <i class="material-icons material-symbols-rounded">chat</i>
-            <span>Comms</span>
-        </a>
-        <a href="#tab-material-management" class="mobile-nav-item" data-bs-toggle="tab" role="tab">
-            <i class="material-icons material-symbols-rounded">inventory_2</i>
-            <span>Materials</span>
-        </a>
-    </nav>
-
     @include('admin.layouts.footer')
     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
@@ -477,9 +446,6 @@ document.addEventListener("DOMContentLoaded", function () {
     const icon = document.getElementById("sidebarToggleIcon");
     const body = document.body;
     const sidebarmenus = document.querySelectorAll(".sidebarmenu");
-    const backdrop = document.getElementById("sidebarBackdrop");
-    const bodyWrapper = document.querySelector('.body-wrapper');
-    let trapCleanup = null;
     const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
 
     // Helper: Safely adjust all DataTables after layout changes
@@ -574,150 +540,8 @@ document.addEventListener("DOMContentLoaded", function () {
             // Adjust DataTables after the sidebar transition to fix header widths
             // Use a small delay to allow CSS transitions to finish
             setTimeout(adjustAllDataTables, 300);
-
-            // Lock body scroll when sidebar is open (mobile usability)
-            if (sidebar.classList.contains('show-sidebar')) {
-                body.classList.add('no-scroll');
-                // Trap focus within visible sidebar menu on small screens
-                if (window.innerWidth < 992) {
-                    const visibleMenu = document.querySelector('.sidebarmenu nav.d-block');
-                    if (visibleMenu) {
-                        trapCleanup = trapFocus(visibleMenu);
-                    }
-                }
-                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
-                if (backdrop) backdrop.setAttribute('aria-hidden', 'false');
-                if (bodyWrapper) bodyWrapper.setAttribute('aria-hidden', 'true');
-            } else {
-                body.classList.remove('no-scroll');
-                if (trapCleanup) { try { trapCleanup(); } catch(e){} trapCleanup = null; }
-                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
-                if (backdrop) backdrop.setAttribute('aria-hidden', 'true');
-                if (bodyWrapper) bodyWrapper.removeAttribute('aria-hidden');
-            }
         });
     }
-
-    // Close sidebar when clicking on backdrop (small screens)
-    if (backdrop) {
-        backdrop.addEventListener('click', function () {
-            if (sidebar.classList.contains('show-sidebar')) {
-                sidebar.classList.remove('show-sidebar');
-                sidebarmenus.forEach(function(el) {
-                    el.classList.add('close');
-                });
-                body.setAttribute('data-sidebartype', 'mini-sidebar');
-                try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
-                if (icon) icon.textContent = "keyboard_double_arrow_right";
-                setTimeout(adjustAllDataTables, 300);
-                body.classList.remove('no-scroll');
-                if (trapCleanup) { try { trapCleanup(); } catch(e){} trapCleanup = null; }
-                if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
-                if (backdrop) backdrop.setAttribute('aria-hidden', 'true');
-                if (bodyWrapper) bodyWrapper.removeAttribute('aria-hidden');
-            }
-        });
-    }
-
-    // Focus trap utility for accessibility
-    function trapFocus(container) {
-        const focusableSelectors = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, [tabindex]:not([tabindex="-1"])';
-        const focusables = Array.from(container.querySelectorAll(focusableSelectors)).filter(el => el.offsetParent !== null);
-        if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        first.focus();
-
-        function handleKey(e) {
-            if (e.key !== 'Tab') return;
-            if (e.shiftKey && document.activeElement === first) {
-                e.preventDefault();
-                last.focus();
-            } else if (!e.shiftKey && document.activeElement === last) {
-                e.preventDefault();
-                first.focus();
-            }
-        }
-        container.addEventListener('keydown', handleKey);
-        return function cleanup() {
-            container.removeEventListener('keydown', handleKey);
-        };
-    }
-
-    // Close on ESC key for accessibility
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && sidebar.classList.contains('show-sidebar')) {
-            sidebar.classList.remove('show-sidebar');
-            sidebarmenus.forEach(function(el) { el.classList.add('close'); });
-            body.setAttribute('data-sidebartype', 'mini-sidebar');
-            try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
-            if (icon) icon.textContent = "keyboard_double_arrow_right";
-            body.classList.remove('no-scroll');
-            if (trapCleanup) { try { trapCleanup(); } catch(e){} trapCleanup = null; }
-            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
-            if (backdrop) backdrop.setAttribute('aria-hidden', 'true');
-            if (bodyWrapper) bodyWrapper.removeAttribute('aria-hidden');
-            setTimeout(adjustAllDataTables, 300);
-        }
-    });
-
-    // Remove backdrop/scroll lock when resizing to desktop
-    window.addEventListener('resize', function() {
-        if (window.innerWidth >= 992 && sidebar.classList.contains('show-sidebar')) {
-            body.classList.remove('no-scroll');
-        }
-    });
-
-    // Auto-close sidebar after selecting a leaf menu item on mobile
-    document.addEventListener('click', function(e) {
-        const link = e.target.closest('.sidebarmenu .sidebar-nav .sidebar-link');
-        if (!link) return;
-        const isCollapseToggle = link.getAttribute('data-bs-toggle') === 'collapse';
-        if (window.innerWidth < 992 && !isCollapseToggle) {
-            sidebar.classList.remove('show-sidebar');
-            sidebarmenus.forEach(function(el) { el.classList.add('close'); });
-            body.setAttribute('data-sidebartype', 'mini-sidebar');
-            try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
-            if (icon) icon.textContent = "keyboard_double_arrow_right";
-            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
-            if (backdrop) backdrop.setAttribute('aria-hidden', 'true');
-            if (bodyWrapper) bodyWrapper.removeAttribute('aria-hidden');
-            body.classList.remove('no-scroll');
-            setTimeout(adjustAllDataTables, 200);
-        }
-    });
-
-    // Sync mobile bottom nav with tab changes
-    const mobileNavItems = document.querySelectorAll('.mobile-nav-item');
-    mobileNavItems.forEach(item => {
-        item.addEventListener('shown.bs.tab', function(e) {
-            mobileNavItems.forEach(nav => nav.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-
-    // Sync desktop tabs with mobile nav clicks
-    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-        tab.addEventListener('shown.bs.tab', function(e) {
-            const target = this.getAttribute('href');
-            // Update mobile nav active state
-            mobileNavItems.forEach(nav => {
-                if (nav.getAttribute('href') === target) {
-                    nav.classList.add('active');
-                } else {
-                    nav.classList.remove('active');
-                }
-            });
-            // Update desktop nav active state
-            document.querySelectorAll('#mainNavbar [data-bs-toggle="tab"]').forEach(desktopTab => {
-                if (desktopTab.getAttribute('href') === target) {
-                    desktopTab.classList.add('active');
-                } else {
-                    desktopTab.classList.remove('active');
-                }
-            });
-        });
-    });
 });
 </script>
 
