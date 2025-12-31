@@ -1257,11 +1257,11 @@ class CalendarManager {
         this.updateCourseHeader();
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridDay',
+            initialView: 'timeGridWeek',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                right: 'dayGridMonth,timeGridWeek'
             },
             buttonText: {
                 today: 'Today',
