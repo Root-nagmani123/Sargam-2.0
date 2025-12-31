@@ -17,6 +17,7 @@ class AttendanceController extends Controller
     function index()
     {
         try {
+            $data_course_id =  get_Role_by_course();
             // If Student-OT user accessing via user_attendance route, redirect to their attendance view
             if (hasRole('Student-OT') && request()->routeIs('attendance.user_attendance.index')) {
                 $studentPk = auth()->user()->user_id;
@@ -68,9 +69,15 @@ class AttendanceController extends Controller
                 ->select('class_session')
                 ->get();
 
-
-            $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
-         $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
+            if(!empty($data_course_id)){
+                $courseMasterPK = CalendarEvent::active()->select('course_master_pk')
+                                ->whereIn('course_master_pk',$data_course_id)
+                                ->groupBy('course_master_pk')->get()->toArray();
+            }
+            else{
+                $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
+            }
+            $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
                         ->select('course_master.course_name', 'course_master.pk');
 
                     if (hasRole('Student-OT')) {

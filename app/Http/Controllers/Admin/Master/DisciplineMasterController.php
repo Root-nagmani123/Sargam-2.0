@@ -17,14 +17,30 @@ class DisciplineMasterController extends Controller
 
     public function create()
     {
-        $courses = CourseMaster::where('active_inactive',1)->where('end_date', '>', now())->get();
+        $data_course_id =  get_Role_by_course();
+         if(!empty($data_course_id))
+        {
+            $courses = CourseMaster::whereIn('pk',$data_course_id)->where('active_inactive',1)->where('end_date', '>', now())->get();
+        }
+        else
+        {
+            $courses = CourseMaster::where('active_inactive',1)->where('end_date', '>', now())->get();
+        }
         return view('admin.master.discipline.create_edit', compact('courses'));
     }
 
     public function edit($id)
     {
         $discipline = DisciplineMaster::findOrFail(decrypt($id));
-        $courses = CourseMaster::where('active_inactive',1)->where('end_date', '>', now())->get();
+        $data_course_id =  get_Role_by_course();
+         if(!empty($data_course_id))
+        {
+            $courses = CourseMaster::whereIn('pk',$data_course_id)->where('active_inactive',1)->where('end_date', '>', now())->get();
+        }
+        else
+        {
+            $courses = CourseMaster::where('active_inactive',1)->where('end_date', '>', now())->get();
+        }
         return view('admin.master.discipline.create_edit', compact('discipline','courses'));
     }
 

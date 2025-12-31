@@ -23,6 +23,11 @@ class MDOEscrotExemptionController extends Controller
         // Get courses based on filter
         $courseMasterQuery = CourseMaster::where('active_inactive', '1');
         
+        $data_course_id =  get_Role_by_course();
+         if(!empty($data_course_id))
+        {
+            $courseMasterQuery->whereIn('pk',$data_course_id);
+        }
         if ($filter === 'active') {
             // Active Courses: end_date > current date
             $courseMasterQuery->where('end_date', '>', $currentDate);
@@ -54,8 +59,13 @@ class MDOEscrotExemptionController extends Controller
     public function create()
     {
         try {
-            $courseMaster = CourseMaster::where('active_inactive', '1')
-                ->where('end_date', '>', now())
+            $data_course_id =  get_Role_by_course();
+            $courseMaster = CourseMaster::where('active_inactive', '1');
+            if(!empty($data_course_id))
+            {
+                $courseMaster->whereIn('pk',$data_course_id);
+            }
+            $courseMaster = $courseMaster->where('end_date', '>', now())
                 ->pluck('course_name', 'pk')
                 ->toArray();
             $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)->pluck('mdo_duty_type_name', 'pk')->toArray();

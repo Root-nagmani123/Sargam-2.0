@@ -140,6 +140,11 @@ HTML;
      */
     public function query(CourseMaster $model): QueryBuilder
     {
+        $data_course_id =  get_Role_by_course();
+         if(!empty($data_course_id))
+        {
+            $model = $model->whereIn('pk',$data_course_id);
+        }
         $query = $model->orderBy('pk', 'desc')->newQuery();
         
         // Apply status filter if provided
