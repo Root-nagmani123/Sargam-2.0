@@ -15,8 +15,13 @@ class MemoNoticeController extends Controller
     // Display all templates
     public function index(Request $request)
     {
+        $data_course_id =  get_Role_by_course();
         $query = MemoNoticeTemplate::with('course')
             ->orderBy('created_date', 'desc');
+            
+        if(!empty($data_course_id)){
+            $query->whereIn('course_master_pk',$data_course_id);
+        }
 
         // Filter by course if selected
         if ($request->filled('course_master_pk')) {
@@ -34,8 +39,8 @@ class MemoNoticeController extends Controller
         $currentDate = now()->toDateString();
 
         // Only active + ongoing + upcoming courses
-        $courses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) use ($currentDate) {
+        $courses = CourseMaster::where('active_inactive', 1);
+            $courses->where(function ($q) use ($currentDate) {
 
                 // Ongoing courses: start_year <= today AND (end_date is null OR end_date >= today)
                 $q->where(function ($ongoing) use ($currentDate) {
@@ -48,8 +53,12 @@ class MemoNoticeController extends Controller
 
                     // OR upcoming courses: start_year > today
                     ->orWhere('start_year', '>', $currentDate);
-            })
-            ->orderBy('course_name')
+
+            });
+            if(!empty($data_course_id)){
+                $courses->whereIn('pk',$data_course_id);
+            }
+            $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
@@ -60,8 +69,12 @@ class MemoNoticeController extends Controller
     {
         $currentDate = now()->toDateString();
 
-        $courses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) use ($currentDate) {
+        $courses = CourseMaster::where('active_inactive', 1);
+        $data_course_id =  get_Role_by_course();
+        if(!empty($data_course_id)){
+            $courses->whereIn('pk',$data_course_id);
+        }
+        $courses->where(function ($q) use ($currentDate) {
 
                 // Ongoing courses
                 $q->where(function ($ongoing) use ($currentDate) {
@@ -137,8 +150,12 @@ class MemoNoticeController extends Controller
         $currentDate = now()->format('Y-m-d');
 
         // Fetch only active + ongoing + upcoming courses
-        $courses = CourseMaster::where('active_inactive', 1)
-            ->where(function ($q) use ($currentDate) {
+        $courses = CourseMaster::where('active_inactive', 1);
+        $data_course_id =  get_Role_by_course();
+        if(!empty($data_course_id)){
+            $courses->whereIn('pk',$data_course_id);
+        }
+        $courses->where(function ($q) use ($currentDate) {
 
                 // **Ongoing courses**: start_year <= today AND (end_date is null OR end_date >= today)
                 $q->where(function ($ongoing) use ($currentDate) {

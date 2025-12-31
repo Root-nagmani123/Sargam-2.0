@@ -40,6 +40,11 @@ class StudentMedicalExemptionController extends Controller
                $q->where('end_date', '<', $currentDate);
            });
        }
+        $data_course_id =  get_Role_by_course();
+         if(!empty($data_course_id))
+        {
+            $query->whereIn('course_master_pk',$data_course_id);
+        }
        
        // Filter by specific course if selected
        $courseFilter = $request->get('course_filter');
@@ -107,6 +112,11 @@ class StudentMedicalExemptionController extends Controller
        
        // Get courses filtered by Active/Archive status for dropdown
        $coursesQuery = CourseMaster::where('active_inactive', '1');
+        $data_course_id =  get_Role_by_course();
+         if(!empty($data_course_id))
+        {
+            $coursesQuery->whereIn('pk',$data_course_id);
+        }
        if ($filter === 'active') {
            $coursesQuery->where('end_date', '>', $currentDate);
        } elseif ($filter === 'archive') {
@@ -120,8 +130,13 @@ class StudentMedicalExemptionController extends Controller
 
    public function create()
 {
-    $courses = CourseMaster::where('active_inactive', '1')
-        ->where('end_date', '>', now())
+    $courses = CourseMaster::where('active_inactive', '1');
+    $data_course_id =  get_Role_by_course();
+    if(!empty($data_course_id))
+    {
+        $courses = $courses->whereIn('pk',$data_course_id);
+    }
+        $courses = $courses->where('end_date', '>', now())
         ->get();
   
     $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
@@ -260,8 +275,13 @@ class StudentMedicalExemptionController extends Controller
 {
     $record = StudentMedicalExemption::findOrFail(decrypt($id));
 
-    $courses = CourseMaster::where('active_inactive', '1')
-        ->where('end_date', '>', now())
+    $courses = CourseMaster::where('active_inactive', '1');
+    $data_course_id =  get_Role_by_course();
+    if(!empty($data_course_id))
+    {
+        $courses = $courses->whereIn('pk',$data_course_id);
+    }
+    $courses = $courses->where('end_date', '>', now())
         ->get();
     $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
         ->where('status', '1')
