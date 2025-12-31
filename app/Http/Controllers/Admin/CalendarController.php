@@ -25,11 +25,10 @@ class CalendarController extends Controller
 
         $courseMaster = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now());
-            if(!empty($data_course_id))
-            {
-                $courseMaster = $courseMaster->whereIn('pk',$data_course_id);
-            }
-            $courseMaster = $courseMaster->select('pk', 'course_name', 'couse_short_name', 'course_year')
+        if (!empty($data_course_id)) {
+            $courseMaster = $courseMaster->whereIn('pk', $data_course_id);
+        }
+        $courseMaster = $courseMaster->select('pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
@@ -524,24 +523,22 @@ class CalendarController extends Controller
             ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
             ->join('subject_master as s', 't.subject_master_pk', '=', 's.pk')
             ->leftJoin('topic_feedback as tf', 'tf.timetable_pk', '=', 't.pk');
-            $query->whereExists(function ($q) {
-                $q->select(DB::raw(1))
-                    ->from('topic_feedback as tf')
-                    ->whereColumn('tf.timetable_pk', 't.pk');
-            });
-                if($data_course_id != '')
-                {
-                    $query = $query->whereIn('t.course_master_pk',$data_course_id);
-    
-                }
-            $query->select([
-                't.pk as event_id',
-                'c.course_name',
-                'f.full_name as faculty_name',
-                's.subject_name',
-                't.subject_topic',
-                DB::raw('ROUND(AVG(tf.rating), 1) as average_rating'),
-            ])
+        $query->whereExists(function ($q) {
+            $q->select(DB::raw(1))
+                ->from('topic_feedback as tf')
+                ->whereColumn('tf.timetable_pk', 't.pk');
+        });
+        if ($data_course_id != '') {
+            $query = $query->whereIn('t.course_master_pk', $data_course_id);
+        }
+        $query->select([
+            't.pk as event_id',
+            'c.course_name',
+            'f.full_name as faculty_name',
+            's.subject_name',
+            't.subject_topic',
+            DB::raw('ROUND(AVG(tf.rating), 1) as average_rating'),
+        ])
             ->groupBy('t.pk', 'c.course_name', 'f.full_name', 's.subject_name', 't.subject_topic');
 
         // ✅ Faculty ko sirf apna data dikhana
@@ -556,8 +553,8 @@ class CalendarController extends Controller
 
         // Filters: courses, faculties, subjects (for dropdowns)
         $courses = CourseMaster::where('active_inactive', 1);
-        if(!empty($data_course_id)){
-            $courses->whereIn('pk',$data_course_id);
+        if (!empty($data_course_id)) {
+            $courses->whereIn('pk', $data_course_id);
         }
         $courses = $courses->select(['pk as id', 'course_name as name'])
             ->orderBy('course_name')
@@ -867,7 +864,48 @@ class CalendarController extends Controller
             Auth::login($user);
             $student_pk = auth()->user()->user_id;
 
-            $pendingQuery = DB::table('timetable as t')
+            // $pendingQuery = DB::table('timetable as t')
+            //     ->select([
+            //         't.pk as timetable_pk',
+            //         't.subject_topic',
+            //         't.Ratting_checkbox',
+            //         't.feedback_checkbox',
+            //         't.Remark_checkbox',
+            //         't.faculty_master as faculty_pk',
+            //         'f.full_name as faculty_name',
+            //         'c.course_name',
+            //         'v.venue_name',
+            //         DB::raw('t.START_DATE as from_date'),
+            //         't.class_session',
+            //     ])
+            //     ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+            //     ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            //     ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+            //     ->where('t.feedback_checkbox', 1)
+            //     ->whereNotExists(function ($sub) use ($student_pk) {
+            //         $sub->select(DB::raw(1))
+            //             ->from('topic_feedback as tf')
+            //             ->whereColumn('tf.timetable_pk', 't.pk')
+            //             ->where('tf.student_master_pk', $student_pk)
+            //             ->where('tf.is_submitted', 1);
+            //     });
+
+            // if (hasRole('Student-OT')) {
+            //     $pendingQuery
+            //         ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
+            //         ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+            //         ->where('scgm.student_master_pk', $student_pk);
+            // }
+
+            // $pendingData = $pendingQuery->orderByDesc('t.START_DATE')->get();
+
+            $groupIds = DB::table('student_course_group_map')
+                ->where('student_master_pk', $student_pk)
+                ->where('active_inactive', 1)
+                ->pluck('group_type_master_course_master_map_pk')
+                ->toArray();
+
+            $pendingData = DB::table('timetable as t')
                 ->select([
                     't.pk as timetable_pk',
                     't.subject_topic',
@@ -881,27 +919,58 @@ class CalendarController extends Controller
                     DB::raw('t.START_DATE as from_date'),
                     't.class_session',
                 ])
+
+                ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
+                ->join('student_course_group_map as scgm', function ($join) use ($student_pk) {
+                    $join->on('scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+                        ->where('scgm.student_master_pk', $student_pk)
+                        ->where('scgm.active_inactive', 1);
+                })
+
                 ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
-                ->where('t.feedback_checkbox', 1)
-                ->whereNotExists(function ($sub) use ($student_pk) {
-                    $sub->select(DB::raw(1))
-                        ->from('topic_feedback as tf')
-                        ->whereColumn('tf.timetable_pk', 't.pk')
+
+                ->leftJoin('topic_feedback as tf', function ($join) use ($student_pk) {
+                    $join->on('tf.timetable_pk', '=', 't.pk')
                         ->where('tf.student_master_pk', $student_pk)
                         ->where('tf.is_submitted', 1);
-                });
+                })
 
-            if (hasRole('Student-OT')) {
-                $pendingQuery
-                    ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
-                    ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
-                    ->where('scgm.student_master_pk', $student_pk);
-            }
+                ->whereNull('tf.pk')
+                ->where('t.feedback_checkbox', 1)
 
-            $pendingData = $pendingQuery->orderByDesc('t.START_DATE')->get();
+                ->orderByDesc('t.START_DATE')
+                ->get();
 
+            // $submittedData = DB::table('topic_feedback as tf')
+            //     ->select([
+            //         'tf.pk as feedback_pk',
+            //         'tf.timetable_pk',
+            //         'tf.topic_name',
+            //         'tf.presentation',
+            //         'tf.content',
+            //         'tf.remark',
+            //         'tf.rating',
+            //         'tf.is_submitted',
+            //         'tf.created_date',
+            //         't.subject_topic',
+            //         'f.full_name as faculty_name',
+            //         'c.course_name',
+            //         'v.venue_name',
+            //         DB::raw('t.START_DATE as from_date'),
+            //         't.class_session',
+            //         't.Ratting_checkbox',
+            //         't.Remark_checkbox',
+            //     ])
+            //     ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+            //     ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+            //     ->leftJoin('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            //     ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+            //     ->where('tf.student_master_pk', $student_pk)
+            //     ->where('tf.is_submitted', 1)
+            //     ->orderByDesc('tf.created_date')
+            //     ->get();
 
             $submittedData = DB::table('topic_feedback as tf')
                 ->select([
@@ -914,14 +983,16 @@ class CalendarController extends Controller
                     'tf.rating',
                     'tf.is_submitted',
                     'tf.created_date',
+
                     't.subject_topic',
-                    'f.full_name as faculty_name',
-                    'c.course_name',
-                    'v.venue_name',
-                    DB::raw('t.START_DATE as from_date'),
                     't.class_session',
                     't.Ratting_checkbox',
                     't.Remark_checkbox',
+                    DB::raw('t.START_DATE as from_date'),
+
+                    'f.full_name as faculty_name',
+                    'c.course_name',
+                    'v.venue_name',
                 ])
                 ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
                 ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
@@ -930,7 +1001,9 @@ class CalendarController extends Controller
                 ->where('tf.student_master_pk', $student_pk)
                 ->where('tf.is_submitted', 1)
                 ->orderByDesc('tf.created_date')
+
                 ->get();
+
 
             return view(
                 'admin.feedback.student_feedback',
