@@ -30,9 +30,17 @@ class GroupMappingController extends Controller
 
     public function index(GroupMappingDataTable $dataTable)
     {
+        $data_course_id =  get_Role_by_course();
+
         $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
-            ->orderBy('course_name')
+            ->where('end_date', '>', now());
+
+        if(!empty($data_course_id))
+        {
+            $courses = $courses->whereIn('pk',$data_course_id);
+        }
+
+        $courses = $courses->orderBy('course_name')
             ->pluck('course_name', 'pk')
             ->toArray();
 
@@ -51,9 +59,15 @@ class GroupMappingController extends Controller
      */
     function create()
     {
-        $courses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
-            ->orderBy('pk', 'desc')
+        $data_course_id =  get_Role_by_course();
+          
+        $courses = CourseMaster::where('active_inactive', '1');
+           $courses->where('end_date', '>', now());
+              if(!empty($data_course_id))
+            {
+                $courses = CourseMaster::whereIn('pk',$data_course_id);
+            }
+            $courses = $courses->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();
         $courseGroupTypeMaster = CourseGroupTypeMaster::pluck('type_name', 'pk')->toArray();
@@ -74,10 +88,15 @@ class GroupMappingController extends Controller
     function edit(string $id)
     {
         $groupMapping = GroupTypeMasterCourseMasterMap::find(decrypt($id));
+        $data_course_id =  get_Role_by_course();
         
         // Get active courses (active_inactive = '1' and end_date > now())
-        $activeCourses = CourseMaster::where('active_inactive', '1')
-            ->where('end_date', '>', now())
+        $activeCourses = CourseMaster::where('active_inactive', '1');
+        if(!empty($data_course_id))
+        {
+            $activeCourses = $activeCourses->whereIn('pk',$data_course_id);
+        }
+        $activeCourses = $activeCourses->where('end_date', '>', now())
             ->orderBy('pk', 'desc')
             ->pluck('course_name', 'pk')
             ->toArray();

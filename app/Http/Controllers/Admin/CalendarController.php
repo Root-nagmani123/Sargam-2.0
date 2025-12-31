@@ -27,7 +27,7 @@ class CalendarController extends Controller
 
         $courseMaster = CourseMaster::where('active_inactive', 1)
             ->where('end_date', '>', now());
-            if($data_course_id != '')
+            if(!empty($data_course_id))
             {
                 $courseMaster = $courseMaster->whereIn('pk',$data_course_id);
             }
@@ -537,17 +537,23 @@ class CalendarController extends Controller
         $user = auth()->user();
         $facultyPk = $user->user_id; // same as faculty_master.pk (agar alag ho to bataana)
         // echo $facultyPk; die;
+        $data_course_id =  get_Role_by_course();
         $query = DB::table('timetable as t')
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
             ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
             ->join('subject_master as s', 't.subject_master_pk', '=', 's.pk')
-            ->leftJoin('topic_feedback as tf', 'tf.timetable_pk', '=', 't.pk')
-            ->whereExists(function ($q) {
+            ->leftJoin('topic_feedback as tf', 'tf.timetable_pk', '=', 't.pk');
+            $query->whereExists(function ($q) {
                 $q->select(DB::raw(1))
                     ->from('topic_feedback as tf')
                     ->whereColumn('tf.timetable_pk', 't.pk');
-            })
-            ->select([
+            });
+                if($data_course_id != '')
+                {
+                    $query = $query->whereIn('t.course_master_pk',$data_course_id);
+    
+                }
+            $query->select([
                 't.pk as event_id',
                 'c.course_name',
                 'f.full_name as faculty_name',
@@ -568,8 +574,11 @@ class CalendarController extends Controller
         $archivedEvents = null; // Provided to avoid undefined variable in blade
 
         // Filters: courses, faculties, subjects (for dropdowns)
-        $courses = CourseMaster::where('active_inactive', 1)
-            ->select(['pk as id', 'course_name as name'])
+        $courses = CourseMaster::where('active_inactive', 1);
+        if(!empty($data_course_id)){
+            $courses->whereIn('pk',$data_course_id);
+        }
+        $courses = $courses->select(['pk as id', 'course_name as name'])
             ->orderBy('course_name')
             ->get();
 

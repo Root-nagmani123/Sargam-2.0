@@ -155,6 +155,8 @@ HTML;
             $statusFilter = 'active'; // Set default to active
         }
 
+        $data_course_id =  get_Role_by_course();
+        
         $query = $model->newQuery()
                 ->withCount('studentCourseGroupMap')
                 ->with(['courseGroup', 'courseGroupType', 'Faculty'])
@@ -171,6 +173,11 @@ HTML;
                     $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
                         $courseQuery->whereNotNull('end_date')
                             ->whereDate('end_date', '<', $currentDate);
+                    });
+                })
+                ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
+                    $query->whereHas('courseGroup', function ($courseQuery) use ($data_course_id) {
+                        $courseQuery->whereIn('pk', $data_course_id);
                     });
                 })
                 ->when(!empty($courseFilter), function ($query) use ($courseFilter) {
