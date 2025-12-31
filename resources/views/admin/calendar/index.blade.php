@@ -1588,7 +1588,7 @@ class CalendarManager {
             const data = await response.json();
             this.showEventDetails(data);
         } catch (error) {
-            this.showNotification('Error loading event details', 'danger');
+            // this.showNotification('Error loading event details', 'danger');
             console.error('Event details error:', error);
         }
     }
