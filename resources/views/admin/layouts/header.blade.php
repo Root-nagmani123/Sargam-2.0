@@ -34,6 +34,7 @@
                                     class="nav-link active rounded-pill px-4 py-2 d-flex align-items-center gap-2"
                                     data-bs-toggle="tab" role="tab" aria-selected="true" aria-controls="home-panel"
                                     id="home-tab">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">home</i>
                                     <span>Home</span>
                                 </a>
                             </li>
@@ -51,6 +52,7 @@
                                     hasRole('Student-OT'))
                                     <span>Academics</span>
                                     @else
+                                        <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
                                         <span>Setup</span>
                                     @endif
 
@@ -64,6 +66,7 @@
                                     class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="communications-panel" id="communications-tab">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">chat</i>
                                     <span>Communications</span>
                                 </a>
                             </li>
@@ -84,6 +87,7 @@
                                     class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
                                     aria-controls="material-management-panel" id="material-management-tab">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
                                     <span>Material Management</span>
                                 </a>
                             </li>
@@ -94,6 +98,8 @@
                                     href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
                                     aria-expanded="false" data-bs-toggle="dropdown">
                                     <span>Financial</span>
+                                    <i class="material-icons material-symbols-rounded fs-6 dropdown-arrow transition-all"
+                                        aria-hidden="true">expand_more</i>
                                 </a>
 
                                 <ul class="dropdown-menu shadow-lg border-0 rounded-xl p-2 mt-1"
