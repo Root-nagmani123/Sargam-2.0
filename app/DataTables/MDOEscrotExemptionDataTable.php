@@ -110,6 +110,11 @@ HTML;
         $filter = request('filter', 'active'); // Default to 'active'
         $currentDate = now()->format('Y-m-d');
         
+        $data_course_id =  get_Role_by_course();
+            if(!empty($data_course_id))
+            {
+                $query->whereIn('course_master_pk',$data_course_id);
+            }
         if ($filter === 'active') {
             // Active Courses: end_date > current date
             $query->whereHas('courseMaster', function($q) use ($currentDate) {

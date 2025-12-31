@@ -20,10 +20,16 @@ class CourseController extends Controller
 {
     public function index(CourseMasterDataTable $dataTable)
     {
+        $data_course_id =  get_Role_by_course();
+
         // Default to active courses (matching the default status filter)
         $currentDate = Carbon::now()->format('Y-m-d');
-        $courses = CourseMaster::where('end_date', '>=', $currentDate)
-            ->orderBy('course_name')
+        $courses = CourseMaster::where('end_date', '>=', $currentDate);
+          if(!empty($data_course_id))
+            {
+                $courses = $courses->whereIn('pk',$data_course_id);
+            }
+            $courses = $courses->orderBy('course_name')
             ->pluck('course_name', 'pk')
             ->toArray();
 
