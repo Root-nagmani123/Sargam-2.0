@@ -42,7 +42,7 @@
         <x-breadcrum title="Academic TimeTable" />
     </header>
 
-        <div class="course-header mb-3" style="border-left: 4px solid #004a93;">
+        <div class="course-header mb-3">
             <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
             <p class="mb-0 text-white fw-medium">
                 <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
@@ -54,36 +54,28 @@
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
         <section class="calendar-controls mb-4" aria-label="Calendar view controls">
-    <div class="card shadow-sm border-0">
-        <div class="card-body p-3 p-lg-4">
-            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
-
-                <!-- Left Controls -->
-                <div class="d-flex flex-wrap align-items-center gap-3">
-
-                    <!-- View Toggle -->
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="text-muted small fw-semibold d-none d-md-inline">View</span>
-                        <div class="btn-group btn-group-sm" role="group" aria-label="Calendar view options">
-                            <button type="button"
-                                class="btn btn-outline-primary active"
-                                id="btnCalendarView"
-                                data-view="calendar"
-                                aria-pressed="false">
-                                <i class="bi bi-calendar3 me-1"></i>
-                                Calendar
-                            </button>
-                            <button type="button"
-                                class="btn btn-outline-primary"
-                                id="btnListView"
-                                data-view="list"
-                                aria-pressed="true">
-                                <i class="bi bi-list-ul me-1"></i>
-                                List
-                            </button>
-                        </div>
+            <div
+                class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
+                <!-- View Toggle Buttons -->
+                <div class="view-toggle-section d-flex align-items-center gap-3">
+                    <span class="text-muted fw-medium small d-none d-md-inline">View:</span>
+                    <div class="btn-group" role="group" aria-label="Calendar view options">
+                        <button type="button" class="btn btn-outline-primary" id="btnListView" aria-pressed="false"
+                            data-view="list">
+                            <i class="bi bi-list-ul me-2"></i>List View
+                        </button>
+                        <button type="button" class="btn btn-outline-primary active" id="btnCalendarView" aria-pressed="false"
+                            data-view="calendar">
+                            <i class="bi bi-calendar3 me-2"></i>Calendar View
+                        </button>
                     </div>
-                    <!-- Course Filter -->
+
+                    <!-- Density Toggle -->
+                    <div class="density-toggle d-flex align-items-center gap-2 ms-2">
+                        <button type="button" class="btn btn-outline-secondary" id="toggleDensityBtn" aria-pressed="false" aria-label="Toggle compact mode">
+                            Expand / Collapse
+                        </button>
+                    </div>
 
                     <div class="mb-3">
                         <select
@@ -102,30 +94,19 @@
                     </div>
 
                 </div>
-
-                <!-- Right Action -->
-                @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP'))
-                <div class="d-flex justify-content-end">
-                    <button type="button"
-                        class="btn btn-primary btn-sm px-4 d-flex align-items-center gap-2"
-                        id="createEventButton"
-                        data-bs-toggle="modal"
-                        data-bs-target="#eventModal">
-                        <i class="bi bi-plus-circle"></i>
-                        <span>Add Event</span>
-                    </button>
-                </div>
+                <!-- Action Buttons -->
+                @if(hasRole('Training') || hasRole('Admin'))
+                <button type="button" class="btn btn-primary px-4" id="createEventButton" data-bs-toggle="modal"
+                    data-bs-target="#eventModal">
+                    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i> Add New Event
+                </button>
                 @endif
-
             </div>
-        </div>
-    </div>
-</section>
-
+        </section>
 
         <!-- Calendar Container -->
         <section class="calendar-container" aria-label="Academic calendar">
-            <div class="card border-start-4 border-primary shadow-sm" style="border-left: 4px solid #004a93;">
+            <div class="card border-start-4 border-primary shadow-sm">
                 <div class="card-body p-3 p-md-4">
 
                     <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
