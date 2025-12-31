@@ -29,9 +29,13 @@ class FeedbackController extends Controller
     public function database()
     {
         try {
+            $data_course_id =  get_Role_by_course();
             // Fetch active courses
-            $courses = CourseMaster::where('active_inactive', 1)
-                ->select('pk', 'course_name')
+            $courses = CourseMaster::where('active_inactive', 1);
+            if(!empty($data_course_id)){
+                $courses->whereIn('pk',$data_course_id);
+            }
+                $courses = $courses->select('pk', 'course_name')
                 ->orderBy('course_name')
                 ->get();
 
@@ -508,6 +512,7 @@ class FeedbackController extends Controller
         if (is_string($facultyType)) {
             $facultyType = [$facultyType];
         }
+        $data_course_id =  get_Role_by_course();
 
         // Get programs based on course type - THIS MUST BE OUTSIDE THE IF/ELSE
         $programsQuery = DB::table('course_master')
@@ -521,6 +526,9 @@ class FeedbackController extends Controller
                 $query->where('active_inactive', 0)
                     ->orWhereDate('end_date', '<', Carbon::today());
             });
+        }
+        if(!empty($data_course_id)){
+            $programsQuery->whereIn('pk',$data_course_id);
         }
 
         $programs = $programsQuery->orderBy('course_name')
@@ -581,9 +589,12 @@ class FeedbackController extends Controller
                 DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
                 DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
                 DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND tf.remark != "" THEN tf.remark END SEPARATOR "|||") as remarks')
-            )
-            ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.presentation')
+            );
+            $query->where('tf.is_submitted', 1);
+            if(!empty($data_course_id)){
+                $query->whereIn('cm.pk',$data_course_id);
+            }
+            $query->whereNotNull('tf.presentation')
             ->whereNotNull('tf.content')
             ->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tf.timetable_pk');
 
@@ -1491,6 +1502,7 @@ class FeedbackController extends Controller
 
         // \Log::info('Feedback Details Request: ', $request->all());
         try {
+            $data_course_id =  get_Role_by_course();
             // Get filter parameters with defaults
             $programId = $request->input('program_id', '');
             $facultyName = $request->input('faculty_name', '');
@@ -1512,6 +1524,9 @@ class FeedbackController extends Controller
             if ($courseType === 'current') {
                 $programsQuery->where('active_inactive', 1)
                     ->whereDate('end_date', '>=', Carbon::today());
+                    if(!empty($data_course_id)){
+                        $programsQuery->whereIn('pk', $data_course_id);
+                    }
             } else {
                 $programsQuery->where(function ($query) {
                     $query->where('active_inactive', 0)
@@ -1590,8 +1605,12 @@ class FeedbackController extends Controller
                     'tt.subject_topic as topic_name',
                     'tf.timetable_pk'
                 )
-                ->where('tf.is_submitted', 1)
-                ->whereNotNull('tf.presentation')
+
+                ->where('tf.is_submitted', 1);
+                if(!empty($data_course_id)){
+                   $query->whereIn('cm.pk', $data_course_id);
+                }
+                 $query->whereNotNull('tf.presentation')
                 ->whereNotNull('tf.content')
                 ->where('tf.presentation', '!=', '')
                 ->where('tf.content', '!=', '');
