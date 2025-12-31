@@ -9,17 +9,35 @@ class CourseMemoDecisionMappController extends Controller
 {
      public function index()
     { 
-        // $mappings = CourseMemoDecisionMapp::all();
-        $mappings = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])->get();
+        $data_course_id =  get_Role_by_course();
+         if(!empty($data_course_id))
+        {
+            $mappings = CourseMemoDecisionMapp::whereIn('course_master_pk',$data_course_id)->with(['course', 'memo', 'memoConclusion'])->get();
+        }
+        else
+        {
+            $mappings = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])->get();
+        }
         return view('admin.course_memo_decision_mapping.index', compact('mappings'));
     }
 
     public function create()
     { 
         $mappings = CourseMemoDecisionMapp::all();
-        $CourseMaster = CourseMaster::where('active_inactive', '1')
+        $data_course_id =  get_Role_by_course();
+         if(!empty($data_course_id))
+        {
+            $CourseMaster = CourseMaster::whereIn('pk',$data_course_id)
+            ->where('active_inactive', '1')
             ->where('end_date', '>', now())
             ->get();
+        }
+        else
+        {
+            $CourseMaster = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
+            ->get();
+        }
         $MemoTypeMaster = MemoTypeMaster::where('active_inactive', 1)
                               ->get();
         $MemoConclusionMaster = MemoConclusionMaster::where('active_inactive', 1)
@@ -43,9 +61,20 @@ class CourseMemoDecisionMappController extends Controller
 
    public function edit($id)
 {
-    $CourseMaster = CourseMaster::where('active_inactive', '1')
+    $data_course_id =  get_Role_by_course();
+     if(!empty($data_course_id))
+    {
+        $CourseMaster = CourseMaster::whereIn('pk',$data_course_id)
+        ->where('active_inactive', '1')
         ->where('end_date', '>', now())
         ->get();
+    }
+    else
+    {
+        $CourseMaster = CourseMaster::where('active_inactive', '1')
+        ->where('end_date', '>', now())
+        ->get();
+    }
     $MemoTypeMaster = MemoTypeMaster::all();
     $courseMemoMap = CourseMemoDecisionMapp::findOrFail(decrypt($id));
             $MemoConclusionMaster = MemoConclusionMaster::all();

@@ -57,10 +57,17 @@ return '
 
     public function query(DisciplineMaster $model): Builder
     {
-        return $model->newQuery()
+        $data_course_id =  get_Role_by_course();
+        $query = $model->newQuery()
             ->leftJoin('course_master as cm', 'cm.pk', '=', 'discipline_master.course_master_pk')
             ->select('discipline_master.*', 'cm.course_name')
             ->orderBy('discipline_master.pk', 'desc');
+
+        if (!empty($data_course_id)) {
+            $query->whereIn('discipline_master.course_master_pk', $data_course_id);
+        }
+
+        return $query;
     }
 
     public function getColumns(): array
