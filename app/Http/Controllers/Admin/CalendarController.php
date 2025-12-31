@@ -15,48 +15,17 @@ use App\Models\User;
 
 class CalendarController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        //moodle new added code start
-        if ($request->has('token')) {
+        //print_r(Auth::user()->roles()->pluck('user_role_name')->toArray());die;
+        //Array ( [0] => Training )
 
-            $key = config('services.moodle.key');
-            $iv  = config('services.moodle.iv');
-
-            $username = openssl_decrypt(
-                base64_decode($request->token),
-                'AES-128-CBC',
-                $key,
-                0,
-                $iv
-            );
-
-            if (!$username) {
-                abort(403, 'Invalid token');
-            }
-
-            $user = User::where('user_name', $username)->first();
-
-            if (!$user) {
-                abort(403, 'User not found');
-            }
-
-            Auth::login($user);
-        }
-
-        if (!auth()->check()) {
-            abort(403, 'Unauthenticated');
-        }
-        //moodle new added code end
-        $data_course_id =  get_Role_by_course();
+        // print_r(auth()->user());die;
 
 
         $courseMaster = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>', now());
-        if ($data_course_id != '') {
-            $courseMaster = $courseMaster->whereIn('pk', $data_course_id);
-        }
-        $courseMaster = $courseMaster->select('pk', 'course_name', 'couse_short_name', 'course_year')
+            ->where('end_date', '>', now())
+            ->select('pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
@@ -218,7 +187,6 @@ class CalendarController extends Controller
         $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
         $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
         $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
-        $event->Faculty_feedback = $request->has('facultyReviewRating') ? 1 : 0;
         $event->active_inactive = $request->active_inactive ?? 1;
 
         $event->save();
@@ -242,7 +210,7 @@ class CalendarController extends Controller
     public function fullCalendarDetails(Request $request)
     {
         // print_r(Auth::user());die;
-        $data_course_id =  get_Role_by_course();
+
         $event = new CalendarEvent();
 
         $events = DB::table('timetable')
@@ -258,10 +226,6 @@ class CalendarController extends Controller
                 ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
                 ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
                 ->where('student_course_group_map.student_master_pk', $student_pk);
-        }
-        if ($data_course_id != '') {
-            // $courseMaster = $courseMaster->whereIn('pk',$data_course_id);
-            $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
         }
 
         // Internal / Guest Faculty
@@ -407,7 +371,6 @@ class CalendarController extends Controller
 
         $event = DB::table('timetable')
             ->join('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
             ->where('timetable.pk', $eventId)
             ->select(
@@ -418,19 +381,13 @@ class CalendarController extends Controller
                 'timetable.END_DATE',
                 'faculty_master.full_name as faculty_name',
                 'venue_master.venue_name as venue_name',
-                'timetable.group_name',
-                'timetable.internal_faculty'
+                'timetable.group_name'
             )
             ->first();
         $groupIds = json_decode($event->group_name, true);
         $groupNames = DB::table('group_type_master_course_master_map')
             ->whereIn('pk', $groupIds)
             ->pluck('group_name');
-
-        $internal_faculty_id = json_decode($event->internal_faculty, true);
-        $internal_faculty_names = DB::table('faculty_master')
-            ->whereIn('pk', $internal_faculty_id)
-            ->pluck('full_name');
 
         if ($event) {
             return response()->json([
@@ -442,7 +399,6 @@ class CalendarController extends Controller
                 'venue_name' => $event->venue_name ?? '',
                 'class_session' => $event->class_session ?? '',
                 'group_name' => $groupNames ?? '',
-                'internal_faculty_names' => $internal_faculty_names ?? '',
             ]);
         } else {
             return response()->json(['error' => 'Event not found'], 404);
@@ -509,7 +465,6 @@ class CalendarController extends Controller
         $event->group_name = json_encode($request->type_names ?? []);
         $event->faculty_master = $request->faculty;
         $event->faculty_type = $request->faculty_type;
-        $event->internal_faculty = json_encode($request->internal_faculty ?? []);
         $event->venue_id = $request->vanue;
         $event->START_DATE = $request->start_datetime;
         $event->END_DATE = $request->start_datetime;
@@ -526,7 +481,6 @@ class CalendarController extends Controller
         }
         $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
         $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
-        $event->Faculty_feedback = $request->has('facultyReviewRating') ? 1 : 0;
         $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
         $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
         $event->active_inactive = $request->active_inactive ?? 1;
