@@ -66,7 +66,74 @@
          </div>
      </div>
  </aside>
+ <aside class="left-sidebar with-horizontal">
+     <div style="height: 100vh; display: flex; flex-direction: column;">
+         <!-- ---------------------------------- -->
+         <!-- Start Vertical Layout Sidebar -->
+         <!-- ---------------------------------- -->
+         <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+             <div style="flex: 1 1 auto; display: flex; flex-direction: column;">
+                 <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+                     <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init" style="flex: 1 1 auto;">
+                         <div class="simplebar-wrapper" style="margin: 0px;">
+                             <div class="simplebar-height-auto-observer-wrapper">
+                                 <div class="simplebar-height-auto-observer"></div>
+                             </div>
+                             <div class="simplebar-mask">
+                                 <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
+                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
+                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
+                                         <div class="simplebar-content" style="padding: 0px;">
 
+                                             @include('components.profile')
+
+
+                                             <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
+                                                 id="mini-1">
+                                                 <a href="javascript:void(0)"
+                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                     data-bs-placement="right" data-bs-title="General">
+
+                                                     <div class="d-flex align-items-center gap-2">
+                                                         <i class="material-icons menu-icon material-symbols-rounded"
+                                                             style="font-size: 32px;">apps</i>
+                                                         <span
+                                                             class="mini-nav-title fs-4 fw-medium text-dark">General</span>
+                                                     </div>
+
+                                                     <i class="material-icons material-symbols-rounded"
+                                                         style="font-size: 20px;">chevron_right</i>
+                                                 </a>
+                                             </li>
+
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                             <div class="simplebar-placeholder" style="width: 80px; height: 537px;"></div>
+                         </div>
+                         <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
+                             <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
+                         </div>
+                         <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
+                             <div class="simplebar-scrollbar"
+                                 style="height: 75px; display: block; transform: translate3d(0px, 0px, 0px);">
+                             </div>
+                         </div>
+                     </ul>
+                 </div>
+                 <div class="sidebarmenu">
+                     <!-- ---------------------------------- -->
+                     <!-- Dashboard -->
+                     <!-- ---------------------------------- -->
+                     <x-menu.general />
+
+                 </div>
+             </div>
+         </div>
+     </div>
+ </aside>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Home sidebar script started');

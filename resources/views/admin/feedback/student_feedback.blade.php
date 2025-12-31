@@ -68,17 +68,21 @@
             display: none;
         }
 
-        .star-rating label {
-            font-size: 1.25rem;
-            color: #ffce54;
-            cursor: pointer;
-            transition: color 0.2s ease-in-out;
-            padding: 0 1px;
-        }
+.star-rating label {
+    font-size: 1.25rem;
+    color: transparent;
+    cursor: pointer;
+    transition: color 0.2s ease-in-out;
+    padding: 0 1px;
+    -webkit-text-stroke: 2px #af2910;
+    text-stroke: 2px #af2910;
+}
 
-        .star-rating input:not(:checked)~label {
-            color: #ffe8a1;
-        }
+.star-rating input:not(:checked)~label {
+    color: transparent;
+    -webkit-text-stroke: 2px #af2910;
+    text-stroke: 2px #af2910;
+}
 
         .table td,
         .table th {
@@ -204,6 +208,31 @@
                 transform: rotate(360deg);
             }
         }
+        .rating-legend {
+    font-size: 0.875rem;
+}
+
+.rating-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 20px;
+    background: #f8f9fa;
+    border: 1px solid #e5e7eb;
+}
+
+.rating-legend .stars {
+    color: #af2910;
+    letter-spacing: 1px;
+    font-size: 0.95rem;
+}
+
+.rating-legend .text {
+    color: #374151;
+    font-weight: 500;
+}
+
     </style>
 </head>
 <x-session_message />
@@ -212,7 +241,7 @@
     <!-- Top Blue Bar (Govt of India) -->
     <div class="top-header d-flex justify-content-between align-items-center d-none d-md-block py-2"
         style="background-color: #004a93;">
-        <div class="container">
+        <div class="container-fluid">
             <div class="row">
                 <div class="col-md-3 d-flex align-items-center">
                     <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png"
@@ -240,7 +269,7 @@
 
     <!-- Sticky Header -->
     <div class="header sticky-top bg-white shadow-sm">
-        <div class="container">
+        <div class="container-fluid py-3    ">
             <nav class="navbar navbar-expand-lg">
                 <div class="container-fluid px-0">
                     <a class="navbar-brand me-2" href="#">
@@ -321,10 +350,10 @@
     </div>
 
     <!-- Main Content -->
-    <div class="container my-5">
+    <div class="container-fluid my-5">
         <div class="card border-0 shadow-sm rounded-4">
             <div class="card-header text-center rounded-top-4 mb-2" style="background-color: #591512;">
-                <h4 class="mb-0 text-white" style="font-family:Inter;font-weight:700;">Faculty Feedbacks</h4>
+                <h4 class="mb-0 text-white" style="font-family:Inter;font-weight:700;">Session Feedbacks</h4>
             </div>
 
             <!-- Tabs Navigation -->
@@ -365,7 +394,29 @@
                             @csrf
                             <div class="card-body mb-4 p-0">
                                 <div class="table-responsive">
-                                    <table class="table rounded-3 overflow-hidden align-middle mb-0 table-bordered">
+                                    <div class="rating-legend d-flex flex-wrap gap-3 align-items-center mt-2 mb-3">
+                                    <span class="legend-item">
+                                        <span class="stars">★★★★★</span>
+                                        <span class="text">Excellent</span>
+                                    </span>
+                                    <span class="legend-item">
+                                        <span class="stars">★★★★</span>
+                                        <span class="text">Very Good</span>
+                                    </span>
+                                    <span class="legend-item">
+                                        <span class="stars">★★★</span>
+                                        <span class="text">Good</span>
+                                    </span>
+                                    <span class="legend-item">
+                                        <span class="stars">★★</span>
+                                        <span class="text">Average</span>
+                                    </span>
+                                    <span class="legend-item">
+                                        <span class="stars">★</span>
+                                        <span class="text">Below Average</span>
+                                    </span>
+                                </div>
+                                    <table class="table rounded">
                                         <thead class="bg-danger text-white">
                                             <tr>
                                                 <th class="text-center text-white">S.No.</th>
@@ -376,7 +427,7 @@
                                                 </th>
                                                 <th class="text-center text-white">Q. How did you like the
                                                     Presentation?</th>
-                                                <th class="text-center text-white">Remarks</th>
+                                                <th class="text-center text-white" style="width: 20%">Remarks</th>
                                                 <th class="text-center text-white">Action</th>
                                             </tr>
                                         </thead>
