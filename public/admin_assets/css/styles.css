@@ -39080,7 +39080,7 @@ pre.code-view code.hljs {
     position: relative;
     background: #ECEDF8;
     width: 230px;
-    margin-top: 89.5px;
+    margin-top: 70px;
     padding: 5px;
     border-radius: 0px 30px 0px 0px;
 }
@@ -39157,7 +39157,7 @@ pre.code-view code.hljs {
 
     /* SVG background panel */
     background: #004384;
-    margin-top: 0px;
+    margin-top: -12px;
     display: none;
     padding: 20px 0px 24px 20px;
     z-index: 98;

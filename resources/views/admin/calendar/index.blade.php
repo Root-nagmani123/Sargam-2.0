@@ -69,7 +69,7 @@
                                 class="btn btn-outline-primary active"
                                 id="btnCalendarView"
                                 data-view="calendar"
-                                aria-pressed="true">
+                                aria-pressed="false">
                                 <i class="bi bi-calendar3 me-1"></i>
                                 Calendar
                             </button>
@@ -77,23 +77,12 @@
                                 class="btn btn-outline-primary"
                                 id="btnListView"
                                 data-view="list"
-                                aria-pressed="false">
+                                aria-pressed="true">
                                 <i class="bi bi-list-ul me-1"></i>
                                 List
                             </button>
                         </div>
                     </div>
-
-                    <!-- Density Toggle -->
-                    <button type="button"
-                        class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1"
-                        id="toggleDensityBtn"
-                        aria-pressed="false"
-                        aria-label="Toggle compact mode">
-                        <i class="bi bi-arrows-collapse"></i>
-                        <span class="d-none d-sm-inline">Compact</span>
-                    </button>
-@if(hasRole('Training') || hasRole('Admin') || hasRole('Faculty'))
                     <!-- Course Filter -->
                     <div class="ms-lg-3">
                         <select
@@ -112,7 +101,6 @@
                     </div>
 
                 </div>
-@endif
 
                 <!-- Right Action -->
                 @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP'))
@@ -1286,22 +1274,26 @@ class CalendarManager {
         const courseFilter = document.getElementById('courseFilter');
         this.selectedCourseId = courseFilter && courseFilter.value ? courseFilter.value : null;
         
+        console.log('Initial selectedCourseId:', this.selectedCourseId);
+        console.log('Course filter value:', courseFilter?.value);
+        
         // Update course header with initial selection
         this.updateCourseHeader();
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridDay',
+            initialView: 'timeGridWeek',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                right: 'dayGridMonth,timeGridWeek'
             },
             buttonText: {
                 today: 'Today',
                 month: 'Month',
-                week: 'Week',
-                day: 'Day'
+                week: 'Week'
             },
+            weekends: false,
+            hiddenDays: [0, 6],
             slotMinTime: CalendarConfig.minTime,
             slotMaxTime: CalendarConfig.maxTime,
             slotDuration: '00:20:00',
@@ -1328,10 +1320,6 @@ class CalendarManager {
                 timeGridWeek: {
                     dayMaxEvents: false,
                     eventMaxStack: 8
-                },
-                timeGridDay: {
-                    dayMaxEvents: false,
-                    eventMaxStack: 8
                 }
             },
             events: (info, successCallback, failureCallback) => {
@@ -1345,6 +1333,12 @@ class CalendarManager {
         });
 
         this.calendar.render();
+        
+        // Hide calendar and show list view by default
+        calendarEl.style.display = 'none';
+        document.getElementById('eventListView').classList.remove('d-none');
+        this.loadListView();
+        
         this.styleMoreLinks();
         this.applyDenseMode();
     }
@@ -1790,7 +1784,9 @@ class CalendarManager {
     }
 
     handleCourseFilterChange(courseId) {
+        console.log('Course filter changed to:', courseId);
         this.selectedCourseId = courseId || null;
+        console.log('selectedCourseId set to:', this.selectedCourseId);
         this.updateCourseHeader();
         
         // Refresh calendar events
@@ -1801,6 +1797,7 @@ class CalendarManager {
         // If in list view, reload it
         const listViewEl = document.getElementById('eventListView');
         if (listViewEl && !listViewEl.classList.contains('d-none')) {
+            console.log('Reloading list view...');
             this.loadListView();
         }
     }
@@ -1868,10 +1865,9 @@ class CalendarManager {
     getCalendarView(view) {
         const views = {
             'month': 'dayGridMonth',
-            'week': 'timeGridWeek',
-            'day': 'timeGridDay'
+            'week': 'timeGridWeek'
         };
-        return views[view] || 'timeGridDay';
+        return views[view] || 'timeGridWeek';
     }
 
     async loadGroupTypes() {
@@ -2541,6 +2537,8 @@ $('#internal_faculty').trigger('change');
 
     async loadListView() {
         try {
+            console.log('loadListView called with selectedCourseId:', this.selectedCourseId);
+            
             // Build URL with course filter
             let url = CalendarConfig.api.events;
             const params = new URLSearchParams();
@@ -2550,6 +2548,8 @@ $('#internal_faculty').trigger('change');
             if (params.toString()) {
                 url += '?' + params.toString();
             }
+            
+            console.log('Fetching from URL:', url);
             
             const response = await fetch(url, {
                 headers: {
