@@ -48163,13 +48163,6 @@ body .ql-toolbar.ql-snow {
     border-radius: var(--bs-border-radius-sm) var(--bs-border-radius-sm) 0 0;
 }
 
-.calendar-container {
-    padding: 10px;
-    background-color: var(--bs-primary);
-    border-radius: 8px;
-    border: 1px solid #e0e6ed;
-}
-
 .app-calendar .fc .fc-daygrid-day-frame {
     max-height: 90px;
 }
