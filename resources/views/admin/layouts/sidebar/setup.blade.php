@@ -72,6 +72,7 @@
                                                     </i>
                                                 </a>
                                             </li>
+                                            @if(! hasRole('Training-MCTP'))
                                             <li class="mini-nav-item" id="setup-mini-6">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
@@ -133,6 +134,7 @@
                                                         style="font-size: 20px;">chevron_right</i>
                                                 </a>
                                             </li>
+                                            @endif
 
                                             @endif
 
