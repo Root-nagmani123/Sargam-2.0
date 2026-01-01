@@ -15,14 +15,14 @@
         @endif
 
         @if (session('error'))
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <dContact class="alert alert-danger alert-dismissible fade show" role="alert">
                 {{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
+            </dContact Informationiv>
         @endif
 
         <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-header d-flex justify-content-between align-items-center bg-warning-subtle">
+            <div class="card-header d-flex justify-content-between align-items-center bg-primary-subtle">
                 <h5 class="mb-0">Student Details</h5>
                 <span class="badge bg-primary">ID: {{ $student->pk }}</span>
             </div>
@@ -57,7 +57,7 @@
                         </div>
 
                         <!-- Name Fields -->
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="first_name" class="form-label required">First Name</label>
                             <input type="text" id="first_name" name="first_name"
                                 class="form-control @error('first_name') is-invalid @enderror"
@@ -67,7 +67,7 @@
                             @enderror
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="middle_name" class="form-label">Middle Name</label>
                             <input type="text" id="middle_name" name="middle_name"
                                 class="form-control @error('middle_name') is-invalid @enderror"
@@ -77,7 +77,7 @@
                             @enderror
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label for="last_name" class="form-label required">Last Name</label>
                             <input type="text" id="last_name" name="last_name"
                                 class="form-control @error('last_name') is-invalid @enderror"
@@ -251,7 +251,7 @@
 
                         <!-- Read-only System Information -->
                         <div class="d-flex justify-content-end gap-2">
-                            <a href="{{ route('student.courses') }}" class="btn btn-secondary">Cancel</a>
+                            <a href="{{ route('student.courses') }}" class="btn btn-outline-secondary">Cancel</a>
                             <button type="submit" class="btn btn-primary" onclick="return submitEditForm(event, this)">
                                 Update Student
                             </button>
@@ -427,7 +427,7 @@
     }
 
     h6.text-primary {
-        border-bottom: 2px solid #0d6efd;
+        border-bottom: 2px solid #af2910;
         padding-bottom: 8px;
         margin-bottom: 20px;
     }

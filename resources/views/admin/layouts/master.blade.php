@@ -369,8 +369,9 @@
 
     <div id="main-wrapper">
          @include('admin.layouts.header')
-          @include('admin.layouts.sidebar')
         <div class="page-wrapper">
+            
+          @include('admin.layouts.sidebar')
             <div class="body-wrapper">
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">
