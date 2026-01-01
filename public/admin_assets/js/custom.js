@@ -794,13 +794,23 @@ $(document).ready(function () {
 
     // Handle import upload button click
     $('#upload_import').on('click', function (e) {
+                //alert('dddd');
         e.preventDefault();
+
+        const course_type = $('#group_type').val();
+
+        if (course_type === null || course_type === '') {
+            alert('Please select course Name.');
+            return;
+        }
 
         const fileInput = $('#importFile')[0];
         if (fileInput.files.length === 0) {
             alert('Please select a file to upload.');
             return;
         }
+
+        
 
         const fileName = fileInput.files[0].name;
         const allowedExtensions = /\.(xlsx|xls|csv)$/i;
@@ -811,6 +821,7 @@ $(document).ready(function () {
         }
 
         const formData = new FormData($('#importExcelForm')[0]);
+        formData.append('course_type', course_type);
 
         $.ajax({
             url: routes.groupMappingExcelUpload,

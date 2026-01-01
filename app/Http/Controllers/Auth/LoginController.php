@@ -113,7 +113,7 @@ class LoginController extends Controller
                     if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
                     }else{
-                    $roles = $user->roles()->pluck('user_role_name')->toArray();
+                    $roles = $user->roles()->pluck('user_role_name','pk')->toArray();
 
                     }
                

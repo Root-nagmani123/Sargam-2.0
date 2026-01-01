@@ -176,3 +176,14 @@ if (!function_exists('notification')) {
         return app(\App\Services\NotificationService::class);
     }
 }
+
+
+    function getcoursevalue()
+    {
+        $courseval = DB::table('course_master')
+            ->select('course_name','pk')
+            ->where('user_role_master_pk', 130)
+            ->get();
+
+        return $courseval;
+    }

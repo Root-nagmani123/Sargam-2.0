@@ -2,14 +2,21 @@
 
 namespace App\Imports\GroupMapping;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\{ToCollection, WithHeadingRow, WithStartRow};
-use App\Models\{StudentMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap,StudentMasterCourseMap};
+use App\Models\{StudentMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap};
 
 class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
 {
     public $failures = [];
+    public $courseType = 18;
+
+    public function __construct($courseType)
+    {
+        $this->courseType = $courseType;
+    }
 
     public function headingRow(): int
     {
@@ -24,19 +31,18 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
     public function collection(Collection $collection)
     {
         $dataToInsert = [];
-
         $processedMappings = [];
 
         foreach ($collection as $index => $row) {
+
             $rowNumber = $index + 2;
             $data = array_map('trim', $row->toArray());
 
-            // Validate Excel row
             $validator = Validator::make($data, [
-                'name'        => 'required|string|max:255',
-                'otcode'      => 'required|string|max:255',
-                'group_name'  => 'required|string|max:255',
-                'group_type'  => 'required|string|max:255',
+                'name'       => 'required|string|max:255',
+                'otcode'     => 'required|string|max:255',
+                'group_name' => 'required|string|max:255',
+                'group_type' => 'required|string|max:255',
             ]);
 
             if ($validator->fails()) {
@@ -44,73 +50,93 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
                 continue;
             }
 
-            // Lookup: StudentMaster
-            // $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
-            //     ->select('pk')->first();
-            $studentMaster = StudentMaster::whereRaw('LOWER(generated_OT_code) = ?', [strtolower($data['otcode'])])
-                ->select('pk')->get();
-                // print_r($studentMaster);die;
-                foreach ($studentMaster as $student) {
-                    $course_active_check_student = StudentMasterCourseMap::where('student_master_pk', $student['pk'])->where('active_inactive', 1)->exists();
-                    if ($course_active_check_student) {
-                        $studentMaster->pk = $student['pk'];
-                    }
-                }
-                // print_r($studentMaster);die;
+            /** ---------------- Student Lookup ---------------- */
+            $students = StudentMaster::whereRaw(
+                'LOWER(generated_OT_code) = ?',
+                [strtolower($data['otcode'])]
+            )->get();
 
+            $studentMaster = null;
+
+            foreach ($students as $student) {
+                if (
+                    StudentMasterCourseMap::where('student_master_pk', $student->pk)
+                        ->where('active_inactive', 1)
+                        ->exists()
+                ) {
+                    $studentMaster = $student;
+                    break;
+                }
+            }
 
             if (!$studentMaster) {
-                $this->addFailure($rowNumber, ["Student not found for OT code: {$data['otcode']}"]);
+                $this->addFailure($rowNumber, [
+                    "Active student not found for OT code: {$data['otcode']}"
+                ]);
                 continue;
             }
 
-            // Lookup: GroupTypeMasterCourseMasterMap (lowercase match)
-            $groupMap = GroupTypeMasterCourseMasterMap::whereRaw('LOWER(group_name) = ?', [strtolower($data['group_name'])])->first();
+            /** ---------------- Group Mapping ---------------- */
+            $groupMap = GroupTypeMasterCourseMasterMap::whereRaw(
+                'LOWER(group_name) = ?',
+                [strtolower($data['group_name'])]
+            )->first();
 
             if (!$groupMap) {
-                $this->addFailure($rowNumber, ["Group map not found for group name: {$data['group_name']}"]);
+                $this->addFailure($rowNumber, [
+                    "Group map not found for group name: {$data['group_name']}"
+                ]);
                 continue;
             }
 
-            // Lookup: CourseGroupTypeMaster
-            $courseGroupType = CourseGroupTypeMaster::where('pk', $groupMap->type_name)->first();
+            /** ---------------- Course Group Type ---------------- */
+            $courseGroupType = CourseGroupTypeMaster::find($groupMap->type_name);
 
             if (!$courseGroupType) {
-                $this->addFailure($rowNumber, ["Course group type not found for type name ID: {$groupMap->type_name}"]);
-                continue;
-            }
-
-            // Compare group type (case-insensitive)
-            if (strcasecmp($courseGroupType->type_name, $data['group_type']) !== 0) {
                 $this->addFailure($rowNumber, [
-                    "Group type mismatch: expected '{$courseGroupType->type_name}', got '{$data['group_type']}' for group '{$data['group_name']}'"
+                    "Course group type not found for ID: {$groupMap->type_name}"
                 ]);
                 continue;
             }
 
+            /** ---------------- Duplicate Check (Sheet) ---------------- */
             $mappingKey = "{$studentMaster->pk}|{$groupMap->pk}";
-
             if (isset($processedMappings[$mappingKey])) {
                 $this->addFailure($rowNumber, [
-                    "Duplicate row detected for student '{$data['otcode']}' and group '{$data['group_name']}' within the sheet"
+                    "Duplicate row for OT '{$data['otcode']}' and group '{$data['group_name']}'"
                 ]);
                 continue;
             }
 
-            $existingMapping = StudentCourseGroupMap::where('student_master_pk', $studentMaster->pk)
-                ->where('group_type_master_course_master_map_pk', $groupMap->pk)
-                ->exists();
-
-            if ($existingMapping) {
+            /** ---------------- Duplicate Check (DB) ---------------- */
+            if (
+                StudentCourseGroupMap::where('student_master_pk', $studentMaster->pk)
+                    ->where('group_type_master_course_master_map_pk', $groupMap->pk)
+                    ->exists()
+            ) {
                 $this->addFailure($rowNumber, [
-                    "Mapping already exists for student '{$data['otcode']}' and group '{$data['group_name']}'"
+                    "Mapping already exists for OT '{$data['otcode']}' and group '{$data['group_name']}'"
+                ]);
+                continue;
+            }
+
+            /** ---------------- Course Mapping Validation ---------------- */
+            $existingCourseMap = DB::table('group_type_master_course_master_map')
+                ->whereRaw('LOWER(group_name) = ?', [strtolower($data['group_name'])])
+                ->whereRaw('LOWER(type_name) = ?', [strtolower($data['group_type'])])
+                ->first();
+
+            if (!$existingCourseMap ||
+                strcasecmp($existingCourseMap->course_name, $this->courseType) !== 0
+            ){
+                $this->addFailure($rowNumber, [
+                    "Course mismatch for group '{$data['group_name']}' and type '{$data['group_type']}' and course '{$existingCourseMap->course_name}'"
                 ]);
                 continue;
             }
 
             $processedMappings[$mappingKey] = true;
 
-            // Passed all checks → prepare insert
             $dataToInsert[] = [
                 'student_master_pk'                      => $studentMaster->pk,
                 'group_type_master_course_master_map_pk' => $groupMap->pk,
@@ -120,7 +146,6 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
             ];
         }
 
-        // Bulk insert if no failures
         if (empty($this->failures) && !empty($dataToInsert)) {
             StudentCourseGroupMap::insert($dataToInsert);
         }

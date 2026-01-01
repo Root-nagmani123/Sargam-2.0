@@ -534,10 +534,7 @@
            
         </div>
     </div>
-
 </div>
-
-
 
 @endsection
 @section('scripts')
@@ -616,7 +613,6 @@ $(function () {
         $('#filter_session_time').val('');
         $('#filter_course').val('');
         $('#archive_mode').val('');
-
         // Reload full data (preloaded AJAX)
         table.ajax.reload(null, true); // true = go to page 1
     });

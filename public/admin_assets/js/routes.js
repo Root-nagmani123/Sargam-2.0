@@ -16,6 +16,5 @@ const routes = {
     'getDistrictsByState': baseUrl + '/master/country/get-districts-by-state',
     'getCitiesByDistrict': baseUrl + '/master/country/get-cities-by-district',
     'assignHostelToStudent': baseUrl + '/hostel-building-map/assign-hostel-student',
-
     'getStudentAttendanceBytopic': baseUrl + '/admin/memo-notice-management/get-student-attendance-by-topic',
 };

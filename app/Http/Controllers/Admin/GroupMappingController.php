@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers\Admin;
-
+use Illuminate\Support\Facades\Session;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +29,11 @@ class GroupMappingController extends Controller
     }
 
     public function index(GroupMappingDataTable $dataTable)
-    {
+    {   
+        //$value = session::get('user_roles');
+         $sessionData = session()->all();
+    dd($sessionData);
+  
         $courses = CourseMaster::where('active_inactive', '1')
             ->where('end_date', '>', now())
             ->orderBy('course_name')
@@ -239,7 +243,7 @@ class GroupMappingController extends Controller
                 'file' => 'required|mimes:xlsx,xls,csv|max:10248',
             ]);
 
-            $import = new GroupMappingMultipleSheetImport();
+             $import = new GroupMappingMultipleSheetImport($request->course_type);
 
             Excel::import($import, $request->file('file'));
 

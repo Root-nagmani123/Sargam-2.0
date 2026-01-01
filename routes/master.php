@@ -91,13 +91,22 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     });
 
     // Course Group Type Master Routes
-    Route::prefix('course-group-type')->name('course.group.type.')->controller(CourseGroupTypeController::class)->group(function () {
+  Route::prefix('course-group-type')
+    ->name('course.group.type.')
+    ->controller(CourseGroupTypeController::class)
+    ->group(function () {
+
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+
+        // Ajax & Datatable
+        Route::get('/grouptypeview', 'grouptypeview')->name('grouptypeview');
+        Route::post('/updatestatus','updateStatus')->name('updatestatus');
     });
+
 
     Route::prefix('mdo')->name('mdo_duty_type.')->controller(MDODutyTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -121,14 +130,22 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/updatedata', 'updatedata')->name('updatedata');
         Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::get('/getcategory', 'getcategory')->name('getcategory');
+
     });
+
     Route::prefix('exemption-medical-speciality-master')->name('exemption.medical.speciality.')->controller(ExemptionCategoryController::class)->group(function () {
+        //dd('dddd');
     Route::get('/', 'medicalSpecialityIndex')->name('index');
     Route::get('/create', 'medicalSpecialityCreate')->name('create');
     Route::post('/store', 'medicalSpecialityStore')->name('store');
     Route::get('/edit/{id}', 'medicalSpecialityEdit')->name('edit');
     Route::delete('/delete/{id}', 'medicalSpecialityDelete')->name('delete');
+
+    Route::get('/exemption_med_spec_mst', 'exemption_med_spec_mst')->name('exemption_med_spec_mst');
+     Route::post('/MedSpecExupdate', 'MedSpecExupdate')->name('MedSpecExupdate');
 });
 Route::prefix('memo-type-master')->name('memo.type.master.')->controller(MemoTypeMasterController::class)->group(function () {
     Route::get('/', 'index')->name('index');
