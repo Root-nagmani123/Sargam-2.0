@@ -21,15 +21,26 @@ class CalendarController extends Controller
         //Array ( [0] => Training )
 
         // print_r(auth()->user());die;
+        $data_course_id =  get_Role_by_course();
 
 
-        $courseMaster = CourseMaster::where('active_inactive', 1)
+        $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->where('end_date', '>', now());
             if(!empty($data_course_id))
             {
-                $courseMaster = $courseMaster->whereIn('pk',$data_course_id);
+                $courseMaster = $courseMaster->whereIn('course_master.pk',$data_course_id);
             }
-            $courseMaster = $courseMaster->select('pk', 'course_name', 'couse_short_name', 'course_year')
+             if (hasRole('Student-OT')) {
+
+                        $courseMaster = $courseMaster->join(
+                            'student_master_course__map',
+                            'student_master_course__map.course_master_pk',
+                            '=',
+                            'course_master.pk'
+                        )
+                        ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
+                    }
+            $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
