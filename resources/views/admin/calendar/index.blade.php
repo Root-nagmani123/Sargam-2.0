@@ -1,8 +1,9 @@
-@extends('admin.layouts.master')
+@extends(hasRole('Student-OT') ? 'fc.layouts.master' : 'admin.layouts.master')
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
+@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+<link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <style>
         :root {
         --primary: #004a93;
@@ -30,6 +31,21 @@
     .course-header .badge {
         background: #ffffff;
         color: #000;
+    }
+
+    /* Responsive Design for Smaller Screens */
+    @media (max-width: 768px) {
+        .course-header {
+            padding: 1.5rem 1rem;
+        }
+
+        .course-header h1 {
+            font-size: 1.25rem;
+        }
+
+        .course-header p {
+            font-size: 0.9rem;
+        }
     }
 </style>
 <div class="container-fluid">
@@ -226,7 +242,8 @@
 .fc-daygrid-day {
     transition: background-color 0.2s ease;
     position: relative;
-    overflow: hidden;
+    overflow: visible !important;
+    min-height: auto;
 }
 
 .fc-daygrid-day:hover {
@@ -257,10 +274,12 @@
     margin: 0.2rem 0;
     transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
     border-left: 4px solid var(--primary-color);
-    background: #fff;
+    background: #fff !important;
     box-shadow: var(--shadow-sm);
     white-space: normal;
     word-break: break-word;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .fc-event-card:hover {
@@ -362,6 +381,7 @@
     margin: 0.25rem 0;
     padding: 0.625rem 0.75rem;
     border-left: 4px solid var(--primary-color);
+    background: #fff !important;
 }
 
 /* Ensure default popover events look like cards */
@@ -372,6 +392,38 @@
     border-radius: 8px;
     box-shadow: var(--shadow-sm);
     border-left: 3px solid var(--primary-color);
+}
+
+/* Mobile popover adjustments */
+@media (max-width: 575.98px) {
+    .fc-popover {
+        max-width: 95vw !important;
+        left: 2.5vw !important;
+        max-height: 70vh !important;
+    }
+
+    .fc-popover .fc-popover-body {
+        max-height: 60vh !important;
+    }
+
+    .fc-popover .fc-popover-body .fc-event-card {
+        padding: 0.5rem 0.4rem;
+        font-size: 0.8rem;
+    }
+
+    .fc-popover .fc-popover-body .fc-event-card .event-title {
+        font-size: 0.75rem !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .fc-popover {
+        max-width: 90vw !important;
+    }
+
+    .fc-popover .fc-popover-body {
+        max-height: 65vh !important;
+    }
 }
 
 /* Event badges within cards */
@@ -411,19 +463,30 @@
 
 .fc-daygrid-day-frame .fc-event-card {
     margin: 0.25rem 0;
-    background: #fff;
+    background: #fff !important;
     box-shadow: var(--shadow-sm);
     flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.fc-daygrid-day-frame .fc-event-card .event-title { font-size: 0.9rem; }
-.fc-daygrid-day-frame .fc-event-card .meta-item { font-size: 0.8rem; }
+.fc-daygrid-day-frame .fc-event-card .event-title { 
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc-daygrid-day-frame .fc-event-card .meta-item { 
+    font-size: 0.8rem;
+    display: none;
+}
 
 /* TimeGrid overlapping events */
 .fc-timegrid-event .fc-event-main {
     border-left: 3px solid var(--primary-color);
     border-radius: 8px;
-    background: #fff;
+    background: #fff !important;
     box-shadow: var(--shadow-sm);
     overflow: hidden;
 }
@@ -1187,11 +1250,615 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         font-size: 0.9rem;
     }
 }
-.fc-event-card {
-background:transparent !important;
+
+/* ========== COMPREHENSIVE RESPONSIVE DESIGN ========== */
+
+/* Extra Small Devices (< 576px) */
+@media (max-width: 575.98px) {
+    /* General Layout */
+    .container-fluid {
+        padding: 0.5rem;
+    }
+
+    /* Course Header */
+    .course-header {
+        padding: 1rem 0.75rem;
+        margin-bottom: 1rem !important;
+    }
+
+    .course-header h1 {
+        font-size: 1.15rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .course-header p {
+        font-size: 0.8rem;
+    }
+
+    .course-header .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+
+    /* Control Panel */
+    .control-panel {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 1rem 0.75rem !important;
+        gap: 0.75rem !important;
+    }
+
+    .view-toggle-section {
+        flex-direction: column !important;
+        width: 100%;
+        gap: 0.75rem !important;
+    }
+
+    .view-toggle-section .text-muted {
+        display: none !important;
+    }
+
+    .btn-group {
+        display: flex;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .btn-group .btn {
+        flex: 1;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.5rem;
+    }
+
+    .btn-group .btn i {
+        margin-right: 0.25rem;
+    }
+
+    .density-toggle {
+        width: 100%;
+    }
+
+    .density-toggle .btn {
+        width: 100%;
+        font-size: 0.8rem;
+    }
+
+    #courseFilter {
+        width: 100% !important;
+        min-width: unset !important;
+        font-size: 0.9rem;
+        padding: 0.5rem;
+    }
+
+    #createEventButton {
+        width: 100%;
+        font-size: 0.85rem;
+        padding: 0.6rem !important;
+    }
+
+    /* Calendar Container */
+    .card {
+        border-left-width: 3px !important;
+    }
+
+    .card-body {
+        padding: 1rem !important;
+    }
+
+    /* FullCalendar Adjustments */
+    .fc {
+        font-size: 0.8rem;
+    }
+
+    .fc-col-header-cell {
+        padding: 0.5rem 0.25rem !important;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .fc-daygrid-day-number {
+        font-size: 0.75rem;
+        padding: 0.35rem;
+    }
+
+    .fc-event-card {
+        padding: 0.35rem 0.4rem !important;
+        border-radius: 0.3rem;
+        margin: 0.15rem 0 !important;
+        font-size: 0.7rem;
+        background: #fff !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .fc-event-card .event-title {
+        font-size: 0.75rem !important;
+        line-height: 1.2 !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 100%;
+    }
+
+    .fc-event-card .event-meta {
+        gap: 0.3rem 0.5rem !important;
+        margin-top: 0.15rem;
+        flex-wrap: wrap;
+    }
+
+    .fc-event-card .meta-item {
+        font-size: 0.7rem !important;
+        display: none !important;
+        white-space: nowrap;
+    }
+
+    .fc-event-card .event-badge {
+        font-size: 0.65rem !important;
+        padding: 0.1rem 0.35rem !important;
+        white-space: nowrap;
+    }
+
+    .fc-daygrid-day-more-link {
+        font-size: 0.8rem !important;
+        padding: 0.3rem 0.5rem !important;
+    }
+
+    /* List View / Timetable */
+    .timetable-header {
+        padding: 1rem !important;
+        border-radius: 0.75rem !important;
+    }
+
+    .timetable-header .row {
+        gap: 1rem !important;
+    }
+
+    .timetable-header .col-md-2,
+    .timetable-header .col-md-6,
+    .timetable-header .col-md-4 {
+        text-align: center !important;
+    }
+
+    .logo-wrapper {
+        padding: 0.5rem !important;
+    }
+
+    .logo-wrapper img {
+        width: 50px !important;
+        height: 50px !important;
+    }
+
+    .timetable-header h1 {
+        font-size: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .timetable-header p {
+        font-size: 0.75rem;
+    }
+
+    .week-controls {
+        padding: 0.75rem !important;
+    }
+
+    .week-controls .btn-group {
+        margin-bottom: 0.75rem;
+        gap: 0.25rem;
+    }
+
+    .week-controls .btn {
+        font-size: 0.75rem;
+        padding: 0.4rem 0.5rem;
+    }
+
+    .week-badge .badge {
+        font-size: 0.75rem !important;
+        padding: 0.35rem 0.75rem !important;
+    }
+
+    /* Week Cards */
+    .week-cards .row {
+        gap: 0.75rem !important;
+    }
+
+    .week-cards .row > * {
+        flex: 0 0 calc(33.333% - 0.5rem);
+    }
+
+    .week-card {
+        padding: 0.75rem !important;
+    }
+
+    .week-card-date {
+        font-size: 0.8rem;
+    }
+
+    .week-card-day {
+        font-size: 0.7rem;
+    }
+
+    /* Timetable Grid */
+    .timetable-container {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.5rem 0.35rem !important;
+        font-size: 0.75rem;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 70px;
+        font-size: 0.7rem;
+    }
+
+    .timetable-grid td {
+        max-height: 200px;
+    }
+
+    /* List Event Cards */
+    .list-event-card {
+        padding: 0.65rem !important;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .list-event-card .title {
+        font-size: 0.85rem;
+    }
+
+    .list-event-card .meta {
+        font-size: 0.75rem;
+    }
+
+    .list-event-card .event-tooltip {
+        min-width: 200px;
+        font-size: 0.75rem;
+        padding: 0.65rem;
+    }
+
+    .list-event-card .group-badge {
+        font-size: 0.65rem;
+        padding: 0.1rem 0.35rem;
+    }
+
+    /* Form Elements */
+    .form-label {
+        font-size: 0.85rem;
+    }
+
+    .form-control,
+    .form-select {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.65rem;
+    }
+
+    .form-check-input {
+        width: 1.1rem;
+        height: 1.1rem;
+    }
+
+    /* Modal */
+    .modal-dialog {
+        margin: 0.5rem !important;
+    }
+
+    .modal-content {
+        border-radius: 0.75rem;
+    }
+
+    .modal-header {
+        padding: 1rem !important;
+    }
+
+    .modal-header .modal-title {
+        font-size: 1rem;
+    }
+
+    .modal-body {
+        padding: 1rem !important;
+        font-size: 0.85rem;
+    }
+
+    .modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+
+    .modal-footer .btn {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    /* Buttons */
+    .btn {
+        font-size: 0.85rem;
+        padding: 0.5rem 0.75rem;
+    }
+
+    .btn-lg {
+        padding: 0.6rem 0.9rem;
+        font-size: 0.9rem;
+    }
+
+    /* Badges */
+    .badge {
+        font-size: 0.65rem;
+    }
+
+    /* Utility Classes */
+    .p-3 {
+        padding: 0.75rem !important;
+    }
+
+    .p-4 {
+        padding: 1rem !important;
+    }
+
+    .p-md-4 {
+        padding: 1rem !important;
+    }
+
+    .mb-3 {
+        margin-bottom: 0.75rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 1rem !important;
+    }
+
+    .gap-3 {
+        gap: 0.75rem !important;
+    }
+
+    .gap-4 {
+        gap: 1rem !important;
+    }
+}
+
+/* Small Devices (576px to 767px) */
+@media (max-width: 767.98px) {
+    .course-header {
+        padding: 1.5rem 1rem;
+    }
+
+    .course-header h1 {
+        font-size: 1.35rem;
+    }
+
+    .control-panel {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .view-toggle-section {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-group {
+        width: 100%;
+    }
+
+    .btn-group .btn {
+        flex: 1;
+        font-size: 0.85rem;
+    }
+
+    #courseFilter {
+        width: 100% !important;
+        min-width: unset !important;
+    }
+
+    #createEventButton {
+        width: 100%;
+    }
+
+    .fc {
+        font-size: 0.85rem;
+    }
+
+    .fc-col-header-cell {
+        padding: 0.75rem 0.4rem !important;
+        font-size: 0.8rem;
+    }
+
+    .fc-daygrid-day-number {
+        font-size: 0.8rem;
+        padding: 0.4rem;
+    }
+
+    .fc-event-card {
+        padding: 0.4rem 0.5rem !important;
+        border-radius: 0.35rem;
+        margin: 0.2rem 0 !important;
+        font-size: 0.75rem;
+        background: #fff !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fc-event-card .event-title {
+        font-size: 0.8rem !important;
+        line-height: 1.2 !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .fc-event-card .event-meta {
+        gap: 0.25rem !important;
+        margin-top: 0.1rem;
+    }
+
+    .fc-event-card .meta-item {
+        display: none !important;
+    }
+
+    .fc-event-card .event-badge {
+        font-size: 0.65rem !important;
+    }
+
+    .timetable-header .row {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .timetable-header .col-md-2,
+    .timetable-header .col-md-6,
+    .timetable-header .col-md-4 {
+        flex: 0 0 100%;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.65rem 0.4rem;
+        font-size: 0.8rem;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 90px;
+    }
+
+    .list-event-card {
+        padding: 0.75rem;
+    }
+
+    .list-event-card .title {
+        font-size: 0.9rem;
+    }
+
+    .list-event-card .event-tooltip {
+        min-width: 220px;
+    }
+}
+
+/* Medium Devices (768px to 991px) */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .course-header {
+        padding: 2rem 1.25rem;
+    }
+
+    .course-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .fc {
+        font-size: 0.9rem;
+    }
+
+    .fc-event-card {
+        padding: 0.5rem 0.625rem;
+        background: #fff !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fc-event-card .event-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .fc-event-card .event-meta {
+        flex-wrap: wrap;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 100px;
+    }
+
+    .list-event-card {
+        padding: 0.75rem;
+    }
+}
+
+/* Desktop Devices (992px and up) - Keep Original Styling */
+@media (min-width: 992px) {
+    .course-header {
+        padding: 2.75rem 1.5rem;
+    }
+
+    .course-header h1 {
+        font-size: 1.85rem;
+    }
+
+    .control-panel {
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .view-toggle-section {
+        flex-direction: row;
+    }
+
+    #courseFilter {
+        min-width: 200px;
+    }
+
+    .fc {
+        font-size: 0.95rem;
+    }
+
+    .fc-event-card {
+        padding: 0.625rem 0.75rem;
+        background: #fff !important;
+    }
+
+    .fc-event-card .event-title {
+        white-space: normal;
+    }
+
+    .fc-event-card .event-meta {
+        display: flex;
+        flex-wrap: wrap;
+    }
+
+    .timetable-grid th,
+    .timetable-grid td {
+        padding: 0.75rem;
+    }
+
+    .timetable-grid .time-column {
+        min-width: 120px;
+    }
+
+    .list-event-card {
+        padding: 0.75rem 1rem;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .control-panel,
+    #createEventButton,
+    .btn,
+    button {
+        display: none !important;
+    }
+
+    .calendar-container {
+        box-shadow: none;
+    }
+
+    .fc {
+        font-size: 0.95rem;
+    }
 }
 </style>
-
+  <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
 // Configuration object
@@ -1271,9 +1938,9 @@ class CalendarManager {
             },
             slotMinTime: CalendarConfig.minTime,
             slotMaxTime: CalendarConfig.maxTime,
-            slotDuration: '00:20:00',
-            snapDuration: '00:20:00',
-            slotLabelInterval: '00:20:00',
+            slotDuration: '00:30:00',
+            snapDuration: '00:30:00',
+            slotLabelInterval: '00:30:00',
             height: 'auto',
             contentHeight: 'auto',
             editable: true,
@@ -1343,7 +2010,12 @@ class CalendarManager {
         })
         .then(response => response.json())
         .then(data => {
-            successCallback(data);
+            // Filter out holidays and restricted holidays
+            const filteredData = data.filter(event => {
+                const type = (event.type || event.event_type || event.session_type || '').toString().toLowerCase();
+                return type !== 'holiday' && type !== 'restricted holiday' && type !== 'restricted' && !type.includes('holiday');
+            });
+            successCallback(filteredData);
         })
         .catch(error => {
             console.error('Error fetching events:', error);
@@ -2936,4 +3608,5 @@ liveRegion.setAttribute('aria-atomic', 'true');
 liveRegion.className = 'visually-hidden';
 document.body.appendChild(liveRegion);
 </script>
+
 @endsection
