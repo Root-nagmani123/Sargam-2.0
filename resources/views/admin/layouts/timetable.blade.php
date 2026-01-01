@@ -34,6 +34,10 @@
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
 
     <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #dcdcdc;
+        }
         .star-rating {
             display: inline-flex;
             justify-content: flex-start;
@@ -237,7 +241,7 @@
 </head>
 <x-session_message />
 
-<body style="min-height: 100vh; display: flex; flex-direction: column;">
+<body style="min-height: 100vh; display: flex; flex-direction: column;background-color: #dcdcdc;">
     <!-- Top Blue Bar (Govt of India) -->
     <div class="top-header d-flex justify-content-between align-items-center d-none d-md-block py-2"
         style="background-color: #004a93;">
