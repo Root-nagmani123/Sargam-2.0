@@ -230,7 +230,6 @@ class CalendarController extends Controller
                 ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
                 ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
                 ->where('student_course_group_map.student_master_pk', $student_pk);
-                print_r($events->get());die;
         }
 
         // Internal / Guest Faculty
