@@ -1,8 +1,9 @@
-@extends('admin.layouts.master')
+@extends(hasRole('Student-OT') ? 'fc.layouts.master' : 'admin.layouts.master')
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
+@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+<link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <style>
         :root {
         --primary: #004a93;
@@ -1857,7 +1858,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 }
 </style>
-
+  <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
 // Configuration object
@@ -3607,4 +3608,5 @@ liveRegion.setAttribute('aria-atomic', 'true');
 liveRegion.className = 'visually-hidden';
 document.body.appendChild(liveRegion);
 </script>
+
 @endsection
