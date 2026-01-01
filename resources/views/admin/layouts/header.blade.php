@@ -61,7 +61,7 @@
 
 
                             <!-- Communications -->
-                            <li class="nav-item" role="none">
+                            <!-- <li class="nav-item" role="none">
                                 <a href="#tab-communications"
                                     class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
@@ -69,7 +69,7 @@
                                     <i class="material-icons material-symbols-rounded" aria-hidden="true">chat</i>
                                     <span>Communications</span>
                                 </a>
-                            </li>
+                            </li> -->
 
                             <!-- Academics -->
                             <!-- <li class="nav-item" role="none">
@@ -82,7 +82,7 @@
                             </li> -->
 
                             <!-- Material Management -->
-                            <li class="nav-item" role="none">
+                            <!-- <li class="nav-item" role="none">
                                 <a href="#tab-material-management"
                                     class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
                                     data-bs-toggle="tab" role="tab" aria-selected="false"
@@ -90,10 +90,10 @@
                                     <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
                                     <span>Material Management</span>
                                 </a>
-                            </li>
+                            </li> -->
 
                             <!-- Financial Dropdown - Enhanced -->
-                            <li class="nav-item dropdown" role="none">
+                            <!-- <li class="nav-item dropdown" role="none">
                                 <a class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
                                     href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
                                     aria-expanded="false" data-bs-toggle="dropdown">
@@ -118,7 +118,7 @@
                                         </a>
                                     </li>
                                 </ul>
-                            </li>
+                            </li> -->
 
                             <!-- Search with Enhanced UI -->
                             <li class="nav-item" role="none">
