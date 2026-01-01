@@ -228,6 +228,7 @@ class CalendarController extends Controller
 
             $events = $events
                 ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
+                ->join('student_master_course__map', 'student_master_course__map.course_master_pk', '=', 'timetable.course_master_pk')
                 ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
                 ->where('student_course_group_map.student_master_pk', $student_pk);
         }
