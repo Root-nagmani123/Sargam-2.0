@@ -1937,9 +1937,9 @@ class CalendarManager {
             },
             slotMinTime: CalendarConfig.minTime,
             slotMaxTime: CalendarConfig.maxTime,
-            slotDuration: '00:20:00',
-            snapDuration: '00:20:00',
-            slotLabelInterval: '00:20:00',
+            slotDuration: '00:30:00',
+            snapDuration: '00:30:00',
+            slotLabelInterval: '00:30:00',
             height: 'auto',
             contentHeight: 'auto',
             editable: true,
@@ -2009,7 +2009,12 @@ class CalendarManager {
         })
         .then(response => response.json())
         .then(data => {
-            successCallback(data);
+            // Filter out holidays and restricted holidays
+            const filteredData = data.filter(event => {
+                const type = (event.type || event.event_type || event.session_type || '').toString().toLowerCase();
+                return type !== 'holiday' && type !== 'restricted holiday' && type !== 'restricted' && !type.includes('holiday');
+            });
+            successCallback(filteredData);
         })
         .catch(error => {
             console.error('Error fetching events:', error);
