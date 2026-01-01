@@ -1,4 +1,4 @@
-@extends(hasRole('Student-OT') ? 'fc.layouts.master' : 'admin.layouts.master')
+@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
