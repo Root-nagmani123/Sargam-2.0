@@ -566,6 +566,112 @@ h3.fw-bold {
 table>thead {
     background-color: #ffffff !important;
 }
+
+/* Compact Timetable Card Design - Shows 2 items at a time */
+.timetable-container {
+    max-height: 240px; /* Shows exactly 2 cards (110px each + 8px margin) */
+    overflow-y: auto;
+    padding-right: 5px;
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 transparent;
+}
+
+.timetable-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.timetable-container::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.timetable-container::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.timetable-container::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+.timetable-card {
+    background: #fff;
+    border-left: 4px solid #dc3545;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+    height: 110px;
+    display: flex;
+    flex-direction: column;
+}
+
+.timetable-card:hover {
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    transform: translateX(2px);
+    border-left-color: #c82333;
+}
+
+.timetable-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.timetable-time-badge {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.timetable-sno {
+    background: #f8f9fa;
+    color: #6c757d;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.timetable-topic {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 6px 0;
+    line-height: 1.3;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.timetable-details {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.7rem;
+    color: #555;
+    margin-top: auto;
+}
+
+.timetable-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.timetable-detail-item i {
+    font-size: 14px;
+    color: #6c757d;
+}
 </style>
 
 
@@ -799,56 +905,52 @@ table>thead {
                         </div>
                     </section>
 
-                    <!-- Quick Links -->
+                    <!-- Today's Timetable -->
                     @if(hasRole('Student-OT'))
-                    <section aria-labelledby="quick-links-title" style="overflow-y:auto; max-height:250px;">
-                        <div class="row">
-                            <div class="col-6">
-                                <h2 id="quick-links-title">
-                                  Today's Time Table
-                                </h2>
-                            </div>
-                            <div class="col-6 text-end">
-                                <a href="{{ route('calendar.index') }}" class="btn btn-outline-primary float-end">View All</a>
-                            </div>
+                    <section aria-labelledby="timetable-title" style="margin-top: 20px;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h2 id="timetable-title" style="font-size: 1.2rem; font-weight: 600; margin: 0; color: #1a1a1a;">
+                                Today's Classes
+                            </h2>
+                            <a href="{{ route('calendar.index') }}" class="btn btn-outline-primary btn-sm" style="font-size: 0.75rem; padding: 4px 12px;">View All</a>
                         </div>
 
-                        <div class="line w-100 my-4"></div>
+                        <div class="line w-100 my-2"></div>
 
-                        <div class="content-text">
-                            @if($todayTimetable && $todayTimetable->isNotEmpty())
-                            <div class="table-responsive">
-                                <table class="table text-nowrap">
-                                    <thead class="bg-danger text-white">
-                                        <tr>
-                                            <th>S.No.</th>
-                                            <th>Session Time</th>
-                                            <th>Topic</th>
-                                            <th>Faculty Name</th>
-                                            <th>Session Date</th>
-                                            <th>Session Venue</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($todayTimetable as $entry)
-                                        <tr>
-                                            <td>{{ $entry['sno'] }}</td>
-                                            <td>{{ $entry['session_time'] }}</td>
-                                            <td>{{ $entry['topic'] }}</td>
-                                            <td>{{ $entry['faculty_name'] }}</td>
-                                            <td>{{ $entry['session_date'] }}</td>
-                                            <td>{{ $entry['session_venue'] }}</td>
-                                        </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
+                        @if($todayTimetable && $todayTimetable->isNotEmpty())
+                        <div class="timetable-container">
+                            @foreach($todayTimetable as $entry)
+                            <div class="timetable-card">
+                                <div class="timetable-header">
+                                    <span class="timetable-time-badge">{{ $entry['session_time'] }}</span>
+                                    <span class="timetable-sno">#{{ $entry['sno'] }}</span>
+                                </div>
+                                <h5 class="timetable-topic">{{ $entry['topic'] }}</h5>
+                                <div class="timetable-details">
+                                    <div class="timetable-detail-item">
+                                        <i class="material-icons material-symbols-rounded">person</i>
+                                        <span>{{ $entry['faculty_name'] }}</span>
+                                    </div>
+                                    <div class="timetable-detail-item">
+                                        <i class="material-icons material-symbols-rounded">location_on</i>
+                                        <span>{{ $entry['session_venue'] }}</span>
+                                    </div>
+                                    <div class="timetable-detail-item">
+                                        <i class="material-icons material-symbols-rounded">event</i>
+                                        <span>{{ $entry['session_date'] }}</span>
+                                    </div>
+                                </div>
                             </div>
-                            @else
-                            <div class="alert alert-info">
-                                <p class="mb-0">No timetable entries found for today.</p>
-                            </div>
-                            @endif
+                            @endforeach
                         </div>
+                        @else
+                        <div class="alert alert-info" style="padding: 10px; margin: 0; border-radius: 6px; font-size: 0.85rem;">
+                            <p class="mb-0" style="text-align: center; color: #6c757d;">
+                                <i class="material-icons material-symbols-rounded" style="font-size: 18px; vertical-align: middle; margin-right: 5px;">event_busy</i>
+                                No classes scheduled for today
+                            </p>
+                        </div>
+                        @endif
                     </section>
                     @endif
                 </div>
