@@ -282,15 +282,45 @@ $(function() {
             url: "{{ route('ot.student.attendance.data')}}",
             data: function(d) {
                 d.filter_session_time = $('#filter_session_time').val();
-                d.archive_mode = $('#archive_mode').val();
+                d.archive_mode = $('#archive_mode_input').val();
                 d.filter_date = $('#filter_date').val();
+                d.filter_course = $('#filter_course').val();
 
                 d.group_pk = $('#group_pk').val();
                 d.course_pk = $('#course_pk').val();
-                d.timetable_pk = $('#filter_date').val();
+                d.timetable_pk = $('#timetable_pk').val();
                 d.student_pk = $('#student_pk').val();
             }
-        }
+        },
+        columns: [
+            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
+            { data: 'date', name: 'date' },
+            { data: 'venue', name: 'venue' },
+            { data: 'group', name: 'group' },
+            { data: 'topic', name: 'topic' },
+            { data: 'faculty', name: 'faculty' },
+            { data: 'attendance_status', name: 'attendance_status', orderable: false },
+            { data: 'duty_type', name: 'duty_type' },
+            { data: 'exemption_type', name: 'exemption_type' },
+            { 
+                data: null, 
+                name: 'document_comment',
+                orderable: false,
+                searchable: false,
+                render: function(data, type, row) {
+                    var html = '';
+                    if (row.exemption_document) {
+                        html += '<a href="' + row.exemption_document + '" target="_blank" class="btn btn-sm btn-info"><i class="bi bi-file-earmark-pdf"></i> Document</a> ';
+                    }
+                    if (row.exemption_comment) {
+                        html += '<span class="text-muted">' + row.exemption_comment + '</span>';
+                    }
+                    return html || 'N/A';
+                }
+            }
+        ],
+        order: [[1, 'desc']]
+    });
 
     // Auto-submit form when filters change
     let filterTimeout;
