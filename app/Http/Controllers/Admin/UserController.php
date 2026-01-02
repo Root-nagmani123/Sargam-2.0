@@ -28,6 +28,11 @@ use Illuminate\Support\Facades\DB;
 
 use App\Models\StudentMedicalExemption;
 use App\Models\MDOEscotDutyMap;
+use App\Models\StudentCourseGroupMap;
+use App\Models\CalendarEvent;
+use App\Models\ClassSessionMaster;
+use App\Models\VenueMaster;
+use Carbon\Carbon;
 
 
 class UserController extends Controller
@@ -80,6 +85,7 @@ class UserController extends Controller
 //   print_r($emp_data);exit;
         $exemptionCount = 0;
         $MDO_count = 0;
+        $todayTimetable = collect([]);
         $userId = Auth::user()->user_id;
          if(hasRole('Student-OT')){
              $exemptionQuery = StudentMedicalExemption::where('student_master_pk', $userId)
@@ -89,9 +95,12 @@ class UserController extends Controller
               $MDO_count = MDOEscotDutyMap::where('selected_student_list', $userId)
             ->with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
             ->count();
+
+            // Fetch today's timetable for the logged-in student
+            $todayTimetable = $this->getTodayTimetableForStudent($userId);
          }
 
-        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count'));
+        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable'));
     }
 
    public function index(Request $request)
@@ -521,7 +530,88 @@ public function uploadPdf(Request $request)
         ]);
 }
    
-}
+    }
+
+    /**
+     * Get today's timetable for a specific student
+     *
+     * @param int $studentId
+     * @return \Illuminate\Support\Collection
+     */
+    private function getTodayTimetableForStudent($studentId)
+    {
+        $today = Carbon::today()->toDateString();
+        
+        // Get student's group mappings
+        $studentGroupMaps = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
+            ->where('student_master_pk', $studentId)
+            ->get();
+           
+
+        if ($studentGroupMaps->isEmpty()) {
+            return collect([]);
+        }
+
+        // Extract group IDs from student's group mappings
+        $groupIds = $studentGroupMaps->pluck('groupTypeMasterCourseMasterMap.pk')
+            ->filter()
+            ->toArray();
+        if (empty($groupIds)) {
+            return collect([]);
+        }
+
+        // Query timetable entries for today that match the student's groups
+        // group_name is stored as JSON array, so we need to check if any of the student's group IDs are in that array
+        $timetableEntries = CalendarEvent::where('active_inactive', 1)
+            ->whereDate('START_DATE', '<=', $today)
+            ->whereDate('END_DATE', '>=', $today)
+            ->where(function ($query) use ($groupIds) {
+                foreach ($groupIds as $groupId) {
+                    // Use JSON_CONTAINS to check if group ID exists in the JSON array
+                    // This handles both string and numeric formats
+                    $query->orWhereRaw('JSON_CONTAINS(group_name, ?)', ['"'.$groupId.'"']);
+                }
+            })
+            ->with(['faculty', 'venue', 'classSession'])
+            ->orderBy('class_session')
+            ->get();
+
+        // Format the timetable data
+        return $timetableEntries->map(function ($entry, $index) {
+            // Format session time based on session_type
+            $sessionTime = 'N/A';
+            if ($entry->session_type == 1) {
+                // session_type 1: class_session is a reference to class_session_master
+                if ($entry->classSession) {
+                    // Try to get time from class_session_master
+                    if (isset($entry->classSession->start_time) && isset($entry->classSession->end_time)) {
+                        $sessionTime = $entry->classSession->start_time . ' - ' . $entry->classSession->end_time;
+                    } elseif (isset($entry->classSession->shift_time)) {
+                        $sessionTime = $entry->classSession->shift_time;
+                    } else {
+                        $sessionTime = $entry->class_session ?? 'N/A';
+                    }
+                } else {
+                    $sessionTime = $entry->class_session ?? 'N/A';
+                }
+            } else {
+                // session_type 2: class_session is a manual time string (e.g., "10:00 AM - 11:30 AM")
+                $sessionTime = $entry->class_session ?? 'N/A';
+            }
+
+            // Format date
+            $sessionDate = $entry->START_DATE ? Carbon::parse($entry->START_DATE)->format('Y-m-d') : '';
+
+            return [
+                'sno' => $index + 1,
+                'session_time' => $sessionTime,
+                'topic' => $entry->subject_topic ?? 'N/A',
+                'faculty_name' => $entry->faculty ? $entry->faculty->full_name : 'N/A',
+                'session_date' => $sessionDate,
+                'session_venue' => $entry->venue ? $entry->venue->venue_name : 'N/A',
+            ];
+        });
+    }
 
 
 }
