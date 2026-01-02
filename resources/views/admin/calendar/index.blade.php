@@ -51,10 +51,11 @@
 <div class="container-fluid">
     <a href="#calendar" class="visually-hidden-focusable" aria-label="Skip to calendar">Skip to calendar</a>
     <!-- Page Header with ARIA landmark -->
+      @if(hasRole('Admin'))
     <header aria-label="Page header">
         <x-breadcrum title="Academic TimeTable" />
     </header>
-
+@endif
         <div class="course-header mb-3">
             <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
             <p class="mb-0 text-white fw-medium">
