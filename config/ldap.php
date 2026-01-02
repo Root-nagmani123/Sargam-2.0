@@ -61,10 +61,11 @@ return [
 
             'follow_referrals' => false,
 
-           
-             'use_ssl' => true,
-                'use_tls' => false,
+            'use_ssl' => env('LDAP_USE_SSL', false), // Set to true for LDAPS
 
+            'use_tls' => env('LDAP_USE_TLS', false), // Set to true for TLS
+
+ 
         ],
 
     ],
