@@ -50,9 +50,6 @@
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
                                     <span>Academics</span>
-                                    @else
-                                        <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
-                                        <span>Setup</span>
                                     @endif
 
                                 </a>
