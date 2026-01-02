@@ -25,6 +25,7 @@ class CalendarController extends Controller
         // print_r(auth()->user());die;
 
         // Moodle code start here 
+        try{
         if ($request->has('token') && !auth()->check()) {
             $key = config('services.moodle.key', '1234567890abcdef');
             $iv = config('services.moodle.iv', 'abcdef1234567890');
@@ -44,10 +45,6 @@ class CalendarController extends Controller
                 if ($username && $username !== false) {
                     // Find user
                     $user = User::where('user_name', trim($username))->first();
-                     $current_date_time = date('Y-m-d H:i:s');
-                DB::table('user_credentials')
-                    ->where('pk', $user->pk)
-                    ->update(['last_login' => $current_date_time]);
                 $roles = ['Student-OT'];
                 Session::put('user_roles', $roles);
                     if ($user) {
@@ -74,6 +71,9 @@ class CalendarController extends Controller
 
             return redirect()->route('login')->with('error', 'Please login to access the timetable');
         }
+    } catch (\Exception $e) {
+        \Log::error('Moodle SSO authentication error: ' . $e->getMessage());
+    }
         // Moodle code end here
         $data_course_id =  get_Role_by_course();
 
