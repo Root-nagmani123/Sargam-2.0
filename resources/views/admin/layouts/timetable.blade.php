@@ -280,51 +280,6 @@
         </div>
     </div>
 
-    <!-- Accessibility Panel -->
-    <div class="uwaw uw-light-theme gradient-head uwaw-initial paid_widget" id="uw-main">
-        <div class="relative second-panel">
-            <h3>Accessibility options by LBSNAA</h3>
-            <div class="uwaw-close" onclick="closeMain()"></div>
-        </div>
-        <div class="uwaw-body">
-            <div class="lang">
-                <div class="lang_head">
-                    <i></i>
-                    <span>Language</span>
-                </div>
-                <div class="language_drop" id="google_translate_element">
-                    <!-- google translate list coming inside here -->
-                </div>
-            </div>
-            <div class="h-scroll">
-                <div class="uwaw-features">
-                    <!-- Accessibility features remain the same -->
-                    <div class="uwaw-features__item reset-feature" id="featureItem_sp">
-                        <button id="speak" class="uwaw-features__item__i"
-                            data-uw-reader-content="Enable the UserWay screen reader"
-                            aria-label="Enable the UserWay screen reader" aria-pressed="false">
-                            <span class="uwaw-features__item__icon">
-                                <span class="icon icon-speaker"> </span>
-                            </span>
-                            <span class="uwaw-features__item__name">Screen Reader</span>
-                            <span class="tick-active uwaw-features__item__enabled reset-tick" id="tickIcon_sp"
-                                style="display: none">
-                            </span>
-                        </button>
-                    </div>
-                    <!-- Other accessibility features... -->
-                </div>
-            </div>
-        </div>
-        <div class="reset-panel">
-            <div class="copyrights-accessibility">
-                <button class="btn-reset-all" id="reset-all" onclick="resetAll()">
-                    <span class="reset-icon"> </span>
-                    <span class="reset-btn-text">Reset All Settings</span>
-                </button>
-            </div>
-        </div>
-    </div>
 
     <!-- Main Content -->
     @yield('content')
@@ -356,9 +311,6 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Accessibility Widget -->
-    <script src="https://cdn.ux4g.gov.in/tools/accessibility-widget.js" async></script>
 
     <!-- JavaScript for Tab Functionality -->
     <script>
