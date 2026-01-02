@@ -371,6 +371,12 @@ $currentPath = $segments[1] ?? null;
     }
 
       public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
+        // Check if this is a DataTables AJAX request
+        if ($request->ajax() || $request->has('draw')) {
+            // This is a DataTables request, return JSON data
+            return $this->getOTAttendanceData($request, $group_pk, $course_pk, $timetable_pk, $student_pk);
+        }
+
         // Get student information
             $student = StudentMaster::where('pk', $student_pk)->firstOrFail();
 
@@ -403,6 +409,31 @@ $currentPath = $segments[1] ?? null;
                     ->get();
             }
 
+            // Return the view for regular page load
+            return view('admin.attendance.ot-student-view', compact(
+                'student',
+                'course',
+                'group_pk',
+                'course_pk',
+                'timetable_pk',
+                'student_pk',
+                'sessions',
+                'maunalSessions',
+                'archivedCourses',
+                'archiveMode',
+                'filterDate',
+                'filterSessionTime',
+                'filterCourse'
+            ));
+        }
+
+        private function getOTAttendanceData(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk) {
+            // Get filter parameters from request
+            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : null;
+            $filterSessionTime = $request->input('filter_session_time');
+            $filterCourse = $request->input('filter_course');
+            $archiveMode = $request->input('archive_mode', 'active');
+
             // Query all course group timetable mappings for this student's course and group
             $query = CourseGroupTimetableMapping::with([
                 'course:pk,course_name,end_date',
@@ -434,30 +465,12 @@ $currentPath = $segments[1] ?? null;
                       ->where('Programme_pk', $course_pk);
             }
 
-if ($archive_mode === 'archive' && $filterCourse) {
-            $query->where('Programme_pk', $filterCourse);
-            // Also need to update group_pk based on the selected course
-            // Get the group for this student and the selected course
-            $studentGroupMap = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
-                ->where('student_master_pk', $student_pk)
-                ->whereHas('groupTypeMasterCourseMasterMap', function($q) use ($filterCourse) {
-                    $q->where('course_name', $filterCourse);
-                })
-                ->first();
-            
-            if ($studentGroupMap && $studentGroupMap->groupTypeMasterCourseMasterMap) {
-                $query->where('group_pk', $studentGroupMap->groupTypeMasterCourseMasterMap->pk);
-            }
-        } else {
-            // Default behavior: use the original course and group
-                   $query->where('group_pk', $request->group_pk)
-                    ->where('Programme_pk', $request->course_pk);
-        }
 
-        // Apply archive/active filter for timetable records
-    if($archive_mode){
-    $query->whereHas('timetable', function ($q) use ($archive_mode) {
-            if ($archive_mode === 'archive') {
+
+            // Apply archive/active filter for timetable records
+    if($archiveMode){
+    $query->whereHas('timetable', function ($q) use ($archiveMode) {
+            if ($archiveMode === 'archive') {
                 // Archive mode: show inactive attendance records
                 $q->where('active_inactive', 0);
             } else {
@@ -467,19 +480,12 @@ if ($archive_mode === 'archive' && $filterCourse) {
         });
     }
     
-    $filterDate = $request->filter_date;
     if ($filterDate) {
         $query->whereHas('timetable', function ($q) use ($filterDate) {
             // Ensure correct column casing, Laravel is usually case-insensitive on MySQL
             $q->whereDate('start_date', $filterDate);
         });
     }
-
-   $filterSessionTime = $request->filter_session_time;
-   $student_pk = $request->student_pk;
-   $course_pk = $request->course_pk;
-   $group_pk = $request->group_pk;
-   $timetable_pk = $request->timetable_pk;
 
     if ($filterSessionTime){
                 $query->whereHas('timetable', function ($q) use ($filterSessionTime) {
@@ -716,5 +722,30 @@ if ($archive_mode === 'archive' && $filterCourse) {
     ->addColumn('exemption_type', fn ($row) => $row['exemption_type'] ?? '')
 
     ->make(true);
+    }
+
+    public function OTmarkAttendanceData(Request $request)
+    {
+        try {
+            $group_pk = $request->input('group_pk');
+            $course_pk = $request->input('course_pk');
+            $timetable_pk = $request->input('timetable_pk');
+            $student_pk = $request->input('student_pk');
+
+            if (!$group_pk || !$course_pk || !$student_pk) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Missing required parameters'
+                ], 400);
+            }
+
+            return $this->getOTAttendanceData($request, $group_pk, $course_pk, $timetable_pk, $student_pk);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching OT attendance data: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 }
