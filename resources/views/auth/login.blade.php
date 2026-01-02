@@ -761,7 +761,7 @@
         filter: brightness(1.2);
     }
 
-    /* Responsive Design - Tablet & Mobile */
+    /* Responsive Design - Mobile-First Approach */
     /* Container Management */
     .container-fluid {
         height: 100%;
@@ -777,68 +777,246 @@
         height: 100%;
     }
 
-    @media (max-width: 991.98px) {
+    /* ===== MOBILE FIRST (Base Styles) ===== */
+    .top-header {
+        display: none;
+    }
+
+    .login-card-enhanced {
+        padding: 20px 16px;
+        border-radius: 12px;
+        max-height: 92vh;
+        margin: auto;
+    }
+
+    .login-page-wrapper {
+        padding: 8px;
+        min-height: 100%;
+    }
+
+    .login-card-enhanced h2 {
+        font-size: 26px;
+    }
+
+    .login-card-enhanced p {
+        font-size: 14px;
+    }
+
+    .form-label {
+        font-size: 13px;
+    }
+
+    .form-control {
+        font-size: 14px;
+        padding: 12px 14px;
+    }
+
+    .login-button-enhanced {
+        padding: 14px;
+        font-size: 16px;
+    }
+
+    .main-header-nav .container-fluid {
+        flex-direction: column;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 8px;
+    }
+
+    .main-header-nav .navbar-brand {
+        justify-content: center;
+    }
+
+    .main-header-nav .navbar-brand .lh-sm {
+        text-align: center;
+    }
+
+    .top-header span,
+    .gigw-footer span {
+        font-size: 12px;
+    }
+
+    /* Mobile - Hide brand logo */
+    .main-header-nav .navbar-brand img {
+        max-width: 120px;
+    }
+
+    .brand-link img {
+        max-width: 100px;
+    }
+
+    /* ===== TABLET (768px and up) ===== */
+    @media (min-width: 768px) {
+        .login-card-enhanced {
+            padding: 24px 20px;
+        }
+
+        .login-card-enhanced h2 {
+            font-size: 28px;
+        }
+
+        .login-card-enhanced p {
+            font-size: 15px;
+        }
+
+        .form-label {
+            font-size: 14px;
+        }
+
+        .form-control {
+            font-size: 15px;
+            padding: 13px 16px;
+        }
+
+        .login-button-enhanced {
+            padding: 15px;
+            font-size: 16px;
+        }
+
+        .main-header-nav .container-fluid {
+            flex-direction: row;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 0;
+        }
+
+        .main-header-nav .navbar-brand {
+            justify-content: flex-start;
+        }
+
+        .main-header-nav .navbar-brand .lh-sm {
+            text-align: left;
+        }
+
+        .top-header {
+            display: flex;
+        }
+
+        .main-header-nav .navbar-brand img {
+            max-width: 200px;
+        }
+
+        .brand-link img {
+            max-width: 130px;
+        }
+
+        .login-page-wrapper {
+            padding: 10px;
+        }
+    }
+
+    /* ===== DESKTOP (992px and up) ===== */
+    @media (min-width: 992px) {
+        .login-card-enhanced {
+            padding: 32px;
+            border-radius: 16px;
+            max-height: 95vh;
+        }
+
         .login-page-wrapper {
             padding: 10px;
         }
 
-        .main-header-nav .navbar-brand {
-            flex-wrap: wrap;
-        }
-    }
-
-    @media (max-width: 575.98px) {
-        .login-card-enhanced {
-            padding: 20px 16px;
-            border-radius: 12px;
-            max-height: 92vh;
-        }
-
-        .login-page-wrapper {
-            padding: 8px;
-        }
-
         .login-card-enhanced h2 {
-            font-size: 26px;
-        }
-
-        .login-card-enhanced p {
-            font-size: 14px;
-        }
-
-        .form-label {
-            font-size: 13px;
-        }
-
-        .form-control {
-            font-size: 14px;
-            padding: 12px 14px;
-        }
-
-        .login-button-enhanced {
-            padding: 14px;
-            font-size: 16px;
-        }
-
-        /* Center Government of India + Ashoka emblem + LBSNAA text on small screens */
-        .main-header-nav .container-fluid {
-            flex-direction: column;
-            justify-content: center !important;
-            align-items: center !important;
-            gap: 8px;
-        }
-
-        .main-header-nav .navbar-brand {
-            justify-content: center;
-        }
-
-        .main-header-nav .navbar-brand .lh-sm {
+            font-size: 32px;
             text-align: center;
         }
 
-        .top-header span,
+        .login-card-enhanced p {
+            font-size: 15px;
+            text-align: center;
+        }
+
+        .form-label {
+            font-size: 14px;
+            text-align: left;
+        }
+
+        .form-control {
+            font-size: 15px;
+            padding: 14px 18px;
+        }
+
+        .login-button-enhanced {
+            padding: 16px;
+            font-size: 17px;
+        }
+
+        .main-header-nav .container-fluid {
+            flex-direction: row;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 0;
+        }
+
+        .main-header-nav .navbar-brand {
+            justify-content: flex-start;
+        }
+
+        .main-header-nav .navbar-brand .lh-sm {
+            text-align: left;
+        }
+
+        .main-header-nav .navbar-brand img {
+            max-width: 300px;
+        }
+
+        .brand-link img {
+            max-width: 150px;
+        }
+
+        .top-header span {
+            font-size: 14px;
+        }
+
         .gigw-footer span {
-            font-size: 12px;
+            font-size: 13px;
+        }
+
+        /* Desktop: Show carousel on lg screens */
+        .col-lg-8 {
+            display: block !important;
+        }
+    }
+
+    /* ===== LARGE DESKTOP (1200px and up) ===== */
+    @media (min-width: 1200px) {
+        .login-card-enhanced {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .main-header-nav .navbar-brand img {
+            max-width: 350px;
+        }
+
+        .brand-link img {
+            max-width: 160px;
+        }
+    }
+
+    /* ===== EXTRA LARGE (1400px and up) ===== */
+    @media (min-width: 1400px) {
+        .login-card-enhanced {
+            max-width: 550px;
+        }
+
+        .container {
+            max-width: 1320px;
+        }
+    }
+
+    /* ===== Tablet Header Navigation Collapse ===== */
+    @media (max-width: 991.98px) {
+        .main-header-nav .navbar-collapse {
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            margin-top: 12px;
+            padding-top: 12px;
+        }
+
+        .login-card-enhanced {
+            padding: 24px 20px;
         }
     }
 
