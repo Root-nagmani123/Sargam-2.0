@@ -55,12 +55,12 @@
                                     href="{{ route('memo.discipline.index') }}">
                                     <span class="hide-menu">Send Discipline Memo</span>
                                 </a></li>
-                                @endif
+                               
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('admin.memo-notice.index') }}">
                                     <span class="hide-menu">Memo / Notice Template</span>
                                 </a></li>
-
+                                @endif
                             {{-- USER Feedback --}}
                             <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
@@ -86,6 +86,7 @@
                                     </a></li>
 
                             </ul>
+                             @if(! hasRole('Training-MCTP'))
                             <li class="sidebar-item" style="background: #4077ad;
                                     border-radius: 30px 0px 0px 30px;
                                     width: 100%;
@@ -108,6 +109,7 @@
                                         <span class="hide-menu">Subject Module Master</span>
                                     </a></li>
                             </ul>
+                             @endif
                             @endif
                         
 
