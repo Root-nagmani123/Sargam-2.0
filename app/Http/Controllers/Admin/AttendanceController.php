@@ -482,8 +482,8 @@ $currentPath = $segments[1] ?? null;
     
     if ($filterDate) {
         $query->whereHas('timetable', function ($q) use ($filterDate) {
-            // Ensure correct column casing, Laravel is usually case-insensitive on MySQL
-            $q->whereDate('start_date', $filterDate);
+            // Ensure correct column casing
+            $q->whereDate('START_DATE', $filterDate);
         });
     }
 
@@ -692,34 +692,37 @@ $currentPath = $segments[1] ?? null;
     ->addColumn('faculty', fn ($row) => $row['faculty'] ?? 'N/A')
 
     ->addColumn('attendance_status', function ($row) {
+        $status = $row['attendance_status'] ?? 'Not Marked';
 
-    $status = $row->attendance_status ?? 'Not Marked';
+        if ($status === 'Present') {
+            $color = 'success';
+            $icon  = 'bi-check-circle-fill';
+        } elseif ($status === 'Late') {
+            $color = 'warning';
+            $icon  = 'bi-clock-fill';
+        } elseif ($status === 'Absent') {
+            $color = 'danger';
+            $icon  = 'bi-x-octagon-fill';
+        } else {
+            $color = 'secondary';
+            $icon  = 'bi-question-circle-fill';
+        }
 
-    if ($status === 'Present') {
-        $color = 'success';
-        $icon  = 'bi-check-circle-fill';
-    } elseif ($status === 'Late') {
-        $color = 'warning';
-        $icon  = 'bi-clock-fill';
-    } elseif ($status === 'Absent') {
-        $color = 'danger';
-        $icon  = 'bi-x-octagon-fill';
-    } else {
-        $color = 'secondary';
-        $icon  = 'bi-question-circle-fill';
-    }
-
-    return '
-        <span class="badge bg-'.$color.' fw-bold py-2 px-3">
-            <i class="bi '.$icon.' me-1"></i> '.$status.'
-        </span>
-    ';
-})
-->rawColumns(['attendance_status'])
+        return '
+            <span class="badge bg-'.$color.' fw-bold py-2 px-3">
+                <i class="bi '.$icon.' me-1"></i> '.$status.'
+            </span>
+        ';
+    })
+    ->rawColumns(['attendance_status'])
 
     ->addColumn('duty_type', fn ($row) => $row['duty_type'] ?? '')
 
     ->addColumn('exemption_type', fn ($row) => $row['exemption_type'] ?? '')
+    
+    ->addColumn('exemption_document', fn ($row) => $row['exemption_document'] ?? null)
+    
+    ->addColumn('exemption_comment', fn ($row) => $row['exemption_comment'] ?? null)
 
     ->make(true);
     }
