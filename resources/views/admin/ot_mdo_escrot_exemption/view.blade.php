@@ -1,8 +1,8 @@
-@extends('admin.layouts.master')
+@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'OT MDO/Escort Exception View - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section(hasRole('Student-OT') ? 'content' : 'setup_content')
 <style>
 .student-card {
     background: #ffffff;
