@@ -800,47 +800,57 @@ table>thead {
                     </section>
 
                     <!-- Quick Links -->
+                    @if(hasRole('Student-OT'))
                     <section aria-labelledby="quick-links-title" style="overflow-y:auto; max-height:250px;">
                         <div class="row">
                             <div class="col-6">
                                 <h2 id="quick-links-title">
-                                    Time Table
+                                  Today's Time Table
                                 </h2>
                             </div>
                             <div class="col-6 text-end">
-                                <a href="#" class="btn btn-outline-primary float-end">View All</a>
+                                <a href="{{ route('calendar.index') }}" class="btn btn-outline-primary float-end">View All</a>
                             </div>
                         </div>
 
                         <div class="line w-100 my-4"></div>
 
                         <div class="content-text">
+                            @if($todayTimetable && $todayTimetable->isNotEmpty())
                             <div class="table-responsive">
                                 <table class="table text-nowrap">
                                     <thead class="bg-danger text-white">
                                         <tr>
                                             <th>S.No.</th>
+                                            <th>Session Time</th>
                                             <th>Topic</th>
                                             <th>Faculty Name</th>
-                                            <th>Session Time</th>
                                             <th>Session Date</th>
                                             <th>Session Venue</th>
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        @foreach($todayTimetable as $entry)
                                         <tr>
-                                            <td>1</td>
-                                            <td>Introduction to Public Administration</td>
-                                            <td>Dr. A. Sharma</td>
-                                            <td>10:00 AM - 11:30 AM</td>
-                                            <td>2024-06-15</td>
-                                            <td>Lecture Hall 1</td>
+                                            <td>{{ $entry['sno'] }}</td>
+                                            <td>{{ $entry['session_time'] }}</td>
+                                            <td>{{ $entry['topic'] }}</td>
+                                            <td>{{ $entry['faculty_name'] }}</td>
+                                            <td>{{ $entry['session_date'] }}</td>
+                                            <td>{{ $entry['session_venue'] }}</td>
                                         </tr>
+                                        @endforeach
                                     </tbody>
                                 </table>
                             </div>
+                            @else
+                            <div class="alert alert-info">
+                                <p class="mb-0">No timetable entries found for today.</p>
+                            </div>
+                            @endif
                         </div>
                     </section>
+                    @endif
                 </div>
             </div>
         </div>
