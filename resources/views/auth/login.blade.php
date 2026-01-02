@@ -1153,6 +1153,13 @@
                                 class="img-fluid" style="width: 550px;">
                             <h2 id="login-form-start" tabindex="-1">Welcome Back</h2>
                             <p>Sign in to your account for application and status services.</p>
+                            @if(isset($error) && $error->any())
+<ul>
+    @foreach($error->all() as $error)
+    <li>{{ $error }}</li>
+    @endforeach
+</ul>
+@endif
                             <form action="{{route('post_login')}}" method="POST" novalidate>
                                 @csrf
 
