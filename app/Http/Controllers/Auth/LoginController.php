@@ -72,17 +72,18 @@ class LoginController extends Controller
 {
    
     $this->validateLogin($request);
-
+    
     $username = $request->input('username');
     $password = $request->input('password');
     $serverHost = request()->getHost(); // gets hostname like localhost or domain.com
-
+    $user = User::where('user_name', $username)->first();
+  //  dd($user->user_category);
     try {
 
             if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local','98.70.99.215'])) {
             // 👨‍💻 Localhost: Normal DB-based login
             $user = User::where('user_name', $username)->first();
-
+            dd($user->user_category);
             if( $user ) {
              Auth::login($user);
              $current_date_time = date('Y-m-d H:i:s');
@@ -93,7 +94,13 @@ class LoginController extends Controller
                 if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
                     }else{
-                    $roles = $user->roles()->pluck('user_role_name')->toArray();
+                  //  $roles = $user->roles()->pluck('user_role_name')->toArray();
+                    $roles = $user->roles()
+              ->where('pk', $user->pk)
+              ->pluck('pk')
+              ->toArray();
+              dd($roles);
+                    
                     }
                     Session::put('user_roles', $roles);
 
