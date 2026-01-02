@@ -63,7 +63,7 @@
 
                     <div class="mt-4 pt-3 border-top">
                         <div class="d-flex gap-2">
-                            @if(hasRole('Training-Induction') || hasRole('Admin'))
+                            @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP'))
                             <button type="button" class="btn btn-sm btn-outline-primary" id="editEventBtn">
                                 <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
                             </button>
