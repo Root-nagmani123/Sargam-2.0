@@ -68,6 +68,13 @@
                                         <span class="hide-menu">Course Group Mapping</span>
                                     </a></li>
                             </ul>
+                             
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('mdo-escrot-exemption.index') }}">
+                                        <span class="hide-menu">MDO Escort Exemption</span>
+                                    </a></li>
+                          
+                             @if(! hasRole('Training-MCTP'))
                             <li class="sidebar-item" style="background: #4077ad;
                             border-radius: 30px 0px 0px 30px;
                             width: 100%;
@@ -81,15 +88,18 @@
                                         style="font-size: 24px;">keyboard_arrow_down</i>
                                 </a>
                             </li>
+                            
                             <ul class="collapse list-unstyled ps-3" id="exemptionmasterCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('student.medical.exemption.index') }}">
                                         <span class="hide-menu">Student Medical Exemption (Doctor)</span>
                                     </a></li>
+                                @if(hasRole('Training-MCTP'))
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('mdo-escrot-exemption.index') }}">
                                         <span class="hide-menu">MDO Escort Exemption</span>
                                     </a></li>
+                                @endif
                                 <li class="sidebar-item">
                                     <a class="sidebar-link d-flex justify-content-between align-items-center"
                                         data-bs-toggle="collapse" href="#exemptionCollapse" role="button"
@@ -150,6 +160,7 @@
                                 <span class="hide-menu">Memo & Notice Chat (User).</span>
                                 </a></li> --}}
                             </ul>
+                            @endif
                             <li class="sidebar-item" style="background: #4077ad;
     border-radius: 30px 0px 0px 30px;
     width: 100%;
