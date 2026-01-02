@@ -289,6 +289,9 @@ class FeedbackController extends Controller
 
     public function showFacultyAverage(Request $request)
     {
+            $data_course_id =  get_Role_by_course();
+
+
         // Get filter parameters with defaults
         $programName = $request->input('program_name');
         $facultyName = $request->input('faculty_name');
@@ -298,14 +301,19 @@ class FeedbackController extends Controller
 
         // 1. Get programs from course_master table
         $programs = DB::table('course_master')
-            ->select('course_name')
-            ->distinct()
-            ->orderBy('course_name')
-            ->pluck('course_name', 'course_name');
+    ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
+        $query->whereIn('pk', $data_course_id);
+    })
+    ->distinct()
+    ->orderBy('course_name')
+    ->pluck('course_name', 'course_name');
 
-        if ($programs->isEmpty()) {
-            $programs = collect(['Phase-I 2024' => 'Phase-I 2024']);
-        }
+if ($programs->isEmpty()) {
+    $programs = collect([
+        'Phase-I 2024' => 'Phase-I 2024'
+    ]);
+}
+
 
         // 2. Get faculties from faculty_master
         $faculties = DB::table('faculty_master')
