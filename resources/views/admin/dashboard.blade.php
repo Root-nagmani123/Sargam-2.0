@@ -602,7 +602,7 @@ table>thead {
                 </div>
             </a>
         </div>
-                <div class="col-lg-3 col-md-6 col-sm-12">
+        <div class="col-lg-3 col-md-6 col-sm-12">
             <a href="{{ route('admin.dashboard.upcoming_events') }}">
                 <div class="stat-card clean-style">
                     <div class="stat-icon icon-green">
@@ -796,6 +796,49 @@ table>thead {
                                     access
                                     to various administrative functions.</li>
                             </ul>
+                        </div>
+                    </section>
+
+                    <!-- Quick Links -->
+                    <section aria-labelledby="quick-links-title" style="overflow-y:auto; max-height:250px;">
+                        <div class="row">
+                            <div class="col-6">
+                                <h2 id="quick-links-title">
+                                    Time Table
+                                </h2>
+                            </div>
+                            <div class="col-6 text-end">
+                                <a href="#" class="btn btn-outline-primary float-end">View All</a>
+                            </div>
+                        </div>
+
+                        <div class="line w-100 my-4"></div>
+
+                        <div class="content-text">
+                            <div class="table-responsive">
+                                <table class="table text-nowrap">
+                                    <thead class="bg-danger text-white">
+                                        <tr>
+                                            <th>S.No.</th>
+                                            <th>Topic</th>
+                                            <th>Faculty Name</th>
+                                            <th>Session Time</th>
+                                            <th>Session Date</th>
+                                            <th>Session Venue</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>1</td>
+                                            <td>Introduction to Public Administration</td>
+                                            <td>Dr. A. Sharma</td>
+                                            <td>10:00 AM - 11:30 AM</td>
+                                            <td>2024-06-15</td>
+                                            <td>Lecture Hall 1</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </section>
                 </div>
