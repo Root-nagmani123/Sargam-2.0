@@ -42,7 +42,12 @@ class CalendarController extends Controller
                 if ($username && $username !== false) {
                     // Find user
                     $user = User::where('user_name', trim($username))->first();
-
+                     $current_date_time = date('Y-m-d H:i:s');
+                DB::table('user_credentials')
+                    ->where('pk', $user->pk)
+                    ->update(['last_login' => $current_date_time]);
+                $roles = ['Student-OT'];
+                Session::put('user_roles', $roles);
                     if ($user) {
                         Auth::login($user);
                         session()->flash('success', 'Welcome back!');
