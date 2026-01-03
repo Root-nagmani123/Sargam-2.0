@@ -32,7 +32,7 @@ class GroupMappingController extends Controller
     {   
         //$value = session::get('user_roles');
          $sessionData = session()->all();
-    dd($sessionData);
+   // dd($sessionData);
   
         $courses = CourseMaster::where('active_inactive', '1')
             ->where('end_date', '>', now())
