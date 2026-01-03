@@ -408,6 +408,7 @@
     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
+    <script src="{{ asset('js/mobile-sidebar.js') }}"></script>
     @stack('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {

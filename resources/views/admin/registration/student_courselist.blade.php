@@ -222,7 +222,7 @@
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered text-nowrap align-middle" id="studentsTable">
+                    <table class="table" id="studentsTable">
                         <thead style="background:#af2910; color:#fff;">
                             <tr>
                                 <th>S.No</th>
