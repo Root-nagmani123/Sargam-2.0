@@ -67,6 +67,7 @@
     <!-- Main Content Area -->
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
+         @if(hasRole('Admin'))
         <section class="calendar-controls mb-4" aria-label="Calendar view controls">
             <div
                 class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
@@ -117,6 +118,7 @@
                 @endif
             </div>
         </section>
+        @endif
 
         <!-- Calendar Container -->
         <section class="calendar-container" aria-label="Academic calendar">
