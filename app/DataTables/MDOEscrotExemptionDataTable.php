@@ -22,6 +22,7 @@ class MDOEscrotExemptionDataTable extends DataTable
             ->editColumn('Time_to', fn($row) => $row->Time_to ?? 'N/A')
             ->editColumn('course_name', fn($row) => optional($row->courseMaster)->course_name ?? 'N/A')
             ->editColumn('mdo_name', fn($row) => optional($row->mdoDutyTypeMaster)->mdo_duty_type_name ?? 'N/A')
+            ->editColumn('faculty_name', fn($row) => optional($row->facultyMaster)->full_name ?? 'N/A')
             ->editColumn('Remark', fn($row) => $row->Remark ?? 'N/A')
             ->filterColumn('student_name', function ($query, $keyword) {
                 $query->whereHas('studentMaster', function ($q) use ($keyword) {
@@ -43,6 +44,11 @@ class MDOEscrotExemptionDataTable extends DataTable
                     $q->where('mdo_duty_type_name', 'like', "%{$keyword}%");
                 });
             })
+            ->filterColumn('faculty_name', function ($query, $keyword) {
+                $query->whereHas('facultyMaster', function ($q) use ($keyword) {
+                    $q->where('full_name', 'like', "%{$keyword}%");
+                });
+            })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
 
@@ -57,6 +63,9 @@ class MDOEscrotExemptionDataTable extends DataTable
                         })
                         ->orWhereHas('mdoDutyTypeMaster', function ($mdoQuery) use ($searchValue) {
                             $mdoQuery->where('mdo_duty_type_name', 'like', "%{$searchValue}%");
+                        })
+                        ->orWhereHas('facultyMaster', function ($facultyQuery) use ($searchValue) {
+                            $facultyQuery->where('full_name', 'like', "%{$searchValue}%");
                         })
                         ->orWhere('Remark', 'like', "%{$searchValue}%");
                     });
@@ -95,7 +104,7 @@ class MDOEscrotExemptionDataTable extends DataTable
 </div>
 HTML;
             })
-            ->rawColumns(['student_name', 'ot_code', 'course_name', 'mdo_name', 'actions']);
+            ->rawColumns(['student_name', 'ot_code', 'course_name', 'mdo_name', 'faculty_name', 'actions']);
     }
 
     public function query(): QueryBuilder
@@ -103,7 +112,8 @@ HTML;
         $query = MDOEscotDutyMap::with([
             'courseMaster' => fn($q) => $q->select('pk', 'course_name', 'end_date'),
             'mdoDutyTypeMaster' => fn($q) => $q->select('pk', 'mdo_duty_type_name'),
-            'studentMaster' => fn($q) => $q->select('pk', 'display_name', 'generated_OT_code')
+            'studentMaster' => fn($q) => $q->select('pk', 'display_name', 'generated_OT_code'),
+            'facultyMaster' => fn($q) => $q->select('pk', 'full_name')
         ])->orderBy('created_date', 'desc')->newQuery();
 
         // Filter by course status (Active/Archive)
@@ -203,6 +213,7 @@ public function html(): HtmlBuilder
             Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(false),
             Column::make('mdo_name')->title('Duty type')->addClass('text-center')->searchable(true)->orderable(false),
+            Column::make('faculty_name')->title('Faculty Name')->addClass('text-center')->searchable(true)->orderable(false),
             Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(true)->orderable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
         ];
