@@ -19,72 +19,22 @@ class CalendarController extends Controller
 {
     public function index(Request $request)
     {
-        //print_r(Auth::user()->roles()->pluck('user_role_name')->toArray());die;
-        //Array ( [0] => Training )
+        \Log::info('CalendarController index: User authenticated via middleware', [
+            'user' => auth()->user()->user_name,
+            'user_id' => auth()->id(),
+            'session_id' => session()->getId()
+        ]);
 
-        // print_r(auth()->user());die;
-
-        // Moodle code start here 
-        try{
-        if ($request->has('token') && !auth()->check()) {
-            $key = config('services.moodle.key', '1234567890abcdef');
-            $iv = config('services.moodle.iv', 'abcdef1234567890');
-
-            // URL decode the token
-            $decodedToken = urldecode($request->token);
-            $base64Decoded = base64_decode($decodedToken);
-            if ($base64Decoded !== false) {
-                // Decrypt
-                $username = openssl_decrypt(
-                    $base64Decoded,
-                    'AES-128-CBC',
-                    $key,
-                    0,
-                    $iv
-                );
-                if ($username && $username !== false) {
-                    // Find user
-                    $user = User::where('user_name', trim($username))->first();
-                $roles = ['Student-OT'];
-                Session::put('user_roles', $roles);
-                    if ($user) {
-                        Auth::login($user);
-                        session()->flash('success', 'Welcome back!');
-                    } else {
-                        \Log::error('User not found in database', ['username' => $username]);
-                        return redirect()->route('login')->with('error', 'User account not found');
-                    }
-                } else {
-                    \Log::error('Token decryption failed');
-                    return redirect()->route('login')->with('error', 'Invalid authentication token');
-                }
-            } else {
-                \Log::error('Base64 decode failed');
-                return redirect()->route('login')->with('error', 'Invalid token format');
-            }
-        }
-        if (!auth()->check()) {
-            \Log::warning('User not authenticated, redirecting to login');
-
-            // Store intended URL
-            session(['url.intended' => $request->fullUrl()]);
-
-            return redirect()->route('login')->with('error', 'Please login to access the timetable');
-        }
-    } catch (\Exception $e) {
-        \Log::error('Moodle SSO authentication error: ' . $e->getMessage());
-    }
-        // Moodle code end here
-        $data_course_id =  get_Role_by_course();
-
+        $data_course_id = get_Role_by_course();
 
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->where('end_date', '>', now());
+
         if (!empty($data_course_id)) {
             $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
         }
-        if (hasRole('Student-OT')) {
 
+        if (hasRole('Student-OT')) {
             $courseMaster = $courseMaster->join(
                 'student_master_course__map',
                 'student_master_course__map.course_master_pk',
@@ -93,6 +43,7 @@ class CalendarController extends Controller
             )
                 ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
         }
+
         $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
 
@@ -100,8 +51,9 @@ class CalendarController extends Controller
             ->select('pk', 'faculty_type', 'full_name')
             ->orderby('full_name', 'ASC')
             ->get();
+
         $internal_faculty = FacultyMaster::where('active_inactive', 1)
-            ->where('faculty_type', 1) // Internal Faculty
+            ->where('faculty_type', 1)
             ->select('pk', 'faculty_type', 'full_name')
             ->orderby('full_name', 'ASC')
             ->get();
@@ -109,7 +61,6 @@ class CalendarController extends Controller
         $subjects = SubjectModuleMaster::where('active_inactive', 1)
             ->select('pk', 'module_name')
             ->get();
-        // print_r($subjects);die;
 
         $venueMaster = VenueMaster::where('active_inactive', 1)
             ->select('venue_id', 'venue_name')
@@ -119,8 +70,11 @@ class CalendarController extends Controller
         $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
             ->select('pk', 'shift_name', 'shift_time', 'start_time', 'end_time')
             ->get();
-        // print_r($classSessionMaster);die;
 
+        \Log::info('Calendar data loaded successfully', [
+            'courses_count' => $courseMaster->count(),
+            'user' => auth()->user()->user_name
+        ]);
 
         return view('admin.calendar.index', compact(
             'courseMaster',

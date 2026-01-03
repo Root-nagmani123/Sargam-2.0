@@ -14,13 +14,20 @@ class DashboardController extends Controller
 {
 function active_course(Request $request)
 {
-   $active_courses = DB::table('course_master')->where('active_inactive', 1)->where('end_date', '>', now())->get();
+   $active_courses = DB::table('course_master')
+        ->where('active_inactive', 1)
+        ->where('start_year', '<', now())
+        ->where('end_date', '>=', now())
+        ->get();
     return view('admin.dashboard.active_course', compact('active_courses'));
     
 }
 function incoming_course(Request $request)
 {
-   $incoming_courses = DB::table('course_master')->where('active_inactive', 1)->where('start_year', '>=', now())->get();
+   $incoming_courses = DB::table('course_master')
+        ->where('active_inactive', 1)
+        ->where('start_year', '>', now())
+        ->get();
     return view('admin.dashboard.incoming_course', compact('incoming_courses'));
 
 }
