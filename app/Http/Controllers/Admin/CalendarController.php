@@ -35,7 +35,7 @@ class CalendarController extends Controller
         }
 
         if (hasRole('Student-OT')) {
-            $courseMaster = $courseMaster->join(
+            $courseMaster = $courseMaster->leftJoin(
                 'student_master_course__map',
                 'student_master_course__map.course_master_pk',
                 '=',
@@ -46,6 +46,7 @@ class CalendarController extends Controller
 
         $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
+            // print_r($courseMaster);die;
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
             ->select('pk', 'faculty_type', 'full_name')
