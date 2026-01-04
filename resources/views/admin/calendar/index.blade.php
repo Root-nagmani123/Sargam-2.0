@@ -67,7 +67,7 @@
     <!-- Main Content Area -->
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
-         @if(hasRole('Admin'))
+         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
         <section class="calendar-controls mb-4" aria-label="Calendar view controls">
             <div
                 class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
@@ -1924,7 +1924,7 @@ class CalendarManager {
         this.selectedCourseId = courseFilter && courseFilter.value ? courseFilter.value : null;
         
         // Update course header with initial selection
-        this.updateCourseHeader();
+        // this.updateCourseHeader();
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
