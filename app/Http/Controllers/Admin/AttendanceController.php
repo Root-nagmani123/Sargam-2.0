@@ -383,8 +383,8 @@ $currentPath = $segments[1] ?? null;
             // Get course information
             $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
 
-            // Get filter parameters
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : null;
+            // Get filter parameters - Default to today's date if not provided
+            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : Carbon::today()->format('Y-m-d');
             $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
@@ -428,11 +428,17 @@ $currentPath = $segments[1] ?? null;
         }
 
         private function getOTAttendanceData(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk) {
-            // Get filter parameters from request
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : null;
+            // Get filter parameters from request - Default to today's date if not provided
+            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : Carbon::today()->format('Y-m-d');
             $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
             $archiveMode = $request->input('archive_mode', 'active');
+            
+            // Check if we should filter by time (only for today's date, before current time)
+            $filterByTime = false;
+            if ($filterDate === Carbon::today()->format('Y-m-d')) {
+                $filterByTime = true;
+            }
 
             // Query all course group timetable mappings for this student's course and group
             $query = CourseGroupTimetableMapping::with([
@@ -504,6 +510,27 @@ $currentPath = $segments[1] ?? null;
       foreach ($courseGroups as $courseGroup) {
                 $timetableDate = optional($courseGroup->timetable)->START_DATE;
                 $timetablePk = $courseGroup->timetable_pk;
+
+                // Filter by time: Skip sessions that haven't ended yet (only when filtering today's date by default)
+                if ($filterByTime && $timetableDate && Carbon::parse($timetableDate)->format('Y-m-d') === Carbon::today()->format('Y-m-d')) {
+                    // Check if session has ended
+                    $sessionEnded = false;
+                    if ($courseGroup->timetable && $courseGroup->timetable->classSession && $courseGroup->timetable->classSession->end_time) {
+                        $endTime = $courseGroup->timetable->classSession->end_time;
+                        $currentTime = Carbon::now()->format('H:i:s');
+                        if ($endTime < $currentTime) {
+                            $sessionEnded = true;
+                        }
+                    } else {
+                        // For manual sessions or sessions without end_time, include them (can't determine end time)
+                        $sessionEnded = true;
+                    }
+                    
+                    // Skip this record if session hasn't ended
+                    if (!$sessionEnded) {
+                        continue;
+                    }
+                }
 
                 // Use the course and group from the filtered courseGroup (or fallback to original)
                 $currentCoursePk = $courseGroup->Programme_pk ?? $course_pk;
