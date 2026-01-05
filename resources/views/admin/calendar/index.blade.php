@@ -7,6 +7,7 @@
 <style>
         :root {
         --primary: #004a93;
+        --primary-color: #004a93;
         --primary-dark: #003366;
         --accent: #eef5ff;
         --bg-light: #f4f6f9;
@@ -272,129 +273,260 @@
 }
 
 .fc-event-card {
-    padding: 0.625rem 0.75rem;
-    border-radius: 0.5rem;
-    margin: 0.2rem 0;
-    transition: transform 0.2s, box-shadow 0.2s, background-color 0.2s;
-    border-left: 4px solid var(--primary-color);
-    background: #fff !important;
-    box-shadow: var(--shadow-sm);
+    padding: 1rem 1.1rem;
+    border-radius: 0.875rem;
+    margin: 0.4rem 0;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 6px solid var(--primary-color);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.06);
     white-space: normal;
     word-break: break-word;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    position: relative;
+    cursor: pointer;
+    border-top-right-radius: 0.875rem;
+    border-bottom-right-radius: 0.875rem;
+    min-height: fit-content;
+}
+
+.fc-event-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, rgba(78, 115, 223, 0.5) 70%, transparent 100%);
+    border-radius: 0.875rem 0.875rem 0 0;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+}
+
+.fc-event-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 40px;
+    height: 40px;
+    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.08) 0%, transparent 70%);
+    border-radius: 0 0.875rem 0 0;
+    pointer-events: none;
 }
 
 .fc-event-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
-    background-color: rgba(0, 0, 0, 0.01);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 10px 32px rgba(0, 74, 147, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
+    background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%) !important;
+    border-left-width: 7px;
+}
+
+.fc-event-card:hover::before {
+    opacity: 1;
+}
+
+.fc-event-card:hover::after {
+    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.15) 0%, transparent 70%);
 }
 
 /* Event card content improvements */
 .fc-event-card .event-title {
     font-weight: 700;
-    font-size: 0.95rem;
-    line-height: 1.35;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    margin-bottom: 0.6rem;
+    color: #1f2937;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: visible;
+    word-wrap: break-word;
+    letter-spacing: -0.015em;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+    min-height: fit-content;
 }
 
 .fc-event-card .event-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 0.75rem;
-    margin-top: 0.25rem;
+    gap: 0.65rem 1.1rem;
+    margin-top: 0.65rem;
+    padding-top: 0.65rem;
+    border-top: 1.5px solid rgba(78, 115, 223, 0.12);
+    min-height: fit-content;
 }
 
 .fc-event-card .meta-item {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    font-size: 0.82rem;
-    color: var(--text-muted);
+    gap: 0.45rem;
+    font-size: 0.875rem;
+    color: #4b5563;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    padding: 0.25rem 0.5rem;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.fc-event-card .meta-item i {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.fc-event-card .meta-item--time i {
+    color: #4e73df;
+}
+
+.fc-event-card .meta-item--venue i {
+    color: #1cc88a;
+}
+
+.fc-event-card .meta-item--faculty i {
+    color: #f6c23e;
+}
+
+.fc-event-card:hover .meta-item {
+    color: #1f2937;
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px);
+}
+
+.fc-event-card:hover .meta-item i {
+    opacity: 1;
 }
 
 /* Dense mode for days with many events */
 .fc-daygrid-day.dense-day .fc-event-card {
-    padding: 0.25rem 0.375rem;
-    border-radius: 0.25rem;
-    box-shadow: none;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.625rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.09);
+    margin: 0.25rem 0;
+    min-height: fit-content;
 }
 
 .fc-daygrid-day.dense-day .fc-event-card .event-title {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     font-weight: 700;
+    -webkit-line-clamp: 2;
+    line-height: 1.4;
+    margin-bottom: 0.4rem;
 }
 
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item { display: none; }
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--time { display: inline-flex; }
+.fc-daygrid-day.dense-day .fc-event-card .event-meta { 
+    margin-top: 0.35rem;
+    padding-top: 0.35rem;
+    gap: 0.4rem 0.6rem;
+}
 
-/* show only title to keep compact */
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item { 
+    font-size: 0.75rem;
+    padding: 0.2rem 0.4rem;
+}
+
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--time { 
+    display: inline-flex;
+}
+
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--venue { 
+    display: inline-flex;
+}
+
+.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--faculty { 
+    display: none;
+}
+
+.fc-daygrid-day.dense-day .fc-event-card .event-badge {
+    font-size: 0.65rem;
+    padding: 0.2rem 0.5rem;
+}
 
 /* Popover styling for "+ more" */
 .fc-popover {
-    border-radius: 12px !important;
-    box-shadow: var(--shadow) !important;
-    border: 1px solid var(--border-color) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.12) !important;
+    border: 2px solid #4e73df !important;
     overflow: hidden;
-    max-height: 500px;
+    max-height: 650px;
     display: flex;
     flex-direction: column;
+    backdrop-filter: blur(12px);
 }
 
 .fc-popover .fc-popover-title {
-    background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
-    font-weight: 600;
+    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
+    color: white;
+    font-weight: 700;
     flex-shrink: 0;
     position: sticky;
     top: 0;
     z-index: 10;
+    padding: 1.1rem 1.4rem;
+    font-size: 1rem;
+    letter-spacing: 0.4px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
+    text-transform: uppercase;
 }
 
 /* Make popover body scrollable for many events */
 .fc-popover .fc-popover-body {
-    max-height: 300px;
+    max-height: 450px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 0.5rem;
+    padding: 1rem;
     scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) rgba(0, 74, 147, 0.05);
+    scrollbar-color: #4e73df #f3f4f6;
+    background: linear-gradient(to bottom, #ffffff 0%, #f8fbff 100%);
 }
 
 /* Custom scrollbar for popover body */
 .fc-popover .fc-popover-body::-webkit-scrollbar {
-    width: 8px;
+    width: 12px;
 }
 
 .fc-popover .fc-popover-body::-webkit-scrollbar-track {
-    background: rgba(0, 74, 147, 0.05);
-    border-radius: 4px;
+    background: #f3f4f6;
+    border-radius: 12px;
+    margin: 0.5rem 0;
 }
 
 .fc-popover .fc-popover-body::-webkit-scrollbar-thumb {
-    background: var(--primary-color);
-    border-radius: 4px;
+    background: linear-gradient(180deg, #4e73df 0%, #3a5bc7 100%);
+    border-radius: 12px;
+    border: 3px solid #f3f4f6;
     transition: background 0.2s ease;
 }
 
 .fc-popover .fc-popover-body::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-dark);
+    background: linear-gradient(180deg, #3a5bc7 0%, #2d4aa7 100%);
+    border-width: 2px;
 }
 
 .fc-popover .fc-popover-body .fc-event-card {
-    margin: 0.25rem 0;
-    padding: 0.625rem 0.75rem;
-    border-left: 4px solid var(--primary-color);
-    background: #fff !important;
+    margin: 0.6rem 0;
+    padding: 1rem 1.1rem;
+    border-left: 6px solid var(--primary-color);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09);
+    border-radius: 0.875rem;
 }
 
 /* Ensure default popover events look like cards */
 .fc-popover .fc-popover-body .fc-event {
-    padding: 0.5rem;
-    margin: 0.25rem 0;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: var(--shadow-sm);
-    border-left: 3px solid var(--primary-color);
+    padding: 0.9rem;
+    margin: 0.6rem 0;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    border-radius: 14px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09);
+    border-left: 5px solid var(--primary-color);
+    transition: all 0.25s ease;
+}
+
+.fc-popover .fc-popover-body .fc-event:hover {
+    transform: translateX(6px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
 }
 
 /* Mobile popover adjustments */
@@ -431,30 +563,110 @@
 
 /* Event badges within cards */
 .fc-event-card .event-badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    padding: 0.125rem 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    padding: 0.3rem 0.75rem;
     border-radius: 999px;
-    background-color: #4e73df;
+    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
     color: #fff;
-    font-weight: 600;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    box-shadow: 0 2px 6px rgba(78, 115, 223, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    position: relative;
+    overflow: hidden;
+}
+
+.fc-event-card .event-badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transition: left 0.5s ease;
+}
+
+.fc-event-card:hover .event-badge {
+    transform: scale(1.08) translateY(-1px);
+    box-shadow: 0 4px 10px rgba(78, 115, 223, 0.35), 0 2px 5px rgba(0, 0, 0, 0.15);
+}
+
+.fc-event-card:hover .event-badge::before {
+    left: 100%;
 }
 
 /* Optional type-based accents */
 .fc-event-card[data-event-type="lecture"] {
     border-left-color: #4e73df;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f5ff 100%) !important;
+}
+
+.fc-event-card[data-event-type="lecture"]::after {
+    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.12) 0%, transparent 70%);
 }
 
 .fc-event-card[data-event-type="exam"] {
     border-left-color: #e74a3b;
+    background: linear-gradient(135deg, #ffffff 0%, #fff6f5 100%) !important;
+}
+
+.fc-event-card[data-event-type="exam"]::after {
+    background: radial-gradient(circle at top right, rgba(231, 74, 59, 0.12) 0%, transparent 70%);
 }
 
 .fc-event-card[data-event-type="meeting"] {
     border-left-color: #1cc88a;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf8 100%) !important;
+}
+
+.fc-event-card[data-event-type="meeting"]::after {
+    background: radial-gradient(circle at top right, rgba(28, 200, 138, 0.12) 0%, transparent 70%);
 }
 
 .fc-event-card[data-event-type="workshop"] {
     border-left-color: #f6c23e;
+    background: linear-gradient(135deg, #ffffff 0%, #fffcf2 100%) !important;
+}
+
+.fc-event-card[data-event-type="workshop"]::after {
+    background: radial-gradient(circle at top right, rgba(246, 194, 62, 0.12) 0%, transparent 70%);
+}
+
+.fc-event-card[data-event-type="lecture"]:hover {
+    background: linear-gradient(135deg, #fafcff 0%, #e3edff 100%) !important;
+}
+
+.fc-event-card[data-event-type="lecture"]:hover::after {
+    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.2) 0%, transparent 70%);
+}
+
+.fc-event-card[data-event-type="exam"]:hover {
+    background: linear-gradient(135deg, #fffafa 0%, #ffe8e8 100%) !important;
+}
+
+.fc-event-card[data-event-type="exam"]:hover::after {
+    background: radial-gradient(circle at top right, rgba(231, 74, 59, 0.2) 0%, transparent 70%);
+}
+
+.fc-event-card[data-event-type="meeting"]:hover {
+    background: linear-gradient(135deg, #fafffe 0%, #e0f9ef 100%) !important;
+}
+
+.fc-event-card[data-event-type="meeting"]:hover::after {
+    background: radial-gradient(circle at top right, rgba(28, 200, 138, 0.2) 0%, transparent 70%);
+}
+
+.fc-event-card[data-event-type="workshop"]:hover {
+    background: linear-gradient(135deg, #fffef9 0%, #fff2d0 100%) !important;
+}
+
+.fc-event-card[data-event-type="workshop"]:hover::after {
+    background: radial-gradient(circle at top right, rgba(246, 194, 62, 0.2) 0%, transparent 70%);
 }
 
 /* Improved stacking for multiple events in same day */
@@ -622,26 +834,64 @@
 
 /* List Event Cards */
 .list-event-card {
-    background: #ffffff;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    transition: var(--transition);
-    border-left: 4px solid var(--primary-color) !important;
-    box-shadow: var(--shadow-sm);
+    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    border: 1.5px solid #e5e7eb;
+    border-radius: 16px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 6px solid var(--primary-color) !important;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.06);
     position: relative;
     cursor: pointer;
+    overflow: visible;
+    min-height: fit-content;
+    padding: 1rem 1.25rem;
+}
+
+.list-event-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color) 0%, rgba(78, 115, 223, 0.5) 70%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    border-radius: 16px 16px 0 0;
+}
+
+.list-event-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 50px;
+    height: 50px;
+    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.08) 0%, transparent 70%);
+    border-radius: 0 16px 0 0;
+    pointer-events: none;
 }
 
 .list-event-card:hover {
-    transform: translateX(4px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateX(8px) translateY(-3px);
+    box-shadow: 0 10px 32px rgba(0, 74, 147, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
     z-index: 10;
+    background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
+    border-left-width: 7px;
+}
+
+.list-event-card:hover::before {
+    opacity: 1;
+}
+
+.list-event-card:hover::after {
+    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.15) 0%, transparent 70%);
 }
 
 .list-event-card:focus-visible {
     outline: 3px solid var(--primary-color);
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.2);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 6px rgba(0, 74, 147, 0.15);
 }
 
 /* Hover tooltip for full details */
@@ -649,19 +899,20 @@
     position: absolute;
     top: 100%;
     left: 0;
-    min-width: 280px;
+    min-width: 320px;
     background: white;
-    border: 2px solid var(--primary-color);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-    padding: 1rem;
-    margin-top: 0.5rem;
+    border: 2px solid #4e73df;
+    border-radius: 14px;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.1);
+    padding: 1.25rem;
+    margin-top: 0.75rem;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.3s ease;
+    transform: translateY(-15px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
     pointer-events: none;
+    backdrop-filter: blur(10px);
 }
 
 .list-event-card:hover .event-tooltip {
@@ -680,58 +931,93 @@
 
 .event-tooltip .tooltip-title {
     font-weight: 700;
-    font-size: 1rem;
-    color: var(--primary-color);
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid #4e73df;
+    font-size: 1.1rem;
+    color: #1f2937;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid #4e73df;
+    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .event-tooltip .tooltip-row {
     display: flex;
     align-items: flex-start;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-    font-size: 0.875rem;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
 }
 
 .event-tooltip .tooltip-row i {
-    color: var(--primary-color);
-    margin-top: 0.1rem;
+    color: #4e73df;
+    margin-top: 0.15rem;
     flex-shrink: 0;
+    font-size: 1.1rem;
 }
 
 .event-tooltip .tooltip-label {
     font-weight: 600;
-    color: var(--text-dark);
-    min-width: 60px;
+    color: #374151;
+    min-width: 70px;
 }
 
 .event-tooltip .tooltip-value {
-    color: var(--text-muted);
+    color: #6b7280;
     flex: 1;
+    line-height: 1.5;
 }
 
 .list-event-card .group-badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.15rem 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.3rem 0.75rem;
     border-radius: 999px;
-    color: var(--primary-color);
-    background: #4e73df;
-    margin-bottom: 0.35rem;
+    color: white;
+    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
+    margin-bottom: 0.5rem;
+    box-shadow: 0 2px 6px rgba(78, 115, 223, 0.25);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    white-space: nowrap;
 }
 
 .list-event-card .title {
     font-weight: 700;
-    font-size: 1rem;
-    line-height: 1.4;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: #1f2937;
+    margin-bottom: 0.65rem;
+    word-wrap: break-word;
+    overflow: visible;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .list-event-card .meta {
-    color: var(--text-muted);
-    font-size: 0.85rem;
+    color: #4b5563;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 500;
+    margin-top: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    width: fit-content;
+}
+
+.list-event-card .meta i {
+    color: #4e73df;
+    font-size: 1rem;
+}
+
+.list-event-card:hover .meta {
+    background: rgba(255, 255, 255, 0.95);
+    color: #1f2937;
 }
 
 /* Group-specific backgrounds */
@@ -1678,34 +1964,57 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 
     .fc-event-card {
-        padding: 0.4rem 0.5rem !important;
-        border-radius: 0.35rem;
-        margin: 0.2rem 0 !important;
-        font-size: 0.75rem;
-        background: #fff !important;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        padding: 0.65rem 0.75rem !important;
+        border-radius: 0.625rem;
+        margin: 0.3rem 0 !important;
+        font-size: 0.8rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+        overflow: visible;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.09);
+        min-height: fit-content;
     }
 
     .fc-event-card .event-title {
-        font-size: 0.8rem !important;
-        line-height: 1.2 !important;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+        overflow: visible;
+        -webkit-line-clamp: 3;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        margin-bottom: 0.45rem !important;
+        word-break: break-word;
     }
 
     .fc-event-card .event-meta {
-        gap: 0.25rem !important;
-        margin-top: 0.1rem;
+        gap: 0.4rem 0.6rem !important;
+        margin-top: 0.35rem;
+        padding-top: 0.4rem;
+        flex-wrap: wrap;
+        border-top-width: 1px;
     }
 
     .fc-event-card .meta-item {
+        font-size: 0.75rem !important;
+        padding: 0.2rem 0.4rem !important;
+        gap: 0.3rem;
+    }
+    
+    .fc-event-card .meta-item--time {
+        display: inline-flex !important;
+    }
+    
+    .fc-event-card .meta-item--venue {
+        display: inline-flex !important;
+    }
+    
+    .fc-event-card .meta-item--faculty {
         display: none !important;
     }
 
     .fc-event-card .event-badge {
         font-size: 0.65rem !important;
+        padding: 0.25rem 0.5rem !important;
+        white-space: nowrap;
     }
 
     .timetable-header .row {
@@ -1757,20 +2066,36 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 
     .fc-event-card {
-        padding: 0.5rem 0.625rem;
-        background: #fff !important;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        padding: 0.75rem 0.875rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+        overflow: visible;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
+        min-height: fit-content;
     }
 
     .fc-event-card .event-title {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        overflow: visible;
+        -webkit-line-clamp: 3;
+        display: -webkit-box;
+        -webkit-box-orient: vertical;
+        font-size: 0.98rem;
+        line-height: 1.45;
+        word-break: break-word;
     }
 
     .fc-event-card .event-meta {
         flex-wrap: wrap;
+        gap: 0.5rem 0.8rem;
+    }
+    
+    .fc-event-card .meta-item {
+        font-size: 0.82rem;
+        padding: 0.25rem 0.45rem;
+    }
+    
+    .fc-event-card .meta-item--time,
+    .fc-event-card .meta-item--venue {
+        display: inline-flex !important;
     }
 
     .timetable-grid th,
@@ -1816,17 +2141,29 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     }
 
     .fc-event-card {
-        padding: 0.625rem 0.75rem;
-        background: #fff !important;
+        padding: 1rem 1.1rem;
+        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+        min-height: fit-content;
     }
 
     .fc-event-card .event-title {
         white-space: normal;
+        font-size: 1.05rem;
+        overflow: visible;
+        word-break: break-word;
+        -webkit-line-clamp: 3;
+        line-height: 1.5;
     }
 
     .fc-event-card .event-meta {
         display: flex;
         flex-wrap: wrap;
+        gap: 0.65rem 1.1rem;
+    }
+    
+    .fc-event-card .meta-item {
+        font-size: 0.875rem;
+        display: inline-flex !important;
     }
 
     .timetable-grid th,
@@ -1890,8 +2227,9 @@ const CalendarConfig = {
         training: '#20c997'
     },
     minDate: new Date().toISOString().split('T')[0],
-    minTime: '09:00',
-    maxTime: '18:00'
+    // Expand visible timetable window to cover typical sessions
+    minTime: '08:00',
+    maxTime: '20:00'
 };
 
 // Calendar Manager Class
@@ -1903,6 +2241,7 @@ class CalendarManager {
         this.listViewWeekOffset = 0; // Track week offset for list view
         this.selectedCourseId = null;
         this.courses = @json($courseMaster);
+        this.eventsLoaded = false; // Track if events have been loaded initially
         this.init();
     }
 
@@ -1928,6 +2267,7 @@ class CalendarManager {
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
+            hiddenDays: [0, 6], // Initially hide Sunday (0) and Saturday (6)
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -1939,6 +2279,7 @@ class CalendarManager {
                 week: 'Week',
                 day: 'Day'
             },
+            allDaySlot: true,
             slotMinTime: CalendarConfig.minTime,
             slotMaxTime: CalendarConfig.maxTime,
             slotDuration: '00:30:00',
@@ -1973,6 +2314,12 @@ class CalendarManager {
             },
             events: (info, successCallback, failureCallback) => {
                 this.fetchEvents(info, successCallback, failureCallback);
+            },
+            loading: (isLoading) => {
+                if (!isLoading) {
+                    // Events have finished loading
+                    this.updateWeekendVisibility();
+                }
             },
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
@@ -2024,6 +2371,50 @@ class CalendarManager {
             console.error('Error fetching events:', error);
             failureCallback(error);
         });
+    }
+
+    handleWeekendVisibility(events) {
+        // Wait for calendar to be fully rendered before adjusting days
+        if (!this.calendar || !events || events.length === 0) {
+            // If no events yet, just mark as loaded and don't hide days
+            this.eventsLoaded = true;
+            return;
+        }
+        
+        // Check if any events fall on Saturday (day 6)
+        const hasSaturdayEvents = events.some(event => {
+            const eventDate = new Date(event.start);
+            return eventDate.getDay() === 6; // 6 = Saturday
+        });
+
+        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
+        const hiddenDays = hasSaturdayEvents ? [0] : [0, 6];
+        
+        // Use setTimeout to ensure calendar is fully rendered
+        setTimeout(() => {
+            this.calendar.setOption('hiddenDays', hiddenDays);
+            this.eventsLoaded = true;
+        }, 50);
+    }
+
+    updateWeekendVisibility() {
+        // Get all events currently in the calendar
+        const events = this.calendar.getEvents();
+        
+        // Check if any events fall on Saturday (day 6)
+        const hasSaturdayEvents = events.some(event => {
+            const eventDate = new Date(event.start);
+            return eventDate.getDay() === 6;
+        });
+
+        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
+        const newHiddenDays = hasSaturdayEvents ? [0] : [0, 6];
+        const currentHiddenDays = this.calendar.getOption('hiddenDays') || [];
+        
+        // Only update if changed to prevent unnecessary re-renders
+        if (JSON.stringify(newHiddenDays.sort()) !== JSON.stringify(currentHiddenDays.sort())) {
+            this.calendar.setOption('hiddenDays', newHiddenDays);
+        }
     }
 
     updateCourseHeader() {
@@ -2162,20 +2553,22 @@ class CalendarManager {
         return {
             html: `
                 <div class="fc-event-card" 
-                     style="border-left: 4px solid ${cardColor};"
+                     style="border-left-color: ${cardColor};"
                      tabindex="0"
                      role="button"
                      aria-labelledby="${titleId}"
                      aria-describedby="${descId}"
                      ${type ? `data-event-type="${typeAttr}"` : ''}>
-                    <div class="event-title mb-1" id="${titleId}" style="color: ${cardColor};">
-                        ${topic}
+                    <div class="d-flex align-items-start justify-content-between gap-2" style="margin-bottom: 0.65rem;">
+                        <div class="event-title flex-grow-1" id="${titleId}" style="color: ${cardColor}; flex: 1; min-width: 0;">
+                            ${topic}
+                        </div>
+                        ${type ? `<span class="event-badge flex-shrink-0" style="margin-left: 0.5rem;">${type}</span>` : ''}
                     </div>
-                    ${type ? `<div class="mb-1"><span class="event-badge">${type}</span></div>` : ''}
-                    <div class="event-meta">
-                        ${arg.timeText ? `<span class=\"meta-item meta-item--time\"><i class=\"bi bi-clock\" aria-hidden=\"true\"></i>${arg.timeText}</span>` : ''}
-                        ${venue ? `<span class=\"meta-item meta-item--venue\"><i class=\"bi bi-geo-alt\" aria-hidden=\"true\"></i>${venue}</span>` : ''}
-                        ${faculty ? `<span class=\"meta-item meta-item--faculty\"><i class=\"bi bi-person\" aria-hidden=\"true\"></i>${faculty}</span>` : ''}
+                    <div class="event-meta" style="width: 100%;">
+                        ${arg.timeText ? `<span class=\"meta-item meta-item--time\"><i class=\"bi bi-clock-fill\" aria-hidden=\"true\"></i><span>${arg.timeText}</span></span>` : ''}
+                        ${venue ? `<span class=\"meta-item meta-item--venue\"><i class=\"bi bi-geo-alt-fill\" aria-hidden=\"true\"></i><span>${venue}</span></span>` : ''}
+                        ${faculty ? `<span class=\"meta-item meta-item--faculty\"><i class=\"bi bi-person-fill\" aria-hidden=\"true\"></i><span>${faculty}</span></span>` : ''}
                     </div>
                     <span class="visually-hidden" id="${descId}">${type ? `${type} ` : ''}${arg.timeText ? `${arg.timeText} ` : ''}${venue ? `at ${venue} ` : ''}${faculty ? `with ${faculty}` : ''}</span>
                 </div>

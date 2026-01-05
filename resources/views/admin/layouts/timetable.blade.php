@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration</title>
+   <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://bootstrapdemos.adminmart.com/matdash/dist/assets/css/styles.css">
     <!-- Favicon icon-->
@@ -35,7 +35,7 @@
     <!-- Top Blue Bar (Govt of India) -->
 
     <!-- Sticky Header -->
-    <div class="header sticky-top bg-white shadow-sm">
+    <div class="header sticky-top bg-white shadow-sm mb-4">
         <div class="container-fluid p-1">
             <nav class="navbar navbar-expand-lg">
                  <a class="navbar-brand me-2" href="#">

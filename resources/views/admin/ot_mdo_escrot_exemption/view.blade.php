@@ -1,6 +1,6 @@
 @extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
-@section('title', 'OT MDO/Escort Exception View - Sargam | Lal Bahadur')
+@section('title', 'Session Moderator/Escort Duty - Sargam | Lal Bahadur')
 
 @section(hasRole('Student-OT') ? 'content' : 'setup_content')
 <style>
@@ -69,7 +69,7 @@
         <div class="card-body">
             <div class="row mb-3">
                 <div class="col-6">
-                    <h4>OT MDO/Escort Exception View</h4>
+                    <h4>Session Moderator/Escort Duty</h4>
                 </div>
                 <div class="col-6">
                     <div class="d-flex justify-content-end align-items-center gap-2">

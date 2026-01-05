@@ -329,6 +329,21 @@ class CalendarController extends Controller
                 $allDay = true;
             }
 
+            // For all-day events, FullCalendar expects an exclusive end date.
+            // If start and end are the same, advance end by +1 day so it renders.
+            if ($allDay) {
+                try {
+                    $startDateTime = Carbon::parse($event->START_DATE)->format('Y-m-d');
+                    $endDateTime = Carbon::parse($event->END_DATE ?: $event->START_DATE)
+                        ->addDay()
+                        ->format('Y-m-d');
+                } catch (\Exception $e) {
+                    // Fallback: ensure at least a one-day span
+                    $startDateTime = $event->START_DATE;
+                    $endDateTime = Carbon::parse($event->START_DATE)->addDay()->format('Y-m-d');
+                }
+            }
+
             return [
                 'id' => $event->pk,
                 'title' => $event->subject_topic,
@@ -338,7 +353,8 @@ class CalendarController extends Controller
                 'faculty_name'   => $event->faculty_name,
                 'backgroundColor' => $colors[array_rand($colors)],  // background color for event
                 'borderColor' => $colors[array_rand($colors)],  // border color for event
-                'textColor' => '#fff',  // Text color for event (White text on colored background)
+                // Use dark text for better contrast with light backgrounds
+                'textColor' => '#111827',
                 'allDay' => $allDay,
                 'display' => 'block',
                 // Debug info - class_session value stored in database
@@ -371,7 +387,8 @@ class CalendarController extends Controller
                     'id' => 'holiday_' . $holiday->id,
                     'title' => $holiday->holiday_name . ' (' . ucfirst($holiday->holiday_type) . ')',
                     'start' => $holiday->holiday_date->format('Y-m-d'),
-                    'end' => $holiday->holiday_date->format('Y-m-d'),
+                    // End must be exclusive for all-day events (+1 day)
+                    'end' => $holiday->holiday_date->copy()->addDay()->format('Y-m-d'),
                     'backgroundColor' => $backgroundColor,
                     'borderColor' => $backgroundColor,
                     'textColor' => $textColor,

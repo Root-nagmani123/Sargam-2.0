@@ -222,7 +222,7 @@
                                     <span class="hide-menu">My Attendance</span>
                                 </a></li>
                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('ot.mdo.escrot.exemption.view') }}">
-                                    <span class="hide-menu">MDO/Escort Duty</span>
+                                    <span class="hide-menu">Session Moderator/Escort Duty</span>
                                 </a></li>
                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.ot.view') }}">
                                     <span class="hide-menu">Medical Exemption</span>
