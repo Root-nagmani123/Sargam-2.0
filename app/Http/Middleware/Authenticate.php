@@ -6,6 +6,8 @@ use Closure;
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
+
 use App\Models\User;
 
 class Authenticate extends Middleware
@@ -75,6 +77,8 @@ class Authenticate extends Middleware
                                 'user_name' => $user->user_name
                             ]);
                             
+                              $roles = ['Student-OT'];
+                            Session::put('user_roles', $roles);
                             // Login the user
                             Auth::login($user);
                             

@@ -54,11 +54,7 @@
                             <label for="" class="form-label">Discipline</label>
                             <select name="discipline_master_pk" class="form-control" id="discipline_pk" required>
                                 <option value="">Select Discipline</option>
-                                @foreach ($disciplines as $discipline)
-                                <option value="{{ $discipline->pk }}"
-                                    {{ old('discipline_master_pk') == $discipline->pk ? 'selected' : '' }}>
-                                    {{ $discipline->discipline_name }}</option>
-                                @endforeach
+                               
                             </select>
                             @error('discipline_master_pk')
                             <span class="text-danger">{{ $message }}</span>
@@ -140,6 +136,9 @@ $('#courseSelectTogetStudent').on('change', function() {
     var courseId = $(this).val();
 
     if (courseId) {
+        $('#select_memo_student').empty().append('<option>Select...</option>');
+
+         $('#discipline_pk').empty().append('<option>Select...</option>');
         $.ajax({
             url: "{{ route('memo.discipline.getStudentByCourse') }}",
 
@@ -162,6 +161,22 @@ $('#courseSelectTogetStudent').on('change', function() {
                                     value: student.pk,
                                     text: student.display_name + ' (' + student
                                         .generated_OT_code + ')',
+                                    selected: isSelected
+                                })
+                            );
+                        });
+                    } else {
+                        // Show message if no defaulters found, but don't prevent UI update
+                        console.log('No defaulter students found for this topic.');
+                    }
+                     if (response.discipline_master_data && response.discipline_master_data.length > 0) {
+                        response.discipline_master_data.forEach(discipline => {
+                            const isSelected = currentSelected.includes(discipline.pk
+                            .toString());
+                            $('#discipline_pk').append(
+                                $('<option>', {
+                                    value: discipline.pk,
+                                    text: discipline.discipline_name,
                                     selected: isSelected
                                 })
                             );
