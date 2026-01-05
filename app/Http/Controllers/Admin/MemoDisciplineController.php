@@ -139,6 +139,8 @@ class MemoDisciplineController extends Controller
                 ->orderBy('s.display_name', 'asc')
                 ->get();
 
+              $discipline_master_data  = DB::table('discipline_master')->where('course_master_pk', $courseId)->where('active_inactive', 1)->get();
+
 
         // If no students found, return empty array instead of error
         // This allows the UI to handle empty state gracefully
@@ -162,7 +164,8 @@ class MemoDisciplineController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Student list fetched successfully.',
-            'students' => $students
+            'students' => $students,
+            'discipline_master_data' => $discipline_master_data
         ]);
 
     } catch (\Exception $e) {
