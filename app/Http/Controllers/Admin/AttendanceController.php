@@ -369,22 +369,81 @@ $currentPath = $segments[1] ?? null;
             return redirect()->back()->with('error', 'An error occurred while saving attendance: ' . $exception->getMessage());
         }
     }
+###old code naseer###
+    //   public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
+    //     // Check if this is a DataTables AJAX request
+    //     if ($request->ajax() || $request->has('draw')) {
+    //         // This is a DataTables request, return JSON data
+    //         return $this->getOTAttendanceData($request, $group_pk, $course_pk, $timetable_pk, $student_pk);
+    //     }
 
-      public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
-        // Check if this is a DataTables AJAX request
-        if ($request->ajax() || $request->has('draw')) {
-            // This is a DataTables request, return JSON data
-            return $this->getOTAttendanceData($request, $group_pk, $course_pk, $timetable_pk, $student_pk);
-        }
+    //     // Get student information
+    //         $student = StudentMaster::where('pk', $student_pk)->firstOrFail();
 
-        // Get student information
+    //         // Get course information
+    //         $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
+
+    //         // Get filter parameters - Default to today's date if not provided
+    //         $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : Carbon::today()->format('Y-m-d');
+    //         $filterSessionTime = $request->input('filter_session_time');
+    //         $filterCourse = $request->input('filter_course');
+    //         $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
+
+    //         // Get sessions for filter dropdown
+    //         $sessions = ClassSessionMaster::get();
+    //         $maunalSessions = Timetable::select('class_session')
+    //             ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
+    //             ->groupBy('class_session')
+    //             ->select('class_session')
+    //             ->get();
+
+    //         // Get archived courses for the student (only when in archive mode)
+    //         $archivedCourses = [];
+    //         if ($archiveMode === 'archive') {
+    //             $archivedCourses = CourseMaster::join('student_master_course__map', 'student_master_course__map.course_master_pk', '=', 'course_master.pk')
+    //                 ->where('student_master_course__map.student_master_pk', $student_pk)
+    //                 ->whereNotNull('course_master.end_date')
+    //                 ->whereDate('course_master.end_date', '<', Carbon::today())
+    //                 ->select('course_master.pk', 'course_master.course_name', 'course_master.end_date')
+    //                 ->orderBy('course_master.end_date', 'desc')
+    //                 ->get();
+    //         }
+
+    //         // Return the view for regular page load
+    //         return view('admin.attendance.ot-student-view', compact(
+    //             'student',
+    //             'course',
+    //             'group_pk',
+    //             'course_pk',
+    //             'timetable_pk',
+    //             'student_pk',
+    //             'sessions',
+    //             'maunalSessions',
+    //             'archivedCourses',
+    //             'archiveMode',
+    //             'filterDate',
+    //             'filterSessionTime',
+    //             'filterCourse'
+    //         ));
+    //     }
+
+
+
+    public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
+        try {
+        // Verify user has Student-OT role
+            if (!hasRole('Student-OT')) {
+                return redirect()->back()->with('error', 'Access denied. Student-OT role required.');
+            }
+
+            // Get student information
             $student = StudentMaster::where('pk', $student_pk)->firstOrFail();
 
             // Get course information
             $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
 
-            // Get filter parameters - Default to today's date if not provided
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : Carbon::today()->format('Y-m-d');
+            // Get filter parameters
+            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : null;
             $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
@@ -409,23 +468,269 @@ $currentPath = $segments[1] ?? null;
                     ->get();
             }
 
-            // Return the view for regular page load
+            // Query all course group timetable mappings for this student's course and group
+            $query = CourseGroupTimetableMapping::with([
+                'course:pk,course_name,end_date',
+                'group:pk,group_name',
+                'timetable',
+                'timetable.classSession:pk,shift_name,start_time,end_time',
+                'timetable.venue:venue_id,venue_name',
+                'timetable.faculty:pk,full_name',
+            ]);
+
+            // Apply course filter if provided (only in archive mode)
+            if ($archiveMode === 'archive' && $filterCourse) {
+                $query->where('Programme_pk', $filterCourse);
+                // Also need to update group_pk based on the selected course
+                // Get the group for this student and the selected course
+                $studentGroupMap = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
+                    ->where('student_master_pk', $student_pk)
+                    ->whereHas('groupTypeMasterCourseMasterMap', function($q) use ($filterCourse) {
+                        $q->where('course_name', $filterCourse);
+                    })
+                    ->first();
+                
+                if ($studentGroupMap && $studentGroupMap->groupTypeMasterCourseMasterMap) {
+                    $query->where('group_pk', $studentGroupMap->groupTypeMasterCourseMasterMap->pk);
+                }
+            } else {
+                // Default behavior: use the original course and group
+                $query->where('group_pk', $group_pk)
+                      ->where('Programme_pk', $course_pk);
+            }
+
+            // Apply archive/active filter for timetable records
+            $query->whereHas('timetable', function ($q) use ($archiveMode) {
+                if ($archiveMode === 'archive') {
+                    // Archive mode: show inactive attendance records
+                    $q->where('active_inactive', 0);
+                } else {
+                    // Active mode: show active attendance records
+                    $q->where('active_inactive', 1);
+                }
+            });
+
+            // Apply date filter
+            if ($filterDate) {
+                $query->whereHas('timetable', function ($q) use ($filterDate) {
+                    $q->whereDate('START_DATE', '=', $filterDate);
+                });
+            }
+
+            // Apply session time filter
+            if ($filterSessionTime) {
+                $query->whereHas('timetable', function ($q) use ($filterSessionTime) {
+                    // Check if filterSessionTime is a class_session_master_pk (numeric) or a manual session string
+                    if (is_numeric($filterSessionTime)) {
+                        $q->where('class_session', $filterSessionTime);
+                    } else {
+                        $q->where('class_session', $filterSessionTime);
+                    }
+                });
+            }
+
+            $courseGroups = $query->orderBy('timetable_pk', 'desc')->get();
+
+            // Build attendance records array
+            $attendanceRecords = [];
+            $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+
+            foreach ($courseGroups as $courseGroup) {
+                $timetableDate = optional($courseGroup->timetable)->START_DATE;
+                $timetablePk = $courseGroup->timetable_pk;
+
+                // Use the course and group from the filtered courseGroup (or fallback to original)
+                $currentCoursePk = $courseGroup->Programme_pk ?? $course_pk;
+                $currentGroupPk = $courseGroup->group_pk ?? $group_pk;
+
+                // Get attendance record
+                $attendance = CourseStudentAttendance::where([
+                    ['Student_master_pk', '=', $student_pk],
+                    ['course_master_pk', '=', $currentCoursePk],
+                    ['group_type_master_course_master_map_pk', '=', $currentGroupPk],
+                    ['timetable_pk', '=', $timetablePk]
+                ])->first();
+
+                // Initialize record data
+                $record = [
+                    'date' => $timetableDate ? format_date($timetableDate, 'd/m/Y') : 'N/A',
+                    'session_time' => optional($courseGroup->timetable)->class_session ?? 'N/A',
+                    'venue' => optional($courseGroup->timetable)->venue->venue_name ?? 'N/A',
+                    'group' => optional($courseGroup->group)->group_name ?? 'N/A',
+                    'topic' => optional($courseGroup->timetable)->subject_topic ?? 'N/A',
+                    'faculty' => optional($courseGroup->timetable)->faculty->full_name ?? 'N/A',
+                    'attendance_status' => 'Not Marked',
+                    'duty_type' => null,
+                    'exemption_type' => null,
+                    'exemption_document' => null,
+                    'exemption_comment' => null,
+                ];
+
+                // Format session time if classSession exists
+                if ($courseGroup->timetable && $courseGroup->timetable->classSession) {
+                    $record['session_time'] = optional($courseGroup->timetable->classSession)->start_time . ' - ' . optional($courseGroup->timetable->classSession)->end_time;
+                }
+
+                // Determine attendance status
+                if ($attendance) {
+                    $status = $attendance->status;
+                    switch ($status) {
+                        case 1:
+                            $record['attendance_status'] = 'Present';
+                            break;
+                        case 2:
+                            $record['attendance_status'] = 'Late';
+                            break;
+                        case 3:
+                            $record['attendance_status'] = 'Absent';
+                            break;
+                        case 4:
+                            $record['attendance_status'] = 'Present';
+                            $record['duty_type'] = 'MDO';
+                            break;
+                        case 5:
+                            $record['attendance_status'] = 'Present';
+                            $record['duty_type'] = 'Escort';
+                            break;
+                        case 6:
+                            $record['attendance_status'] = 'Present';
+                            $record['exemption_type'] = 'Medical';
+                            // Get medical exemption details
+                            if ($timetableDate) {
+                                $medicalExemption = StudentMedicalExemption::where([
+                                    ['course_master_pk', '=', $currentCoursePk],
+                                    ['student_master_pk', '=', $student_pk],
+                                    ['active_inactive', '=', 1]
+                                ])
+                                ->where(function($query) use ($timetableDate) {
+                                    $query->where('from_date', '<=', $timetableDate)
+                                          ->where(function($q) use ($timetableDate) {
+                                              $q->whereNull('to_date')
+                                                ->orWhere('to_date', '>=', $timetableDate);
+                                          });
+                                })->first();
+
+                                if ($medicalExemption) {
+                                    $record['exemption_document'] = $medicalExemption->Doc_upload;
+                                    $record['exemption_comment'] = $medicalExemption->Description;
+                                }
+                            }
+                            break;
+                        case 7:
+                            $record['attendance_status'] = 'Present';
+                            $record['exemption_type'] = 'Other';
+                            // Get other exemption details
+                            if ($timetableDate) {
+                                $otherDutyType = $mdoDutyTypes['other'] ?? null;
+                                if ($otherDutyType) {
+                                    $otherExemption = MDOEscotDutyMap::where([
+                                        ['course_master_pk', '=', $currentCoursePk],
+                                        ['mdo_duty_type_master_pk', '=', $otherDutyType],
+                                        ['selected_student_list', '=', $student_pk]
+                                    ])->whereDate('mdo_date', '=', $timetableDate)->first();
+
+                                    if ($otherExemption) {
+                                        $record['exemption_comment'] = $otherExemption->Remark ?? null;
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                } else {
+                    // Check if student has exemptions even if attendance not marked
+                    if ($timetableDate) {
+                        // Check medical exemption
+                        $medicalExemption = StudentMedicalExemption::where([
+                            ['course_master_pk', '=', $currentCoursePk],
+                            ['student_master_pk', '=', $student_pk],
+                            ['active_inactive', '=', 1]
+                        ])
+                        ->where(function($query) use ($timetableDate) {
+                            $query->where('from_date', '<=', $timetableDate)
+                                  ->where(function($q) use ($timetableDate) {
+                                      $q->whereNull('to_date')
+                                        ->orWhere('to_date', '>=', $timetableDate);
+                                  });
+                        })->first();
+
+                        if ($medicalExemption) {
+                            $record['attendance_status'] = 'Present';
+                            $record['exemption_type'] = 'Medical';
+                            $record['exemption_document'] = $medicalExemption->Doc_upload;
+                            $record['exemption_comment'] = $medicalExemption->Description;
+                        } else {
+                            // Check MDO/Escort/Other duties
+                            // Check MDO
+                            if (!empty($mdoDutyTypes['mdo'])) {
+                                $mdoDuty = MDOEscotDutyMap::where([
+                                    ['course_master_pk', '=', $currentCoursePk],
+                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
+                                    ['selected_student_list', '=', $student_pk]
+                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
+
+                                if ($mdoDuty) {
+                                    $record['attendance_status'] = 'Present';
+                                    $record['duty_type'] = 'MDO';
+                                }
+                            }
+
+                            // Check Escort
+                            if (!$record['duty_type'] && !empty($mdoDutyTypes['escort'])) {
+                                $escortDuty = MDOEscotDutyMap::where([
+                                    ['course_master_pk', '=', $currentCoursePk],
+                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
+                                    ['selected_student_list', '=', $student_pk]
+                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
+
+                                if ($escortDuty) {
+                                    $record['attendance_status'] = 'Present';
+                                    $record['duty_type'] = 'Escort';
+                                }
+                            }
+
+                            // Check Other
+                            if (!$record['duty_type'] && !empty($mdoDutyTypes['other'])) {
+                                $otherDuty = MDOEscotDutyMap::where([
+                                    ['course_master_pk', '=', $currentCoursePk],
+                                    ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['other']],
+                                    ['selected_student_list', '=', $student_pk]
+                                ])->whereDate('mdo_date', '=', $timetableDate)->first();
+
+                                if ($otherDuty) {
+                                    $record['attendance_status'] = 'Present';
+                                    $record['exemption_type'] = 'Other';
+                                    $record['exemption_comment'] = $otherDuty->Remark ?? null;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                $attendanceRecords[] = $record;
+            }
+
             return view('admin.attendance.ot-student-view', compact(
-                'student',
                 'course',
+                'student',
+                'attendanceRecords',
+                'sessions',
+                'maunalSessions',
+                'filterDate',
+                'filterSessionTime',
+                'filterCourse',
+                'archivedCourses',
+                'archiveMode',
                 'group_pk',
                 'course_pk',
                 'timetable_pk',
-                'student_pk',
-                'sessions',
-                'maunalSessions',
-                'archivedCourses',
-                'archiveMode',
-                'filterDate',
-                'filterSessionTime',
-                'filterCourse'
+                'student_pk'
             ));
+
+        } catch (\Exception $e) {
+            \Log::error('Error fetching OT student attendance: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
         }
+    }
 
         private function getOTAttendanceData(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk) {
             // Get filter parameters from request - Default to today's date if not provided
