@@ -2,7 +2,15 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+@section('content')
+
+@php
+    // Debug: Check if courseMaster is available
+    if (!isset($courseMaster) || $courseMaster->isEmpty()) {
+        \Log::error('Calendar view: courseMaster is empty or not set');
+    }
+@endphp
+
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <style>
         :root {
@@ -1062,6 +1070,19 @@
     animation: spin 0.8s linear infinite;
 }
 
+/* Auto-hide the calendar loading overlay after 2 seconds */
+#calendarLoadingOverlay {
+    animation: fadeOut 0.5s ease-in-out 2s forwards;
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
@@ -2031,7 +2052,21 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 }
 
 </style>
+
+<!-- Debug: Page is loading -->
+<script>console.log('Calendar view is rendering...', {
+    courseMasterExists: {{ isset($courseMaster) ? 'true' : 'false' }},
+    courseMasterCount: {{ isset($courseMaster) ? $courseMaster->count() : 0 }}
+});</script>
+
 <div class="container-fluid">
+    @if(!isset($courseMaster) || $courseMaster->isEmpty())
+        <div class="alert alert-warning m-4">
+            <h4><i class="bi bi-exclamation-triangle me-2"></i>No Courses Available</h4>
+            <p>No active courses found. Please contact the administrator.</p>
+        </div>
+    @endif
+    
     <!-- Page Header with ARIA landmark -->
     @if(hasRole('Admin'))
         <header aria-label="Page header">
@@ -2123,7 +2158,33 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         <!-- Calendar Container -->
         <section class="calendar-container" aria-label="Academic calendar">
             <div class="card border-start-4 border-primary shadow-sm">
-                <div class="card-body p-3 p-md-4">
+                <div class="card-body p-3 p-md-4 position-relative">
+                    
+                    <!-- Loading overlay -->
+                    <div id="calendarLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white" style="min-height: 400px; z-index: 100;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading calendar...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Loading calendar...</p>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        // IMMEDIATE fallback - hide loader after 3 seconds
+                        (function() {
+                            console.log('Inline script: Setting up emergency timeout');
+                            setTimeout(function() {
+                                var overlay = document.getElementById('calendarLoadingOverlay');
+                                if (overlay) {
+                                    console.log('EMERGENCY TIMEOUT: Hiding loader');
+                                    overlay.style.display = 'none';
+                                } else {
+                                    console.error('Overlay element not found in timeout');
+                                }
+                            }, 3000);
+                        })();
+                    </script>
 
                     <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
                     <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
@@ -2225,6 +2286,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
+console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
+
 // Configuration object
 const CalendarConfig = {
     api: {
@@ -2270,21 +2333,55 @@ class CalendarManager {
     }
 
     init() {
-        this.initFullCalendar();
-        this.bindEvents();
-        this.setupAccessibility();
-        this.validateDates();
-        this.updateCurrentWeek();
-        this.observeMoreLinksChanges();
-        this.initDensity();
+        try {
+            console.log('Initializing calendar manager...');
+            this.initFullCalendar();
+            
+            try { this.bindEvents(); } catch (e) { console.error('bindEvents error:', e); }
+            try { this.setupAccessibility(); } catch (e) { console.error('setupAccessibility error:', e); }
+            try { this.validateDates(); } catch (e) { console.error('validateDates error:', e); }
+            try { this.updateCurrentWeek(); } catch (e) { console.error('updateCurrentWeek error:', e); }
+            try { this.observeMoreLinksChanges(); } catch (e) { console.error('observeMoreLinksChanges error:', e); }
+            try { this.initDensity(); } catch (e) { console.error('initDensity error:', e); }
+            
+            console.log('Calendar manager initialized successfully');
+        } catch (error) {
+            console.error('Error in init():', error);
+            // Hide loader on error
+            const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-danger mb-3">
+                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="text-danger">Calendar Initialization Error</h5>
+                        <p class="text-muted">${error.message}</p>
+                        <button class="btn btn-primary mt-3" onclick="location.reload()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Reload Page
+                        </button>
+                    </div>
+                `;
+            }
+        }
     }
 
     initFullCalendar() {
+        console.log('Starting initFullCalendar...');
         const calendarEl = document.getElementById('calendar');
+        const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+        
+        if (!calendarEl) {
+            throw new Error('Calendar element not found');
+        }
+        
+        console.log('Calendar element found:', calendarEl);
         
         // Get initial course ID from filter dropdown
         const courseFilter = document.getElementById('courseFilter');
         this.selectedCourseId = courseFilter && courseFilter.value ? courseFilter.value : null;
+        
+        console.log('Selected course ID:', this.selectedCourseId);
         
         // Update course header with initial selection
         // this.updateCourseHeader();
@@ -2340,9 +2437,25 @@ class CalendarManager {
                 this.fetchEvents(info, successCallback, failureCallback);
             },
             loading: (isLoading) => {
+                console.log('Calendar loading state:', isLoading);
+                const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+                
                 if (!isLoading) {
                     // Events have finished loading
-                    this.updateWeekendVisibility();
+                    console.log('Events loaded, hiding overlay');
+                    
+                    try {
+                        this.updateWeekendVisibility();
+                    } catch (error) {
+                        console.error('Error updating weekend visibility:', error);
+                    }
+                    
+                    // Hide loading overlay
+                    if (loadingOverlay) {
+                        loadingOverlay.style.display = 'none';
+                    }
+                } else {
+                    console.log('Loading events...');
                 }
             },
             eventContent: this.renderEventContent.bind(this),
@@ -2353,8 +2466,19 @@ class CalendarManager {
         });
 
         this.calendar.render();
+        console.log('Calendar rendered');
+        
         this.styleMoreLinks();
         this.applyDenseMode();
+        
+        // Fallback: Hide loading overlay after calendar renders (in case loading callback doesn't fire)
+        setTimeout(() => {
+            const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+            if (loadingOverlay) {
+                console.log('Timeout fallback: hiding loading overlay');
+                loadingOverlay.style.display = 'none';
+            }
+        }, 2000); // Give calendar 2 seconds to load
     }
 
     fetchEvents(info, successCallback, failureCallback) {
@@ -2376,23 +2500,33 @@ class CalendarManager {
             url += '?' + params.toString();
         }
 
+        console.log('Fetching events from:', url);
+
         fetch(url, {
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Events loaded:', data.length);
             // Filter out holidays and restricted holidays
             const filteredData = data.filter(event => {
                 const type = (event.type || event.event_type || event.session_type || '').toString().toLowerCase();
                 return type !== 'holiday' && type !== 'restricted holiday' && type !== 'restricted' && !type.includes('holiday');
             });
+            console.log('Events after filtering:', filteredData.length);
             successCallback(filteredData);
         })
         .catch(error => {
             console.error('Error fetching events:', error);
+            this.showNotification('Failed to load calendar events. Please refresh the page.', 'danger');
             failureCallback(error);
         });
     }
@@ -4049,7 +4183,44 @@ async updateinternal_faculty(facultyType) {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.calendarManager = new CalendarManager();
+    console.log('DOM Content Loaded - Initializing calendar...');
+    console.log('Calendar element exists:', !!document.getElementById('calendar'));
+    console.log('Loading overlay exists:', !!document.getElementById('calendarLoadingOverlay'));
+    
+    // Absolute fallback - hide loader after 3 seconds no matter what
+    setTimeout(() => {
+        const overlay = document.getElementById('calendarLoadingOverlay');
+        if (overlay) {
+            console.log('ABSOLUTE FALLBACK: Hiding loader after 3 seconds');
+            overlay.style.display = 'none';
+        }
+    }, 3000);
+    
+    try {
+        window.calendarManager = new CalendarManager();
+        console.log('Calendar manager initialized successfully');
+    } catch (error) {
+        console.error('Error initializing calendar:', error);
+        console.error('Error stack:', error.stack);
+        
+        // Hide loading overlay and show error message
+        const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.innerHTML = `
+                <div class="text-center">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="text-danger">Failed to Load Calendar</h5>
+                    <p class="text-muted">Please refresh the page or contact support if the problem persists.</p>
+                    <p class="text-muted small">Error: ${error.message}</p>
+                    <button class="btn btn-primary mt-3" onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reload Page
+                    </button>
+                </div>
+            `;
+        }
+    }
 });
 
 // Add ARIA live region for announcements
