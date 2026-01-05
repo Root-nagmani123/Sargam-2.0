@@ -34,6 +34,16 @@ class Authenticate extends Middleware
             'user' => Auth::check() ? Auth::user()->user_name : 'Not authenticated',
             'session_id' => session()->getId()
         ]);
+        if ($request->has('token') && Auth::check()) {
+                Log::info('Token present but user already logged in, logging out old user', [
+                    'old_user' => Auth::user()->user_name
+                ]);
+
+                Auth::logout();
+                Session::flush();             
+                Session::regenerate();        
+            }
+
 
         // STEP 1: Check for Moodle token authentication if not already authenticated
         if ($request->has('token') && !Auth::check()) {
