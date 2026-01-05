@@ -43,7 +43,7 @@
                     <div class="info-badge h-100">
                         <div class="d-flex align-items-center mb-2">
                             <span class="small text-uppercase fw-semibold"
-                                style="letter-spacing: 0.5px;">OT Code</span>
+                                style="letter-spacing: 0.5px;">OT / ParticipantCode</span>
                         </div>
                         <p class="mb-0 fw-bold text-muted">
                             {{ $student->generated_OT_code ?? 'N/A' }}
@@ -74,7 +74,7 @@
                         <div class="btn-group border border-2 border-primary rounded-pill overflow-hidden w-100 w-md-auto"
                             role="group" aria-label="Attendance Status Filter">
                             <button type="button" class="btn btn-sm text-decoration-none px-4 py-2 fw-semibold"
-                                id="filterArchive_active" aria-pressed="true"
+                                id="filterActive" aria-pressed="true"
                                 aria-label="Show active attendance records">Active Records
                             </button>
                             <button type="button" class="btn btn-sm text-decoration-none px-4 py-2 fw-semibold"
@@ -194,8 +194,7 @@
             }
 
             // Re-apply the current archive mode for context
-            archiveModeInput.value = '{{ $archiveMode ?? '
-            active ' }}';
+            archiveModeInput.value = '{{ $archiveMode ?? 'active' }}';
 
             // Submit the form with cleared filters
             form.submit();
@@ -348,7 +347,6 @@ $(function() {
             }
         }
         // Reset to active mode
-        setActiveButton($('#filterActive'));
         $('#archive_mode_input').val('active');
         $('#filterForm').submit();
     });
