@@ -2678,6 +2678,7 @@ class CalendarManager {
         document.getElementById('eventVanue').textContent = data.venue_name || '';
         document.getElementById('eventclasssession').textContent = data.class_session || '';
         document.getElementById('eventgroupname').textContent = data.group_name || '';
+        document.getElementById('internal_faculty_name_show').textContent = data.internal_faculty || '';
 
         // Set edit/delete button data
         const editBtn = document.getElementById('editEventBtn');

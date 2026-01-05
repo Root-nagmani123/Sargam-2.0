@@ -33,7 +33,7 @@ class StudentAttendanceListDataTable extends DataTable
             ->filterColumn('student_code', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('generated_OT_code', 'like', "%{$keyword}%")))
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
-
+ 
                 if (!empty($searchValue)) {
                     $query->where(function ($subQuery) use ($searchValue) {
                         $subQuery->whereHas('studentsMaster', function ($studentQuery) use ($searchValue) {
@@ -99,15 +99,16 @@ class StudentAttendanceListDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('OT Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('student_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('student_name')->title('OT/Participant Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('student_code')->title('OT/Participant Code')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('attendance_status')->title('Attendance')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_duty')->title('MDO Duty')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('escort_duty')->title('Escort Duty')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('escort_duty')->title('Escort/Moderator Duty')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('medical_exempt')->title('Medical Exemption')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('other_exempt')->title('Other Exemption')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
+    
 
     protected function renderRadio($row, int $value, string $label, string $labelClass = 'text-dark'): string
     {

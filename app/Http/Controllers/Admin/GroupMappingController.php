@@ -253,12 +253,15 @@ class GroupMappingController extends Controller
      */
     function importGroupMapping(Request $request)
     {
+        // print_r($request->all());die;
         try {
             $request->validate([
                 'file' => 'required|mimes:xlsx,xls,csv|max:10248',
             ]);
 
-            $import = new GroupMappingMultipleSheetImport();
+           $import = new GroupMappingMultipleSheetImport(
+                $request->course_master_pk
+            );
 
             Excel::import($import, $request->file('file'));
 
@@ -468,6 +471,7 @@ class GroupMappingController extends Controller
                 'name' => 'required|string|max:255',
                 'otcode' => 'required|string|max:255',
                 'group_name' => 'required|string|max:255',
+                'course_master_pk' => 'required|integer|exists:course_master,pk',
                 'group_type' => 'required|string|max:255',
             ]);
 
@@ -487,8 +491,14 @@ class GroupMappingController extends Controller
             }
 
             // Lookup: GroupTypeMasterCourseMasterMap by group name (case-insensitive)
-            $groupMap = GroupTypeMasterCourseMasterMap::whereRaw('LOWER(group_name) = ?', [strtolower($data['group_name'])])
-                ->first();
+         $groupMap = GroupTypeMasterCourseMasterMap::whereRaw(
+                        'LOWER(group_name) = ?',
+                        [strtolower($data['group_name'])]
+                    )
+                    ->where('course_name', $data['course_master_pk']) // 🔥 REQUIRED
+                    ->where('active_inactive', 1)
+                    ->first();
+
             // print_r($groupMap);die;
 
             if (!$groupMap) {
@@ -517,16 +527,20 @@ class GroupMappingController extends Controller
             }
 
             // Check if mapping already exists
-            $existingMapping = StudentCourseGroupMap::where('student_master_pk', $studentMaster->pk)
-                ->where('group_type_master_course_master_map_pk', $groupMap->pk)
-                ->exists();
+            $studentCourseExists = StudentMasterCourseMap::where(
+                        'student_master_pk',
+                        $studentMaster->pk
+                    )
+                    ->where('course_master_pk', $data['course_master_pk'])
+                    ->where('active_inactive', 1)
+                    ->exists();
 
-            if ($existingMapping) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Mapping already exists for student '{$data['otcode']}' and group '{$data['group_name']}'",
-                ], 422);
-            }
+                if (!$studentCourseExists) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Student does not belong to selected course",
+                    ], 422);
+                }
 
             // Create the mapping (same as Excel import)
             StudentCourseGroupMap::create([

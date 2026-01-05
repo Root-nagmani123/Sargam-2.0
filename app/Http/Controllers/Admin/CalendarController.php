@@ -421,13 +421,19 @@ class CalendarController extends Controller
                 'timetable.END_DATE',
                 'faculty_master.full_name as faculty_name',
                 'venue_master.venue_name as venue_name',
-                'timetable.group_name'
+                'timetable.group_name',
+                'timetable.internal_faculty'
             )
             ->first();
         $groupIds = json_decode($event->group_name, true);
+        $internalFacultyIds = json_decode($event->internal_faculty, true);
         $groupNames = DB::table('group_type_master_course_master_map')
             ->whereIn('pk', $groupIds)
             ->pluck('group_name');
+            
+        $internalFacultyNames = DB::table('faculty_master')
+            ->whereIn('pk', $internalFacultyIds)
+            ->pluck('full_name');
 
         if ($event) {
             return response()->json([
@@ -436,6 +442,7 @@ class CalendarController extends Controller
                 'start' => $event->START_DATE,
                 // 'end' => $event->END_DATE,
                 'faculty_name' => $event->faculty_name ?? '',
+                'internal_faculty' => $internalFacultyNames->implode(', '),
                 'venue_name' => $event->venue_name ?? '',
                 'class_session' => $event->class_session ?? '',
                 'group_name' => $groupNames ?? '',

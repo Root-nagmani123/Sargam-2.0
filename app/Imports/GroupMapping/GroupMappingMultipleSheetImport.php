@@ -8,9 +8,12 @@ class GroupMappingMultipleSheetImport implements WithMultipleSheets
 {
     public $sheet1Import;
 
-    public function __construct()
+    public $courseMasterPk;
+
+    public function __construct($courseMasterPk)
     {
-        $this->sheet1Import = new GroupMappingImport();
+        $this->courseMasterPk = $courseMasterPk;
+        $this->sheet1Import = new GroupMappingImport($courseMasterPk);
     }
 
     public function sheets(): array
