@@ -46,7 +46,7 @@ class CalendarController extends Controller
 
         $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
-            // print_r($courseMaster);die;
+        // print_r($courseMaster);die;
 
         $facultyMaster = FacultyMaster::where('active_inactive', 1)
             ->select('pk', 'faculty_type', 'full_name')
@@ -693,7 +693,6 @@ class CalendarController extends Controller
                 })
 
                 ->where('t.feedback_checkbox', 1)
-                // ->whereDate('t.END_DATE', '<', now()->toDateString())
 
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
@@ -701,6 +700,13 @@ class CalendarController extends Controller
                         ->whereColumn('tf.timetable_pk', 't.pk')
                         ->where('tf.student_master_pk', $student_pk)
                         ->where('tf.is_submitted', 1);
+                })
+                ->where(function ($q) {
+                    $q->whereDate('t.END_DATE', '<', now()->toDateString()) // past dates
+                        ->orWhere(function ($q2) {
+                            $q2->whereDate('t.END_DATE', now()->toDateString()) // today
+                                ->whereTime('t.class_session', '<=', now()->toTimeString()); // only if ended
+                        });
                 });
 
             if (hasRole('Student-OT')) {
@@ -711,8 +717,8 @@ class CalendarController extends Controller
             }
 
             $pendingData = $pendingQuery
-                ->orderByDesc('t.START_DATE')
-                ->get();
+                ->orderBy('t.START_DATE', 'asc')
+                ->orderBy('t.class_session', 'asc')->get();
 
             $submittedData = DB::table('topic_feedback as tf')
                 ->select([
@@ -830,7 +836,6 @@ class CalendarController extends Controller
                 })
 
                 ->where('t.feedback_checkbox', 1)
-                // ->whereDate('t.END_DATE', '<', now()->toDateString())
 
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
@@ -838,7 +843,15 @@ class CalendarController extends Controller
                         ->whereColumn('tf.timetable_pk', 't.pk')
                         ->where('tf.student_master_pk', $student_pk)
                         ->where('tf.is_submitted', 1);
+                })
+                ->where(function ($q) {
+                    $q->whereDate('t.END_DATE', '<', now()->toDateString()) // past dates
+                        ->orWhere(function ($q2) {
+                            $q2->whereDate('t.END_DATE', now()->toDateString()) // today
+                                ->whereTime('t.class_session', '<=', now()->toTimeString()); // only if ended
+                        });
                 });
+
 
             if (hasRole('Student-OT')) {
                 $pendingQuery
@@ -848,7 +861,8 @@ class CalendarController extends Controller
             }
 
             $pendingData = $pendingQuery
-                ->orderByDesc('t.START_DATE')
+                ->orderBy('t.START_DATE', 'asc')
+                ->orderBy('t.class_session', 'asc')
                 ->get();
 
             $submittedData = DB::table('topic_feedback as tf')
