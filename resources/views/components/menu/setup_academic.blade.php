@@ -69,10 +69,7 @@
                                     </a></li>
                             </ul>
                              
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('mdo-escrot-exemption.index') }}">
-                                        <span class="hide-menu">MDO Escort Exemption</span>
-                                    </a></li>
+                               
                           
                              @if(! hasRole('Training-MCTP'))
                             <li class="sidebar-item" style="background: #4077ad;
@@ -100,6 +97,10 @@
                                         <span class="hide-menu">MDO Escort Exemption</span>
                                     </a></li>
                                 @endif
+                                 <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('mdo-escrot-exemption.index') }}">
+                                        <span class="hide-menu">MDO Escort Exemption</span>
+                                    </a></li>
                                 <li class="sidebar-item">
                                     <a class="sidebar-link d-flex justify-content-between align-items-center"
                                         data-bs-toggle="collapse" href="#exemptionCollapse" role="button"
