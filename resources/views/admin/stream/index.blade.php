@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-<x-breadcrum title="Stream" />
+    <x-breadcrum title="Stream" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left:4px solid #004a93;">
@@ -31,14 +31,14 @@
                     <hr>
                     <div class="table-responsive">
 
-                        <table class="table">
-                            <thead class="table-light">
+                        <table class="table text-nowrap w-100">
+                            <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th style="background-color: #af2910; font-weight: 600;">S.No.</th>
-                                    <th style="background-color: #af2910; font-weight: 600;">Stream Name</th>
-                                    <th style="background-color: #af2910; font-weight: 600;">Status</th>
-                                    <th style="background-color: #af2910; font-weight: 600;">Action</th>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Stream Name</th>
+                                    <th class="col">Status</th>
+                                    <th class="col">Action</th>
 
                                 </tr>
                                 <!-- end row -->
@@ -57,49 +57,48 @@
                                                 data-id="{{ $stream->pk }}" {{ $stream->status == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
-                                    <td class="text-center">
+                                    <td>
 
-                                        <div class="dropdown">
-                                            <a href="javascript:void(0)" id="actionMenu{{ $stream->pk }}"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <span class="material-symbols-rounded fs-5">more_horiz</span>
+                                        <div class="d-inline-flex align-items-center gap-2" role="group"
+                                            aria-label="Stream actions">
+
+                                            <!-- Edit -->
+                                            <a href="{{ route('stream.edit', $stream->pk) }}"
+                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                                                aria-label="Edit stream">
+                                                <span class="material-symbols-rounded fs-6"
+                                                    aria-hidden="true">edit</span>
+                                                <span class="d-none d-md-inline">Edit</span>
                                             </a>
 
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm"
-                                                aria-labelledby="actionMenu{{ $stream->pk }}">
+                                            <!-- Delete -->
+                                            @if($stream->status == 1)
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                                disabled aria-disabled="true" title="Cannot delete active stream">
+                                                <span class="material-symbols-rounded fs-6"
+                                                    aria-hidden="true">delete</span>
+                                                <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                            @else
+                                            <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST"
+                                                class="d-inline"
+                                                onsubmit="return confirm('Are you sure you want to delete this stream?');">
+                                                @csrf
+                                                @method('DELETE')
 
-                                                <!-- Edit -->
-                                                <li>
-                                                    <a href="{{ route('stream.edit', $stream->pk) }}"
-                                                        class="dropdown-item d-flex align-items-center gap-2">
-                                                        <span
-                                                            class="material-symbols-rounded text-primary fs-6">edit</span>
-                                                        Edit
-                                                    </a>
-                                                </li>
+                                                <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                                    aria-label="Delete stream">
+                                                    <span class="material-symbols-rounded fs-6"
+                                                        aria-hidden="true">delete</span>
+                                                    <span class="d-none d-md-inline">Delete</span>
+                                                </button>
+                                            </form>
+                                            @endif
 
-                                                <!-- Delete -->
-                                                <li>
-                                                    <form action="{{ route('stream.destroy', $stream->pk) }}"
-                                                        method="POST" class="d-inline">
-                                                        @csrf
-                                                        @method('DELETE')
-
-                                                        <button type="button"
-                                                            class="dropdown-item d-flex align-items-center gap-2 text-danger"
-                                                            onclick="event.preventDefault();
-                                if({{ $stream->status }} == 1) return; 
-                                if(confirm('Are you sure you want to delete this stream?')) {
-                                    this.closest('form').submit();
-                                }" {{ $stream->status == 1 ? 'disabled' : '' }}>
-                                                            <span class="material-symbols-rounded fs-6">delete</span>
-                                                            Delete
-                                                        </button>
-                                                    </form>
-                                                </li>
-
-                                            </ul>
                                         </div>
+
 
                                     </td>
 

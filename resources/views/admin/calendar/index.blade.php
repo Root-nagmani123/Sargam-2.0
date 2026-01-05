@@ -48,184 +48,7 @@
             font-size: 0.9rem;
         }
     }
-</style>
-<div class="container-fluid">
-    <a href="#calendar" class="visually-hidden-focusable" aria-label="Skip to calendar">Skip to calendar</a>
-    <!-- Page Header with ARIA landmark -->
-      @if(hasRole('Admin'))
-    <header aria-label="Page header">
-        <x-breadcrum title="Academic TimeTable" />
-    </header>
-@endif
-        <div class="course-header mb-3">
-            <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
-            <p class="mb-0 text-white fw-medium">
-                <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
-                | <strong>Year:</strong> {{ $courseMaster->first()->course_year ?? date('Y') }}
-            </p>
-        </div>
-
-    <!-- Main Content Area -->
-    <main id="main-content" role="main">
-        <!-- Action Controls with proper semantics -->
-         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
-        <section class="calendar-controls mb-4" aria-label="Calendar view controls">
-            <div
-                class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
-                <!-- View Toggle Buttons -->
-                <div class="view-toggle-section d-flex align-items-center gap-3">
-                    <span class="text-muted fw-medium small d-none d-md-inline">View:</span>
-                    <div class="btn-group" role="group" aria-label="Calendar view options">
-                        <button type="button" class="btn btn-outline-primary" id="btnListView" aria-pressed="false"
-                            data-view="list">
-                            <i class="bi bi-list-ul me-2"></i>List View
-                        </button>
-                        <button type="button" class="btn btn-outline-primary active" id="btnCalendarView" aria-pressed="false"
-                            data-view="calendar">
-                            <i class="bi bi-calendar3 me-2"></i>Calendar View
-                        </button>
-                    </div>
-
-                    <!-- Density Toggle -->
-                    <div class="density-toggle d-flex align-items-center gap-2 ms-2">
-                        <button type="button" class="btn btn-outline-secondary" id="toggleDensityBtn" aria-pressed="false" aria-label="Toggle compact mode">
-                            Expand / Collapse
-                        </button>
-                    </div>
-
-                    <div class="mb-3">
-                        <select
-                            class="form-select"
-                            id="courseFilter"
-                            aria-label="Filter by course"
-                            style="min-width: 200px;">
-                            <option value="">All Courses</option>
-                            @foreach($courseMaster as $course)
-                                <option value="{{ $course->pk }}" 
-                                    {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
-                                    {{ $course->course_name }} ({{ $course->couse_short_name }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                </div>
-                <!-- Action Buttons -->
-                @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
-                <button type="button" class="btn btn-primary px-4" id="createEventButton" data-bs-toggle="modal"
-                    data-bs-target="#eventModal">
-                    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i> Add New Event
-                </button>
-                @endif
-            </div>
-        </section>
-        @endif
-
-        <!-- Calendar Container -->
-        <section class="calendar-container" aria-label="Academic calendar">
-            <div class="card border-start-4 border-primary shadow-sm">
-                <div class="card-body p-3 p-md-4">
-
-                    <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
-                    <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
-
-                    <!-- List View -->
-                    <div id="eventListView" class="mt-4 d-none" role="region" aria-label="Weekly timetable">
-                        <div class="timetable-wrapper">
-                            <!-- Timetable Header -->
-                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
-                                <div class="row align-items-center g-4">
-                                    <div class="col-md-2 text-center text-md-start">
-                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
-                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
-                                                class="img-fluid" width="70" height="70">
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6 text-center">
-                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
-                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
-                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
-                                        </p>
-                                    </div>
-
-                                    <div class="col-md-4 text-center text-md-end">
-                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
-                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
-                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
-                                                    aria-label="Previous week">
-                                                    <i class="bi bi-chevron-left"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
-                                                    aria-label="Current week">
-                                                    <i class="bi bi-calendar-check me-2"></i>Today
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
-                                                    aria-label="Next week">
-                                                    <i class="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-
-                                            <div class="week-badge">
-                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
-                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Week Cards (Accessible, GIGW-friendly) -->
-                            <div id="weekCards" class="week-cards mb-4" role="region" aria-labelledby="weekCardsTitle">
-                                <h2 id="weekCardsTitle" class="h5 fw-bold text-primary mb-3">Week at a glance</h2>
-                                <div class="row g-3" role="list" aria-label="Days of the week">
-                                    <!-- JS will render day cards here -->
-                                </div>
-                            </div>
-
-                            <!-- Timetable table -->
-                            <div class="timetable-container border rounded-3 overflow-hidden">
-                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
-                                    <table class="table table-bordered timetable-grid" id="timetableTable"
-                                        aria-describedby="timetableDescription">
-                                        <caption class="visually-hidden" id="timetableDescription">
-                                            Weekly academic timetable showing events
-                                        </caption>
-                                        <thead id="timetableHead">
-                                            <tr>
-                                                <th scope="col" class="time-column">Time</th>
-                                                <th scope="col">Monday</th>
-                                                <th scope="col">Tuesday</th>
-                                                <th scope="col">Wednesday</th>
-                                                <th scope="col">Thursday</th>
-                                                <th scope="col">Friday</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody id="timetableBody">
-                                            <!-- JS will populate body -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-    </main>
-</div>
-
-@include('admin.calendar.partials.add_edit_events')
-@include('admin.calendar.partials.events_details')
-@include('admin.calendar.partials.confirmation')
-
-<!-- Add CSS for modern look -->
-<style>
-/* Accessibility improvements */
+    /* Accessibility improvements */
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -2197,7 +2020,208 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         font-size: 0.95rem;
     }
 }
+.control-panel:focus-within {
+    outline: 2px solid #004a93;
+    outline-offset: 2px;
+}
+
+.btn:focus-visible,
+.form-select:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
+}
+
 </style>
+<div class="container-fluid">
+    <!-- Page Header with ARIA landmark -->
+    @if(hasRole('Admin'))
+        <header aria-label="Page header">
+            <x-breadcrum title="Academic TimeTable" />
+        </header>
+    @endif
+        <div class="course-header mb-3">
+            <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
+            <p class="mb-0 text-white fw-medium">
+                <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
+                | <strong>Year:</strong> {{ $courseMaster->first()->course_year ?? date('Y') }}
+            </p>
+        </div>
+
+    <!-- Main Content Area -->
+    <main id="main-content" role="main">
+        <!-- Action Controls with proper semantics -->
+         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
+        <section
+    class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
+    role="region"
+    aria-labelledby="controlPanelHeading"
+    style="border-left: 4px solid #004a93;"
+>
+    <h2 id="controlPanelHeading" class="visually-hidden">
+        Calendar Control Panel
+    </h2>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
+
+        <!-- Filters & View Controls -->
+        <fieldset class="d-flex flex-wrap align-items-center gap-3 mb-0">
+            <legend class="visually-hidden">View and Filter Controls</legend>
+
+            <!-- Density Toggle -->
+            <div class="btn-group" role="group" aria-label="Toggle calendar density">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary d-flex align-items-center gap-2"
+                    id="toggleDensityBtn"
+                    aria-pressed="false"
+                    aria-expanded="false"
+                >
+                    <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
+                    <span class="fw-medium">Compact View</span>
+                </button>
+            </div>
+
+            <!-- Course Filter -->
+            <div class="form-floating">
+                <select
+                    class="form-select"
+                    id="courseFilter"
+                    aria-describedby="courseFilterHelp"
+                >
+                    <option value="">All Courses</option>
+                    @foreach($courseMaster as $course)
+                        <option value="{{ $course->pk }}"
+                            {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
+                            {{ $course->course_name }} ({{ $course->couse_short_name }})
+                        </option>
+                    @endforeach
+                </select>
+                <label for="courseFilter">Filter by Course</label>
+            </div>
+        </fieldset>
+
+        <!-- Primary Actions -->
+        @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP'))
+        <div class="d-flex align-items-center gap-2">
+            <button
+                type="button"
+                class="btn btn-primary px-4 d-flex align-items-center gap-2"
+                id="createEventButton"
+                data-bs-toggle="modal"
+                data-bs-target="#eventModal"
+            >
+                <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                <span>Add New Event</span>
+            </button>
+        </div>
+        @endif
+
+    </div>
+</section>
+
+        @endif
+
+        <!-- Calendar Container -->
+        <section class="calendar-container" aria-label="Academic calendar">
+            <div class="card border-start-4 border-primary shadow-sm">
+                <div class="card-body p-3 p-md-4">
+
+                    <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
+                    <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
+
+                    <!-- List View -->
+                    <div id="eventListView" class="mt-4 d-none" role="region" aria-label="Weekly timetable">
+                        <div class="timetable-wrapper">
+                            <!-- Timetable Header -->
+                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
+                                <div class="row align-items-center g-4">
+                                    <div class="col-md-2 text-center text-md-start">
+                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
+                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
+                                                class="img-fluid" width="70" height="70">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 text-center">
+                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
+                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
+                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
+                                        </p>
+                                    </div>
+
+                                    <div class="col-md-4 text-center text-md-end">
+                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
+                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
+                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
+                                                    aria-label="Previous week">
+                                                    <i class="bi bi-chevron-left"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
+                                                    aria-label="Current week">
+                                                    <i class="bi bi-calendar-check me-2"></i>Today
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
+                                                    aria-label="Next week">
+                                                    <i class="bi bi-chevron-right"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="week-badge">
+                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
+                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Week Cards (Accessible, GIGW-friendly) -->
+                            <div id="weekCards" class="week-cards mb-4" role="region" aria-labelledby="weekCardsTitle">
+                                <h2 id="weekCardsTitle" class="h5 fw-bold text-primary mb-3">Week at a glance</h2>
+                                <div class="row g-3" role="list" aria-label="Days of the week">
+                                    <!-- JS will render day cards here -->
+                                </div>
+                            </div>
+
+                            <!-- Timetable table -->
+                            <div class="timetable-container border rounded-3 overflow-hidden">
+                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
+                                    <table class="table table-bordered timetable-grid" id="timetableTable"
+                                        aria-describedby="timetableDescription">
+                                        <caption class="visually-hidden" id="timetableDescription">
+                                            Weekly academic timetable showing events
+                                        </caption>
+                                        <thead id="timetableHead">
+                                            <tr>
+                                                <th scope="col" class="time-column">Time</th>
+                                                <th scope="col">Monday</th>
+                                                <th scope="col">Tuesday</th>
+                                                <th scope="col">Wednesday</th>
+                                                <th scope="col">Thursday</th>
+                                                <th scope="col">Friday</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody id="timetableBody">
+                                            <!-- JS will populate body -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+@include('admin.calendar.partials.add_edit_events')
+@include('admin.calendar.partials.events_details')
+@include('admin.calendar.partials.confirmation')
+
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
@@ -2266,7 +2290,7 @@ class CalendarManager {
         // this.updateCourseHeader();
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek',
+            initialView: 'dayGridMonth',
             hiddenDays: [0, 6], // Initially hide Sunday (0) and Saturday (6)
             headerToolbar: {
                 left: 'prev,next today',
@@ -2678,6 +2702,7 @@ class CalendarManager {
         document.getElementById('eventVanue').textContent = data.venue_name || '';
         document.getElementById('eventclasssession').textContent = data.class_session || '';
         document.getElementById('eventgroupname').textContent = data.group_name || '';
+        document.getElementById('internal_faculty_name_show').textContent = data.internal_faculty || '';
 
         // Set edit/delete button data
         const editBtn = document.getElementById('editEventBtn');

@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-<x-breadcrum title="Class Session Master" />
+    <x-breadcrum title="Class Session Master" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -32,15 +32,15 @@
                     <hr>
                     <div class="table-responsive">
                         <table class="table w-100 nowrap">
-                            <thead class="table-light">
+                            <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th style="background-color: #af2910; font-weight: 600;">S.No.</th>
-                                    <th style="background-color: #af2910; font-weight: 600;">Shift Name</th>
-                                    <th style="background-color: #af2910; font-weight: 600;">Start Time</th>
-                                    <th style="background-color: #af2910; font-weight: 600;">End Time</th>
-                                    <th style="background-color: #af2910; font-weight: 600;">Status</th>
-                                    <th style="background-color: #af2910; font-weight: 600;">Action</th>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Shift Name</th>
+                                    <th class="col">Start Time</th>
+                                    <th class="col">End Time</th>
+                                    <th class="col">Status</th>
+                                    <th class="col">Action</th>
 
                                 </tr>
                                 <!-- end row -->
@@ -61,53 +61,50 @@
                                                 {{ $classSession->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
-                                    <td class="text-center">
+                                    <td>
 
-                                        <div class="dropdown">
-                                            <a href="javascript:void(0)" class="btn px-2"
-                                                id="actionMenu{{ $classSession->pk }}" data-bs-toggle="dropdown"
-                                                aria-expanded="false">
-                                                <span class="material-symbols-rounded fs-5">more_horiz</span>
+                                        <div class="d-inline-flex align-items-center gap-2" role="group"
+                                            aria-label="Class session actions">
+
+                                            <!-- Edit -->
+                                            <a href="{{ route('master.class.session.edit', ['id' => encrypt($classSession->pk)]) }}"
+                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                                                aria-label="Edit class session">
+                                                <span class="material-symbols-rounded fs-6"
+                                                    aria-hidden="true">edit</span>
+                                                <span class="d-none d-md-inline">Edit</span>
                                             </a>
 
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm"
-                                                aria-labelledby="actionMenu{{ $classSession->pk }}">
+                                            <!-- Delete -->
+                                            @if($classSession->active_inactive == 1)
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                                disabled aria-disabled="true"
+                                                title="Cannot delete active class session">
+                                                <span class="material-symbols-rounded fs-6"
+                                                    aria-hidden="true">delete</span>
+                                                <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                            @else
+                                            <form
+                                                action="{{ route('master.class.session.delete', ['id' => encrypt($classSession->pk)]) }}"
+                                                method="POST" class="d-inline"
+                                                onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                                @csrf
+                                                @method('DELETE')
 
-                                                <!-- Edit -->
-                                                <li>
-                                                    <a href="{{ route('master.class.session.edit', ['id' => encrypt($classSession->pk)]) }}"
-                                                        class="dropdown-item d-flex align-items-center gap-2">
-                                                        <span
-                                                            class="material-symbols-rounded text-primary fs-6">edit</span>
-                                                        Edit
-                                                    </a>
-                                                </li>
+                                                <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                                    aria-label="Delete class session">
+                                                    <span class="material-symbols-rounded fs-6"
+                                                        aria-hidden="true">delete</span>
+                                                    <span class="d-none d-md-inline">Delete</span>
+                                                </button>
+                                            </form>
+                                            @endif
 
-                                                <!-- Delete -->
-                                                <li>
-                                                    <form
-                                                        action="{{ route('master.class.session.delete', ['id' => encrypt($classSession->pk)]) }}"
-                                                        method="POST" class="d-inline">
-
-                                                        @csrf
-                                                        @method('DELETE')
-
-                                                        <button type="button"
-                                                            class="dropdown-item d-flex align-items-center gap-2 text-danger"
-                                                            onclick="event.preventDefault();
-                                if({{ $classSession->active_inactive }} == 1) return;
-                                if(confirm('Are you sure you want to delete this record?')) {
-                                    this.closest('form').submit();
-                                }" {{ $classSession->active_inactive == 1 ? 'disabled' : '' }}>
-                                                            <span class="material-symbols-rounded fs-6">delete</span>
-                                                            Delete
-                                                        </button>
-
-                                                    </form>
-                                                </li>
-
-                                            </ul>
                                         </div>
+
 
                                     </td>
 
