@@ -84,9 +84,9 @@
 
             <hr>
 
-            <!-- Duty Type Filter -->
+            <!-- Filters -->
             <div class="row mb-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label for="duty_type_filter" class="form-label fw-bold">Filter by Duty Type</label>
                     <select name="duty_type_filter" id="duty_type_filter" class="form-select">
                         <option value="">All Duty Types</option>
@@ -99,8 +99,18 @@
                         @endif
                     </select>
                 </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="button" id="clearFilterBtn" class="btn btn-outline-secondary px-4 py-2 shadow-sm">
+                <div class="col-md-3">
+                    <label for="from_date_filter" class="form-label fw-bold">From Date</label>
+                    <input type="date" name="from_date_filter" id="from_date_filter" class="form-control" 
+                           value="{{ isset($fromDateFilter) ? $fromDateFilter : '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="to_date_filter" class="form-label fw-bold">To Date</label>
+                    <input type="date" name="to_date_filter" id="to_date_filter" class="form-control" 
+                           value="{{ isset($toDateFilter) ? $toDateFilter : '' }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" id="clearFilterBtn" class="btn btn-outline-secondary px-4 py-2 shadow-sm w-100">
                         <i class="material-icons menu-icon material-symbols-rounded me-1" style="font-size: 18px; vertical-align: middle;">refresh</i> Clear Filter
                     </button>
                 </div>
@@ -313,27 +323,60 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const dutyTypeFilter = document.getElementById('duty_type_filter');
+        const fromDateFilter = document.getElementById('from_date_filter');
+        const toDateFilter = document.getElementById('to_date_filter');
         const clearFilterBtn = document.getElementById('clearFilterBtn');
         
-        if (dutyTypeFilter) {
-            dutyTypeFilter.addEventListener('change', function() {
-                const selectedValue = this.value;
-                const url = new URL(window.location.href);
-                
-                if (selectedValue) {
-                    url.searchParams.set('duty_type_filter', selectedValue);
-                } else {
-                    url.searchParams.delete('duty_type_filter');
-                }
-                
-                window.location.href = url.toString();
-            });
+        // Function to update URL with filters
+        function updateFilters() {
+            const url = new URL(window.location.href);
+            
+            // Update duty type filter
+            if (dutyTypeFilter && dutyTypeFilter.value) {
+                url.searchParams.set('duty_type_filter', dutyTypeFilter.value);
+            } else {
+                url.searchParams.delete('duty_type_filter');
+            }
+            
+            // Update from date filter
+            if (fromDateFilter && fromDateFilter.value) {
+                url.searchParams.set('from_date_filter', fromDateFilter.value);
+            } else {
+                url.searchParams.delete('from_date_filter');
+            }
+            
+            // Update to date filter
+            if (toDateFilter && toDateFilter.value) {
+                url.searchParams.set('to_date_filter', toDateFilter.value);
+            } else {
+                url.searchParams.delete('to_date_filter');
+            }
+            
+            window.location.href = url.toString();
         }
         
+        // Duty type filter change
+        if (dutyTypeFilter) {
+            dutyTypeFilter.addEventListener('change', updateFilters);
+        }
+        
+        // From date filter change
+        if (fromDateFilter) {
+            fromDateFilter.addEventListener('change', updateFilters);
+        }
+        
+        // To date filter change
+        if (toDateFilter) {
+            toDateFilter.addEventListener('change', updateFilters);
+        }
+        
+        // Clear all filters
         if (clearFilterBtn) {
             clearFilterBtn.addEventListener('click', function() {
                 const url = new URL(window.location.href);
                 url.searchParams.delete('duty_type_filter');
+                url.searchParams.delete('from_date_filter');
+                url.searchParams.delete('to_date_filter');
                 window.location.href = url.toString();
             });
         }

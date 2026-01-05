@@ -51,8 +51,10 @@ class OTMDOEscrotExemptionController extends Controller
             return redirect()->back()->with('error', 'Student record not found.');
         }
         
-        // Get duty type filter
+        // Get filter parameters
         $dutyTypeFilter = $request->get('duty_type_filter');
+        $fromDateFilter = $request->get('from_date_filter');
+        $toDateFilter = $request->get('to_date_filter');
         
         // Check student duty count in mdo_escot_duty_map
         // Compare selected_student_list = student_master.pk
@@ -62,6 +64,16 @@ class OTMDOEscrotExemptionController extends Controller
         // Filter by duty type if specified
         if ($dutyTypeFilter) {
             $dutyMapsQuery->where('mdo_duty_type_master_pk', $dutyTypeFilter);
+        }
+        
+        // Filter by from date if specified
+        if ($fromDateFilter) {
+            $dutyMapsQuery->where('mdo_date', '>=', $fromDateFilter);
+        }
+        
+        // Filter by to date if specified
+        if ($toDateFilter) {
+            $dutyMapsQuery->where('mdo_date', '<=', $toDateFilter);
         }
         
         $dutyMaps = $dutyMapsQuery->orderBy('created_date', 'desc')->get();
@@ -128,7 +140,7 @@ class OTMDOEscrotExemptionController extends Controller
             'has_duties' => count($validDutyMaps) > 0,
         ];
         
-        return view('admin.ot_mdo_escrot_exemption.view', compact('studentData', 'allDutyTypes', 'dutyTypeFilter'));
+        return view('admin.ot_mdo_escrot_exemption.view', compact('studentData', 'allDutyTypes', 'dutyTypeFilter', 'fromDateFilter', 'toDateFilter'));
     }
     
     /**
@@ -138,6 +150,8 @@ class OTMDOEscrotExemptionController extends Controller
     {
         // Get filter parameters
         $dutyTypeFilter = $request->get('duty_type_filter');
+        $fromDateFilter = $request->get('from_date_filter');
+        $toDateFilter = $request->get('to_date_filter');
         
         // Get all students with category = 'S' from user_credentials
         $studentIds = DB::table('user_credentials')
@@ -163,6 +177,16 @@ class OTMDOEscrotExemptionController extends Controller
             // Filter by duty type if specified
             if ($dutyTypeFilter) {
                 $dutyMapsQuery->where('mdo_duty_type_master_pk', $dutyTypeFilter);
+            }
+            
+            // Filter by from date if specified
+            if ($fromDateFilter) {
+                $dutyMapsQuery->where('mdo_date', '>=', $fromDateFilter);
+            }
+            
+            // Filter by to date if specified
+            if ($toDateFilter) {
+                $dutyMapsQuery->where('mdo_date', '<=', $toDateFilter);
             }
             
             $dutyMaps = $dutyMapsQuery->orderBy('created_date', 'desc')->get();
@@ -222,7 +246,9 @@ class OTMDOEscrotExemptionController extends Controller
         return view('admin.ot_mdo_escrot_exemption.view', compact(
             'studentData',
             'allDutyTypes',
-            'dutyTypeFilter'
+            'dutyTypeFilter',
+            'fromDateFilter',
+            'toDateFilter'
         ));
     }
 }
