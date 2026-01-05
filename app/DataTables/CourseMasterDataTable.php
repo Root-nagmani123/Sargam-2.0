@@ -51,54 +51,80 @@ class CourseMasterDataTable extends DataTable
                 $btnId = 'dropdown-btn-' . $row->pk;
 
                 $html = <<<HTML
-<div class="dropdown text-center action-dropdown">
-    <a id="{$btnId}" data-bs-toggle="dropdown" data-bs-offset="0,10" data-bs-auto-close="outside" aria-expanded="false" aria-haspopup="true" aria-label="Actions" style="cursor: pointer;">
-        <span class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px;">more_horiz</span>
-    </a>
-    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-        <li>
-            <a class="dropdown-item d-flex align-items-center" href="{$viewUrl}" target="_blank">
-                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">visibility</span>
-                View
-            </a>
-        </li>
-        <li>
-            <a class="dropdown-item d-flex align-items-center" href="{$editUrl}">
-                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">edit</span>
-                Edit
-            </a>
-        </li>
-        <li><hr class="dropdown-divider"></li>
-HTML;
+<td class="text-center">
+    <div class="d-inline-flex align-items-center gap-2"
+         role="group"
+         aria-label="Row actions">
 
-                if ($isActive) {
-                    $html .= <<<HTML
-        <li>
-            <span class="dropdown-item d-flex align-items-center disabled" title="Cannot delete active course" aria-disabled="true">
-                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
-                Delete
+        <!-- View -->
+        <a
+            href="{$viewUrl}"
+            target="_blank"
+            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+            aria-label="View course"
+        >
+            <span class="material-icons material-symbols-rounded"
+                  style="font-size:18px;"
+                  aria-hidden="true">
+                visibility
             </span>
-        </li>
-HTML;
-                } else {
-                    $formId = 'delete-form-' . $row->pk;
-                    $html .= <<<HTML
-        <li>
-            <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
+            <span class="d-none d-lg-inline">View</span>
+        </a>
+
+        <!-- Edit -->
+        <a
+            href="{$editUrl}"
+            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+            aria-label="Edit course"
+        >
+            <span class="material-icons material-symbols-rounded"
+                  style="font-size:18px;"
+                  aria-hidden="true">
+                edit
+            </span>
+            <span class="d-none d-lg-inline">Edit</span>
+        </a>
+
+        <!-- Delete -->
+        <?php if ($isActive): ?>
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                disabled
+                aria-disabled="true"
+                title="Cannot delete active course"
+            >
+                <span class="material-icons material-symbols-rounded"
+                      style="font-size:18px;"
+                      aria-hidden="true">
+                    delete
+                </span>
+                <span class="d-none d-lg-inline">Delete</span>
+            </button>
+        <?php else: ?>
+            <form action="{$deleteUrl}" method="POST" class="d-inline">
                 <input type="hidden" name="_token" value="{$csrf}">
                 <input type="hidden" name="_method" value="DELETE">
-                <a href="#" class="dropdown-item d-flex align-items-center text-danger" onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this course?')) { document.getElementById('{$formId}').submit(); }">
-                    <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
-                    Delete
-                </a>
-            </form>
-        </li>
-HTML;
-                }
 
-                $html .= <<<HTML
-    </ul>
-</div>
+                <button
+                    type="submit"
+                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                    aria-label="Delete course"
+                    onclick="return confirm('Are you sure you want to delete this course?');"
+                >
+                    <span class="material-icons material-symbols-rounded"
+                          style="font-size:18px;"
+                          aria-hidden="true">
+                        delete
+                    </span>
+                    <span class="d-none d-lg-inline">Delete</span>
+                </button>
+            </form>
+        <?php endif; ?>
+
+    </div>
+</td>
+
 HTML;
                 return $html;
             })

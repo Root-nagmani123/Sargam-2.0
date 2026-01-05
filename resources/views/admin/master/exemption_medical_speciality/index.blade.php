@@ -51,53 +51,53 @@
                                             </div>
                                         </td>
                                         <td>
-                                            <div class="dropdown">
-                                                <a
-                                                    data-bs-toggle="dropdown" aria-expanded="false">
-                                                    <i class="material-icons menu-icon">more_horiz</i>
-                                                </a>
+                                            <div class="d-inline-flex align-items-center gap-2"
+     role="group"
+     aria-label="Medical speciality actions">
 
-                                                <ul class="dropdown-menu dropdown-menu-end">
+    <!-- Edit -->
+    <a href="{{ route('master.exemption.medical.speciality.edit', ['id' => encrypt($speciality->pk)]) }}"
+       class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+       aria-label="Edit medical speciality">
+        <i class="material-icons material-symbols-rounded"
+           style="font-size:18px;"
+           aria-hidden="true">edit</i>
+        <span class="d-none d-md-inline">Edit</span>
+    </a>
 
-                                                    <!-- Edit -->
-                                                    <li>
-                                                        <a class="dropdown-item"
-                                                            href="{{ route('master.exemption.medical.speciality.edit', ['id' => encrypt($speciality->pk)]) }}">
-                                                            <i class="material-icons material-symbols-rounded me-2"
-                                                                style="font-size: 18px;">edit</i>
-                                                            Edit
-                                                        </a>
-                                                    </li>
+    <!-- Delete -->
+    @if($speciality->active_inactive == 1)
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                disabled
+                aria-disabled="true"
+                title="Cannot delete active record">
+            <i class="material-icons material-symbols-rounded"
+               style="font-size:18px;"
+               aria-hidden="true">delete</i>
+            <span class="d-none d-md-inline">Delete</span>
+        </button>
+    @else
+        <form action="{{ route('master.exemption.medical.speciality.delete', ['id' => encrypt($speciality->pk)]) }}"
+              method="POST"
+              class="d-inline">
+            @csrf
+            @method('DELETE')
 
-                                                    <!-- Delete -->
-                                                    <li>
-                                                        @if($speciality->active_inactive == 1)
-                                                        <button class="dropdown-item text-muted" disabled
-                                                            title="Cannot delete active record">
-                                                            <i class="material-icons material-symbols-rounded me-2"
-                                                                style="font-size: 18px;">delete</i>
-                                                            Delete (Disabled)
-                                                        </button>
-                                                        @else
-                                                        <form action="{{ route('master.exemption.medical.speciality.delete', 
-                                        ['id' => encrypt($speciality->pk)]) }}" method="POST" class="d-inline">
-                                                            @csrf
-                                                            @method('DELETE')
+            <button type="submit"
+                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                    aria-label="Delete medical speciality"
+                    onclick="return confirm('Are you sure you want to delete this record?');">
+                <i class="material-icons material-symbols-rounded"
+                   style="font-size:18px;"
+                   aria-hidden="true">delete</i>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>
+        </form>
+    @endif
 
-                                                            <button class="dropdown-item text-danger" onclick="event.preventDefault();
-                                if(confirm('Are you sure you want to delete this record?')) {
-                                    this.closest('form').submit();
-                                }">
-                                                                <i class="material-icons material-symbols-rounded me-2"
-                                                                    style="font-size: 18px;">delete</i>
-                                                                Delete
-                                                            </button>
-                                                        </form>
-                                                        @endif
-                                                    </li>
+</div>
 
-                                                </ul>
-                                            </div>
                                         </td>
 
                                     </tr>
