@@ -260,14 +260,14 @@
                                                     Rating
                                                 </label>
                                             </div>
-                                            <div class="form-check" id="facultyReviewRatingDiv">
+                                            <!-- <div class="form-check" id="facultyReviewRatingDiv">
                                                 <input class="form-check-input" type="checkbox" id="facultyReviewRating"
                                                     name="facultyReviewRating" value="1">
                                                 <label class="form-check-label" for="facultyReviewRating">
                                                     Internal Faculty Feedback<span class="text-muted fs-6">internal
                                                         faculty can give feedback to guest faculty</span>
                                                 </label>
-                                            </div>
+                                            </div> -->
 
                                             <small class="text-muted d-block mt-2">
                                                 Select at least one feedback component.
