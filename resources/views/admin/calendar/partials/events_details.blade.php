@@ -8,8 +8,18 @@
                         <h3 class="modal-title h5 mb-0" id="eventDetailsTitle">
                             <span id="eventTitle">Event</span>
                         </h3>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                            aria-label="Close"></button>
+                        <div class="d-flex gap-2 align-items-center">
+                            @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP'))
+                            <button type="button" class="btn btn-sm btn-primary" id="editEventBtn">
+                                <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" id="deleteEventBtn">
+                                <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
+                            </button>
+                            @endif
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
                     </div>
                     <div class="mt-2">
                         <p class="mb-0 small fw-medium text-white">
@@ -58,19 +68,6 @@
                                 <strong>Internal Faculty:</strong>
                                 <span id="internal_faculty_name_show" class="ms-1"></span>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-4 pt-3 border-top">
-                        <div class="d-flex gap-2">
-                            @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP'))
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="editEventBtn">
-                                <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" id="deleteEventBtn">
-                                <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
-                            </button>
-                            @endif
                         </div>
                     </div>
                 </div>

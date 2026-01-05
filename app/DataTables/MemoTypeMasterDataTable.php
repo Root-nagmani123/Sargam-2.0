@@ -59,14 +59,14 @@ class MemoTypeMasterDataTable extends DataTable
     <!-- Delete -->
     <?php if ($isActive): ?>
         <button type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
                 disabled
                 aria-disabled="true"
                 title="Cannot delete active memo type">
             <span class="material-icons material-symbols-rounded"
                   style="font-size:18px;"
                   aria-hidden="true">delete</span>
-            <span class="d-none d-md-inline">Delete</span>
+            <span class="d-none">Delete</span>
         </button>
     <?php else: ?>
         <form id="<?= $formId ?>"
