@@ -1,14 +1,15 @@
-@extends('admin.layouts.master')
+@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'My Attendance')
 
-@section('setup_content')
-<!-- Skip to main content - GIGW Accessibility Requirement -->
-<a href="#main-content" class="skip-to-main" aria-label="Skip to main content">Skip to main content</a>
+@section(hasRole('Student-OT') ? 'content' : 'setup_content')
 
 <div class="container-fluid" id="main-content" role="main">
+    @if(hasRole('Admin'))
     <x-breadcrum title="My Attendance Record" />
     <x-session_message />
+
+    @endif
 
     {{-- Modern Student Information Header --}}
     <div class="card mb-4" style="border-left: 4px solid #004a93;">
