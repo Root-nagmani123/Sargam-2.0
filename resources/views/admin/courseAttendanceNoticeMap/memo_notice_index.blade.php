@@ -58,7 +58,7 @@
             </div>
             @else
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table text-nowrap">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -96,31 +96,40 @@
                                 </div>
                             </td>
 <td>
-    <div class="dropdown">
-        <a href="#" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="material-icons material-icons-rounded fs-5">more_horiz</i>
-        </a>
+    <div class="d-inline-flex align-items-center gap-2"
+     role="group"
+     aria-label="Memo notice template actions">
 
-        <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-            <li>
-                <a class="dropdown-item"
-                   href="{{ route('admin.memo-notice.edit', $template->pk) }}">
-                    Edit
-                </a>
-            </li>
+    <!-- Edit -->
+    <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
+       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+       aria-label="Edit memo notice template">
+        <i class="material-icons material-symbols-rounded"
+           style="font-size:18px;"
+           aria-hidden="true">edit</i>
+        <span class="d-none d-md-inline">Edit</span>
+    </a>
 
-            <li>
-                <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
-                      method="POST"
-                      onsubmit="return confirm('Are you sure you want to delete this template?')">
-                    @csrf @method('DELETE')
-                    <button type="submit" class="dropdown-item text-danger">
-                        Delete
-                    </button>
-                </form>
-            </li>
-        </ul>
-    </div>
+    <!-- Delete -->
+    <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
+          method="POST"
+          class="d-inline"
+          onsubmit="return confirm('Are you sure you want to delete this template?')">
+        @csrf
+        @method('DELETE')
+
+        <button type="submit"
+                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                aria-label="Delete memo notice template">
+            <i class="material-icons material-symbols-rounded"
+               style="font-size:18px;"
+               aria-hidden="true">delete</i>
+            <span class="d-none d-md-inline">Delete</span>
+        </button>
+    </form>
+
+</div>
+
 </td>
 
                         </tr>

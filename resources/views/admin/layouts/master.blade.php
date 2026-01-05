@@ -188,196 +188,257 @@
             padding: 6px 4px;
         }
     }
+
     /* Wrapper */
-.modern-bottom-dd {
-    position: relative;
-}
+    .modern-bottom-dd {
+        position: relative;
+    }
 
-/* Label */
-.dd-label {
-    font-size: 0.95rem;
-    color: #000;
-}
+    /* Label */
+    .dd-label {
+        font-size: 0.95rem;
+        color: #000;
+    }
 
-/* Trigger */
-.dd-trigger {
-    border: none;
-    border-bottom: 1px solid #4c8ec5; /* Soft Blue like screenshot */
-    border-radius: 10px;
-    background: transparent;
-    padding: 8px 0 10px 0;
-    font-weight: 600;
-    font-size: 1rem;
-    min-height: 44px; /* GIGW Minimum touch target */
-    cursor: pointer;
-    transition: all .25s ease;
-}
+    /* Trigger */
+    .dd-trigger {
+        border: none;
+        border-bottom: 1px solid #4c8ec5;
+        /* Soft Blue like screenshot */
+        border-radius: 10px;
+        background: transparent;
+        padding: 8px 0 10px 0;
+        font-weight: 600;
+        font-size: 1rem;
+        min-height: 44px;
+        /* GIGW Minimum touch target */
+        cursor: pointer;
+        transition: all .25s ease;
+    }
 
-/* Hover */
-.dd-trigger:hover {
-    border-bottom-color: #004a93;
-}
+    /* Hover */
+    .dd-trigger:hover {
+        border-bottom-color: #004a93;
+    }
 
-/* Focus visible for accessibility */
-.dd-trigger:focus-visible {
-    outline: none;
-    border-bottom-color: #004a93 !important;
-    box-shadow: 0 2px 0 0 #004a93;
-}
+    /* Focus visible for accessibility */
+    .dd-trigger:focus-visible {
+        outline: none;
+        border-bottom-color: #004a93 !important;
+        box-shadow: 0 2px 0 0 #004a93;
+    }
 
-/* Dropdown arrow rotation */
-.dropdown.show .dd-icon svg {
-    transform: rotate(180deg);
-    transition: .25s;
-}
+    /* Dropdown arrow rotation */
+    .dropdown.show .dd-icon svg {
+        transform: rotate(180deg);
+        transition: .25s;
+    }
 
-/* Menu */
-.dd-menu {
-    border-radius: 10px;
-    padding: 6px 0;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-    animation: fadeIn .15s ease-out;
-}
+    /* Menu */
+    .dd-menu {
+        border-radius: 10px;
+        padding: 6px 0;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        animation: fadeIn .15s ease-out;
+    }
 
-/* Menu Items */
-.dd-menu-item {
-    padding: 10px 14px;
-    min-height: 40px;
-    font-weight: 500;
-}
+    /* Menu Items */
+    .dd-menu-item {
+        padding: 10px 14px;
+        min-height: 40px;
+        font-weight: 500;
+    }
 
-/* Hover */
-.dd-menu-item:hover {
-    background: #e8f3ff;
-    color: #004a93;
-    border-radius: 6px;
-}
+    /* Hover */
+    .dd-menu-item:hover {
+        background: #e8f3ff;
+        color: #004a93;
+        border-radius: 6px;
+    }
 
-/* Animation */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-.pagination .page-link {
-    border: none !important;
-    padding: 4px 10px;
-    font-size: 14px;
-    color: #3a3a3a;
-    background: transparent;
-}
+    /* Animation */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-4px);
+        }
 
-.pagination .page-item.active .page-link.current-page {
-    border: 2px solid #0d6efd !important;
-    border-radius: 8px !important;
-    color: #0d6efd !important;
-    font-weight: 600;
-    background: transparent !important;
-}
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-.pagination .page-item.disabled .page-link {
-    color: #aaa;
-}
+    .pagination .page-link {
+        border: none !important;
+        padding: 4px 10px;
+        font-size: 14px;
+        color: #3a3a3a;
+        background: transparent;
+    }
 
-.pagination li {
-    margin-right: 4px;
-}
+    .pagination .page-item.active .page-link.current-page {
+        border: 2px solid #0d6efd !important;
+        border-radius: 8px !important;
+        color: #0d6efd !important;
+        font-weight: 600;
+        background: transparent !important;
+    }
 
-.pagination .page-link:hover {
-    color: #0d6efd;
-}
-.search-expand {
-    position: relative;
-}
+    .pagination .page-item.disabled .page-link {
+        color: #aaa;
+    }
 
-.search-input {
-    width: 0;
-    opacity: 0;
-    padding: 0;
-    transition: width .35s ease, opacity .25s ease;
-    border-radius: 50rem;
-    border: 1px solid #ced4da;
-}
+    .pagination li {
+        margin-right: 4px;
+    }
 
-/* Expanded state */
-.search-input.active {
-    width: 200px;           /* You can increase this */
-    opacity: 1;
-    padding: .375rem .75rem;
-}
-.alphabet-loader {
-    position: fixed;
-    inset: 0;
-    background: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-}
+    .pagination .page-link:hover {
+        color: #0d6efd;
+    }
 
-.alphabet-loader .letters {
-    display: flex;
-    gap: 8px;
-}
+    .search-expand {
+        position: relative;
+    }
 
-.alphabet-loader .letters span {
-    font-size: 32px;
-    font-weight: 700;
-    font-family: 'Poppins', sans-serif;
-    color: #004a93;
-    opacity: 0.2;
-    animation: pulseText 1.2s infinite ease-in-out;
-}
+    .search-input {
+        width: 0;
+        opacity: 0;
+        padding: 0;
+        transition: width .35s ease, opacity .25s ease;
+        border-radius: 50rem;
+        border: 1px solid #ced4da;
+    }
 
-.alphabet-loader .letters span:nth-child(1) { animation-delay: 0s; }
-.alphabet-loader .letters span:nth-child(2) { animation-delay: 0.1s; }
-.alphabet-loader .letters span:nth-child(3) { animation-delay: 0.2s; }
-.alphabet-loader .letters span:nth-child(4) { animation-delay: 0.3s; }
-.alphabet-loader .letters span:nth-child(5) { animation-delay: 0.4s; }
-.alphabet-loader .letters span:nth-child(6) { animation-delay: 0.5s; }
-.alphabet-loader .letters span:nth-child(7) { animation-delay: 0.6s; }
-.alphabet-loader .letters span:nth-child(8) { animation-delay: 0.7s; }
-.alphabet-loader .letters span:nth-child(9) { animation-delay: 0.8s; }
-.alphabet-loader .letters span:nth-child(10) { animation-delay: 0.9s; }
+    /* Expanded state */
+    .search-input.active {
+        width: 200px;
+        /* You can increase this */
+        opacity: 1;
+        padding: .375rem .75rem;
+    }
 
-@keyframes pulseText {
-    0% { opacity: 0.2; transform: translateY(0); }
-    50% { opacity: 1; transform: translateY(-6px); }
-    100% { opacity: 0.2; transform: translateY(0); }
-}
+    .alphabet-loader {
+        position: fixed;
+        inset: 0;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
 
+    .alphabet-loader .letters {
+        display: flex;
+        gap: 8px;
+    }
 
+    .alphabet-loader .letters span {
+        font-size: 32px;
+        font-weight: 700;
+        font-family: 'Poppins', sans-serif;
+        color: #004a93;
+        opacity: 0.2;
+        animation: pulseText 1.2s infinite ease-in-out;
+    }
+
+    .alphabet-loader .letters span:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .alphabet-loader .letters span:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .alphabet-loader .letters span:nth-child(3) {
+        animation-delay: 0.2s;
+    }
+
+    .alphabet-loader .letters span:nth-child(4) {
+        animation-delay: 0.3s;
+    }
+
+    .alphabet-loader .letters span:nth-child(5) {
+        animation-delay: 0.4s;
+    }
+
+    .alphabet-loader .letters span:nth-child(6) {
+        animation-delay: 0.5s;
+    }
+
+    .alphabet-loader .letters span:nth-child(7) {
+        animation-delay: 0.6s;
+    }
+
+    .alphabet-loader .letters span:nth-child(8) {
+        animation-delay: 0.7s;
+    }
+
+    .alphabet-loader .letters span:nth-child(9) {
+        animation-delay: 0.8s;
+    }
+
+    .alphabet-loader .letters span:nth-child(10) {
+        animation-delay: 0.9s;
+    }
+
+    @keyframes pulseText {
+        0% {
+            opacity: 0.2;
+            transform: translateY(0);
+        }
+
+        50% {
+            opacity: 1;
+            transform: translateY(-6px);
+        }
+
+        100% {
+            opacity: 0.2;
+            transform: translateY(0);
+        }
+    }
+
+    /* Sidebar toggle icon rotation */
+    #sidebarToggleIcon {
+        transition: transform 0.3s ease-in-out;
+        display: inline-block;
+    }
+    #sidebarToggleIcon.rotated {
+        transform: rotate(180deg);
+    }
     </style>
 
 </head>
 
 <body data-sidebartype="full">
     <!-- Preloader -->
-<div class="alphabet-loader" id="alphabetLoader">
-    <div class="letters">
-        <span>S</span>
-        <span>A</span>
-        <span>R</span>
-        <span>G</span>
-        <span>A</span>
-        <span>M</span>
-        <span>&nbsp;</span>
-        <span>2</span>
-        <span>.</span>
-        <span>0</span>
+    <div class="alphabet-loader" id="alphabetLoader">
+        <div class="letters">
+            <span>S</span>
+            <span>A</span>
+            <span>R</span>
+            <span>G</span>
+            <span>A</span>
+            <span>M</span>
+            <span>&nbsp;</span>
+            <span>2</span>
+            <span>.</span>
+            <span>0</span>
+        </div>
     </div>
-</div>
 
     <div id="main-wrapper">
-         @include('admin.layouts.header')
+        @include('admin.layouts.header')
         <div class="page-wrapper">
-            
-          @include('admin.layouts.sidebar')
+
+            @include('admin.layouts.sidebar')
             <div class="body-wrapper">
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">
                     <!-- Home Tab -->
                     <div class="tab-pane fade show active" id="home" role="tabpanel">
-                                @yield('content')
+                        @yield('content')
                     </div>
 
                     <!-- Setup Tab -->
@@ -405,10 +466,9 @@
     </div>
 
     @include('admin.layouts.footer')
-    <script src="{{ asset('js/forms.js') }}"></script>
+     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
-    <script src="{{ asset('js/mobile-sidebar.js') }}"></script>
     @stack('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -443,7 +503,8 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener("DOMContentLoaded", function () {
     const sidebar = document.getElementById("main-wrapper");
     const toggleBtn = document.getElementById("headerCollapse");
-    const icon = document.getElementById("sidebarToggleIcon");
+    // Query all icons across all tabs (multiple instances due to tab structure)
+    const icons = document.querySelectorAll("#sidebarToggleIcon");
     const body = document.body;
     const sidebarmenus = document.querySelectorAll(".sidebarmenu");
     const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
@@ -493,6 +554,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Initialize collapsed state on page load
     const sidebarType = body.getAttribute("data-sidebartype");
+    console.log('Initial sidebar type:', sidebarType);
+    console.log('Icon elements found:', icons.length);
+    
     if (sidebarType === "mini-sidebar") {
         // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
         sidebar.classList.remove("show-sidebar");
@@ -500,8 +564,12 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebarmenus.forEach(function(el) {
             el.classList.add("close");
         });
-        // Set icon to expand (collapsed state)
-        if (icon) icon.textContent = "keyboard_double_arrow_right";
+        // Set all icon instances to expand (collapsed state)
+        icons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.remove("rotated");
+        });
+        console.log('Set all icons to non-rotated (collapsed state)');
         // After initial collapse state, adjust DataTables to new layout
         setTimeout(adjustAllDataTables, 300);
     } else {
@@ -510,38 +578,40 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebarmenus.forEach(function(el) {
             el.classList.remove("close");
         });
-        if (icon) icon.textContent = "keyboard_double_arrow_left";
+        // Set all icon instances to rotated (expanded state)
+        icons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.add("rotated");
+        });
+        console.log('Set all icons to rotated (expanded state)');
         // After initial expanded state, adjust DataTables to new layout
         setTimeout(adjustAllDataTables, 300);
     }
 
-    if (toggleBtn) {
-        toggleBtn.addEventListener("click", function () {
-            // Toggle show-sidebar class on main-wrapper
-            sidebar.classList.toggle("show-sidebar");
-
-            // Toggle close class on sidebarmenu elements
-            sidebarmenus.forEach(function(el) {
-                el.classList.toggle("close");
-            });
-
-            // Toggle data-sidebartype on body
-            const currentType = body.getAttribute("data-sidebartype");
-            if (currentType === "mini-sidebar") {
-                body.setAttribute("data-sidebartype", "full");
-                try { localStorage.setItem('SidebarType', 'full'); } catch (e) {}
-                if (icon) icon.textContent = "keyboard_double_arrow_left";   // collapse icon
+    // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
+    function syncIconWithSidebar(type) {
+        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
+        allIcons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            if (type === "full") {
+                icon.classList.add("rotated");
             } else {
-                body.setAttribute("data-sidebartype", "mini-sidebar");
-                try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
-                if (icon) icon.textContent = "keyboard_double_arrow_right";  // expand icon
+                icon.classList.remove("rotated");
             }
-
-            // Adjust DataTables after the sidebar transition to fix header widths
-            // Use a small delay to allow CSS transitions to finish
-            setTimeout(adjustAllDataTables, 300);
         });
+        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
     }
+
+    const observer = new MutationObserver(function(mutations) {
+        for (const m of mutations) {
+            if (m.attributeName === 'data-sidebartype') {
+                const t = body.getAttribute('data-sidebartype');
+                syncIconWithSidebar(t);
+                setTimeout(adjustAllDataTables, 300);
+            }
+        }
+    });
+    observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
 });
 </script>
 
