@@ -11,6 +11,12 @@ use App\Models\{StudentMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMaste
 class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
 {
     public $failures = [];
+    public $courseMasterPk;
+
+    public function __construct($courseMasterPk)
+    {
+        $this->courseMasterPk = $courseMasterPk;
+    }
 
     public function headingRow(): int
     {
@@ -54,6 +60,7 @@ public function collection(Collection $collection)
             )
             ->where('cgtm.type_name', $data['group_type'])
             ->where('gtm.group_name', $data['group_name'])
+            ->where('gtm.course_name', $this->courseMasterPk) 
             ->where('gtm.active_inactive', 1)
             ->select('gtm.pk', 'gtm.course_name', 'gtm.type_name')
             ->first();
