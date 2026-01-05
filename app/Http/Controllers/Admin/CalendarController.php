@@ -693,6 +693,7 @@ class CalendarController extends Controller
                 })
 
                 ->where('t.feedback_checkbox', 1)
+                // ->whereDate('t.END_DATE', '<', now()->toDateString())
 
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
@@ -829,6 +830,7 @@ class CalendarController extends Controller
                 })
 
                 ->where('t.feedback_checkbox', 1)
+                // ->whereDate('t.END_DATE', '<', now()->toDateString())
 
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
