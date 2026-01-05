@@ -341,14 +341,31 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize Select2 when modal is shown
     $('#eventModal').on('shown.bs.modal', function() {
+        var modalDialog = $('#eventModal').find('.modal-dialog');
     
+        // Initialize Select2 for faculty field
+        if (!$('#faculty').hasClass('select2-hidden-accessible')) {
+            $('#faculty').select2({
+                placeholder: 'Select Faculty',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: modalDialog
+            });
+        }
+
+        // Update Select2 display if value is set programmatically (for edit mode)
+        setTimeout(function() {
+            if ($('#faculty').hasClass('select2-hidden-accessible') && $('#faculty').val()) {
+                $('#faculty').trigger('change.select2');
+            }
+        }, 100);
 
         if (!$('#internal_faculty').hasClass('select2-hidden-accessible')) {
             $('#internal_faculty').select2({
                 placeholder: 'Select Internal Faculty',
                 allowClear: true,
                 width: '100%',
-                dropdownParent: $('#eventModal')
+                dropdownParent: modalDialog
             });
         }
 
@@ -356,6 +373,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Destroy Select2 when modal is hidden to prevent conflicts
     $('#eventModal').on('hidden.bs.modal', function() {
+        if ($('#faculty').hasClass('select2-hidden-accessible')) {
+            $('#faculty').select2('destroy');
+        }
         if ($('#internal_faculty').hasClass('select2-hidden-accessible')) {
             $('#internal_faculty').select2('destroy');
         }
