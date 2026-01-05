@@ -3347,10 +3347,40 @@ class CalendarManager {
 
         // Checkboxes
         document.getElementById('fullDayCheckbox').checked = event.full_day == 1;
-        document.getElementById('feedback_checkbox').checked = event.feedback_checkbox == 1;
-        document.getElementById('remarkCheckbox').checked = event.Remark_checkbox == 1;
-        document.getElementById('ratingCheckbox').checked = event.Ratting_checkbox == 1;
         document.getElementById('bio_attendanceCheckbox').checked = event.Bio_attendance == 1;
+        
+        // Handle feedback checkboxes - set them in correct order
+        const feedbackCheckbox = document.getElementById('feedback_checkbox');
+        const remarkCheckbox = document.getElementById('remarkCheckbox');
+        const ratingCheckbox = document.getElementById('ratingCheckbox');
+        const feedbackOptions = document.getElementById('feedbackOptions');
+        
+        // First, show/hide feedback options div based on saved state
+        if (event.feedback_checkbox == 1 && feedbackOptions) {
+            feedbackOptions.classList.remove('d-none');
+            if (remarkCheckbox) remarkCheckbox.disabled = false;
+            if (ratingCheckbox) ratingCheckbox.disabled = false;
+        } else if (feedbackOptions) {
+            feedbackOptions.classList.add('d-none');
+        }
+        
+        // Then set the checkbox values
+        if (feedbackCheckbox) feedbackCheckbox.checked = event.feedback_checkbox == 1;
+        if (remarkCheckbox) remarkCheckbox.checked = event.Remark_checkbox == 1;
+        if (ratingCheckbox) ratingCheckbox.checked = event.Ratting_checkbox == 1;
+        
+        // Handle faculty review rating div visibility based on internal faculty div
+        if (event.feedback_checkbox == 1) {
+            const facultyReviewRatingDiv = document.getElementById('facultyReviewRatingDiv');
+            const internalFacultyDiv = document.getElementById('internalFacultyDiv');
+            if (facultyReviewRatingDiv && internalFacultyDiv) {
+                if (internalFacultyDiv.style.display === 'block') {
+                    facultyReviewRatingDiv.classList.remove('d-none');
+                } else {
+                    facultyReviewRatingDiv.classList.add('d-none');
+                }
+            }
+        }
 
         // Trigger dependent loads (await group types to ensure it completes)
         await this.loadGroupTypesForEdit(event);
