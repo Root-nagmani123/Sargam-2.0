@@ -40,6 +40,12 @@
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
                                     <span class="hide-menu">Attendance</span>
                                 </a></li>
+                            @if(hasRole('Training-MCTP'))
+                             <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('mdo-escrot-exemption.index') }}">
+                                        <span class="hide-menu">MDO Escort Exemption</span>
+                                    </a></li>
+                            @endif
                             
                               
                                 @if(! hasRole('Training-MCTP'))
@@ -62,6 +68,7 @@
                                 </a></li>
                                 @endif
                             {{-- USER Feedback --}}
+                              @if(! hasRole('Training-MCTP'))
                             <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -86,7 +93,7 @@
                                     </a></li>
 
                             </ul>
-                             @if(! hasRole('Training-MCTP'))
+                           
                             <li class="sidebar-item" style="background: #4077ad;
                                     border-radius: 30px 0px 0px 30px;
                                     width: 100%;

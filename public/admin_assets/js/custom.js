@@ -795,6 +795,12 @@ $(document).ready(function () {
     // Handle import upload button click
     $('#upload_import').on('click', function (e) {
         e.preventDefault();
+        var courseId = $('#course_master_pk_model').val();
+        if (!courseId) {
+            alert('Please select a course before uploading.');
+            return;
+        }
+        // console.log('Selected Course ID:', courseId);return false;
 
         const fileInput = $('#importFile')[0];
         if (fileInput.files.length === 0) {
@@ -811,6 +817,7 @@ $(document).ready(function () {
         }
 
         const formData = new FormData($('#importExcelForm')[0]);
+        formData.append('course_master_pk', courseId);
 
         $.ajax({
             url: routes.groupMappingExcelUpload,
@@ -826,7 +833,7 @@ $(document).ready(function () {
                 alert('File imported successfully!');
                 $('#importModal').modal('hide');
                 resetImportModal();
-                location.reload();
+                // location.reload();
             },
             error: function (xhr) {
                 console.log('Error response:', xhr);

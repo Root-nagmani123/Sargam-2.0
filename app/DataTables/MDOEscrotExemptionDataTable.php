@@ -78,30 +78,38 @@ class MDOEscrotExemptionDataTable extends DataTable
                 $formId = 'delete-form-' . $row->pk;
 
                 return <<<HTML
-<div class="dropdown text-center">
-    <button class="btn btn-link p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
-        <span class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">more_horiz</span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-        <li>
-            <a class="dropdown-item d-flex align-items-center" href="{$editUrl}">
-                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">edit</span>
-                Edit
-            </a>
-        </li>
-        <li><hr class="dropdown-divider"></li>
-        <li>
-            <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
-                <input type="hidden" name="_token" value="{$csrf}">
-                <input type="hidden" name="_method" value="DELETE">
-                <a href="#" class="dropdown-item d-flex align-items-center text-danger" onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this record?')) document.getElementById('{$formId}').submit();">
-                    <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
-                    Delete
-                </a>
-            </form>
-        </li>
-    </ul>
+<div class="d-flex justify-content-center align-items-center gap-2"
+     role="group"
+     aria-label="Row actions">
+
+    <!-- Edit -->
+    <a href="{$editUrl}"
+       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2"
+       aria-label="Edit record">
+        <span class="material-icons material-symbols-rounded"
+              style="font-size:20px;"
+              aria-hidden="true">edit</span>
+        <span class="d-none d-md-inline">Edit</span>
+    </a>
+
+    <!-- Delete -->
+    <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
+        <input type="hidden" name="_token" value="{$csrf}">
+        <input type="hidden" name="_method" value="DELETE">
+
+        <button type="submit"
+                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2"
+                aria-label="Delete record"
+                onclick="return confirm('Are you sure you want to delete this record?');">
+            <span class="material-icons material-symbols-rounded"
+                  style="font-size:20px;"
+                  aria-hidden="true">delete</span>
+            <span class="d-none d-md-inline">Delete</span>
+        </button>
+    </form>
+
 </div>
+
 HTML;
             })
             ->rawColumns(['student_name', 'ot_code', 'course_name', 'mdo_name', 'faculty_name', 'actions']);

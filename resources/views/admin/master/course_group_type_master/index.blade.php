@@ -20,7 +20,7 @@
 
                                 <!-- Add Button -->
                                 <a href="{{ route('master.course.group.type.create') }}" class="btn btn-primary">
-                                    <i class="material-icons menu-icon me-1">add</i> Add Course Group Type
+                                    Add Course Group Type
                                 </a>
 
 
@@ -33,10 +33,10 @@
                             <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th>S.No.</th>
-                                    <th>Type Name</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Type Name</th>
+                                    <th class="col">Status</th>
+                                    <th class="col">Action</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -54,50 +54,49 @@
                                                 {{ $courseGroupType->active_inactive == 1 ? 'checked' : '' }}>
                                         </div>
                                     </td>
-                                    <td>
-                                        <div class="dropdown">
-                                            <a class="text-dark" href="#" role="button"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="material-icons menu-icon">more_horiz</i>
-                                            </a>
+                                   <td>
+    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
 
-                                            <ul class="dropdown-menu dropdown-menu-end">
+        <!-- Edit Action -->
+        <a
+            href="{{ route('master.course.group.type.edit', ['id' => encrypt($courseGroupType->pk)]) }}"
+            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+            aria-label="Edit course group type"
+        >
+            <i class="material-icons material-symbols-rounded"
+               style="font-size:18px;" aria-hidden="true">
+                edit
+            </i>
+            <span class="d-none d-md-inline">Edit</span>
+        </a>
 
-                                                <!-- Edit -->
-                                                <li>
-                                                    <a class="dropdown-item"
-                                                        href="{{ route('master.course.group.type.edit', ['id' => encrypt($courseGroupType->pk)]) }}">
-                                                        <i class="material-icons material-symbols-rounded me-2"
-                                                            style="font-size: 18px;">edit</i>
-                                                        Edit
-                                                    </a>
-                                                </li>
+        <!-- Delete Action -->
+        <form
+            action="{{ route('master.course.group.type.delete', ['id' => encrypt($courseGroupType->pk)]) }}"
+            method="POST"
+            class="d-inline"
+        >
+            @csrf
+            @method('DELETE')
 
-                                                <!-- Delete -->
-                                                <li>
-                                                    <form
-                                                        action="{{ route('master.course.group.type.delete', ['id' => encrypt($courseGroupType->pk)]) }}"
-                                                        method="POST" class="d-inline">
-                                                        @csrf
-                                                        @method('DELETE')
+            <button
+                type="submit"
+                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                aria-label="Delete course group type"
+                {{ $courseGroupType->active_inactive == 1 ? 'disabled aria-disabled=true' : '' }}
+                onclick="return confirm('Are you sure you want to delete this record?');"
+            >
+                <i class="material-icons material-symbols-rounded"
+                   style="font-size:18px;" aria-hidden="true">
+                    delete
+                </i>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>
+        </form>
 
-                                                        <button class="dropdown-item text-danger"
-                                                            {{ $courseGroupType->active_inactive == 1 ? 'disabled' : '' }}
-                                                            onclick="event.preventDefault();
-                            if(this.hasAttribute('disabled')) return;
-                            if(confirm('Are you sure you want to delete this record?')) {
-                                this.closest('form').submit();
-                            }">
-                                                            <i class="material-icons material-symbols-rounded me-2"
-                                                                style="font-size: 18px;">delete</i>
-                                                            Delete
-                                                        </button>
-                                                    </form>
-                                                </li>
+    </div>
+</td>
 
-                                            </ul>
-                                        </div>
-                                    </td>
 
                                 </tr>
                                 @endforeach

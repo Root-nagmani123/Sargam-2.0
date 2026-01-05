@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-<x-breadcrum title="Venue Master" />
+    <x-breadcrum title="Venue Master" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -32,8 +32,8 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table w-100 nowrap" style="border-radius: 10px; overflow: hidden;">
-                            <thead style="background-color: #af2910;">
+                        <table class="table w-100 text-nowrap">
+                            <thead>
                                 <!-- start row -->
                                 <tr>
                                     <th class="col">S.No.</th>
@@ -68,52 +68,51 @@
                                         </div>
                                     </td>
                                     <td class="text-center">
+                                        <div class="d-inline-flex align-items-center gap-2" role="group"
+                                            aria-label="Venue actions">
 
-                                        <div class="dropdown">
-                                            <a href="javascript:void(0)" class="px-2"
-                                                id="actionMenu{{ $venue->venue_id }}" data-bs-toggle="dropdown"
-                                                aria-expanded="false">
-                                                <span class="material-symbols-rounded fs-5">more_horiz</span>
+                                            <!-- Edit -->
+                                            <a href="{{ route('Venue-Master.edit', $venue->venue_id) }}"
+                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                                                aria-label="Edit venue">
+                                                <span class="material-symbols-rounded fs-6"
+                                                    aria-hidden="true">edit</span>
+                                                <span class="d-none d-md-inline">Edit</span>
                                             </a>
 
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm"
-                                                aria-labelledby="actionMenu{{ $venue->venue_id }}">
+                                            <!-- Delete -->
+                                            @if($venue->active_inactive == 1)
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                                disabled aria-disabled="true" title="Cannot delete active venue">
+                                                <span class="material-symbols-rounded fs-6"
+                                                    aria-hidden="true">delete</span>
+                                                <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                            @else
+                                            <form action="{{ route('Venue-Master.destroy', $venue->venue_id) }}"
+                                                method="POST" class="d-inline delete-form"
+                                                onsubmit="return confirm('Are you sure you want to delete this venue?');">
+                                                @csrf
+                                                @method('DELETE')
 
-                                                <!-- Edit -->
-                                                <li>
-                                                    <a href="{{ route('Venue-Master.edit', $venue->venue_id) }}"
-                                                        class="dropdown-item d-flex align-items-center gap-2">
-                                                        <span
-                                                            class="material-symbols-rounded text-primary fs-6">edit</span>
-                                                        Edit
-                                                    </a>
-                                                </li>
+                                                <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                                    aria-label="Delete venue">
+                                                    <span class="material-symbols-rounded fs-6"
+                                                        aria-hidden="true">delete</span>
+                                                    <span class="d-none d-md-inline">Delete</span>
+                                                </button>
+                                            </form>
+                                            @endif
 
-                                                <!-- Delete -->
-                                                <li>
-                                                    <form action="{{ route('Venue-Master.destroy', $venue->venue_id) }}"
-                                                        method="POST" class="d-inline delete-form"
-                                                        data-status="{{ $venue->active_inactive }}">
+                                        </div>
 
-                                                        @csrf
-                                                        @method('DELETE')
 
-                                                        <button type="button"
-                                                            class="dropdown-item d-flex align-items-center gap-2 text-danger"
-                                                            onclick="event.preventDefault();
-                                if({{ $venue->active_inactive }} == 1) return;
-                                if(confirm('Are you sure you want to delete this venue?')) {
-                                    this.closest('form').submit();
-                                }" {{ $venue->active_inactive == 1 ? 'disabled' : '' }}>
+                                    </td>
 
-                                                            <span class="material-symbols-rounded fs-6">delete</span>
-                                                            Delete
-                                                        </button>
-                                                    </form>
-                                                </li>
-
-                                                </ </tr>
-                                                @endforeach
+                                    </ </tr>
+                                    @endforeach
                             </tbody>
                         </table>
 

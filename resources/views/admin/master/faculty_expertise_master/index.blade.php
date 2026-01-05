@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-
+    <x-breadcrum title="Faculty Expertise"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -31,8 +31,8 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table text-nowrap" style="border-radius: 10px; overflow: hidden; width: 100%;">
-                            <thead style="background-color: #af2910;">
+                        <table class="table text-nowrap">
+                            <thead>
                                 <!-- start row -->
                                 <tr>
                                     <th>S.No.</th>
@@ -58,48 +58,47 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="dropdown">
-                                            <a href="javascript:void(0)" type="button" data-bs-toggle="dropdown"
-                                                aria-expanded="false"
-                                                style="border-radius: 50%; width: 34px; height: 34px; display: flex; justify-content: center; align-items: center;">
+                                        <div class="d-inline-flex align-items-center gap-2" role="group"
+                                            aria-label="Faculty expertise actions">
+
+                                            <!-- Edit -->
+                                            <a href="{{ route('master.faculty.expertise.edit', ['id' => encrypt($faculty->pk)]) }}"
+                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                                                aria-label="Edit faculty expertise">
                                                 <i class="material-icons material-symbols-rounded"
-                                                    style="font-size: 22px;">more_horiz</i>
+                                                    style="font-size:18px;" aria-hidden="true">edit</i>
+                                                <span class="d-none d-md-inline">Edit</span>
                                             </a>
 
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <!-- Delete -->
+                                            @if($faculty->active_inactive == 1)
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                                disabled aria-disabled="true" title="Cannot delete active record">
+                                                <i class="material-icons material-symbols-rounded"
+                                                    style="font-size:18px;" aria-hidden="true">delete</i>
+                                                <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                            @else
+                                            <form
+                                                action="{{ route('master.faculty.expertise.delete', ['id' => encrypt($faculty->pk)]) }}"
+                                                method="POST" class="d-inline"
+                                                onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                                @csrf
+                                                @method('DELETE')
 
-                                                <!-- Edit -->
-                                                <li>
-                                                    <a class="dropdown-item d-flex align-items-center"
-                                                        href="{{ route('master.faculty.expertise.edit', ['id' => encrypt($faculty->pk)]) }}">
-                                                        <i class="material-icons material-symbols-rounded text-primary me-2"
-                                                            style="font-size: 20px;">edit</i>
-                                                        Edit
-                                                    </a>
-                                                </li>
+                                                <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                                    aria-label="Delete faculty expertise">
+                                                    <i class="material-icons material-symbols-rounded"
+                                                        style="font-size:18px;" aria-hidden="true">delete</i>
+                                                    <span class="d-none d-md-inline">Delete</span>
+                                                </button>
+                                            </form>
+                                            @endif
 
-                                                <!-- Delete -->
-                                                <li>
-                                                    <form
-                                                        action="{{ route('master.faculty.expertise.delete', ['id' => encrypt($faculty->pk)]) }}"
-                                                        method="POST" class="d-inline w-100">
-                                                        @csrf
-                                                        @method('DELETE')
-
-                                                        <a class="dropdown-item d-flex align-items-center text-danger {{ $faculty->active_inactive == 1 ? 'disabled' : '' }}"
-                                                            href="javascript:void(0)" onclick="event.preventDefault(); 
-                                if(!this.classList.contains('disabled') && confirm('Are you sure you want to delete this record?')) {
-                                    this.closest('form').submit();
-                                }">
-                                                            <i class="material-icons material-symbols-rounded me-2"
-                                                                style="font-size: 20px;">delete</i>
-                                                            Delete
-                                                        </a>
-                                                    </form>
-                                                </li>
-
-                                            </ul>
                                         </div>
+
                                     </td>
 
 
