@@ -443,7 +443,7 @@ $currentPath = $segments[1] ?? null;
             $course = CourseMaster::where('pk', $course_pk)->firstOrFail();
 
             // Get filter parameters
-            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : null;
+            $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
             $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'

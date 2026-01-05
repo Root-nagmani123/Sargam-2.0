@@ -94,12 +94,12 @@
                                 @if(hasRole('Training-MCTP'))
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('mdo-escrot-exemption.index') }}">
-                                        <span class="hide-menu">MDO Escort Exemption</span>
+                                        <span class="hide-menu">Escort/Moderator Duty</span>
                                     </a></li>
                                 @endif
                                  <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('mdo-escrot-exemption.index') }}">
-                                        <span class="hide-menu">MDO Escort Exemption</span>
+                                        <span class="hide-menu">Escort/Moderator Duty</span>
                                     </a></li>
                                 <li class="sidebar-item">
                                     <a class="sidebar-link d-flex justify-content-between align-items-center"

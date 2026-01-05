@@ -470,7 +470,7 @@
                             <i class="bi bi-calendar-date me-1 text-primary"></i> Date:
                         </label>
                         <input type="date" class="form-control form-control-lg" id="filter_date" name="filter_date"
-                            value="{{ $filterDate ?? '' }}" max="{{ date('Y-m-d') }}" aria-label="Filter by Date">
+                            value="{{ $filterDate ?? date('Y-m-d') }}" max="{{ date('Y-m-d') }}" aria-label="Filter by Date">
                     </div>
                     <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
                         <label for="filter_session_time" class="form-label fw-semibold">
