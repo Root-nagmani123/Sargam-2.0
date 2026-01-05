@@ -89,7 +89,7 @@ class CourseMasterDataTable extends DataTable
         <?php if ($isActive): ?>
             <button
                 type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
                 disabled
                 aria-disabled="true"
                 title="Cannot delete active course"
