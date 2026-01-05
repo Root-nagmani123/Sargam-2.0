@@ -16,8 +16,13 @@
                     </div>
                     <div class="col-md-6 text-end">
                         <form method="GET" class="d-flex justify-content-end gap-2">
+
                             <input type="text" name="search" class="form-control" placeholder="Search..."
                                 value="{{ $search }}">
+                            <select name="User_type" class="form-select">
+                                <option value="S" {{ $user_type == 'S' ? 'selected' : '' }}>Student</option>
+                                <option value="E" {{ $user_type == 'E' ? 'selected' : '' }}>Employee</option>
+                            </select>
                             <select name="per_page" class="form-select">
                                 <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10</option>
                                 <option value="20" {{ $perPage == 20 ? 'selected' : '' }}>20</option>
