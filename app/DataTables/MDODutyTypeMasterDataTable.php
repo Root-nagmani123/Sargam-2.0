@@ -37,14 +37,44 @@ class MDODutyTypeMasterDataTable extends DataTable
                 }
             }, true)
             ->addColumn('status', function ($row) {
-                $isActive = $row->active_inactive == 1;
+                $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return '<div class="form-check form-switch d-inline-block">
-                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                   data-table="mdo_duty_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . ($isActive ? 'checked' : '') . '>
-                        </div>';
+                    <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
+                        data-table="course_group_type_master"
+                        data-column="active_inactive"
+                        data-id="' . $row->pk . '"
+                        ' . $checked . '>
+                </div>';
             })
             ->addColumn('actions', function ($row) {
-                return view('admin.master.mdo_duty_type.actions', compact('row'))->render();
+                      $disabled = $row->active_inactive == 1 ? 'disabled' : '';
+
+            return'
+                <div class="dropdown">
+                    <a class="text-dark" href="#" role="button"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="material-icons menu-icon">more_horiz</i>
+                                            </a>
+
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item edit-btn" href="javascript:void(0)"
+                               data-id="' . $row->pk . '"
+                               data-mdo_duty_type_name="' . $row->mdo_duty_type_name . '">
+                                <i class="material-icons me-2" style="font-size:18px;">edit</i>
+                                Edit
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class="dropdown-item delete-btn ' . $disabled . '" href="javascript:void(0)"
+                               data-id="' . $row->pk . '">
+                                <i class="material-icons me-2" style="font-size:18px;">delete</i>
+                                Delete
+                            </a>
+                        </li>
+                    </ul>
+                </div>';
             })
             ->rawColumns(['mdo_duty_type_name', 'status', 'actions']);
     }
@@ -69,45 +99,45 @@ class MDODutyTypeMasterDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         return $this->builder()
-                    ->setTableId('mdodutytypemaster-table')
-                    ->columns($this->getColumns())
-                    ->minifiedAjax()
-                    // ->orderBy(1)
-                    ->parameters([
-                        'order' => [],
-                        'responsive' => true,
-                        'autoWidth' => false,
-                        'scrollX' => true,
-                        'searching' => true,
-                        'lengthChange' => true,
-                        'pageLength' => 10,
-                        'lengthMenu' => [[10, 25, 50, 100], [10, 25, 50, 100]],
-                        'buttons' => ['excel', 'csv', 'pdf', 'print', 'reset', 'reload'],
-                        'columnDefs' => [
-                            ['orderable' => false, 'targets' => 0],
-                            ['orderable' => false, 'targets' => 1],
-                            ['orderable' => false, 'targets' => 2],
-                            ['orderable' => false, 'targets' => 3],
-                        ],
-                        'language' => [
-                            'paginate' => [
-                                'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+            ->setTableId('mdodutytypemaster-table')
+            ->columns($this->getColumns())
+            ->minifiedAjax()
+            // ->orderBy(1)
+            ->parameters([
+                'order' => [],
+                'responsive' => true,
+                'autoWidth' => false,
+                'scrollX' => true,
+                'searching' => true,
+                'lengthChange' => true,
+                'pageLength' => 10,
+                'lengthMenu' => [[10, 25, 50, 100], [10, 25, 50, 100]],
+                'buttons' => ['excel', 'csv', 'pdf', 'print', 'reset', 'reload'],
+                'columnDefs' => [
+                    ['orderable' => false, 'targets' => 0],
+                    ['orderable' => false, 'targets' => 1],
+                    ['orderable' => false, 'targets' => 2],
+                    ['orderable' => false, 'targets' => 3],
+                ],
+                'language' => [
+                    'paginate' => [
+                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
                                                     style="font-size: 24px;">chevron_left</i>',
-                                'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
                                                     style="font-size: 24px;">chevron_right</i>'
-                            ]
-                        ],
+                    ]
+                ],
 
-                    ])
-                    ->selectStyleSingle()
-                    ->buttons([
-                        Button::make('excel'),
-                        Button::make('csv'),
-                        Button::make('pdf'),
-                        Button::make('print'),
-                        Button::make('reset'),
-                        Button::make('reload'),
-                    ]);
+            ])
+            ->selectStyleSingle()
+            ->buttons([
+                Button::make('excel'),
+                Button::make('csv'),
+                Button::make('pdf'),
+                Button::make('print'),
+                Button::make('reset'),
+                Button::make('reload'),
+            ]);
     }
 
     /**

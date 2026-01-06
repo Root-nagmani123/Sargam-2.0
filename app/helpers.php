@@ -194,3 +194,14 @@ if (!function_exists('notification')) {
         return app(\App\Services\NotificationService::class);
     }
 }
+
+    function getcoursevalue()
+    {
+        $user_role_master_pk = Session::get('user_role_master_pk');
+        $courseval = DB::table('course_master')
+            ->select('course_name','pk')
+            ->where('user_role_master_pk', $user_role_master_pk)
+            ->get();
+
+        return $courseval;
+    }

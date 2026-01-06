@@ -6,17 +6,34 @@ use App\DataTables\MDODutyTypeMasterDataTable;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\MDODutyTypeMaster;
+use Illuminate\Support\Facades\DB;
 
 class MDODutyTypeController extends Controller
 {
     public function index(MDODutyTypeMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.mdo_duty_type.index');
+        
     }
     // {
     //     // $mdoDutyTypes = MDODutyTypeMaster::latest('pk')->get();
     //     // return view('admin.master.mdo_duty_type.index', compact('mdoDutyTypes'));
     // }
+
+    public function changeStatus(Request $request)
+    {
+        DB::table('mdo_duty_type_master')
+            ->where('pk', $request->pk)
+            ->update([
+                'active_inactive' => $request->active_inactive,
+                'modified_date' => now()
+            ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Status updated successfully'
+        ]);
+    }
 
     public function create()
     {
@@ -37,13 +54,14 @@ class MDODutyTypeController extends Controller
 
     public function store(Request $request)
     {
+       
         try {
             $request->validate([
                 'mdo_duty_type_name' => 'required|string|max:255'
             ]);
 
-            if( $request->id ) {
-                $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($request->id));
+            if($request->id){
+                $mdoDutyType = MDODutyTypeMaster::findOrFail($request->id);
                 $mdoDutyType->update([
                     'mdo_duty_type_name' => $request->mdo_duty_type_name
                 ]);
@@ -53,7 +71,7 @@ class MDODutyTypeController extends Controller
                         'action' => 'update',
                         'data' => [
                             'pk' => $mdoDutyType->pk,
-                            'encrypted_pk' => encrypt($mdoDutyType->pk),
+                            'encrypted_pk' =>$mdoDutyType->pk,
                             'mdo_duty_type_name' => $mdoDutyType->mdo_duty_type_name,
                             'active_inactive' => $mdoDutyType->active_inactive,
                         ]
@@ -84,10 +102,10 @@ class MDODutyTypeController extends Controller
         }   
     }
 
-    public function delete($id)
+    public function delete(Request $request)
     {
         try {
-            $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($id));
+            $mdoDutyType = MDODutyTypeMaster::findOrFail($request->id);
             $mdoDutyType->delete();
             return redirect()->route('master.mdo_duty_type.index')->with('success', 'MDO Duty Type deleted successfully');
         } catch (\Exception $e) {
