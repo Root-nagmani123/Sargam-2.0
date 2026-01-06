@@ -108,10 +108,44 @@ class StudentAttendanceListDataTable extends DataTable
             Column::make('other_exempt')->title('Other Exemption')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
-    
 
     protected function renderRadio($row, int $value, string $label, string $labelClass = 'text-dark'): string
     {
+        if ($value === 5) {
+
+    $studentId = $row->studentsMaster->pk;
+    $timetable = Timetable::select('START_DATE', 'class_session')
+        ->where('pk', $this->timetable_pk)
+        ->first();
+
+    if ($timetable) {
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+        $escortType = $mdoDutyTypes['escort'] ?? null;
+
+        if ($escortType) {
+            $escortDuty = MDOEscotDutyMap::where([
+                ['course_master_pk', '=', $this->course_pk],
+                ['mdo_duty_type_master_pk', '=', $escortType],
+                ['selected_student_list', '=', $studentId]
+            ])
+            ->whereDate('mdo_date', '=', $timetable->START_DATE)
+            ->first();
+
+            if ($escortDuty && $this->checkTimeOverlap(
+                $timetable->class_session,
+                $escortDuty->Time_from,
+                $escortDuty->Time_to
+            )) {
+                // Escort laga hua hai → sirf text dikhao
+                return "<span class='text-info fw-bold'>Escort/Moderator</span>";
+            }
+        }
+    }
+
+    // Escort nahi hai → N/A
+    return "<span class='text-muted'>N/A</span>";
+}
+
         $studentId = $row->studentsMaster->pk;
         $courseStudent = CourseStudentAttendance::where([
             ['Student_master_pk', '=', $studentId],
@@ -212,10 +246,13 @@ class StudentAttendanceListDataTable extends DataTable
 
         // Determine default checked value
         $defaultCheckedValue = null;
-        
+        // print_r($courseStudent);die;
         // If there's an existing attendance record, use its status
         if ($courseStudent) {
             $defaultCheckedValue = $courseStudent->status;
+            if( $defaultCheckedValue == 5 ){
+                $defaultCheckedValue = 1;
+            }
         } else {
             // Check if student has any exemptions or duties
             $hasExemptionOrDuty = $this->hasExemptionOrDuty($studentId);
@@ -225,6 +262,8 @@ class StudentAttendanceListDataTable extends DataTable
                 $defaultCheckedValue = 1; // Present
             }
         }
+   
+
 
         foreach ($options as $value => $label) {
             $labelClass = match ($value) {
@@ -273,17 +312,17 @@ class StudentAttendanceListDataTable extends DataTable
         }
 
         // Check for Escort duty (value 5)
-        if (!empty($mdoDutyTypes['escort'])) {
-            $escortDuty = MDOEscotDutyMap::where([
-                ['course_master_pk', '=', $this->course_pk],
-                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
-                ['selected_student_list', '=', $studentId]
-            ])->whereDate('mdo_date', '=', $timetableDate)->first();
+        // if (!empty($mdoDutyTypes['escort'])) {
+        //     $escortDuty = MDOEscotDutyMap::where([
+        //         ['course_master_pk', '=', $this->course_pk],
+        //         ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
+        //         ['selected_student_list', '=', $studentId]
+        //     ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-            if ($escortDuty && $this->checkTimeOverlap($timetable->class_session, $escortDuty->Time_from, $escortDuty->Time_to)) {
-                return true;
-            }
-        }
+        //     if ($escortDuty && $this->checkTimeOverlap($timetable->class_session, $escortDuty->Time_from, $escortDuty->Time_to)) {
+        //         return true;
+        //     }
+        // }
 
         // Check for Other Exemption (value 7)
         if (!empty($mdoDutyTypes['other'])) {

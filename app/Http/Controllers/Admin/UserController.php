@@ -107,6 +107,7 @@ class UserController extends Controller
 {
     $perPage = $request->input('per_page', 10); // Default 10 items per page
     $search = $request->input('search');
+  $user_type = trim($request->input('User_type'));
 
     $usersQuery = DB::table('user_credentials as uc')
         ->leftJoin('employee_role_mapping as erm', 'erm.user_credentials_pk', '=', 'uc.pk')
@@ -137,10 +138,13 @@ class UserController extends Controller
               ->orWhere('uc.email_id', 'like', "%$search%");
         });
     }
+   if (!empty($user_type)) {
+    $usersQuery->where('uc.user_category', $user_type);
+}
 
     $users = $usersQuery->paginate($perPage)->withQueryString();
 
-    return view('admin.user_management.users.index', compact('users', 'perPage', 'search'));
+    return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type'));
 }
 
     /**
