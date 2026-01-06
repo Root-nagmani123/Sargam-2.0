@@ -3572,12 +3572,12 @@ async updateinternal_faculty(facultyType) {
 
         }
     }
-   async setInternalFaculty(internalFacultyIds) {
+   async setInternalFaculty_bkp(internalFacultyIds) {
 
     if (!internalFacultyIds) return;
 
     // Agar CSV string aa rahi ho
-    if (typeof internalFacultyIds === 'array') {
+    if (typeof internalFacultyIds === 'string') {
         internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
     }
 
@@ -3586,10 +3586,46 @@ async updateinternal_faculty(facultyType) {
     Array.from(select.options).forEach(option => {
         option.selected = internalFacultyIds.includes(option.value);
     });
+// console.log(internalFacultyIds);
+// console.log([...select.options].map(o => o.value));
 
     // Agar Choices.js / Select2 use kar rahe ho
     select.dispatchEvent(new Event('change'));
 }
+async setInternalFaculty(internalFacultyIds) {
+
+    if (!internalFacultyIds) return;
+
+    // ✅ FIX 1: agar JSON string aa rahi ho
+    if (typeof internalFacultyIds === 'string') {
+
+        internalFacultyIds = internalFacultyIds.trim();
+
+        // JSON array string: '["23","67"]'
+        if (internalFacultyIds.startsWith('[')) {
+            internalFacultyIds = JSON.parse(internalFacultyIds);
+        } 
+        // normal CSV: '23,67'
+        else {
+            internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
+        }
+    }
+
+    // ✅ FIX 2: force string comparison
+    internalFacultyIds = internalFacultyIds.map(id => String(id));
+
+    const select = document.getElementById('internal_faculty');
+
+    Array.from(select.options).forEach(option => {
+        option.selected = internalFacultyIds.includes(String(option.value));
+    });
+
+    // console.log(internalFacultyIds);           // ["23","67"]
+    // console.log([...select.options].map(o => o.value));
+
+    select.dispatchEvent(new Event('change'));
+}
+
     async loadGroupTypesForEdit(event) {
         // Set selected group names for edit
         try {
