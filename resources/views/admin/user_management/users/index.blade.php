@@ -19,10 +19,12 @@
 
                             <input type="text" name="search" class="form-control" placeholder="Search..."
                                 value="{{ $search }}">
-                            <select name="User_type" class="form-select">
-                                <option value="S" {{ $user_type == 'S' ? 'selected' : '' }}>Student</option>
-                                <option value="E" {{ $user_type == 'E' ? 'selected' : '' }}>Employee</option>
+                           <select name="User_type" class="form-select">
+                                <option value="">All Users</option>
+                                <option value="S" {{ $user_type === 'S' ? 'selected' : '' }}>Student</option>
+                                <option value="E" {{ $user_type === 'E' ? 'selected' : '' }}>Employee</option>
                             </select>
+
                             <select name="per_page" class="form-select">
                                 <option value="10" {{ $perPage == 10 ? 'selected' : '' }}>10</option>
                                 <option value="20" {{ $perPage == 20 ? 'selected' : '' }}>20</option>
