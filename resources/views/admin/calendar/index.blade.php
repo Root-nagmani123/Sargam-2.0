@@ -3484,7 +3484,9 @@ class CalendarManager {
         document.getElementById('subject_name').value = event.subject_master_pk;
         document.getElementById('topic').value = event.subject_topic;
         document.getElementById('start_datetime').value = event.START_DATE;
-        document.getElementById('faculty').value = event.faculty_master;
+        // Handle multiple faculty selection
+        const facultyIds = Array.isArray(event.faculty_master) ? event.faculty_master : [event.faculty_master];
+        $('#faculty').val(facultyIds).trigger('change');
         document.getElementById('faculty_type').value = event.faculty_type;
         document.getElementById('vanue').value = event.venue_id;
 

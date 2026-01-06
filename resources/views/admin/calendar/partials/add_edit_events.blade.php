@@ -109,8 +109,7 @@
                                 <label for="faculty" class="form-label required">
                                     Faculty
                                 </label>
-                                <select name="faculty" id="faculty" class="form-select" required aria-required="true">
-                                    <option value="">Select Faculty</option>
+                                <select name="faculty[]" id="faculty" class="form-select" required aria-required="true" multiple>
                                     @foreach($facultyMaster as $faculty)
                                     <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
                                         {{ $faculty->full_name }}
