@@ -198,19 +198,29 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                      
+
+
                                         <!-- Dropdown Section -->
                                         <div class="modal-body pt-3">
-
-                                            <!-- File Upload -->
                                             <div class="mb-3">
-                                                <label for="importFile" class="form-label">Select Course</label>
-                                               <select name="course_master_pk" id="course_master_pk_model" class="form-select shadow-sm " required>
-                                                    <option value="">Select Course</option>
-                                                   @foreach($courses ?? [] as $pk => $name)
-                                                    <option value="{{ $pk }}"  {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
-                                                @endforeach
+                                                <label for="group_type" class="form-label">Select Course Name</label>
+                                                <select name="group_type" id="group_type" class="form-control" required>
+                                                    <option value="">Select Course Name</option>
+
+                                                    @php
+                                                    $courses = getCourseValue();
+                                                    @endphp
+
+                                                    @foreach ($courses as $course)
+                                                    <option value="{{ $course->pk }}">
+                                                    {{ $course->course_name }}
+                                                    </option>
+                                                    @endforeach
+                                                   
                                                 </select>
                                             </div>
+
+                                            <!-- File Upload -->
                                             <div class="mb-3">
                                                 <label for="importFile" class="form-label">Select Excel File</label>
                                                 <input type="file" name="file" id="importFile" class="form-control"

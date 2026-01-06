@@ -91,7 +91,9 @@ Route::prefix('master')->name('master.')->middleware('auth')->group(function () 
     });
 
     // Course Group Type Master Routes
-  Route::prefix('course-group-type')->name('course.group.type.')->controller(CourseGroupTypeController::class)
+  Route::prefix('course-group-type')
+    ->name('course.group.type.')
+    ->controller(CourseGroupTypeController::class)
     ->group(function () {
 
         Route::get('/', 'index')->name('index');

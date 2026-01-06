@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Exemption medical speciality')
+@section('title', 'Exemption categories')
 
 @section('setup_content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Exemption medical speciality" />
+    <x-breadcrum title="Exemption categories" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -13,12 +13,12 @@
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Exemption medical speciality</h4>
+                            <h4>Exemption categories</h4>
                         </div>
                         <div class="col-6">
                              <!-- <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button> -->
                             <div class="float-end gap-2">
-                                 <button id="showAlert" class="btn btn-primary">+ Add Exemption medical speciality</button>
+                                 <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button>
                                 <!-- <a href="{{route('master.exemption.category.master.create')}}" class="btn btn-primary">+
                                     Add Exemption categories</a> -->
                             </div>
@@ -26,13 +26,13 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table" id="exemptionCategoryeditForm">
+                        <table class="table" id="getcategory">
                             <thead>
                                 <!-- start row -->
                                 <tr>
                                     <th class="col">S.No.</th>
-                                    <th class="col">Speciality Name</th>
-                                    <th class="col">Created Date</th>
+                                    <th class="col">Name</th>
+                                    <th class="col">Short Name</th>
                                     <th class="col">Status</th>
                                     <th class="col">Actions</th>
                                 </tr>
@@ -52,12 +52,12 @@
 @section('scripts')
 <script>
     $(function() {
-        let table = $('#exemptionCategoryeditForm').DataTable({
+        let table = $('#getcategory').DataTable({
             processing: true,
             serverSide: true,
             searching: true,
             ajax: {
-                url: "{{ route('master.exemption.medical.speciality.exemption_med_spec_mst') }}",
+                url: "{{ route('master.exemption.category.master.getcategory') }}",
                 data: function(d) {
                     d.pk = $('#pk').val();
                     d.active_inactive = $('#active_inactive').val();
@@ -71,12 +71,12 @@
                     searchable: false
                 },
                 {
-                    data: 'speciality_name',
-                    name: 'speciality_name'
+                    data: 'exemp_category_name',
+                    name: 'exemp_category_name'
                 },
                 {
-                    data: 'created_date',
-                    name: 'created_date'
+                    data: 'ShortName',
+                    name: 'ShortName'
                 },
                 {
                     data: 'status',
@@ -102,12 +102,12 @@
           //  alert(active_inactive);
             Swal.fire({
                 title: 'Are you sure?',
-                text: "Are you sure? You want to deactivate this item?",
+                text: "This status is changed permanently!",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#d33',
                 cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, deactivate',
+                confirmButtonText: 'Yes',
                 cancelButtonText: 'Cancel'
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -179,15 +179,17 @@
 
     }); //endclose
 </script>
-<button id="showAlert">Add</button>
-
 <script>
 document.getElementById('showAlert').addEventListener('click', function () {
     Swal.fire({
-        title: '<strong>Add Exemption medical speciality</strong>',
+        title: '<strong>Add Exemption Category</strong>',
         html: `
-            <form id="exemptionCategoryForm">
+            <form id="exemptionCategoryForm"
+                  action="{{ route('master.exemption.category.master.store') }}"
+                  method="POST">
+
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="pk" value="${pk}">
 
                 <!-- Type Name -->
                 <div class="row mb-2 align-items-center">
@@ -195,9 +197,28 @@ document.getElementById('showAlert').addEventListener('click', function () {
                         Type Name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <input type="text" name="speciality_name" id="speciality_name" class="form-control">
-                        <small class="text-danger d-none" id="speciality_name_error">
+                        <input type="text"
+                               name="exemp_category_name"
+                               id="exemp_category_name"
+                               class="form-control">
+                        <small class="text-danger d-none" id="exemp_category_name_error">
                             Type Name is required
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Short Name -->
+                <div class="row mb-2 align-items-center">
+                    <label class="col-auto col-form-label fw-semibold">
+                        Short Name <span class="text-danger">*</span>
+                    </label>
+                    <div class="col">
+                        <input type="text"
+                               name="exemp_cat_short_name"
+                               id="exemp_cat_short_name"
+                               class="form-control">
+                        <small class="text-danger d-none" id="exemp_cat_short_name_error">
+                            Short Name is required
                         </small>
                     </div>
                 </div>
@@ -208,7 +229,9 @@ document.getElementById('showAlert').addEventListener('click', function () {
                         Status <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <select name="active_inactive" id="status" class="form-control">
+                        <select name="status"
+                                id="status"
+                                class="form-control">
                             <option value="">-- Select Status --</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -222,92 +245,70 @@ document.getElementById('showAlert').addEventListener('click', function () {
         `,
         showCancelButton: true,
         confirmButtonText: 'Submit',
-        showLoaderOnConfirm: true,
         focusConfirm: false,
 
         preConfirm: () => {
             const popup = Swal.getPopup();
 
-            const typeName  = popup.querySelector('#speciality_name');
-            const status    = popup.querySelector('#status');
+            const typeName   = popup.querySelector('#exemp_category_name');
+            const shortName  = popup.querySelector('#exemp_cat_short_name');
+            const status     = popup.querySelector('#status');
 
-            const typeErr   = popup.querySelector('#speciality_name_error');
-            const statusErr = popup.querySelector('#status_error');
+            const typeErr    = popup.querySelector('#exemp_category_name_error');
+            const shortErr   = popup.querySelector('#exemp_cat_short_name_error');
+            const statusErr  = popup.querySelector('#status_error');
 
-            // reset
-            [typeName, status].forEach(el => el.classList.remove('is-invalid'));
-            [typeErr, statusErr].forEach(el => el.classList.add('d-none'));
+            // Reset validation state
+            [typeName, shortName, status].forEach(el => el.classList.remove('is-invalid'));
+            [typeErr, shortErr, statusErr].forEach(el => el.classList.add('d-none'));
 
-            let valid = true;
+            let isValid = true;
 
             if (!typeName.value.trim()) {
                 typeName.classList.add('is-invalid');
                 typeErr.classList.remove('d-none');
-                valid = false;
+                isValid = false;
+            }
+
+            if (!shortName.value.trim()) {
+                shortName.classList.add('is-invalid');
+                shortErr.classList.remove('d-none');
+                isValid = false;
             }
 
             if (!status.value) {
                 status.classList.add('is-invalid');
                 statusErr.classList.remove('d-none');
-                valid = false;
+                isValid = false;
             }
-
-            if (!valid) return false;
-
-            // AJAX request
-            return fetch("{{ route('master.exemption.medical.speciality.store') }}", {
-                method: "POST",
-                headers: {
-                    "X-CSRF-TOKEN": "{{ csrf_token() }}",
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    speciality_name: typeName.value,
-                    status: status.value
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => {
-                        throw new Error(err.message || 'Validation failed');
-                    });
-                }
-                return response.json();
-            })
-            .catch(error => {
-                Swal.showValidationMessage(error.message);
-            });
+            return isValid;
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Saved!',
-                text: 'Exemption category added successfully',
-                timer: 1500,
-                showConfirmButton: false
-            });
-
-            // reload datatable / page if needed
-             $('#exemptionCategoryeditForm').DataTable().ajax.reload();
+            document.getElementById('exemptionCategoryForm').submit();
         }
     });
 });
 </script>
 <script>
-$(document).on('click', '.edit-btn', function () {
+    $(document).on('click', '.edit-btn', function() {
 
-    let id              = $(this).data('id');
-    let speciality_name = $(this).data('speciality_name');
-    let status          = $(this).data('active_inactive');
+        let pk = $(this).data('id');
+        //alert(pk);
+         let exemp_category_name = $(this).data('exemp_category_name');
+        let exemp_cat_short_name = $(this).data('exemp_cat_short_name');
+        let status = $(this).data('active_inactive');
 
-    Swal.fire({
-        title: '<strong><small>Edit Exemption medical speciality</small></strong>',
-        html: `
-            <form id="exemptionCategoryeditForm">
-                <input type="hidden" id="id" value="${id}">
-                <input type="hidden" id="csrf" value="{{ csrf_token() }}">
+        let url = "{{ route('master.exemption.category.master.updatedata') }}";
+
+        Swal.fire({
+            title: '<strong>Edit Course Group Type</strong>',
+            html: `
+            <form id="exemptionCategoryeditForm"
+                  action="${url}"
+                  method="POST">
+
+                <input type="hidden" name="_token" value="{{ csrf_token() }}">
 
                 <!-- Type Name -->
                 <div class="row mb-2 align-items-center">
@@ -315,10 +316,28 @@ $(document).on('click', '.edit-btn', function () {
                         Type Name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <input type="text" id="speciality_name" name="speciality_name" class="form-control"
-                               value="${speciality_name}">
-                        <small class="text-danger d-none" id="speciality_name_error">
+                        <input type="text"
+                               name="exemp_category_name"
+                               id="exemp_category_name"
+                               class="form-control" value="${exemp_category_name}">
+                        <small class="text-danger d-none" id="exemp_category_name_error">
                             Type Name is required
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Short Name -->
+                <div class="row mb-2 align-items-center">
+                    <label class="col-auto col-form-label fw-semibold">
+                        Short Name <span class="text-danger">*</span>
+                    </label>
+                    <div class="col">
+                        <input type="text"
+                               name="exemp_cat_short_name"
+                               id="exemp_cat_short_name"
+                               class="form-control" value="${exemp_cat_short_name}">
+                        <small class="text-danger d-none" id="exemp_cat_short_name_error">
+                            Short Name is required
                         </small>
                     </div>
                 </div>
@@ -329,7 +348,9 @@ $(document).on('click', '.edit-btn', function () {
                         Status <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <select id="status" name="status" class="form-control">
+                        <select name="status"
+                                id="status"
+                                class="form-control">
                             <option value="">-- Select Status --</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -342,82 +363,55 @@ $(document).on('click', '.edit-btn', function () {
             </form>
         `,
         didOpen: () => {
-            $('#status').val(status);
+            $('#status').val(status).trigger('change');
         },
-        showCancelButton: true,
-        confirmButtonText: 'Update',
-        showLoaderOnConfirm: true,
-        focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Update',
+            focusConfirm: false,
 
-        preConfirm: () => {
-
+            preConfirm: () => {
             const popup = Swal.getPopup();
-            const nameEl   = popup.querySelector('#speciality_name');
-            const statusEl = popup.querySelector('#status');
-            const nameErr  = popup.querySelector('#speciality_name_error');
-            const statErr  = popup.querySelector('#status_error');
-            // reset
-            [nameEl, statusEl].forEach(el => el.classList.remove('is-invalid'));
-            [nameErr, statErr].forEach(el => el.classList.add('d-none'));
 
-            let valid = true;
+            const typeName   = popup.querySelector('#exemp_category_name');
+            const shortName  = popup.querySelector('#exemp_cat_short_name');
+            const status     = popup.querySelector('#status');
 
-            if (!nameEl.value.trim()) {
-                nameEl.classList.add('is-invalid');
-                nameErr.classList.remove('d-none');
-                valid = false;
+            const typeErr    = popup.querySelector('#exemp_category_name_error');
+            const shortErr   = popup.querySelector('#exemp_cat_short_name_error');
+            const statusErr  = popup.querySelector('#status_error');
+
+            // Reset validation state
+            [typeName, shortName, status].forEach(el => el.classList.remove('is-invalid'));
+            [typeErr, shortErr, statusErr].forEach(el => el.classList.add('d-none'));
+
+            let isValid = true;
+
+            if (!typeName.value.trim()) {
+                typeName.classList.add('is-invalid');
+                typeErr.classList.remove('d-none');
+                isValid = false;
             }
 
-            if (!statusEl.value) {
-                statusEl.classList.add('is-invalid');
-                statErr.classList.remove('d-none');
-                valid = false;
+            if (!shortName.value.trim()) {
+                shortName.classList.add('is-invalid');
+                shortErr.classList.remove('d-none');
+                isValid = false;
             }
 
-            if (!valid) return false;
-
-            // AJAX call
-            return $.ajax({
-                url: "{{ route('master.exemption.medical.speciality.store') }}",
-                type: "POST",
-                dataType: "json",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    id: id,
-                    speciality_name: nameEl.value,
-                    status: statusEl.value
-                }
-            }).catch(xhr => {
-                if (xhr.status === 422) {
-                    let errors = xhr.responseJSON.errors;
-                    if (errors.medical_speciality_name) {
-                        nameEl.classList.add('is-invalid');
-                        nameErr.textContent = errors.medical_speciality_name[0];
-                        nameErr.classList.remove('d-none');
-                    }
-                } else {
-                    Swal.showValidationMessage('Something went wrong!');
-                }
-            });
+            if (!status.value) {
+                status.classList.add('is-invalid');
+                statusErr.classList.remove('d-none');
+                isValid = false;
+            }
+            return isValid;
         }
-    }).then((result) => {
-
-        if (result.isConfirmed) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Updated!',
-                text: result.value.message,
-                timer: 1500,
-                showConfirmButton: false
-            });
-
-            // Reload datatable if exists
-            $('#exemptionCategoryeditForm').DataTable().ajax.reload(null, false);
-        }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('exemptionCategoryeditForm').submit();
+            }
+        });
     });
-});
 </script>
-
 @if(session('success'))
 <script>
     Swal.fire({

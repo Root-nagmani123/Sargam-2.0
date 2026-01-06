@@ -6,8 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\CourseGroupTypeMaster;
 use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Facades\DB;
-
 
 class CourseGroupTypeController extends Controller
 {
@@ -26,46 +24,46 @@ class CourseGroupTypeController extends Controller
         return view('admin.master.course_group_type_master.index');
     }
 
-    public function grouptypeview(Request $request)
-    {
-        // UPDATE STATUS (Active / Inactive)
-        if ($request->has('pk') && $request->has('active_inactive') && $request->active_inactive != 2) {
-            CourseGroupTypeMaster::where('pk', $request->pk)
-                ->update([
-                    'active_inactive' => $request->active_inactive
-                ]);
-        }
+public function grouptypeview(Request $request)
+{
+    // UPDATE STATUS (Active / Inactive)
+    if ($request->has('pk') && $request->has('active_inactive') && $request->active_inactive != 2) {
+        CourseGroupTypeMaster::where('pk', $request->pk)
+            ->update([
+                'active_inactive' => $request->active_inactive
+            ]);
+    }
 
-        // DELETE ROW
-        if ($request->has('pk') && $request->active_inactive == 2) {
-            CourseGroupTypeMaster::where('pk', $request->pk)->delete();
-        }
+    // DELETE ROW
+    if ($request->has('pk') && $request->active_inactive == 2) {
+        CourseGroupTypeMaster::where('pk', $request->pk)->delete();
+    }
 
-        // DataTable SELECT QUERY
-        $query = CourseGroupTypeMaster::select(['pk', 'type_name', 'active_inactive'])
-            ->orderByDesc('pk');
+    // DataTable SELECT QUERY
+    $query = CourseGroupTypeMaster::select(['pk', 'type_name', 'active_inactive'])
+        ->orderByDesc('pk');
 
-        return DataTables::of($query)
-            ->addIndexColumn()
+    return DataTables::of($query)
+        ->addIndexColumn()
 
-            // 🔍 GLOBAL SEARCH
-            ->filter(function ($query) use ($request) {
-                if (!empty($request->search['value'])) {
-                    $search = $request->search['value'];
-                    $query->where('type_name', 'LIKE', "%{$search}%");
-                }
-            })
+        // 🔍 GLOBAL SEARCH
+        ->filter(function ($query) use ($request) {
+            if (!empty($request->search['value'])) {
+                $search = $request->search['value'];
+                $query->where('type_name', 'LIKE', "%{$search}%");
+            }
+        })
 
-            // Type Name
-            ->addColumn('type_name', function ($row) {
-                return $row->type_name ?? 'N/A';
-            })
+        // Type Name
+        ->addColumn('type_name', function ($row) {
+            return $row->type_name ?? 'N/A';
+        })
 
-            // Status Toggle
-            ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
+        // Status Toggle
+        ->addColumn('status', function ($row) {
+            $checked = $row->active_inactive == 1 ? 'checked' : '';
 
-                return '
+            return '
                 <div class="form-check form-switch d-inline-block">
                     <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
                         data-table="course_group_type_master"
@@ -73,52 +71,56 @@ class CourseGroupTypeController extends Controller
                         data-id="' . $row->pk . '"
                         ' . $checked . '>
                 </div>';
-            })
+        })
 
-            // Action Dropdown
-            ->addColumn('action', function ($row) {
+        // Action Dropdown
+        ->addColumn('action', function ($row) {
 
-                $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
+            $disabled = $row->active_inactive == 1 ? 'disabled' : '';
 
-                return '
-    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
+            return'
+                <div class="dropdown">
+                    <a class="text-dark" href="#" role="button"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="material-icons menu-icon">more_horiz</i>
+                                            </a>
 
-        <!-- Edit Action -->
-        <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . $row->type_name . '" 
-           class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-           aria-label="Edit course group type">
-            <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
-            <span class="d-none d-md-inline">Edit</span>
-        </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item edit-btn" href="javascript:void(0)"
+                               data-id="' . $row->pk . '"
+                               data-type-name="' . $row->type_name . '">
+                                <i class="material-icons me-2" style="font-size:18px;">edit</i>
+                                Edit
+                            </a>
+                        </li>
 
-        <!-- Delete Action -->
-        
-            <a href="javascript:void(0)"
-                data-id="' . $row->pk . '"
-                class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                    <span class="d-none d-md-inline">Delete</span>
-                </a>
-    </div>';
-            })
+                        <li>
+                            <a class="dropdown-item delete-btn ' . $disabled . '" href="javascript:void(0)"
+                               data-id="' . $row->pk . '">
+                                <i class="material-icons me-2" style="font-size:18px;">delete</i>
+                                Delete
+                            </a>
+                        </li>
+                    </ul>
+                </div>';
+        })
 
+        // Allow HTML
+        ->rawColumns(['status', 'action'])
+        ->make(true);
+}
 
-            // Allow HTML
-            ->rawColumns(['status', 'action'])
-            ->make(true);
-    }
-
-    public function updateStatus(Request $request)
-    {
+ public function updateStatus(Request $request)
+{
         $table = 'course_group_type_master';
         try {
             DB::table($table)
-                ->where('pk', $request->pk)
-                ->update([
-                    'type_name'       => $request->type_name,
-                    'active_inactive' => $request->has('active_inactive') ? 1 : 0,
-                ]);
+            ->where('pk', $request->pk)
+            ->update([
+                'type_name'       => $request->type_name,
+                'active_inactive' => $request->has('active_inactive') ? 1 : 0,
+            ]);
 
             return redirect()->back()->with('success', 'Course Group Type updated successfully');
         } catch (\Exception $e) {

@@ -4,12 +4,9 @@ namespace App\Http\Controllers\Admin\Master;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use App\Models\ExemptionCategoryMaster;
-use App\Models\ExemptionMedicalSpecialityMaster;
+use App\Models\ExemptionCategoryMaster; 
+use App\Models\ExemptionMedicalSpecialityMaster; 
 use Yajra\DataTables\Facades\DataTables;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
-
 
 
 class ExemptionCategoryController extends Controller
@@ -21,130 +18,122 @@ class ExemptionCategoryController extends Controller
         return view('admin.master.exemption_categories_master.index');
     }
 
-    public function getcategory(Request $request)
-    {
-        /* ===============================
+public function getcategory(Request $request)
+{
+    /* ===============================
        UPDATE STATUS (Active / Inactive)
     ================================ */
-        if ($request->filled('pk') && $request->filled('active_inactive') && $request->active_inactive != 2) {
-            ExemptionCategoryMaster::whereKey($request->pk)->update([
-                'active_inactive' => $request->active_inactive
-            ]);
-        }
+    if ($request->filled('pk') && $request->filled('active_inactive') && $request->active_inactive != 2) {
+        ExemptionCategoryMaster::whereKey($request->pk)->update([
+            'active_inactive' => $request->active_inactive
+        ]);
+    }
 
-        /* ===============================
+    /* ===============================
        DELETE RECORD
     ================================ */
-        if ($request->filled('pk') && $request->active_inactive == 2) {
-            ExemptionCategoryMaster::whereKey($request->pk)->delete();
-        }
+    if ($request->filled('pk') && $request->active_inactive == 2) {
+        ExemptionCategoryMaster::whereKey($request->pk)->delete();
+    }
 
-        /* ===============================
+    /* ===============================
        DATATABLE QUERY
     ================================ */
-        $query = ExemptionCategoryMaster::orderByDesc('pk');
+    $query = ExemptionCategoryMaster::orderByDesc('pk');
 
-        return DataTables::of($query)
-            ->addIndexColumn()
+    return DataTables::of($query)
+        ->addIndexColumn()
 
-            /* ===============================
+        /* ===============================
            GLOBAL SEARCH
         ================================ */
-            ->filter(function ($query) use ($request) {
-                if (!empty($request->search['value'])) {
-                    $search = $request->search['value'];
+        ->filter(function ($query) use ($request) {
+            if (!empty($request->search['value'])) {
+                $search = $request->search['value'];
 
-                    $query->where(function ($q) use ($search) {
-                        $q->where('exemp_category_name', 'LIKE', "%{$search}%")
-                            ->orWhere('exemp_cat_short_name', 'LIKE', "%{$search}%");
-                    });
-                }
-            })
+                $query->where(function ($q) use ($search) {
+                    $q->where('exemp_category_name', 'LIKE', "%{$search}%")
+                      ->orWhere('exemp_cat_short_name', 'LIKE', "%{$search}%");
+                });
+            }
+        })
 
-            /* ===============================
+        /* ===============================
            COLUMNS
         ================================ */
-            ->addColumn('exemp_category_name', function ($row) {
-                return $row->exemp_category_name ?? 'N/A';
-            })
+        ->addColumn('exemp_category_name', function ($row) {
+            return $row->exemp_category_name ?? 'N/A';
+        })
 
-            ->addColumn('ShortName', function ($row) {
-                return $row->exemp_cat_short_name ?? 'N/A';
-            })
+        ->addColumn('ShortName', function ($row) {
+            return $row->exemp_cat_short_name ?? 'N/A';
+        })
 
-            /* ===============================
+        /* ===============================
            STATUS TOGGLE
         ================================ */
-            ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
+        ->addColumn('status', function ($row) {
+            $checked = $row->active_inactive == 1 ? 'checked' : '';
 
-                return '
+            return '
             <div class="form-check form-switch d-inline-block">
                 <input class="form-check-input plain-status-toggle"
                        type="checkbox"
-                       data-id="' . $row->pk . '"
-                       ' . $checked . '>
+                       data-id="'.$row->pk.'"
+                       '.$checked.'>
             </div>';
-            })
+        })
 
-            /* ===============================
+        /* ===============================
            ACTION BUTTONS
         ================================ */
-    ->addColumn('action', function ($row) {
-        $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
+        ->addColumn('action', function ($row) {
+            $disabled = $row->active_inactive == 1 ? 'disabled' : '';
 
-                return '
-                    <div class="d-inline-flex align-items-center gap-2"
-                        role="group"
-                        aria-label="Row actions">
+            return '
+            <div class="dropdown">
+                <a href="#" class="text-dark" data-bs-toggle="dropdown">
+                    <i class="material-icons">more_horiz</i>
+                </a>
 
-                        <!-- Edit Action -->
-                        <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        data-exemp_category_name="' . $row->exemp_category_name . '"
-                        data-exemp_cat_short_name="' . $row->exemp_cat_short_name . '"
-                        data-active_inactive="' . $row->active_inactive . '"
-                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
-                        aria-label="Edit course group type">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">edit</i>
-
-                            <span class="d-none d-md-inline">Edit</span>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item edit-btn"
+                           href="javascript:void(0)"
+                           data-id="'.$row->pk.'"
+                           data-exemp_category_name="'.$row->exemp_category_name.'"
+                           data-exemp_cat_short_name="'.$row->exemp_cat_short_name.'"
+                           data-active_inactive="'.$row->active_inactive.'">
+                            <i class="material-icons me-2" style="font-size:18px;">edit</i>
+                            Edit
                         </a>
+                    </li>
 
-                        <!-- Delete Action -->
-                        <a href="javascript:void(0)"
-                        data-id="' . $row->pk . '"
-                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
-                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
-
-                            <i class="material-icons material-symbols-rounded"
-                            style="font-size:18px;">delete</i>
-
-                            <span class="d-none d-md-inline">Delete</span>
+                    <li>
+                        <a class="dropdown-item delete-btn '.$disabled.'"
+                           href="javascript:void(0)"
+                           data-id="'.$row->pk.'">
+                            <i class="material-icons me-2" style="font-size:18px;">delete</i>
+                            Delete
                         </a>
+                    </li>
+                </ul>
+            </div>';
+        })
 
-                    </div>
-                ';
-            })
-
-
-            ->rawColumns(['status', 'action'])
-            ->orderColumn('DT_RowIndex', 'pk $1') //Added this line for ordering
-            ->make(true);
-    }
+        ->rawColumns(['status', 'action'])
+        ->make(true);
+}
 
 
-    public function updatedata(Request $request)
+ public function updatedata(Request $request)
     {
         $table = 'exemption_category_master';
         try {
-            DB::table($table)->where('pk', $request->pk)->update([
-                'exemp_category_name' => $request->exemp_category_name,
-                'exemp_cat_short_name' => $request->exemp_cat_short_name,
-                'active_inactive' => $request->active_inactive
-            ]);
+            DB::table($table)->where('pk', $request->pk)->update(['exemp_category_name' => $request->exemp_category_name,
+        'exemp_cat_short_name' => $request->exemp_cat_short_name,
+        'active_inactive' => $request->active_inactive
+        ]);
             return redirect()->back()->with('success', 'Exemption categories updated successfully');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Exemption categories not correct');
@@ -227,11 +216,117 @@ public function store(Request $request)
 
 
 
-    public function medicalSpecialityIndex()
-    {
-        // $specialities = ExemptionMedicalSpecialityMaster::paginate(10);
-        return view('admin.master.exemption_medical_speciality.index');
+public function medicalSpecialityIndex()
+{
+   // $specialities = ExemptionMedicalSpecialityMaster::paginate(10);
+    return view('admin.master.exemption_medical_speciality.index');
+}
+
+public function exemption_med_spec_mst(Request $request)
+{
+    /* ===============================
+       UPDATE STATUS (Active / Inactive)
+    ================================ */
+    if ($request->filled('pk') && $request->filled('active_inactive') && $request->active_inactive != 2) {
+        ExemptionMedicalSpecialityMaster::whereKey($request->pk)->update([
+            'active_inactive' => $request->active_inactive
+        ]);
     }
+
+    /* ===============================
+       DELETE RECORD
+    ================================ */
+    if ($request->filled('pk') && $request->active_inactive == 2) {
+        ExemptionMedicalSpecialityMaster::whereKey($request->pk)->delete();
+    }
+
+    /* ===============================
+       DATATABLE QUERY
+    ================================ */
+    $query = ExemptionMedicalSpecialityMaster::orderByDesc('pk');
+
+    return DataTables::of($query)
+        ->addIndexColumn()
+
+        /* ===============================
+           GLOBAL SEARCH
+        ================================ */
+        ->filter(function ($query) use ($request) {
+            if (!empty($request->search['value'])) {
+                $search = $request->search['value'];
+
+                $query->where(function ($q) use ($search) {
+                    $q->where('speciality_name', 'LIKE', "%{$search}%");
+                });
+            }
+        })
+
+        /* ===============================
+           COLUMNS
+        ================================ */
+        ->addColumn('speciality_name', function ($row) {
+            return $row->speciality_name ?? 'N/A';
+        })
+
+        ->addColumn('created_date', function ($row) {
+            return $row->created_date ?? 'N/A';
+        })
+
+        /* ===============================
+           STATUS TOGGLE
+        ================================ */
+        ->addColumn('status', function ($row) {
+            $checked = $row->active_inactive == 1 ? 'checked' : '';
+
+            return '
+            <div class="form-check form-switch d-inline-block">
+                <input class="form-check-input plain-status-toggle"
+                       type="checkbox"
+                       data-id="'.$row->pk.'"
+                       '.$checked.'>
+            </div>';
+        })
+
+        /* ===============================
+           ACTION BUTTONS
+        ================================ */
+        ->addColumn('action', function ($row) {
+            $disabled = $row->active_inactive == 1 ? 'disabled' : '';
+
+            return '
+            <div class="dropdown">
+                <a href="#" class="text-dark" data-bs-toggle="dropdown">
+                    <i class="material-icons">more_horiz</i>
+                </a>
+
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item edit-btn"
+                           href="javascript:void(0)"
+                           data-id="'.$row->pk.'"
+                           data-speciality_name="'.$row->speciality_name.'"
+                           data-created_date="'.$row->created_date.'"
+                           data-active_inactive="'.$row->active_inactive.'">
+                            <i class="material-icons me-2" style="font-size:18px;">edit</i>
+                            Edit
+                        </a>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item delete-btn '.$disabled.'"
+                           href="javascript:void(0)"
+                           data-id="'.$row->pk.'">
+                            <i class="material-icons me-2" style="font-size:18px;">delete</i>
+                            Delete
+                        </a>
+                    </li>
+                </ul>
+            </div>';
+        })
+
+        ->rawColumns(['status', 'action'])
+        ->make(true);
+}
 
     public function exemption_med_spec_mst(Request $request)
     {
