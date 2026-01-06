@@ -258,7 +258,7 @@ class GroupMappingController extends Controller
                 'file' => 'required|mimes:xlsx,xls,csv|max:10248',
             ]);
 
-            $import = new GroupMappingMultipleSheetImport();
+            $import = new GroupMappingMultipleSheetImport($request->course_type);
 
             Excel::import($import, $request->file('file'));
 
