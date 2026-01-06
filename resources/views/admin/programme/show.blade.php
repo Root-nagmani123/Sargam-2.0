@@ -127,10 +127,16 @@
                                         <span class="text-muted">Total Faculty</span>
                                         <span class="badge bg-info rounded-pill">{{ count($assistantCoordinatorsData) + 1 }}</span>
                                     </div>
-                                    @if($course->start_date)
+                                    @if($course->start_year)
                                     <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                                         <span class="text-muted">Start Date</span>
-                                        <span class="fw-semibold">{{ \Carbon\Carbon::parse($course->start_date)->format('d M Y') }}</span>
+                                        <span class="fw-semibold">{{ \Carbon\Carbon::parse($course->start_year)->format('d M Y') }}</span>
+                                    </div>
+                                    @endif
+                                    @if($course->end_date)
+                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span class="text-muted">End Date</span>
+                                        <span class="fw-semibold">{{ \Carbon\Carbon::parse($course->end_date)->format('d M Y') }}</span>
                                     </div>
                                     @endif
                                 </div>
