@@ -852,17 +852,18 @@ class CalendarController extends Controller
                         ->where('tf.is_submitted', 1);
                 })
                 ->where(function ($q) {
-                    $q->whereDate('t.END_DATE', '<', today()) 
+                    $q->whereDate('t.END_DATE', '<', today()) // previous days
                         ->orWhere(function ($q2) {
-                            $q2->whereDate('t.END_DATE', today()) 
+                            $q2->whereDate('t.END_DATE', today()) // today
                                 ->whereRaw("
-                                  STR_TO_DATE(
-                                  TRIM(SUBSTRING_INDEX(t.class_session, 'to', -1)),
-                                 '%H:%i'
-                                  ) <= ?
-                                  ", [now()->format('H:i')]);
-                          });
-                     });
+                STR_TO_DATE(
+                    TRIM(SUBSTRING_INDEX(t.class_session, 'to', -1)),
+                    '%H:%i'
+                ) <= ?
+             ", [now()->format('H:i')]);
+                        });
+                });
+
 
 
             if (hasRole('Student-OT')) {
