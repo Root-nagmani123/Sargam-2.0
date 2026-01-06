@@ -430,7 +430,7 @@ class CalendarController extends Controller
         $groupNames = DB::table('group_type_master_course_master_map')
             ->whereIn('pk', $groupIds)
             ->pluck('group_name');
-            
+
         $internalFacultyNames = DB::table('faculty_master')
             ->whereIn('pk', $internalFacultyIds)
             ->pluck('full_name');
@@ -852,12 +852,17 @@ class CalendarController extends Controller
                         ->where('tf.is_submitted', 1);
                 })
                 ->where(function ($q) {
-                    $q->whereDate('t.END_DATE', '<', now()->toDateString()) // past dates
+                    $q->whereDate('t.END_DATE', '<', today()) 
                         ->orWhere(function ($q2) {
-                            $q2->whereDate('t.END_DATE', now()->toDateString()) // today
-                                ->whereTime('t.class_session', '<=', now()->toTimeString()); // only if ended
-                        });
-                });
+                            $q2->whereDate('t.END_DATE', today()) 
+                                ->whereRaw("
+                                  STR_TO_DATE(
+                                  TRIM(SUBSTRING_INDEX(t.class_session, 'to', -1)),
+                                 '%H:%i'
+                                  ) <= ?
+                                  ", [now()->format('H:i')]);
+                          });
+                     });
 
 
             if (hasRole('Student-OT')) {
