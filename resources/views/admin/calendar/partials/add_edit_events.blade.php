@@ -1,51 +1,4 @@
 <!-- Add/Edit Event Modal -->
-<style>
-.form-section {
-    background: #ffffff;
-    border-radius: 0.75rem;
-    border: 1px solid #e9ecef;
-    padding: 1.5rem;
-}
-
-.form-section-header {
-    font-weight: 600;
-    color: #004a93;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.required::after {
-    content: " *";
-    color: #dc3545;
-    font-weight: 600;
-}
-
-.form-control:focus,
-.form-control:focus {
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, .15);
-}
-
-.helper-text {
-    font-size: 0.825rem;
-    color: #6c757d;
-}
-
-/* Select2 dropdown fixes */
-.select2-container {
-    z-index: 9999 !important;
-}
-
-.select2-dropdown {
-    z-index: 10000 !important;
-}
-
-.select2-container--open {
-    z-index: 10001 !important;
-}
-</style>
-
 <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable modal-lg">
         <form id="eventForm" novalidate>
@@ -75,15 +28,14 @@
                 <!-- Modal Body -->
                 <div class="modal-body">
                     <!-- Basic Information -->
-                    <section class="form-section mb-4" aria-labelledby="basicInfoHeading">
-                        <h3 id="basicInfoHeading" class="form-section-header mb-4">
-                            <i class="bi bi-info-circle"></i> Basic Information
-                        </h3>
-
-                        <div class="row g-4">
+                    <section class="mb-4" aria-labelledby="basicInfoHeading">
+                        <h3 id="basicInfoHeading" class="h6 text-primary mb-3">Basic Information</h3>
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="Course_name" class="form-label required">Course Name</label>
-                                <select name="Course_name" id="Course_name" class="form-control" required
+                                <label for="Course_name" class="form-label required">
+                                    Course Name
+                                </label>
+                                <select name="Course_name" id="Course_name" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Course</option>
                                     @foreach($courseMaster as $course)
@@ -93,8 +45,10 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label for="group_type" class="form-label required">Group Type</label>
-                                <select name="group_type" id="group_type" class="form-control" required
+                                <label for="group_type" class="form-label required">
+                                    Group Type
+                                </label>
+                                <select name="group_type" id="group_type" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Group Type</option>
                                 </select>
@@ -102,67 +56,74 @@
 
                             <div class="col-12">
                                 <label class="form-label required">Group Type Name</label>
-                                <div id="type_name_container" class="border rounded-3 p-3 bg-body-secondary"
-                                    aria-live="polite">
-                                    <div class="text-muted text-center small" id="groupTypePlaceholder">
-                                        Please select a Group Type to continue
+                                <div id="type_name_container" class="border rounded p-3 bg-light-subtle">
+                                    <div class="text-center text-muted" id="groupTypePlaceholder">
+                                        Select a Group Type first
                                     </div>
                                 </div>
-                                <div class="invalid-feedback d-block" id="type_names_error" hidden>
+                                <div class="invalid-feedback" id="type_names_error" style="display: none;">
                                     Please select at least one Group Type Name.
                                 </div>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="subject_module" class="form-label required">Subject Module</label>
-                                <select name="subject_module" id="subject_module" class="form-control" required
+                                <label for="subject_module" class="form-label required">
+                                    Subject Module
+                                </label>
+                                <select name="subject_module" id="subject_module" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Subject Module</option>
                                     @foreach($subjects as $subject)
-                                    <option value="{{ $subject->pk }}">{{ $subject->module_name }}</option>
+                                    <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
+                                        {{ $subject->module_name }}
+                                    </option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="subject_name" class="form-label required">Subject Name</label>
-                                <select name="subject_name" id="subject_name" class="form-control" required
+                                <label for="subject_name" class="form-label required">
+                                    Subject Name
+                                </label>
+                                <select name="subject_name" id="subject_name" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Subject Name</option>
                                 </select>
                             </div>
 
                             <div class="col-12">
-                                <label for="topic" class="form-label required">Topic</label>
+                                <label for="topic" class="form-label required">
+                                    Topic
+                                </label>
                                 <textarea name="topic" id="topic" class="form-control" rows="3"
-                                    placeholder="Briefly describe the session topic" required
-                                    aria-required="true"></textarea>
-                                <div class="helper-text">Maximize clarity; avoid abbreviations.</div>
+                                    placeholder="Enter topic details" required aria-required="true"></textarea>
                             </div>
                         </div>
                     </section>
 
-
                     <!-- Faculty & Venue -->
-                    <section class="form-section mb-4" aria-labelledby="facultyVenueHeading">
-                        <h3 id="facultyVenueHeading" class="form-section-header mb-4">
-                            <i class="bi bi-person-badge"></i> Faculty & Venue
-                        </h3>
-
-                        <div class="row g-4">
+                    <section class="mb-4" aria-labelledby="facultyVenueHeading">
+                        <h3 id="facultyVenueHeading" class="h6 text-primary mb-3">Faculty & Venue</h3>
+                        <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="faculty" class="form-label required">Faculty (Full Group / Internal / Guest)</label>
-                                <select name="faculty" id="faculty" class="form-control" required aria-required="true">
+                                <label for="faculty" class="form-label required">
+                                    Faculty
+                                </label>
+                                <select name="faculty" id="faculty" class="form-select" required aria-required="true">
                                     <option value="">Select Faculty</option>
                                     @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">{{ $faculty->full_name }}</option>
+                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                        {{ $faculty->full_name }}
+                                    </option>
                                     @endforeach
                                 </select>
                             </div>
 
                             <div class="col-md-6">
-                                <label for="faculty_type" class="form-label required">Faculty Type</label>
-                                <select name="faculty_type" id="faculty_type" class="form-control" required
+                                <label for="faculty_type" class="form-label required">
+                                    Faculty Type
+                                </label>
+                                <select name="faculty_type" id="faculty_type" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Faculty Type</option>
                                     <option value="1">Internal</option>
@@ -171,55 +132,57 @@
                                 </select>
                             </div>
 
+
                             <div class="col-md-6">
-                                <label for="vanue" class="form-label required">Location</label>
-                                <select name="vanue" id="vanue" class="form-control" required aria-required="true">
+                                <label for="vanue" class="form-label required">
+                                    Location
+                                </label>
+                                <select name="vanue" id="vanue" class="form-select" required aria-required="true">
                                     <option value="">Select Location</option>
                                     @foreach($venueMaster as $loc)
                                     <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-
                             <div class="col-md-6" id="internalFacultyDiv">
-                                <label for="internal_faculty" class="form-label required">Internal Faculty</label>
-                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" multiple
-                                    required aria-required="true">
+                                <label for="internal_faculty" class="form-label required">
+                                    Internal Faculty
+                                </label>
+                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" required
+                                    aria-required="true" multiple>
                                     @foreach($internal_faculty as $faculty)
-                                    <option value="{{ $faculty->pk }}">{{ $faculty->full_name }}</option>
+                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
+                                        {{ $faculty->full_name }}
+                                    </option>
                                     @endforeach
                                 </select>
-                                <div class="helper-text">Use Ctrl / Cmd to select multiple</div>
                             </div>
                         </div>
                     </section>
 
-
                     <!-- Schedule -->
-                    <section class="form-section mb-4" aria-labelledby="scheduleHeading">
-                        <h3 id="scheduleHeading" class="form-section-header mb-4">
-                            <i class="bi bi-calendar-event"></i> Schedule
-                        </h3>
+                    <section class="mb-4" aria-labelledby="scheduleHeading">
+                        <h3 id="scheduleHeading" class="h6 text-primary mb-3">Schedule</h3>
 
-                        <fieldset class="mb-3">
-                            <legend class="form-label required">Shift Type</legend>
-
+                        <!-- Shift Type -->
+                        <div class="mb-3">
+                            <label class="form-label d-block required">Shift Type</label>
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="shift_type" id="normalShift"
-                                    value="1" checked>
+                                <input type="radio" name="shift_type" id="normalShift" value="1"
+                                    class="form-check-input" checked aria-controls="shiftSelect">
                                 <label class="form-check-label" for="normalShift">Normal Shift</label>
                             </div>
-
                             <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="shift_type" id="manualShift"
-                                    value="2">
+                                <input type="radio" name="shift_type" id="manualShift" value="2"
+                                    class="form-check-input" aria-controls="manualShiftFields">
                                 <label class="form-check-label" for="manualShift">Manual Shift</label>
                             </div>
-                        </fieldset>
+                        </div>
 
+                        <!-- Normal Shift -->
                         <div id="shiftSelect" class="mb-3">
                             <label for="shift" class="form-label required">Shift</label>
-                            <select name="shift" id="shift" class="form-control" required>
+                            <select name="shift" id="shift" class="form-select" required aria-required="true">
                                 <option value="">Select Shift</option>
                                 @foreach($classSessionMaster as $shift)
                                 <option value="{{ $shift->shift_time }}">
@@ -228,56 +191,108 @@
                                 @endforeach
                             </select>
                         </div>
-                    </section>
 
-
-                    <!-- Additional Options -->
-                    <section class="form-section" aria-labelledby="additionalOptionsHeading">
-                        <h3 id="additionalOptionsHeading" class="form-section-header mb-4">
-                            <i class="bi bi-sliders"></i> Additional Options
-                        </h3>
-
-                        <div class="row g-4">
-                            <div class="col-md-8">
-                                <div class="border rounded-4 p-3 h-100">
-                                    <div class="form-check form-switch mb-3">
-                                        <input class="form-check-input" type="checkbox" id="feedback_checkbox"
-                                            name="feedback_checkbox">
-                                        <label class="form-check-label fw-semibold" for="feedback_checkbox">
-                                            Enable Feedback
-                                        </label>
-                                    </div>
-
-                                    <div id="feedbackOptions" class="ps-3 border-start d-none">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="remarkCheckbox"
-                                                name="remarkCheckbox">
-                                            <label class="form-check-label" for="remarkCheckbox">Remark</label>
-                                        </div>
-
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" id="ratingCheckbox"
-                                                name="ratingCheckbox">
-                                            <label class="form-check-label" for="ratingCheckbox">Rating</label>
-                                        </div>
-                                    </div>
+                        <!-- Manual Shift -->
+                        <div id="manualShiftFields" class="d-none">
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
+                                        name="fullDayCheckbox" aria-controls="dateTimeFields">
+                                    <label class="form-check-label" for="fullDayCheckbox">
+                                        Full Day Event
+                                    </label>
                                 </div>
                             </div>
 
-                            <div class="col-md-4">
-                                <div class="border rounded-4 p-3 h-100 d-flex align-items-center">
-                                    <div class="form-check form-switch">
-                                        <input class="form-check-input" type="checkbox" id="bio_attendanceCheckbox"
-                                            name="bio_attendanceCheckbox">
-                                        <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
-                                            Bio Attendance
-                                        </label>
+                            <div id="dateTimeFields">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="start_time" class="form-label required">Start Time</label>
+                                        <input type="time" name="start_time" id="start_time" class="form-control"
+                                            aria-describedby="startTimeHelp">
+                                        <small id="startTimeHelp" class="form-text text-muted">
+                                            Must be at least 1 hour from now
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="end_time" class="form-label required">End Time</label>
+                                        <input type="time" name="end_time" id="end_time" class="form-control">
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </section>
 
+                    <!-- Additional Options -->
+                    <section class="pt-4 border-top" aria-labelledby="additionalOptionsHeading">
+                        <h3 id="additionalOptionsHeading" class="h6 text-primary mb-3">
+                            <i class="bi bi-sliders me-2"></i>Additional Options
+                        </h3>
+
+                        <div class="row g-3">
+                            <!-- Feedback Group -->
+                            <div class="col-md-8">
+                                <div class="card border-0 shadow-sm rounded-4 h-100">
+                                    <div class="card-body p-3">
+                                        <!-- Feedback Parent -->
+                                        <div class="form-check form-switch mb-3">
+                                            <input class="form-check-input" type="checkbox" id="feedback_checkbox"
+                                                name="feedback_checkbox" value="1" aria-controls="feedbackOptions">
+                                            <label class="form-check-label fw-semibold" for="feedback_checkbox">
+                                                Feedback
+                                            </label>
+                                        </div>
+
+                                        <!-- Feedback Child Options -->
+                                        <div id="feedbackOptions" class="ps-4 border-start d-none">
+                                            <div class="form-check mb-2">
+                                                <input class="form-check-input" type="checkbox" id="remarkCheckbox"
+                                                    name="remarkCheckbox" value="1">
+                                                <label class="form-check-label" for="remarkCheckbox">
+                                                    Remark
+                                                </label>
+                                            </div>
+
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="ratingCheckbox"
+                                                    name="ratingCheckbox" value="1">
+                                                <label class="form-check-label" for="ratingCheckbox">
+                                                    Rating
+                                                </label>
+                                            </div>
+                                            <!-- <div class="form-check" id="facultyReviewRatingDiv">
+                                                <input class="form-check-input" type="checkbox" id="facultyReviewRating"
+                                                    name="facultyReviewRating" value="1">
+                                                <label class="form-check-label" for="facultyReviewRating">
+                                                    Internal Faculty Feedback<span class="text-muted fs-6">internal
+                                                        faculty can give feedback to guest faculty</span>
+                                                </label>
+                                            </div> -->
+
+                                            <small class="text-muted d-block mt-2">
+                                                Select at least one feedback component.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bio Attendance (Independent) -->
+                            <div class="col-md-4">
+                                <div class="card border-0 shadow-sm rounded-4 h-100">
+                                    <div class="card-body p-3 d-flex align-items-center">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="bio_attendanceCheckbox"
+                                                name="bio_attendanceCheckbox" value="1">
+                                            <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
+                                                Bio Attendance
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
 
                 </div>
 
@@ -326,13 +341,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize Select2 when modal is shown
     $('#eventModal').on('shown.bs.modal', function() {
+        var modalDialog = $('#eventModal').find('.modal-dialog');
+    
         // Initialize Select2 for faculty field
         if (!$('#faculty').hasClass('select2-hidden-accessible')) {
             $('#faculty').select2({
                 placeholder: 'Select Faculty',
                 allowClear: true,
                 width: '100%',
-                dropdownParent: $('#eventModal')
+                dropdownParent: modalDialog
             });
         }
 
@@ -348,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 placeholder: 'Select Internal Faculty',
                 allowClear: true,
                 width: '100%',
-                dropdownParent: $('#eventModal')
+                dropdownParent: modalDialog
             });
         }
 
@@ -368,12 +385,12 @@ document.addEventListener('DOMContentLoaded', function() {
     facultySelect.addEventListener('change', function() {
         console.log(facultySelect, typeof facultySelect);
         facultyType = $('#faculty option:selected').data('faculty_type');
-        updateinternal_faculty_data(facultyType, console.log('changed second' + facultyType));
+        updateinternal_faculty_data(facultyType, console.log('changed second'+facultyType));
     });
     faculty_type.addEventListener('change', function() {
         console.log(faculty_type, typeof faculty_type);
         const facultyType = this.value;
-        updateinternal_faculty_data(facultyType, console.log('changed thired' + facultyType));
+        updateinternal_faculty_data(facultyType, console.log('changed thired'+facultyType));
     });
 
     function updateinternal_faculty_data(facultyType, logMessage) {
