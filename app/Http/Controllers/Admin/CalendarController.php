@@ -709,10 +709,15 @@ class CalendarController extends Controller
                         ->where('tf.is_submitted', 1);
                 })
                 ->where(function ($q) {
-                    $q->whereDate('t.END_DATE', '<', now()->toDateString()) // past dates
+                    $q->whereDate('t.END_DATE', '<', today())
                         ->orWhere(function ($q2) {
-                            $q2->whereDate('t.END_DATE', now()->toDateString()) // today
-                                ->whereTime('t.class_session', '<=', now()->toTimeString()); // only if ended
+                            $q2->whereDate('t.END_DATE', today())
+                                ->whereRaw("
+                STR_TO_DATE(
+                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                    '%h:%i %p'
+                ) <= CURTIME()
+             ");
                         });
                 });
 
@@ -852,15 +857,15 @@ class CalendarController extends Controller
                         ->where('tf.is_submitted', 1);
                 })
                 ->where(function ($q) {
-                    $q->whereDate('t.END_DATE', '<', today()) // previous days
+                    $q->whereDate('t.END_DATE', '<', today())
                         ->orWhere(function ($q2) {
-                            $q2->whereDate('t.END_DATE', today()) // today
+                            $q2->whereDate('t.END_DATE', today())
                                 ->whereRaw("
                 STR_TO_DATE(
-                    TRIM(SUBSTRING_INDEX(t.class_session, 'to', -1)),
-                    '%H:%i'
-                ) <= ?
-             ", [now()->format('H:i')]);
+                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                    '%h:%i %p'
+                ) <= CURTIME()
+             ");
                         });
                 });
 
