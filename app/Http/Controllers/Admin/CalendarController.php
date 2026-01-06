@@ -950,6 +950,23 @@ class CalendarController extends Controller
             ->orderBy('session_end_time', 'asc')
             ->get();
 
+            // DEBUG: Log results
+        logger()->info('DEBUG RESULTS', [
+            'pending_count' => $pendingData->count(),
+            'data' => $pendingData->map(function($item) {
+                return [
+                    'pk' => $item->timetable_pk,
+                    'topic' => $item->subject_topic,
+                    'start_date' => $item->from_date,
+                    'end_date' => $item->END_DATE,
+                    'session' => $item->class_session,
+                    'session_end_time' => $item->session_end_time,
+                    'is_time_passed' => $item->is_time_passed,
+                ];
+            })->toArray()
+        ]);
+        
+
         $submittedData = DB::table('topic_feedback as tf')
             ->select([
                 'tf.pk as feedback_pk',
