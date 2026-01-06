@@ -851,10 +851,9 @@ class CalendarController extends Controller
     }
 
 
-    public function studentFacultyFeedback(Request $request)
+   public function studentFacultyFeedback(Request $request)
 {
     try {
-
         $otUrl = '';
 
         if (!$request->has('token')) {
@@ -885,7 +884,6 @@ class CalendarController extends Controller
         Auth::login($user);
         $student_pk = auth()->user()->user_id;
 
-
         $pendingQuery = DB::table('timetable as t')
             ->select([
                 't.pk as timetable_pk',
@@ -899,11 +897,11 @@ class CalendarController extends Controller
                 'v.venue_name',
                 DB::raw('t.START_DATE as from_date'),
                 't.class_session',
-                // Add field to extract session end time for sorting
+                // CORRECTED: Use same format as working function
                 DB::raw("
                     STR_TO_DATE(
-                        TRIM(SUBSTRING_INDEX(t.class_session, 'to', -1)),
-                        '%H:%i'
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
                     ) as session_end_time
                 ")
             ])
@@ -926,21 +924,19 @@ class CalendarController extends Controller
                     ->where('tf.student_master_pk', $student_pk)
                     ->where('tf.is_submitted', 1);
             })
-            // Fixed: Show past sessions OR today's sessions if end time has passed
+            // CORRECTED: Use same logic as working function
             ->where(function ($q) {
                 $q->whereDate('t.END_DATE', '<', today()) // All past sessions
                     ->orWhere(function ($q2) {
                         $q2->whereDate('t.END_DATE', today()) // Today's sessions
                             ->whereRaw("
                                 STR_TO_DATE(
-                                    TRIM(SUBSTRING_INDEX(t.class_session, 'to', -1)),
-                                    '%H:%i'
-                                ) <= ?
-                            ", [now()->format('H:i')]);
+                                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                                    '%h:%i %p'
+                                ) <= CURTIME()
+                            ");
                     });
             });
-
-
 
         if (hasRole('Student-OT')) {
             $pendingQuery
