@@ -1023,6 +1023,55 @@ class CalendarController extends Controller
             logger()->error('Error in studentFacultyFeedback: ' . $e->getMessage());
             return back()->with('error', 'Something went wrong');
         }
+
+        $pendingData = $pendingQuery
+            ->orderBy('t.START_DATE', 'asc')
+            ->orderBy('session_end_time', 'asc')
+            ->get();
+
+        $submittedData = DB::table('topic_feedback as tf')
+            ->select([
+                'tf.pk as feedback_pk',
+                'tf.timetable_pk',
+                'tf.topic_name',
+                'tf.presentation',
+                'tf.content',
+                'tf.remark',
+                'tf.rating',
+                'tf.is_submitted',
+                'tf.created_date',
+                't.subject_topic',
+                'f.full_name as faculty_name',
+                'c.course_name',
+                'v.venue_name',
+                DB::raw('t.START_DATE as from_date'),
+                't.class_session',
+                't.Ratting_checkbox',
+                't.Remark_checkbox',
+            ])
+            ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+
+            ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
+                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                    ->where('smcm.student_master_pk', '=', $student_pk)
+                    ->where('smcm.active_inactive', '=', 1);
+            })
+
+            ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+            ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+            ->where('tf.student_master_pk', $student_pk)
+            ->where('tf.is_submitted', 1)
+            ->orderByDesc('tf.created_date')
+            ->get();
+
+        return view(
+            'admin.feedback.student_feedback',
+            compact('pendingData', 'submittedData', 'otUrl')
+        );
+    } catch (\Throwable $e) {
+        logger()->error('Error in studentFacultyFeedback: ' . $e->getMessage());
+        return back()->with('error', 'Something went wrong');
     }
 
 
