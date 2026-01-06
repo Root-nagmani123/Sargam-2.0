@@ -668,7 +668,14 @@ $currentPath = $segments[1] ?? null;
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-                                if ($mdoDuty) {
+                                // Get timetable class_session for time overlap checking
+                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                                
+                                if ($mdoDuty && $this->checkTimeOverlap(
+                                    $timetableClassSession,
+                                    $mdoDuty->Time_from,
+                                    $mdoDuty->Time_to
+                                )) {
                                     $record['attendance_status'] = 'Present';
                                     $record['duty_type'] = 'MDO';
                                 }
@@ -682,7 +689,14 @@ $currentPath = $segments[1] ?? null;
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-                                if ($escortDuty) {
+                                // Get timetable class_session for time overlap checking
+                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                                
+                                if ($escortDuty && $this->checkTimeOverlap(
+                                    $timetableClassSession,
+                                    $escortDuty->Time_from,
+                                    $escortDuty->Time_to
+                                )) {
                                     $record['attendance_status'] = 'Present';
                                     $record['duty_type'] = 'Escort';
                                 }
@@ -696,7 +710,14 @@ $currentPath = $segments[1] ?? null;
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-                                if ($otherDuty) {
+                                // Get timetable class_session for time overlap checking
+                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                                
+                                if ($otherDuty && $this->checkTimeOverlap(
+                                    $timetableClassSession,
+                                    $otherDuty->Time_from,
+                                    $otherDuty->Time_to
+                                )) {
                                     $record['attendance_status'] = 'Present';
                                     $record['exemption_type'] = 'Other';
                                     $record['exemption_comment'] = $otherDuty->Remark ?? null;
@@ -966,7 +987,14 @@ $currentPath = $segments[1] ?? null;
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-                                if ($mdoDuty) {
+                                // Get timetable class_session for time overlap checking
+                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                                
+                                if ($mdoDuty && $this->checkTimeOverlap(
+                                    $timetableClassSession,
+                                    $mdoDuty->Time_from,
+                                    $mdoDuty->Time_to
+                                )) {
                                     $record['attendance_status'] = 'Present';
                                     $record['duty_type'] = 'MDO';
                                 }
@@ -980,7 +1008,14 @@ $currentPath = $segments[1] ?? null;
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-                                if ($escortDuty) {
+                                // Get timetable class_session for time overlap checking
+                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                                
+                                if ($escortDuty && $this->checkTimeOverlap(
+                                    $timetableClassSession,
+                                    $escortDuty->Time_from,
+                                    $escortDuty->Time_to
+                                )) {
                                     $record['attendance_status'] = 'Present';
                                     $record['duty_type'] = 'Escort';
                                 }
@@ -994,7 +1029,14 @@ $currentPath = $segments[1] ?? null;
                                     ['selected_student_list', '=', $student_pk]
                                 ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-                                if ($otherDuty) {
+                                // Get timetable class_session for time overlap checking
+                                $timetableClassSession = optional($courseGroup->timetable)->class_session ?? null;
+                                
+                                if ($otherDuty && $this->checkTimeOverlap(
+                                    $timetableClassSession,
+                                    $otherDuty->Time_from,
+                                    $otherDuty->Time_to
+                                )) {
                                     $record['attendance_status'] = 'Present';
                                     $record['exemption_type'] = 'Other';
                                     $record['exemption_comment'] = $otherDuty->Remark ?? null;
@@ -1081,6 +1123,133 @@ $currentPath = $segments[1] ?? null;
                 'status' => 'error',
                 'message' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Check if class_session time overlaps with duty Time_from and Time_to
+     */
+    protected function checkTimeOverlap(?string $classSession, ?string $dutyTimeFrom, ?string $dutyTimeTo): bool
+    {
+        if (empty($classSession) || empty($dutyTimeFrom) || empty($dutyTimeTo)) {
+            return false;
+        }
+
+        // Parse class_session to get start and end times
+        $classSessionTimes = $this->parseClassSession($classSession);
+        if (!$classSessionTimes) {
+            return false;
+        }
+
+        $classStartTime = $classSessionTimes['start'];
+        $classEndTime = $classSessionTimes['end'];
+
+        // Convert duty times to seconds for comparison
+        $dutyStartSeconds = $this->timeToSeconds($dutyTimeFrom);
+        $dutyEndSeconds = $this->timeToSeconds($dutyTimeTo);
+        $classStartSeconds = $this->timeToSeconds($classStartTime);
+        $classEndSeconds = $this->timeToSeconds($classEndTime);
+
+        if ($dutyStartSeconds === false || $dutyEndSeconds === false || 
+            $classStartSeconds === false || $classEndSeconds === false) {
+            return false;
+        }
+
+        // Check if class session time overlaps with duty time range
+        return ($classStartSeconds <= $dutyEndSeconds && $classEndSeconds >= $dutyStartSeconds);
+    }
+
+    /**
+     * Parse class_session string to extract start and end times
+     */
+    protected function parseClassSession(?string $classSession): ?array
+    {
+        if (empty($classSession)) {
+            return null;
+        }
+
+        // Check if class_session is a numeric ID (PK reference to ClassSessionMaster)
+        if (is_numeric($classSession)) {
+            $classSessionMaster = ClassSessionMaster::find($classSession);
+            if ($classSessionMaster && $classSessionMaster->start_time && $classSessionMaster->end_time) {
+                return [
+                    'start' => date('H:i', strtotime($classSessionMaster->start_time)),
+                    'end' => date('H:i', strtotime($classSessionMaster->end_time))
+                ];
+            }
+            return null;
+        }
+
+        // Parse string format like "10:35 AM - 11:30 AM" or "10:35 - 11:30"
+        $separators = [' - ', ' to ', '-'];
+        $timeParts = null;
+        
+        foreach ($separators as $separator) {
+            if (strpos($classSession, $separator) !== false) {
+                $parts = explode($separator, $classSession);
+                if (count($parts) === 2) {
+                    $timeParts = [
+                        'start' => trim($parts[0]),
+                        'end' => trim($parts[1])
+                    ];
+                    break;
+                }
+            }
+        }
+
+        if (!$timeParts) {
+            return null;
+        }
+
+        // Convert times to H:i format (24-hour)
+        try {
+            $startTime = date('H:i', strtotime($timeParts['start']));
+            $endTime = date('H:i', strtotime($timeParts['end']));
+            
+            return [
+                'start' => $startTime,
+                'end' => $endTime
+            ];
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Convert time string to seconds for easy comparison
+     */
+    protected function timeToSeconds(?string $time): int|false
+    {
+        if (empty($time)) {
+            return false;
+        }
+
+        try {
+            // First, try to parse as "H:i" or "H:i:s" format directly
+            if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', trim($time), $matches)) {
+                $hours = (int)$matches[1];
+                $minutes = (int)$matches[2];
+                $seconds = isset($matches[3]) ? (int)$matches[3] : 0;
+                
+                // Validate ranges
+                if ($hours >= 0 && $hours <= 23 && $minutes >= 0 && $minutes <= 59 && $seconds >= 0 && $seconds <= 59) {
+                    return ($hours * 3600) + ($minutes * 60) + $seconds;
+                }
+            }
+            
+            // Fallback: Try to parse with strtotime (for formats like "10:00 AM")
+            $timestamp = strtotime($time);
+            if ($timestamp !== false) {
+                $hours = (int)date('H', $timestamp);
+                $minutes = (int)date('i', $timestamp);
+                $seconds = (int)date('s', $timestamp);
+
+                return ($hours * 3600) + ($minutes * 60) + $seconds;
+            }
+            
+            return false;
+        } catch (\Exception $e) {
+            return false;
         }
     }
 }
