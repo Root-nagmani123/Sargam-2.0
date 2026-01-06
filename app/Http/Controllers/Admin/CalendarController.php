@@ -770,18 +770,15 @@ class CalendarController extends Controller
                         ->where('tf.is_submitted', 1);
                 })
                 // Modified: Show past sessions OR today's sessions if end time has passed
-                ->where(function ($q) {
-                    $q->whereDate('t.END_DATE', '<', today()) // All past sessions
-                        ->orWhere(function ($q2) {
-                            $q2->whereDate('t.END_DATE', today()) // Today's sessions
-                                ->whereRaw("
-                                STR_TO_DATE(
-                                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-                                    '%h:%i %p'
-                                ) <= CURTIME()
+                ->whereRaw("
+                        TIMESTAMP(
+                        t.END_DATE,
+                        STR_TO_DATE(
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
+                            )
+                         ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
                             ");
-                        });
-                });
 
             if (hasRole('Student-OT')) {
                 $pendingQuery
@@ -924,19 +921,15 @@ class CalendarController extends Controller
                         ->where('tf.student_master_pk', $student_pk)
                         ->where('tf.is_submitted', 1);
                 })
-                // CORRECTED: Use same logic as working function
-                ->where(function ($q) {
-                    $q->whereDate('t.END_DATE', '<', today()) // All past sessions
-                        ->orWhere(function ($q2) {
-                            $q2->whereDate('t.END_DATE', today()) // Today's sessions
-                                ->whereRaw("
-                                STR_TO_DATE(
-                                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-                                    '%h:%i %p'
-                                     ) <= CONVERT_TZ(CURTIME(), '+00:00', '+05:30')
+                 ->whereRaw("
+                        TIMESTAMP(
+                        t.END_DATE,
+                        STR_TO_DATE(
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
+                            )
+                         ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
                             ");
-                        });
-                });
 
             if (hasRole('Student-OT')) {
                 $pendingQuery
