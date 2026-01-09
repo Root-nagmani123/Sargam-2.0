@@ -1541,6 +1541,8 @@ if ($programs->isEmpty()) {
                         ->orWhereDate('end_date', '<', Carbon::today());
                 });
             }
+           
+
 
             $programs = $programsQuery->orderBy('course_name')
                 ->pluck('course_name', 'id');
@@ -1656,6 +1658,10 @@ if ($programs->isEmpty()) {
                 $query->where('cm.active_inactive', 1)
                     ->whereDate('cm.end_date', '>=', Carbon::today());
             }
+            if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+                $facultyPk = (Auth::user()->user_id);
+                $query->where('fm.employee_master_pk', $facultyPk);
+            }
 
             // Order by
             $query->orderBy('tt.START_DATE', 'DESC')
@@ -1720,6 +1726,7 @@ if ($programs->isEmpty()) {
             $groupedData = $processedData->groupBy(function ($item) {
                 return $item['program_name'] . '|' . $item['faculty_name'] . '|' . $item['topic_name'];
             });
+            // print_r($groupedData);
 
             // Prepare response based on request type
             if ($request->ajax() || $request->wantsJson()) {

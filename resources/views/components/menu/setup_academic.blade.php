@@ -231,8 +231,8 @@
                                         <span class="hide-menu">OT - Memo / Notice</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{route('feedback.get.feedbackList')}}">
-                                        <span class="hide-menu">My Feedback</span>
+                                        href="{{route('admin.feedback.feedback_details')}}">
+                                        <span class="hide-menu">My Feedback.</span>
                                     </a></li>
                             </ul>
                             @endif

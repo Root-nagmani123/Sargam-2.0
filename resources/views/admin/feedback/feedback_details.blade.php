@@ -237,6 +237,7 @@
                     </div>
 
                     <!-- Faculty Type -->
+                     @if (!hasRole('Internal Faculty') && !hasRole('Guest Faculty'))
                     <div class="col-lg-2 col-md-6 mb-3">
                         <fieldset>
                             <legend class="fs-6 fw-semibold mb-2">Faculty Type</legend>
@@ -254,6 +255,7 @@
                             </div>
                         </fieldset>
                     </div>
+                   
 
                     <!-- Faculty Name -->
                     <div class="col-lg-2 col-md-6 mb-3 suggestions-container">
@@ -280,6 +282,7 @@
                             @endif
                         </div>
                     </div>
+                     @endif
                 </div>
 
                 <div class="d-flex align-items-center">
