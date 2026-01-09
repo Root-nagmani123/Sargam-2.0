@@ -623,3 +623,10 @@ Route::middleware(['auth'])->group(function () {
 });
 
    Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+ Route::get(
+    '/admin/feedback/pending',
+    [FeedbackController::class, 'pendingFeedbackIndex']
+)->name('admin.feedback.pending');
+
+
+
