@@ -317,49 +317,8 @@
             // Remove existing click listener
             toggleBtn.onclick = null;
             
-            // Add enhanced toggle
-            toggleBtn.addEventListener('click', enhancedSidebarToggle(function(e) {
-                // This will call the desktop toggle logic
-                // The desktop logic is in master.blade.php
-                if (!isMobile && !isTablet) {
-                    // Let the original desktop handler work
-                    const sidebar = document.getElementById("main-wrapper");
-                    const body = document.body;
-                    const sidebarmenus = document.querySelectorAll(".sidebarmenu");
-                    const icon = document.getElementById("sidebarToggleIcon");
-                    
-                    if (sidebar) {
-                        sidebar.classList.toggle("show-sidebar");
-                        sidebarmenus.forEach(function(el) {
-                            el.classList.toggle("close");
-                        });
-
-                        const currentType = body.getAttribute("data-sidebartype");
-                        if (currentType === "mini-sidebar") {
-                            body.setAttribute("data-sidebartype", "full");
-                            try { localStorage.setItem('SidebarType', 'full'); } catch (e) {}
-                            if (icon) icon.textContent = "keyboard_double_arrow_left";
-                        } else {
-                            body.setAttribute("data-sidebartype", "mini-sidebar");
-                            try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
-                            if (icon) icon.textContent = "keyboard_double_arrow_right";
-                        }
-
-                        // Adjust DataTables
-                        setTimeout(function() {
-                            if (window.jQuery && $.fn && $.fn.dataTable) {
-                                const api = $.fn.dataTable.tables({ visible: true, api: true });
-                                if (api && api.columns) {
-                                    api.columns.adjust();
-                                    if (api.responsive && api.responsive.recalc) {
-                                        api.responsive.recalc();
-                                    }
-                                }
-                            }
-                        }, 300);
-                    }
-                }
-            }));
+            // Add enhanced toggle: handle mobile/tablet only; let desktop handler run
+            toggleBtn.addEventListener('click', enhancedSidebarToggle(null));
         }
 
         // Handle window resize

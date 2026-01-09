@@ -59,7 +59,7 @@
                                 <select id="courseFilter" class="form-select shadow-sm">
                                     <option value="">All Courses</option>
                                     @foreach($courses ?? [] as $pk => $name)
-                                    <option value="{{ $pk }}">{{ $name }}</option>
+                                    <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -132,6 +132,16 @@
                                                 <input type="text" class="form-control" id="studentOtCode" name="otcode"
                                                     placeholder="Enter OT code" required maxlength="255">
                                             </div>
+                                            <div class="mb-3">
+                                                <label for="studentEmail" class="form-label">Course <span
+                                                        class="text-danger">*</span></label>
+                                                <select class="form-select" id="studentCourse" name="course_master_pk" required>
+                                                    <option value="">Select Course</option>
+                                                    @foreach($courses ?? [] as $pk => $name)
+                                                    <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
 
                                             <div class="mb-3">
                                                 <label for="studentGroupType" class="form-label">Group Type <span
@@ -178,7 +188,7 @@
                             data-bs-keyboard="false">
 
                             <div class="modal-dialog">
-                                <div class="modal-content">
+                                <div class="modal-content"> 
                                     <form method="POST" enctype="multipart/form-data" id="importExcelForm">
                                         @csrf
 
@@ -188,29 +198,19 @@
                                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
                                      
-
-
                                         <!-- Dropdown Section -->
                                         <div class="modal-body pt-3">
-                                            <div class="mb-3">
-                                                <label for="group_type" class="form-label">Select Course Name</label>
-                                                <select name="group_type" id="group_type" class="form-control" required>
-                                                    <option value="">Select Course Name</option>
-
-                                                    @php
-                                                    $courses = getCourseValue();
-                                                    @endphp
-
-                                                    @foreach ($courses as $course)
-                                                    <option value="{{ $course->pk }}">
-                                                    {{ $course->course_name }}
-                                                    </option>
-                                                    @endforeach
-                                                   
-                                                </select>
-                                            </div>
 
                                             <!-- File Upload -->
+                                            <div class="mb-3">
+                                                <label for="importFile" class="form-label">Select Course</label>
+                                               <select name="course_master_pk" id="course_master_pk_model" class="form-select shadow-sm " required>
+                                                    <option value="">Select Course</option>
+                                                   @foreach($courses ?? [] as $pk => $name)
+                                                    <option value="{{ $pk }}"  {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                                                @endforeach
+                                                </select>
+                                            </div>
                                             <div class="mb-3">
                                                 <label for="importFile" class="form-label">Select Excel File</label>
                                                 <input type="file" name="file" id="importFile" class="form-control"

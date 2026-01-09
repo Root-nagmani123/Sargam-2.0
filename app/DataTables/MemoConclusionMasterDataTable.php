@@ -41,47 +41,54 @@ class MemoConclusionMasterDataTable extends DataTable
                 $formId = 'delete-form-' . $row->pk;
 
                 $html = <<<HTML
-<div class="dropdown text-center">
-    <button class="btn btn-link p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
-        <span class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">more_horiz</span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-        <li>
-            <a class="dropdown-item d-flex align-items-center" href="{$editUrl}">
-                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">edit</span>
-                Edit
-            </a>
-        </li>
-        <li><hr class="dropdown-divider"></li>
-HTML;
+<div class="d-inline-flex align-items-center gap-2"
+     role="group"
+     aria-label="Memo conclusion actions">
 
-                if ($isActive) {
-                    $html .= <<<HTML
-        <li>
-            <span class="dropdown-item d-flex align-items-center disabled" title="Cannot delete active memo conclusion" aria-disabled="true">
-                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
-                Delete
-            </span>
-        </li>
-HTML;
-                } else {
-                    $html .= <<<HTML
-        <li>
-            <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
-                <input type="hidden" name="_token" value="{$csrf}">
-                <input type="hidden" name="_method" value="DELETE">
-                <a href="#" class="dropdown-item d-flex align-items-center text-danger" onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this memo conclusion?')) document.getElementById('{$formId}').submit();">
-                    <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
-                    Delete
-                </a>
-            </form>
-        </li>
-HTML;
-                }
+    <!-- Edit -->
+    <a href="{$editUrl}"
+       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+       aria-label="Edit memo conclusion">
+        <span class="material-icons material-symbols-rounded"
+              style="font-size:18px;"
+              aria-hidden="true">edit</span>
+        <span class="d-none d-md-inline">Edit</span>
+    </a>
 
-                $html .= <<<HTML
-    </ul>
+    <!-- Delete -->
+    <?php if ($isActive): ?>
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
+                disabled
+                aria-disabled="true"
+                title="Cannot delete active memo conclusion">
+            <span class="material-icons material-symbols-rounded"
+                  style="font-size:18px;"
+                  aria-hidden="true">delete</span>
+            <span class="d-none d-md-inline">Delete</span>
+        </button>
+    <?php else: ?>
+        <form id="<?= $formId ?>"
+              action="<?= $deleteUrl ?>"
+              method="POST"
+              class="d-inline">
+            <input type="hidden" name="_token" value="<?= $csrf ?>">
+            <input type="hidden" name="_method" value="DELETE">
+
+            <button type="submit"
+                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                    aria-label="Delete memo conclusion"
+                    onclick="return confirm('Are you sure you want to delete this memo conclusion?');">
+                <span class="material-icons material-symbols-rounded"
+                      style="font-size:18px;"
+                      aria-hidden="true">delete</span>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>
+        </form>
+    <?php endif; ?>
+
 </div>
+
 HTML;
 
                 return $html;

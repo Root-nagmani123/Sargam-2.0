@@ -84,38 +84,6 @@
 
             <hr>
 
-            <!-- Filters -->
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label for="duty_type_filter" class="form-label fw-bold">Filter by Duty Type</label>
-                    <select name="duty_type_filter" id="duty_type_filter" class="form-select">
-                        <option value="">All Duty Types</option>
-                        @if(isset($allDutyTypes) && is_array($allDutyTypes))
-                            @foreach($allDutyTypes as $pk => $name)
-                                <option value="{{ $pk }}" {{ isset($dutyTypeFilter) && $dutyTypeFilter == $pk ? 'selected' : '' }}>
-                                    {{ $name }}
-                                </option>
-                            @endforeach
-                        @endif
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="from_date_filter" class="form-label fw-bold">From Date</label>
-                    <input type="date" name="from_date_filter" id="from_date_filter" class="form-control" 
-                           value="{{ isset($fromDateFilter) ? $fromDateFilter : '' }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="to_date_filter" class="form-label fw-bold">To Date</label>
-                    <input type="date" name="to_date_filter" id="to_date_filter" class="form-control" 
-                           value="{{ isset($toDateFilter) ? $toDateFilter : '' }}">
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="button" id="clearFilterBtn" class="btn btn-outline-secondary px-4 py-2 shadow-sm w-100">
-                        <i class="material-icons menu-icon material-symbols-rounded me-1" style="font-size: 18px; vertical-align: middle;">refresh</i> Clear Filter
-                    </button>
-                </div>
-            </div>
-
             @php
             // Check if this is a student login view (has student_name, ot_code, email keys)
             $isStudentView = isset($studentData) && isset($studentData['student_name']) &&
@@ -123,7 +91,7 @@
             @endphp
 
             @if($isStudentView)
-            <!-- Student Login View -->
+            <!-- Student Login View - Student Details -->
             <div class="row mb-4">
                 <div class="col-12">
                     <div class="card bg-light" style="border-left: 4px solid #004a93;">
@@ -159,6 +127,41 @@
                     </div>
                 </div>
             </div>
+            @endif
+
+            <!-- Filters -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="duty_type_filter" class="form-label fw-bold">Filter by Duty Type</label>
+                    <select name="duty_type_filter" id="duty_type_filter" class="form-select">
+                        <option value="">All Duty Types</option>
+                        @if(isset($allDutyTypes) && is_array($allDutyTypes))
+                            @foreach($allDutyTypes as $pk => $name)
+                                <option value="{{ $pk }}" {{ isset($dutyTypeFilter) && $dutyTypeFilter == $pk ? 'selected' : '' }}>
+                                    {{ $name }}
+                                </option>
+                            @endforeach
+                        @endif
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="from_date_filter" class="form-label fw-bold">From Date</label>
+                    <input type="date" name="from_date_filter" id="from_date_filter" class="form-control" 
+                           value="{{ isset($fromDateFilter) ? $fromDateFilter : '' }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="to_date_filter" class="form-label fw-bold">To Date</label>
+                    <input type="date" name="to_date_filter" id="to_date_filter" class="form-control" 
+                           value="{{ isset($toDateFilter) ? $toDateFilter : '' }}">
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="button" id="clearFilterBtn" class="btn btn-outline-secondary px-4 py-2 shadow-sm w-100">
+                        <i class="material-icons menu-icon material-symbols-rounded me-1" style="font-size: 18px; vertical-align: middle;">refresh</i> Clear Filter
+                    </button>
+                </div>
+            </div>
+
+            @if($isStudentView)
 
             <!-- Duty Details -->
             @if(isset($studentData['has_duties']) && $studentData['has_duties'])

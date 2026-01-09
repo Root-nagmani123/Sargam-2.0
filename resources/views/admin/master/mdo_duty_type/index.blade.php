@@ -18,8 +18,8 @@
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-center gap-2">
                                 <!-- Add Group Mapping -->
-                                <a href="{{route('master.mdo_duty_type.create')}}" id="openCreateDutyType"
-                                    class="btn btn-primary d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#mdoDutyTypeModal">
+                                <a href="javascript:void(0)" 
+                                    class="btn btn-primary add-btn d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#mdoDutyTypeModal">
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">add</i>
                                     Add MDO Duty Type
@@ -174,16 +174,19 @@
         let checkbox = $(this);
         let pk = checkbox.data('id');
         let active_inactive = checkbox.is(':checked') ? 1 : 0;
+            var actionText = active_inactive ? 'activate' : 'deactivate';
+            var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+            var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
 
-        Swal.fire({
-            title: 'Are you sure?',
-            text: 'Are you sure? You want to deactivate this item?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, deactivate',
-            cancelButtonText: 'Cancel'
+            Swal.fire({
+                title: 'Are you sure?',
+                text: `Are you sure you want to ${actionText} this item?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: confirmBtnColor,
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: confirmBtnText,
+                cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed){
                 $.ajax({
@@ -257,61 +260,242 @@
 </script>
 
 <script>
-    $(document).on('click', '.edit-btn', function() {
-        let pk = $(this).data('id');
-        //alert(pk);
-        let mdo_duty_type_name = $(this).data('mdo_duty_type_name');
-        let url = "{{ route('master.mdo_duty_type.store') }}";
+    
+    $(document).on('click', '.edit-btn', function () {
+    let  pk = $(this).data('id');
+    let  mdo_duty_type_name = $(this).data('mdo_duty_type_name');
+    let  active_inactive = $(this).data('active_inactive');
+    let  url = "{{ route('master.mdo_duty_type.store') }}";
 
-        Swal.fire({
-            title: '<strong>Edit MDO Duty Type</strong>',
-            html: `
-            <form id="EditMDODutyTypeForm"
-                  action="${url}"
-              method="POST">
-            <input type="hidden" name="_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="id" value="${pk}">
-            <div class="row mb-1 align-items-center">
-                <label class="col-auto col-form-label fw-semibold">
-                    Type Name <span class="text-danger">*</span>
-                </label>
-                <div class="col">
-                    <input type="text"
-                           name="mdo_duty_type_name"
-                           id="mdo_duty_type_name"
-                           class="form-control"
-                           value="${mdo_duty_type_name}">
-                    <small class="text-danger d-none" id="mdo_duty_type_name_error">
-                        Type Name is required
-                    </small>
+    Swal.fire({
+        title: '<strong><small>Edit MDO Duty Type</small></strong>',
+        html: `
+            <form id="EditMDODutyTypeForm">
+                <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="id" value="${pk}">
+
+                <div class="row mb-2 align-items-center">
+                    <label class="col-4 col-form-label fw-semibold">
+                        Duty Type Name <span class="text-danger">*</span>
+                    </label>
+                    <div class="col-8">
+                        <input type="text"
+                            name="mdo_duty_type_name"
+                            id="mdo_duty_type_name"
+                            class="form-control"
+                            value="${mdo_duty_type_name}">
+                        <small class="text-danger d-none" id="mdo_duty_type_name_error">
+                            Duty Type Name is required
+                        </small>
+                    </div>
                 </div>
-            </div>
-        </form>
+
+                <div class="row mb-2 align-items-center">
+                    <label class="col-4 col-form-label fw-semibold">
+                        Status <span class="text-danger">*</span>
+                    </label>
+                    <div class="col-8">
+                        <select name="active_inactive"
+                                id="active_inactive"
+                                class="form-select">
+                            <option value="">-- Select Status --</option>
+                            <option value="1" ${active_inactive == 1 ? 'selected' : ''}>Active</option>
+                            <option value="0" ${active_inactive == 0 ? 'selected' : ''}>Inactive</option>
+                        </select>
+
+                        <small class="text-danger d-none" id="active_inactive_error">
+                            Status is required
+                        </small>
+                    </div>
+                </div>
+
+            </form>
         `,
-            showCancelButton: true,
-            confirmButtonText: 'Update',
-            focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Update',
+        focusConfirm: false,
 
-            preConfirm: () => {
-                const typeNameInput = Swal.getPopup().querySelector('#mdo_duty_type_name');
-                const errorMsg = Swal.getPopup().querySelector('#mdo_duty_type_name_error');
+        preConfirm: () => {
+            const typeNameInput = Swal.getPopup().querySelector('#mdo_duty_type_name');
+            const active_inactiveInput = Swal.getPopup().querySelector('#active_inactive');
+            const errorMsg = Swal.getPopup().querySelector('#mdo_duty_type_name_error');
+            const active_inactiveMsg = Swal.getPopup().querySelector('#active_inactive_error');
 
-                typeNameInput.classList.remove('is-invalid');
-                errorMsg.classList.add('d-none');
+            typeNameInput.classList.remove('is-invalid');
+            errorMsg.classList.add('d-none');
 
-                if (!typeNameInput.value.trim()) {
-                    typeNameInput.classList.add('is-invalid');
-                    errorMsg.classList.remove('d-none');
-                    return false;
-                }
-                return true;
+            active_inactiveInput.classList.remove('is-invalid');
+            active_inactiveMsg.classList.add('d-none');
+            
+
+            if (!typeNameInput.value.trim()) {
+                typeNameInput.classList.add('is-invalid');
+                errorMsg.classList.remove('d-none');
+                return false;
             }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('EditMDODutyTypeForm').submit();
+
+            if (!active_inactiveInput.value.trim()) {
+                active_inactiveInput.classList.add('is-invalid');
+                active_inactiveMsg.classList.remove('d-none');
+                return false;
+            }
+
+            return {
+                id: pk,
+                mdo_duty_type_name: typeNameInput.value.trim(),
+                active_inactive: active_inactiveInput.value.trim(),
+                _token: "{{ csrf_token() }}"
+            };
+        }
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            $.ajax({
+                url: url,
+                type: "POST",
+                data: result.value,
+                beforeSend: function () {
+                    Swal.showLoading();
+                },
+                success: function (response) {
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Updated!',
+                        text: response.message ?? 'Record updated successfully',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    $('.dataTable').DataTable().ajax.reload(null, false);
+                },
+                error: function (xhr) {
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: xhr.responseJSON?.message ?? 'Something went wrong'
+                    });
+                }
+            });
+        }
+    });
+});
+
+// add form//
+
+$(document).on('click', '.add-btn', function () {
+
+    const url  = "{{ route('master.mdo_duty_type.store') }}";
+    const csrf = "{{ csrf_token() }}";
+
+    Swal.fire({
+        title: '<strong><small>Add MDO Duty Type</small></strong>',
+        html: `
+            <form id="AddMDODutyTypeForm">
+                <input type="hidden" name="_token" value="${csrf}">
+
+                <div class="row mb-2 align-items-center">
+                    <label class="col-auto col-form-label fw-semibold">
+                        Duty Type Name <span class="text-danger">*</span>
+                    </label>
+                    <div class="col">
+                        <input type="text"
+                               name="mdo_duty_type_name"
+                               class="form-control">
+                        <small class="text-danger d-none" id="mdo_duty_type_name_error">
+                            Duty Type Name is required
+                        </small>
+                    </div>
+                </div>
+
+                <div class="row mb-2 align-items-center">
+                    <label class="col-auto col-form-label fw-semibold">
+                        Status <span class="text-danger">*</span>
+                    </label>
+                    <div class="col">
+                        <select name="active_inactive" class="form-select">
+                            <option value="">-- Select Status --</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        <small class="text-danger d-none" id="active_inactive_error">
+                            Status is required
+                        </small>
+                    </div>
+                </div>
+            </form>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Save',
+        focusConfirm: false,
+
+        preConfirm: () => {
+
+            const form = $('#AddMDODutyTypeForm');
+            const nameInput   = form.find('[name="mdo_duty_type_name"]');
+            const statusInput = form.find('[name="active_inactive"]');
+
+            let valid = true;
+
+            form.find('.is-invalid').removeClass('is-invalid');
+            $('#mdo_duty_type_name_error, #active_inactive_error').addClass('d-none');
+
+            if (!nameInput.val().trim()) {
+                nameInput.addClass('is-invalid');
+                $('#mdo_duty_type_name_error').removeClass('d-none');
+                valid = false;
+            }
+
+            if (!statusInput.val()) {
+                statusInput.addClass('is-invalid');
+                $('#active_inactive_error').removeClass('d-none');
+                valid = false;
+            }
+
+            if (!valid) return false;
+
+            return {
+                mdo_duty_type_name: nameInput.val().trim(),
+                active_inactive: statusInput.val(),
+                _token: csrf
+            };
+        }
+
+    }).then((result) => {
+
+        if (!result.isConfirmed) return;
+
+        $.ajax({
+            url: url,
+            type: "POST",
+            data: result.value,
+            beforeSend: () => Swal.showLoading(),
+
+            success: (response) => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: response.message ?? 'Record added successfully',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+
+                $('.dataTable').DataTable().ajax.reload(null, false);
+            },
+
+            error: (xhr) => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: xhr.responseJSON?.message ?? 'Something went wrong'
+                });
             }
         });
     });
+});
+
 </script>
 @if(session('success'))
 <script>

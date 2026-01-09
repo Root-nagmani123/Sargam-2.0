@@ -160,11 +160,11 @@ $(document).on('mousedown', 'select[data-readonly]', function (e) {
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
     let table = $checkbox.data('table');
+    
     let column = $checkbox.data('column');
     let id = $checkbox.data('id');
     let id_column = $checkbox.data('id_column');
     let status = $checkbox.is(':checked') ? 1 : 0;
-
 
     table = $(this).data('table');
     column = $(this).data('column');
@@ -212,10 +212,8 @@ $(document).on('change', '.status-toggle', function () {
                     </div>
                 `);
                  setTimeout(function() {
-       location.reload();
-
-       //console.log(data);
-    }, 1000);
+                 $('.dataTable ').DataTable().ajax.reload();
+                }, 500);
             },
             error: function () {
                 Swal.fire('Error', 'Status update failed', 'error');
@@ -795,6 +793,12 @@ $(document).ready(function () {
     // Handle import upload button click
     $('#upload_import').on('click', function (e) {
         e.preventDefault();
+        var courseId = $('#course_master_pk_model').val();
+        if (!courseId) {
+            alert('Please select a course before uploading.');
+            return;
+        }
+        // console.log('Selected Course ID:', courseId);return false;
 
         const fileInput = $('#importFile')[0];
         if (fileInput.files.length === 0) {
@@ -811,6 +815,7 @@ $(document).ready(function () {
         }
 
         const formData = new FormData($('#importExcelForm')[0]);
+        formData.append('course_master_pk', courseId);
 
         $.ajax({
             url: routes.groupMappingExcelUpload,
@@ -826,7 +831,7 @@ $(document).ready(function () {
                 alert('File imported successfully!');
                 $('#importModal').modal('hide');
                 resetImportModal();
-                location.reload();
+                // location.reload();
             },
             error: function (xhr) {
                 console.log('Error response:', xhr);

@@ -66,9 +66,15 @@ hr {
                     <label for="programme" class="form-label fw-semibold">Course Name</label>
                     <select name="course_master_pk" id="programme" class="form-select shadow-sm select2" required>
                         <option value="">Select Course</option>
-                        @foreach($courseMasters as $course)
-                        <option value="{{ $course['pk'] }}">{{ $course['course_name'] }}</option>
-                        @endforeach
+                       @foreach($courseMasters as $course)
+                        <option 
+                            value="{{ $course['pk'] }}"
+                            {{ count($courseMasters) === 1 ? 'selected' : '' }}
+                        >
+                            {{ $course['course_name'] }}
+                        </option>
+                    @endforeach
+
                     </select>
                 </div>
 

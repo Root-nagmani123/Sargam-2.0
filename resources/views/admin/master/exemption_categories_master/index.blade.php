@@ -26,7 +26,7 @@
                     </div>
                     <hr>
                     <div class="table-responsive">
-                        <table class="table" id="getcategory">
+                        <table class="table" id="exceptiongetcategory">
                             <thead>
                                 <!-- start row -->
                                 <tr>
@@ -52,7 +52,7 @@
 @section('scripts')
 <script>
     $(function() {
-        let table = $('#getcategory').DataTable({
+        let table = $('#exceptiongetcategory').DataTable({
             processing: true,
             serverSide: true,
             searching: true,
@@ -99,15 +99,18 @@
             var pk = checkbox.data('id');
            // alert(pk);
             var active_inactive = checkbox.is(':checked') ? 1 : 0;
-          //  alert(active_inactive);
+            var actionText = active_inactive ? 'activate' : 'deactivate';
+            var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+            var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
+
             Swal.fire({
                 title: 'Are you sure?',
-                text: "Are you sure? You want to deactivate this item?",
+                text: `Are you sure you want to ${actionText} this item?`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
+                confirmButtonColor: confirmBtnColor,
                 cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, deactivate',
+                confirmButtonText: confirmBtnText,
                 cancelButtonText: 'Cancel'
             }).then((result) => {
                 if (result.isConfirmed) {
@@ -181,64 +184,45 @@
 </script>
 <script>
 document.getElementById('showAlert').addEventListener('click', function () {
+
     Swal.fire({
         title: '<strong>Add Exemption Category</strong>',
         html: `
-            <form id="exemptionCategoryForm"
-                  action="{{ route('master.exemption.category.master.store') }}"
-                  method="POST">
-
+            <form id="exemptionCategoryForm">
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="pk" value="${pk}">
+                
 
-                <!-- Type Name -->
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
+                <div class="row mb-2">
+                    <label class="col-auto fw-semibold">
                         Type Name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <input type="text"
-                               name="exemp_category_name"
-                               id="exemp_category_name"
-                               class="form-control">
-                        <small class="text-danger d-none" id="exemp_category_name_error">
-                            Type Name is required
-                        </small>
+                        <input type="text" name="exemp_category_name" id="exemp_category_name" class="form-control">
+                        <small class="text-danger d-none" id="exemp_category_name_error">Required</small>
                     </div>
                 </div>
 
-                <!-- Short Name -->
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
+                <div class="row mb-2">
+                    <label class="col-auto fw-semibold">
                         Short Name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <input type="text"
-                               name="exemp_cat_short_name"
-                               id="exemp_cat_short_name"
-                               class="form-control">
-                        <small class="text-danger d-none" id="exemp_cat_short_name_error">
-                            Short Name is required
-                        </small>
+                        <input type="text" name="exemp_cat_short_name" id="exemp_cat_short_name" class="form-control">
+                        <small class="text-danger d-none" id="exemp_cat_short_name_error">Required</small>
                     </div>
                 </div>
 
-                <!-- Status -->
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
+                <div class="row mb-2">
+                    <label class="col-auto fw-semibold">
                         Status <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <select name="status"
-                                id="status"
-                                class="form-control">
-                            <option value="">-- Select Status --</option>
+                        <select name="status" id="status" class="form-control">
+                            <option value="">Select</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
                         </select>
-                        <small class="text-danger d-none" id="status_error">
-                            Status is required
-                        </small>
+                        <small class="text-danger d-none" id="status_error">Required</small>
                     </div>
                 </div>
             </form>
@@ -248,169 +232,163 @@ document.getElementById('showAlert').addEventListener('click', function () {
         focusConfirm: false,
 
         preConfirm: () => {
+
             const popup = Swal.getPopup();
+            const form = popup.querySelector('#exemptionCategoryForm');
 
-            const typeName   = popup.querySelector('#exemp_category_name');
-            const shortName  = popup.querySelector('#exemp_cat_short_name');
-            const status     = popup.querySelector('#status');
+            const formData = new FormData(form);
 
-            const typeErr    = popup.querySelector('#exemp_category_name_error');
-            const shortErr   = popup.querySelector('#exemp_cat_short_name_error');
-            const statusErr  = popup.querySelector('#status_error');
-
-            // Reset validation state
-            [typeName, shortName, status].forEach(el => el.classList.remove('is-invalid'));
-            [typeErr, shortErr, statusErr].forEach(el => el.classList.add('d-none'));
-
-            let isValid = true;
-
-            if (!typeName.value.trim()) {
-                typeName.classList.add('is-invalid');
-                typeErr.classList.remove('d-none');
-                isValid = false;
-            }
-
-            if (!shortName.value.trim()) {
-                shortName.classList.add('is-invalid');
-                shortErr.classList.remove('d-none');
-                isValid = false;
-            }
-
-            if (!status.value) {
-                status.classList.add('is-invalid');
-                statusErr.classList.remove('d-none');
-                isValid = false;
-            }
-            return isValid;
+            return fetch("{{ route('master.exemption.category.master.store') }}", {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(response => response.text())
+            .then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    throw new Error(text); // HTML response caught here
+                }
+            })
+            .catch(error => {
+                Swal.showValidationMessage(
+                    'Server Error or Session Expired'
+                );
+            });
         }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            document.getElementById('exemptionCategoryForm').submit();
+    }).then(result => {
+        if (result.isConfirmed && result.value?.status) {
+            Swal.fire('Success', result.value.message, 'success');
+            $('#exceptiongetcategory').DataTable().ajax.reload();
         }
     });
+
 });
+
+
 </script>
 <script>
-    $(document).on('click', '.edit-btn', function() {
+    $(document).on('click', '.edit-btn', function () {
 
-        let pk = $(this).data('id');
-        //alert(pk);
-         let exemp_category_name = $(this).data('exemp_category_name');
-        let exemp_cat_short_name = $(this).data('exemp_cat_short_name');
-        let status = $(this).data('active_inactive');
+    let pk = $(this).data('id');
+    let exemp_category_name = $(this).data('exemp_category_name');
+    let exemp_cat_short_name = $(this).data('exemp_cat_short_name');
+    let status = $(this).data('active_inactive');
 
-        let url = "{{ route('master.exemption.category.master.updatedata') }}";
-
-        Swal.fire({
-            title: '<strong>Edit Course Group Type</strong>',
-            html: `
-            <form id="exemptionCategoryeditForm"
-                  action="${url}"
-                  method="POST">
+    Swal.fire({
+        title: '<strong>Edit Exemption Category</strong>',
+        html: `
+            <form id="exemptionCategoryeditForm">
 
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="pk" value="${pk}">
 
-                <!-- Type Name -->
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
+                <div class="row mb-2">
+                    <label class="col-auto fw-semibold">
                         Type Name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
                         <input type="text"
                                name="exemp_category_name"
                                id="exemp_category_name"
-                               class="form-control" value="${exemp_category_name}">
-                        <small class="text-danger d-none" id="exemp_category_name_error">
-                            Type Name is required
-                        </small>
+                               class="form-control"
+                               value="${exemp_category_name}">
+                        <small class="text-danger d-none" id="exemp_category_name_error">Required</small>
                     </div>
                 </div>
 
-                <!-- Short Name -->
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
+                <div class="row mb-2">
+                    <label class="col-auto fw-semibold">
                         Short Name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
                         <input type="text"
                                name="exemp_cat_short_name"
                                id="exemp_cat_short_name"
-                               class="form-control" value="${exemp_cat_short_name}">
-                        <small class="text-danger d-none" id="exemp_cat_short_name_error">
-                            Short Name is required
-                        </small>
+                               class="form-control"
+                               value="${exemp_cat_short_name}">
+                        <small class="text-danger d-none" id="exemp_cat_short_name_error">Required</small>
                     </div>
                 </div>
 
-                <!-- Status -->
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
+                <div class="row mb-2">
+                    <label class="col-auto fw-semibold">
                         Status <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <select name="status"
-                                id="status"
-                                class="form-control">
-                            <option value="">-- Select Status --</option>
+                        <select name="status" id="status" class="form-control">
+                            <option value="">Select</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
                         </select>
-                        <small class="text-danger d-none" id="status_error">
-                            Status is required
-                        </small>
+                        <small class="text-danger d-none" id="status_error">Required</small>
                     </div>
                 </div>
+
             </form>
         `,
         didOpen: () => {
-            $('#status').val(status).trigger('change');
+            $('#status').val(status);
         },
-            showCancelButton: true,
-            confirmButtonText: 'Update',
-            focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Update',
+        focusConfirm: false,
 
-            preConfirm: () => {
+        preConfirm: () => {
+
             const popup = Swal.getPopup();
+            const form = popup.querySelector('#exemptionCategoryeditForm');
 
-            const typeName   = popup.querySelector('#exemp_category_name');
-            const shortName  = popup.querySelector('#exemp_cat_short_name');
-            const status     = popup.querySelector('#status');
+            const typeName = form.querySelector('#exemp_category_name');
+            const shortName = form.querySelector('#exemp_cat_short_name');
+            const statusEl = form.querySelector('#status');
 
-            const typeErr    = popup.querySelector('#exemp_category_name_error');
-            const shortErr   = popup.querySelector('#exemp_cat_short_name_error');
-            const statusErr  = popup.querySelector('#status_error');
+            let valid = true;
 
-            // Reset validation state
-            [typeName, shortName, status].forEach(el => el.classList.remove('is-invalid'));
-            [typeErr, shortErr, statusErr].forEach(el => el.classList.add('d-none'));
+            if (!typeName.value.trim()) valid = false;
+            if (!shortName.value.trim()) valid = false;
+            if (!statusEl.value) valid = false;
 
-            let isValid = true;
-
-            if (!typeName.value.trim()) {
-                typeName.classList.add('is-invalid');
-                typeErr.classList.remove('d-none');
-                isValid = false;
+            if (!valid) {
+                Swal.showValidationMessage('All fields are required');
+                return false;
             }
 
-            if (!shortName.value.trim()) {
-                shortName.classList.add('is-invalid');
-                shortErr.classList.remove('d-none');
-                isValid = false;
-            }
+            const formData = new FormData(form);
 
-            if (!status.value) {
-                status.classList.add('is-invalid');
-                statusErr.classList.remove('d-none');
-                isValid = false;
-            }
-            return isValid;
+            return fetch("{{ route('master.exemption.category.master.store') }}", {
+                method: "POST",
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(res => res.text())
+            .then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch {
+                    throw new Error(text);
+                }
+            })
+            .catch(() => {
+                Swal.showValidationMessage('Server error or session expired');
+            });
         }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('exemptionCategoryeditForm').submit();
-            }
-        });
+
+    }).then(result => {
+        if (result.isConfirmed && result.value?.status) {
+            Swal.fire('Updated!', result.value.message, 'success');
+            $('#exceptiongetcategory').DataTable().ajax.reload();
+        }
     });
+});
+
 </script>
 @if(session('success'))
 <script>

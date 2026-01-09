@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\CourseGroupTypeMaster;
 use Yajra\DataTables\Facades\DataTables;
+use Illuminate\Support\Facades\DB;
+
 
 class CourseGroupTypeController extends Controller
 {
@@ -24,46 +26,46 @@ class CourseGroupTypeController extends Controller
         return view('admin.master.course_group_type_master.index');
     }
 
-public function grouptypeview(Request $request)
-{
-    // UPDATE STATUS (Active / Inactive)
-    if ($request->has('pk') && $request->has('active_inactive') && $request->active_inactive != 2) {
-        CourseGroupTypeMaster::where('pk', $request->pk)
-            ->update([
-                'active_inactive' => $request->active_inactive
-            ]);
-    }
+    public function grouptypeview(Request $request)
+    {
+        // UPDATE STATUS (Active / Inactive)
+        if ($request->has('pk') && $request->has('active_inactive') && $request->active_inactive != 2) {
+            CourseGroupTypeMaster::where('pk', $request->pk)
+                ->update([
+                    'active_inactive' => $request->active_inactive
+                ]);
+        }
 
-    // DELETE ROW
-    if ($request->has('pk') && $request->active_inactive == 2) {
-        CourseGroupTypeMaster::where('pk', $request->pk)->delete();
-    }
+        // DELETE ROW
+        if ($request->has('pk') && $request->active_inactive == 2) {
+            CourseGroupTypeMaster::where('pk', $request->pk)->delete();
+        }
 
-    // DataTable SELECT QUERY
-    $query = CourseGroupTypeMaster::select(['pk', 'type_name', 'active_inactive'])
-        ->orderByDesc('pk');
+        // DataTable SELECT QUERY
+        $query = CourseGroupTypeMaster::select(['pk', 'type_name', 'active_inactive'])
+            ->orderByDesc('pk');
 
-    return DataTables::of($query)
-        ->addIndexColumn()
+        return DataTables::of($query)
+            ->addIndexColumn()
 
-        // 🔍 GLOBAL SEARCH
-        ->filter(function ($query) use ($request) {
-            if (!empty($request->search['value'])) {
-                $search = $request->search['value'];
-                $query->where('type_name', 'LIKE', "%{$search}%");
-            }
-        })
+            // 🔍 GLOBAL SEARCH
+            ->filter(function ($query) use ($request) {
+                if (!empty($request->search['value'])) {
+                    $search = $request->search['value'];
+                    $query->where('type_name', 'LIKE', "%{$search}%");
+                }
+            })
 
-        // Type Name
-        ->addColumn('type_name', function ($row) {
-            return $row->type_name ?? 'N/A';
-        })
+            // Type Name
+            ->addColumn('type_name', function ($row) {
+                return $row->type_name ?? 'N/A';
+            })
 
-        // Status Toggle
-        ->addColumn('status', function ($row) {
-            $checked = $row->active_inactive == 1 ? 'checked' : '';
+            // Status Toggle
+            ->addColumn('status', function ($row) {
+                $checked = $row->active_inactive == 1 ? 'checked' : '';
 
-            return '
+                return '
                 <div class="form-check form-switch d-inline-block">
                     <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
                         data-table="course_group_type_master"
@@ -71,56 +73,52 @@ public function grouptypeview(Request $request)
                         data-id="' . $row->pk . '"
                         ' . $checked . '>
                 </div>';
-        })
+            })
 
-        // Action Dropdown
-        ->addColumn('action', function ($row) {
+            // Action Dropdown
+            ->addColumn('action', function ($row) {
 
-            $disabled = $row->active_inactive == 1 ? 'disabled' : '';
+                $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';
 
-            return'
-                <div class="dropdown">
-                    <a class="text-dark" href="#" role="button"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="material-icons menu-icon">more_horiz</i>
-                                            </a>
+                return '
+    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Row actions">
 
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <a class="dropdown-item edit-btn" href="javascript:void(0)"
-                               data-id="' . $row->pk . '"
-                               data-type-name="' . $row->type_name . '">
-                                <i class="material-icons me-2" style="font-size:18px;">edit</i>
-                                Edit
-                            </a>
-                        </li>
+        <!-- Edit Action -->
+        <a href="javascript:void(0)" data-id="' . $row->pk . '" data-type-name="' . $row->type_name . '" 
+           class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
+           aria-label="Edit course group type">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
+            <span class="d-none d-md-inline">Edit</span>
+        </a>
 
-                        <li>
-                            <a class="dropdown-item delete-btn ' . $disabled . '" href="javascript:void(0)"
-                               data-id="' . $row->pk . '">
-                                <i class="material-icons me-2" style="font-size:18px;">delete</i>
-                                Delete
-                            </a>
-                        </li>
-                    </ul>
-                </div>';
-        })
+        <!-- Delete Action -->
+        
+            <a href="javascript:void(0)"
+                data-id="' . $row->pk . '"
+                class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
+                aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
+                    <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                    <span class="d-none d-md-inline">Delete</span>
+                </a>
+    </div>';
+            })
 
-        // Allow HTML
-        ->rawColumns(['status', 'action'])
-        ->make(true);
-}
 
- public function updateStatus(Request $request)
-{
+            // Allow HTML
+            ->rawColumns(['status', 'action'])
+            ->make(true);
+    }
+
+    public function updateStatus(Request $request)
+    {
         $table = 'course_group_type_master';
         try {
             DB::table($table)
-            ->where('pk', $request->pk)
-            ->update([
-                'type_name'       => $request->type_name,
-                'active_inactive' => $request->has('active_inactive') ? 1 : 0,
-            ]);
+                ->where('pk', $request->pk)
+                ->update([
+                    'type_name'       => $request->type_name,
+                    'active_inactive' => $request->has('active_inactive') ? 1 : 0,
+                ]);
 
             return redirect()->back()->with('success', 'Course Group Type updated successfully');
         } catch (\Exception $e) {
@@ -133,31 +131,58 @@ public function grouptypeview(Request $request)
         return view('admin.master.course_group_type_master.create');
     }
 
-    function store(Request $request)
+    public function store(Request $request)
     {
         try {
             $request->validate([
                 'type_name' => 'required|string|max:255',
             ]);
-            
-            if ($request->id != null) {
-                $course = CourseGroupTypeMaster::find(decrypt($request->id));
+
+            // UPDATE
+            if ($request->filled('id')) {
+
+                $course = CourseGroupTypeMaster::find($request->id);
 
                 if (!$course) {
-                    return redirect()->route('master.course.group.type.index')
-                                     ->with('error', 'Course group type not found.');
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Course group type not found.'
+                    ], 404);
                 }
 
-                $course->update($request->only('type_name'));
-            } else {
-                CourseGroupTypeMaster::create($request->all());
+                $course->update([
+                    'type_name' => $request->type_name
+                ]);
+
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Course Group Type updated successfully.'
+                ]);
             }
 
-            return redirect()->route('master.course.group.type.index')
-                             ->with('success', 'Course Group Type saved successfully.');
+            // CREATE
+            CourseGroupTypeMaster::create([
+                'type_name' => $request->type_name
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Course Group Type added successfully.'
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+
+            return response()->json([
+                'status' => false,
+                'errors' => $e->errors()
+            ], 422);
 
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage())->withInput();
+
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -168,11 +193,10 @@ public function grouptypeview(Request $request)
 
             if (!$courseGroupTypeMaster) {
                 return redirect()->route('master.course.group.type.index')
-                                 ->with('error', 'Course group type not found.');
+                    ->with('error', 'Course group type not found.');
             }
 
             return view('admin.master.course_group_type_master.create', compact('courseGroupTypeMaster'));
-
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
@@ -185,14 +209,13 @@ public function grouptypeview(Request $request)
 
             if (!$courseGroupTypeMaster) {
                 return redirect()->route('master.course.group.type.index')
-                                 ->with('error', 'Course group type not found.');
+                    ->with('error', 'Course group type not found.');
             }
 
             $courseGroupTypeMaster->delete();
 
             return redirect()->route('master.course.group.type.index')
-                             ->with('success', 'Course Group Type deleted successfully.');
-
+                ->with('success', 'Course Group Type deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', $e->getMessage())->withInput();
         }

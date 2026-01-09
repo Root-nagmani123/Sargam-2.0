@@ -13,12 +13,7 @@ class MDODutyTypeController extends Controller
     public function index(MDODutyTypeMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.mdo_duty_type.index');
-        
     }
-    // {
-    //     // $mdoDutyTypes = MDODutyTypeMaster::latest('pk')->get();
-    //     // return view('admin.master.mdo_duty_type.index', compact('mdoDutyTypes'));
-    // }
 
     public function changeStatus(Request $request)
     {
@@ -53,17 +48,18 @@ class MDODutyTypeController extends Controller
     }
 
     public function store(Request $request)
-    {
-       
+    { 
         try {
             $request->validate([
-                'mdo_duty_type_name' => 'required|string|max:255'
+                'mdo_duty_type_name' => 'required|string|max:255',
+                'active_inactive' => 'required'
             ]);
 
             if($request->id){
                 $mdoDutyType = MDODutyTypeMaster::findOrFail($request->id);
                 $mdoDutyType->update([
-                    'mdo_duty_type_name' => $request->mdo_duty_type_name
+                    'mdo_duty_type_name' => $request->mdo_duty_type_name,
+                    'active_inactive' => $request->active_inactive
                 ]);
                 if($request->ajax()) {
                     return response()->json([
@@ -79,7 +75,7 @@ class MDODutyTypeController extends Controller
                 }
                 return redirect()->route('master.mdo_duty_type.index')->with('success', 'MDO Duty Type updated successfully');
             }
-            MDODutyTypeMaster::create(['mdo_duty_type_name' => $request->mdo_duty_type_name]);
+            MDODutyTypeMaster::create(['mdo_duty_type_name' => $request->mdo_duty_type_name,'active_inactive' => $request->active_inactive]);
             $created = MDODutyTypeMaster::latest('pk')->first();
             if($request->ajax()) {
                 return response()->json([

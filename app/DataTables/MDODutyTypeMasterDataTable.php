@@ -46,35 +46,42 @@ class MDODutyTypeMasterDataTable extends DataTable
                         ' . $checked . '>
                 </div>';
             })
+
+
             ->addColumn('actions', function ($row) {
-                      $disabled = $row->active_inactive == 1 ? 'disabled' : '';
+                $disabled = $row->active_inactive == 1 ? 'disabled' : '';
 
-            return'
-                <div class="dropdown">
-                    <a class="text-dark" href="#" role="button"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <i class="material-icons menu-icon">more_horiz</i>
-                                            </a>
+                return '
+                    <div class="d-inline-flex align-items-center gap-2"
+                        role="group"
+                        aria-label="Row actions">
 
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <a class="dropdown-item edit-btn" href="javascript:void(0)"
-                               data-id="' . $row->pk . '"
-                               data-mdo_duty_type_name="' . $row->mdo_duty_type_name . '">
-                                <i class="material-icons me-2" style="font-size:18px;">edit</i>
-                                Edit
-                            </a>
-                        </li>
+                        <!-- Edit Action -->
+                        <a href="javascript:void(0)"
+                        data-id="' . $row->pk . '"
+                        data-mdo_duty_type_name="' . $row->mdo_duty_type_name . '"
+                         data-id="' . $row->pk . '"
+                        data-active_inactive="' . $row->active_inactive . '"
+                        class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
+                        aria-label="Edit course group type">
 
-                        <li>
-                            <a class="dropdown-item delete-btn ' . $disabled . '" href="javascript:void(0)"
-                               data-id="' . $row->pk . '">
-                                <i class="material-icons me-2" style="font-size:18px;">delete</i>
-                                Delete
-                            </a>
-                        </li>
-                    </ul>
-                </div>';
+                            <i class="material-icons material-symbols-rounded"
+                            style="font-size:18px;">edit</i>
+
+                            <span class="d-none d-md-inline">Edit</span>
+                        </a>
+
+                        <!-- Delete Action -->
+                        <a href="javascript:void(0)"
+                        data-id="' . $row->pk . '"
+                        class="btn btn-sm btn-outline-danger delete-btn d-inline-flex align-items-center gap-1 ' . $disabled . '"
+                        aria-disabled="' . ($row->active_inactive == 1 ? 'true' : 'false') . '">
+                            <i class="material-icons material-symbols-rounded"
+                            style="font-size:18px;">delete</i>
+                            <span class="d-none d-md-inline">Delete</span>
+                        </a>
+                    </div>
+                ';
             })
             ->rawColumns(['mdo_duty_type_name', 'status', 'actions']);
     }

@@ -49,113 +49,11 @@
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
-                        <div class="col-6">
+                        <div class="col-4">
                             <h4>MDO/Escort Exemption</h4>
                         </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-end mb-3 gap-2">
-                                <!-- Print / Download Button -->
-                                <button type="button" id="printDownloadBtn"
-                                    class="btn btn-info px-3 py-2 rounded shadow-sm">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">print</i>
-                                    Print / Download
-                                </button>
-                                <!-- Add New Button -->
-                                <a href="{{ route('mdo-escrot-exemption.create') }}"
-                                    class="btn btn-primary px-3 py-2 rounded shadow-sm">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add New MDO/Escort Exemption
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-
-                    <!-- Filters Section -->
-                    <div class="row mb-3 align-items-end">
-                        <!-- Course Filter -->
-                        <div class="col-md-4 mb-3">
-                            <label for="course_filter" class="form-label fw-semibold">Course:</label>
-                            <select id="course_filter" class="form-select">
-                                <option value="">-- All Courses --</option>
-                                @foreach ($courseMaster as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <!-- Year Filter -->
-                        <div class="col-md-4 mb-3">
-                            <label for="year_filter" class="form-label fw-semibold">Year:</label>
-                            <select id="year_filter" class="form-select">
-                                <option value="">-- All Years --</option>
-                                @foreach ($years as $year => $yearValue)
-                                <option value="{{ $year }}">{{ $year }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <!-- Duty Type Filter -->
-                        <div class="col-md-4 mb-3">
-                            <label for="duty_type_filter" class="form-label fw-semibold">Duty type:</label>
-                            <select id="duty_type_filter" class="form-select">
-                                <option value="">-- All Duty Types --</option>
-                                @foreach ($dutyTypes as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <!-- From Date Filter -->
-                        <div class="col-md-3 mb-3">
-                            <label for="from_date_filter" class="form-label fw-semibold">From Date:</label>
-                            <input type="date" id="from_date_filter" class="form-control" value="{{ request('from_date_filter') }}">
-                        </div>
-                        
-                        <!-- To Date Filter -->
-                        <div class="col-md-3 mb-3">
-                            <label for="to_date_filter" class="form-label fw-semibold">To Date:</label>
-                            <input type="date" id="to_date_filter" class="form-control" value="{{ request('to_date_filter') }}">
-                        </div>
-                        
-                        <!-- Time From Filter -->
-                        <div class="col-md-3 mb-3">
-                            <label for="time_from_filter" class="form-label fw-semibold">Time From:</label>
-                            <input type="time" id="time_from_filter" class="form-control">
-                        </div>
-                        
-                        <!-- Time To Filter -->
-                        <div class="col-md-3 mb-3">
-                            <label for="time_to_filter" class="form-label fw-semibold">Time To:</label>
-                            <input type="time" id="time_to_filter" class="form-control">
-                        </div>
-                    </div>
-                    
-                    <!-- Reset Filter Button Row -->
-                    <div class="row mb-3">
-                        <div class="col-md-12">
-                            <button type="button" class="btn btn-outline-secondary px-4 py-2 shadow-sm" id="resetFilters">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Active/Archive Buttons Row -->
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold d-block">&nbsp;</label>
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-primary fs-6 px-3 py-2 d-inline-flex align-items-center">
-                                    <i class="bi bi-list-check me-2"></i> Total Records: <strong class="ms-1" id="total-records-count">0</strong>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="col-md-6 text-end">
-                            <label class="form-label fw-semibold d-block">&nbsp;</label>
-                            <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
+                        <div class="col-4 text-end">
+                             <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
                                 aria-label="Course Status Filter">
                                 @php
                                     $activeParams = ['filter' => 'active'];
@@ -201,6 +99,107 @@
                                     <i class="bi bi-archive me-1"></i> Archive
                                 </a>
                             </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex justify-content-end align-items-end mb-3 gap-2">
+                                <!-- Print / Download Button -->
+                                <button type="button" id="printDownloadBtn"
+                                    class="btn btn-outline-info px-3 py-2 rounded shadow-sm">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 20px; vertical-align: middle;">print</i>
+                                    Print / Download
+                                </button>
+                                <!-- Add New Button -->
+                                <a href="{{ route('mdo-escrot-exemption.create') }}"
+                                    class="btn btn-primary px-3 py-2 rounded shadow-sm">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 20px; vertical-align: middle;">add</i>
+                                    Add New MDO/Escort Exemption
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Filters Section -->
+                    <div class="row mb-3 align-items-end">
+                        <!-- Course Filter -->
+                        <div class="col-md-3 mb-3">
+                            <label for="course_filter" class="form-label fw-semibold">Course:</label>
+                            <select id="course_filter" class="form-select">
+                                <option value="">-- All Courses --</option>
+                                @foreach ($courseMaster as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <!-- Year Filter -->
+                        <div class="col-md-3 mb-3">
+                            <label for="year_filter" class="form-label fw-semibold">Year:</label>
+                            <select id="year_filter" class="form-select">
+                                <option value="">-- All Years --</option>
+                                @foreach ($years as $year => $yearValue)
+                                <option value="{{ $year }}">{{ $year }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <!-- Duty Type Filter -->
+                        <div class="col-md-3 mb-3">
+                            <label for="duty_type_filter" class="form-label fw-semibold">Duty type:</label>
+                            <select id="duty_type_filter" class="form-select">
+                                <option value="">-- All Duty Types --</option>
+                                @foreach ($dutyTypes as $id => $name)
+                                <option value="{{ $id }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
+                        <!-- From Date Filter -->
+                        <div class="col-md-3 mb-3">
+                            <label for="from_date_filter" class="form-label fw-semibold">From Date:</label>
+                            <input type="date" id="from_date_filter" class="form-control" value="{{ request('from_date_filter') }}">
+                        </div>
+                        
+                        <!-- To Date Filter -->
+                        <div class="col-md-3 mb-3">
+                            <label for="to_date_filter" class="form-label fw-semibold">To Date:</label>
+                            <input type="date" id="to_date_filter" class="form-control" value="{{ request('to_date_filter') }}">
+                        </div>
+                        
+                        <!-- Time From Filter -->
+                        <div class="col-md-3 mb-3">
+                            <label for="time_from_filter" class="form-label fw-semibold">Time From:</label>
+                            <input type="time" id="time_from_filter" class="form-control">
+                        </div>
+                        
+                        <!-- Time To Filter -->
+                        <div class="col-md-3 mb-3">
+                            <label for="time_to_filter" class="form-label fw-semibold">Time To:</label>
+                            <input type="time" id="time_to_filter" class="form-control">
+                        </div>
+                         <div class="col-md-3 mb-3 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-secondary" id="resetFilters">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Active/Archive Buttons Row -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold d-block">&nbsp;</label>
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-primary fs-6 px-3 py-2 d-inline-flex align-items-center">
+                                    <i class="bi bi-list-check me-2"></i> Total Records: <strong class="ms-1" id="total-records-count">0</strong>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <label class="form-label fw-semibold d-block">&nbsp;</label>
+                           
                         </div>
                     </div>
                     

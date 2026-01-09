@@ -1,65 +1,48 @@
-@extends('admin.layouts.master')
+@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
-@section('title', 'My Attendance')
+@section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section('setup_content')
-<!-- Skip to main content - GIGW Accessibility Requirement -->
-<a href="#main-content" class="skip-to-main" aria-label="Skip to main content">Skip to main content</a>
-
-<div class="container-fluid" id="main-content" role="main">
+@section('content')
+<div class="container-fluid">
+     @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
     <x-breadcrum title="My Attendance Record" />
     <x-session_message />
+    @endif
 
-    {{-- Modern Student Information Header --}}
-    <div class="card mb-4" style="border-left: 4px solid #004a93;">
-        <div class="card-body p-4">
-            <h5 class="mb-0 fw-bold d-flex align-items-center">Student Information</h5>
-            <hr class="my-2">
-            <div class="row g-4">
+    {{-- Student Information Header --}}
+    <div class="card shadow mb-4" style="border-left: 4px solid #004a93;">
+        <div class="card-body">
+            <div class="row g-3">
                 <div class="col-md-4">
-                    <div class="info-badge h-100">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="small text-uppercase fw-semibold"
-                                style="letter-spacing: 0.5px;">Course</span>
-                        </div>
-                        <p class="mb-0 fw-bold text-muted">
-                            {{ $course->course_name ?? 'N/A' }}
-                        </p>
-                    </div>
+                    <strong>Course Name:</strong>
+                    <span class="text-primary">
+                        {{ $course->course_name ?? 'N/A' }}
+                    </span>
                 </div>
                 <div class="col-md-4">
-                    <div class="info-badge h-100">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="small text-uppercase fw-semibold"
-                                style="letter-spacing: 0.5px;">Student Name</span>
-                        </div>
-                        <p class="mb-0 fw-bold text-muted">
-                            {{ $student->display_name ?? 'N/A' }}
-                        </p>
-                    </div>
+                    <strong>Student Name:</strong>
+                    <span class="text-primary">
+                        {{ $student->display_name ?? 'N/A' }}
+                    </span>
                 </div>
                 <div class="col-md-4">
-                    <div class="info-badge h-100">
-                        <div class="d-flex align-items-center mb-2">
-                            <span class="small text-uppercase fw-semibold"
-                                style="letter-spacing: 0.5px;">OT Code</span>
-                        </div>
-                        <p class="mb-0 fw-bold text-muted">
-                            {{ $student->generated_OT_code ?? 'N/A' }}
-                        </p>
-                    </div>
+                    <strong>OT Code:</strong>
+                    <span class="text-primary">
+                        {{ $student->generated_OT_code ?? 'N/A' }}
+                    </span>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Enhanced Filter Form --}}
-    <div class="card mb-4" style="border-left: 4px solid #004a93;">
-        <div class="card-body p-4">
-            <h5 class="mb-0 fw-bold d-flex align-items-center">
-                <span>Attendance Filters</span>
+    {{-- Filter Form --}}
+    <div class="card shadow-lg mb-4 border-0 rounded-4">
+        <div class="card-header bg-primary text-white p-3 rounded-top-4">
+            <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
+                <i class="bi bi-funnel-fill me-2"></i> Attendance Filters
             </h5>
-            <hr class="my-2">
+        </div>
+        <div class="card-body p-4">
             <form method="GET" action="{{ route('attendance.OT.student_mark.student', [
             'group_pk' => $group_pk,
             'course_pk' => $course_pk,
@@ -69,16 +52,21 @@
                 <input type="hidden" name="archive_mode" id="archive_mode_input" value="{{ $archiveMode ?? 'active' }}">
 
                 <div class="row mb-4">
-                    <div class="col-12">
-                        <div class="btn-group border border-2 border-primary rounded-pill overflow-hidden w-100 w-md-auto"
-                            role="group" aria-label="Attendance Status Filter">
-                            <button type="button" class="btn btn-sm text-decoration-none px-4 py-2 fw-semibold"
-                                id="filterArchive_active" aria-pressed="true"
-                                aria-label="Show active attendance records">Active Records
+                    <div class="col-12 text-end">
+                        <label class="form-label d-block text-muted small fw-semibold">View Mode:</label>
+                        <div class="btn-group border border-1 border-primary rounded-pill overflow-hidden" role="group"
+                            aria-label="Attendance Status Filter">
+                            <button type="button"
+                                class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'active' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
+                                id="filterActive"
+                                aria-pressed="{{ ($archiveMode ?? 'active') === 'active' ? 'true' : 'false' }}">
+                                <i class="bi bi-check-circle me-1"></i> Active 
                             </button>
-                            <button type="button" class="btn btn-sm text-decoration-none px-4 py-2 fw-semibold"
-                                id="filterArchive" aria-pressed="false" aria-label="Show archived attendance records">
-                                Archived Records
+                            <button type="button"
+                                class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'archive' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
+                                id="filterArchive"
+                                aria-pressed="{{ ($archiveMode ?? 'active') === 'archive' ? 'true' : 'false' }}">
+                                <i class="bi bi-archive me-1"></i> Archive 
                             </button>
                         </div>
                     </div>
@@ -111,7 +99,7 @@
                             <i class="bi bi-calendar-date me-1 text-primary"></i> Date:
                         </label>
                         <input type="date" class="form-control form-control-lg" id="filter_date" name="filter_date"
-                            value="{{ $filterDate ?? '' }}" aria-label="Filter by Date">
+                            value="{{ $filterDate ?? date('Y-m-d') }}" max="{{ date('Y-m-d') }}" aria-label="Filter by Date">
                     </div>
                     <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-4' : 'col-lg-5' }} col-md-6">
                         <label for="filter_session_time" class="form-label fw-semibold">
@@ -215,112 +203,183 @@
     </script>
 
     {{-- Attendance Details Table --}}
-    <div class="card shadow">
-        <div class="card-header">
+    <div class="card shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-bottom py-3">
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="mb-0 fw-semibold">Attendance Details</h4>
             </div>
         </div>
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-                <h4 class="mb-0 fw-bold d-flex align-items-center">
-                    <span>Attendance Records</span>
-                </h4>
-                <div class="d-flex gap-2 no-print">
-                    <button type="button" class="btn btn-light btn-sm" onclick="window.print()"
-                        aria-label="Print attendance records">
-                        <i class="bi bi-printer-fill me-1" aria-hidden="true"></i>
-                        <span>Print</span>
-                    </button>
-                </div>
-            </div>
-            <hr class="my-2">
-
-            <input type="hidden" name="group_pk" id="group_pk" value="{{ $group_pk }}">
-            <input type="hidden" name="course_pk" id="course_pk" value="{{ $course_pk }}">
-            <input type="hidden" name="timetable_pk" id="timetable_pk" value="{{ $timetable_pk }}">
-            <input type="hidden" name="student_pk" id="student_pk" value="{{ $student_pk }}">
+        <div class="card-body p-0">
+            @if(count($attendanceRecords) > 0)
             <div class="table-responsive">
-                <table class="table" id="attendanceTable">
+                <table class="table table-hover align-middle mb-0 border-light">
                     <thead>
                         <tr>
-                            <th>#</th>
-                            <th>Date & Time</th>
+                            <th class="text-nowrap">Date & Time</th>
                             <th>Venue</th>
                             <th>Group</th>
                             <th>Topic</th>
                             <th>Faculty</th>
-                            <th>Attendance Status</th>
-                            <th>Duty Type</th>
-                            <th>Exemption</th>
-                            <th>Document / Comment</th>
+                            <th class="text-center text-nowrap">Attendance Status</th>
+                            <th class="text-center text-nowrap">Duty Type (MDO/Escort)</th>
+                            <th class="text-center">Exemption</th>
+                            <th class="text-center">Doc / Comment</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <!-- Data populated by DataTables -->
+                        @foreach($attendanceRecords as $record)
+                        <tr>
+                            <td class="fw-semibold text-nowrap">
+                                <div class="d-flex flex-column">
+                                    <span>{{ $record['date'] }}</span>
+                                    <small class="text-muted">{{ $record['session_time'] }}</small>
+                                </div>
+                            </td>
+                            <td>{{ $record['venue'] }}</td>
+                            <td>{{ $record['group'] }}</td>
+                            <td>{{ $record['topic'] }}</td>
+                            <td>{{ $record['faculty'] }}</td>
+
+                            <td class="text-center">
+                                @php
+                                $status = $record['attendance_status'];
+                                $color = '';
+                                $icon = '';
+                                if ($status == 'Present') {
+                                $color = 'success';
+                                $icon = 'bi-check-circle-fill';
+                                } elseif ($status == 'Late') {
+                                $color = 'warning';
+                                $icon = 'bi-clock-fill';
+                                } elseif ($status == 'Absent') {
+                                $color = 'danger';
+                                $icon = 'bi-x-octagon-fill';
+                                } else {
+                                $color = 'secondary';
+                                $icon = 'bi-question-circle-fill';
+                                }
+                                @endphp
+                                <span class="badge bg-{{ $color }} fw-bold py-2 px-3">
+                                    <i class="bi {{ $icon }} me-1"></i> {{ $status }}
+                                </span>
+                            </td>
+
+                            <td class="text-center">
+                                @if($record['duty_type'])
+                                <span
+                                    class="badge bg-info-subtle text-info fw-semibold">{{ $record['duty_type'] }}</span>
+                                @else
+                                <span class="text-muted small">-</span>
+                                @endif
+                            </td>
+
+                            <td class="text-center">
+                                @if($record['exemption_type'])
+                                <span
+                                    class="badge bg-primary-subtle text-primary fw-semibold">{{ $record['exemption_type'] }}</span>
+                                @else
+                                <span class="text-muted small">-</span>
+                                @endif
+                            </td>
+
+                            <td class="text-center text-nowrap">
+                                @if($record['exemption_document'])
+                                <a href="{{ asset('storage/' . $record['exemption_document']) }}" target="_blank"
+                                    class="btn btn-sm btn-outline-primary me-2" title="View Document"
+                                    aria-label="View Exemption Document">
+                                    <i class="bi bi-eye-fill"></i>
+                                </a>
+                                @endif
+
+                                @if($record['exemption_comment'])
+                                @if($record['exemption_document'])
+                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
+                                    data-bs-placement="top" title="{{ $record['exemption_comment'] }}"
+                                    aria-label="View Comment">
+                                    <i class="bi bi-chat-text-fill"></i>
+                                </button>
+                                @else
+                                <span class="text-muted small" data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="{{ $record['exemption_comment'] }}">{{ Str::limit($record['exemption_comment'], 15) }}</span>
+                                @endif
+                                @else
+                                @if(!$record['exemption_document'])
+                                <span class="text-muted small">-</span>
+                                @endif
+                                @endif
+                            </td>
+                        </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
-
+            @else
+            <div class="alert alert-info text-center m-4" role="alert">
+                <i class="bi bi-info-circle me-2"></i> No attendance records found for the selected filters.
+            </div>
+            @endif
         </div>
     </div>
 
-</div>
-
-
-
-@endsection
-@section('scripts')
-
-<script>
-$(function() {
-    //alert('sfsdf');
-    let table = $('#attendanceTable').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: {
-            url: "{{ route('ot.student.attendance.data')}}",
-            data: function(d) {
-                d.filter_session_time = $('#filter_session_time').val();
-                d.archive_mode = $('#archive_mode_input').val();
-                d.filter_date = $('#filter_date').val();
-                d.filter_course = $('#filter_course').val();
-
-                d.group_pk = $('#group_pk').val();
-                d.course_pk = $('#course_pk').val();
-                d.timetable_pk = $('#timetable_pk').val();
-                d.student_pk = $('#student_pk').val();
-            }
-        },
-        columns: [
-            { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
-            { data: 'date', name: 'date' },
-            { data: 'venue', name: 'venue' },
-            { data: 'group', name: 'group' },
-            { data: 'topic', name: 'topic' },
-            { data: 'faculty', name: 'faculty' },
-            { data: 'attendance_status', name: 'attendance_status', orderable: false },
-            { data: 'duty_type', name: 'duty_type' },
-            { data: 'exemption_type', name: 'exemption_type' },
-            { 
-                data: null, 
-                name: 'document_comment',
-                orderable: false,
-                searchable: false,
-                render: function(data, type, row) {
-                    var html = '';
-                    if (row.exemption_document) {
-                        html += '<a href="' + row.exemption_document + '" target="_blank" class="btn btn-sm btn-info"><i class="bi bi-file-earmark-pdf"></i> Document</a> ';
-                    }
-                    if (row.exemption_comment) {
-                        html += '<span class="text-muted">' + row.exemption_comment + '</span>';
-                    }
-                    return html || 'N/A';
-                }
-            }
-        ],
-        order: [[1, 'desc']]
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
     });
+    </script>
+</div>
+@endsection
+
+@section('scripts')
+<script>
+$(document).ready(function() {
+    // Initialize select2 if available
+    if ($.fn.select2) {
+        $('.select2').select2({
+            placeholder: 'Select Session Time',
+            allowClear: true
+        });
+    }
+
+    // Active/Archive toggle button handlers
+    $('#filterActive').on('click', function() {
+        setActiveButton($(this));
+        $('#archive_mode_input').val('active');
+        $('#filterForm').submit();
+    });
+
+    $('#filterArchive').on('click', function() {
+        setActiveButton($(this));
+        $('#archive_mode_input').val('archive');
+        $('#filterForm').submit();
+    });
+
+    // Function to set active button styling
+    function setActiveButton(activeBtn) {
+        // Reset all buttons to outline style
+        $('#filterActive')
+            .removeClass('btn-success active text-white')
+            .addClass('btn-outline-success')
+            .attr('aria-pressed', 'false');
+
+        $('#filterArchive')
+            .removeClass('btn-secondary active text-white')
+            .addClass('btn-outline-secondary')
+            .attr('aria-pressed', 'false');
+
+        // Set the active button
+        if (activeBtn.attr('id') === 'filterActive') {
+            activeBtn.removeClass('btn-outline-success')
+                .addClass('btn-success text-white active')
+                .attr('aria-pressed', 'true');
+        } else if (activeBtn.attr('id') === 'filterArchive') {
+            activeBtn.removeClass('btn-outline-secondary')
+                .addClass('btn-secondary text-white active')
+                .attr('aria-pressed', 'true');
+        }
+    }
 
     // Auto-submit form when filters change
     let filterTimeout;
@@ -353,5 +412,4 @@ $(function() {
     });
 });
 </script>
-
 @endsection

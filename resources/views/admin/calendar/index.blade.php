@@ -2,7 +2,15 @@
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
-@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+@section('content')
+
+@php
+    // Debug: Check if courseMaster is available
+    if (!isset($courseMaster) || $courseMaster->isEmpty()) {
+        \Log::error('Calendar view: courseMaster is empty or not set');
+    }
+@endphp
+
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <style>
         :root {
@@ -48,184 +56,7 @@
             font-size: 0.9rem;
         }
     }
-</style>
-<div class="container-fluid">
-    <a href="#calendar" class="visually-hidden-focusable" aria-label="Skip to calendar">Skip to calendar</a>
-    <!-- Page Header with ARIA landmark -->
-      @if(hasRole('Admin'))
-    <header aria-label="Page header">
-        <x-breadcrum title="Academic TimeTable" />
-    </header>
-@endif
-        <div class="course-header mb-3">
-            <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
-            <p class="mb-0 text-white fw-medium">
-                <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
-                | <strong>Year:</strong> {{ $courseMaster->first()->course_year ?? date('Y') }}
-            </p>
-        </div>
-
-    <!-- Main Content Area -->
-    <main id="main-content" role="main">
-        <!-- Action Controls with proper semantics -->
-         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
-        <section class="calendar-controls mb-4" aria-label="Calendar view controls">
-            <div
-                class="control-panel d-flex justify-content-between align-items-center flex-wrap gap-3 bg-white p-3 rounded-3 shadow-sm border">
-                <!-- View Toggle Buttons -->
-                <div class="view-toggle-section d-flex align-items-center gap-3">
-                    <span class="text-muted fw-medium small d-none d-md-inline">View:</span>
-                    <div class="btn-group" role="group" aria-label="Calendar view options">
-                        <button type="button" class="btn btn-outline-primary" id="btnListView" aria-pressed="false"
-                            data-view="list">
-                            <i class="bi bi-list-ul me-2"></i>List View
-                        </button>
-                        <button type="button" class="btn btn-outline-primary active" id="btnCalendarView" aria-pressed="false"
-                            data-view="calendar">
-                            <i class="bi bi-calendar3 me-2"></i>Calendar View
-                        </button>
-                    </div>
-
-                    <!-- Density Toggle -->
-                    <div class="density-toggle d-flex align-items-center gap-2 ms-2">
-                        <button type="button" class="btn btn-outline-secondary" id="toggleDensityBtn" aria-pressed="false" aria-label="Toggle compact mode">
-                            Expand / Collapse
-                        </button>
-                    </div>
-
-                    <div class="mb-3">
-                        <select
-                            class="form-select"
-                            id="courseFilter"
-                            aria-label="Filter by course"
-                            style="min-width: 200px;">
-                            <option value="">All Courses</option>
-                            @foreach($courseMaster as $course)
-                                <option value="{{ $course->pk }}" 
-                                    {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
-                                    {{ $course->course_name }} ({{ $course->couse_short_name }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                </div>
-                <!-- Action Buttons -->
-                @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
-                <button type="button" class="btn btn-primary px-4" id="createEventButton" data-bs-toggle="modal"
-                    data-bs-target="#eventModal">
-                    <i class="bi bi-plus-circle me-2" aria-hidden="true"></i> Add New Event
-                </button>
-                @endif
-            </div>
-        </section>
-        @endif
-
-        <!-- Calendar Container -->
-        <section class="calendar-container" aria-label="Academic calendar">
-            <div class="card border-start-4 border-primary shadow-sm">
-                <div class="card-body p-3 p-md-4">
-
-                    <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
-                    <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
-
-                    <!-- List View -->
-                    <div id="eventListView" class="mt-4 d-none" role="region" aria-label="Weekly timetable">
-                        <div class="timetable-wrapper">
-                            <!-- Timetable Header -->
-                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
-                                <div class="row align-items-center g-4">
-                                    <div class="col-md-2 text-center text-md-start">
-                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
-                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
-                                                class="img-fluid" width="70" height="70">
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6 text-center">
-                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
-                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
-                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
-                                        </p>
-                                    </div>
-
-                                    <div class="col-md-4 text-center text-md-end">
-                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
-                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
-                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
-                                                    aria-label="Previous week">
-                                                    <i class="bi bi-chevron-left"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
-                                                    aria-label="Current week">
-                                                    <i class="bi bi-calendar-check me-2"></i>Today
-                                                </button>
-                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
-                                                    aria-label="Next week">
-                                                    <i class="bi bi-chevron-right"></i>
-                                                </button>
-                                            </div>
-
-                                            <div class="week-badge">
-                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
-                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Week Cards (Accessible, GIGW-friendly) -->
-                            <div id="weekCards" class="week-cards mb-4" role="region" aria-labelledby="weekCardsTitle">
-                                <h2 id="weekCardsTitle" class="h5 fw-bold text-primary mb-3">Week at a glance</h2>
-                                <div class="row g-3" role="list" aria-label="Days of the week">
-                                    <!-- JS will render day cards here -->
-                                </div>
-                            </div>
-
-                            <!-- Timetable table -->
-                            <div class="timetable-container border rounded-3 overflow-hidden">
-                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
-                                    <table class="table table-bordered timetable-grid" id="timetableTable"
-                                        aria-describedby="timetableDescription">
-                                        <caption class="visually-hidden" id="timetableDescription">
-                                            Weekly academic timetable showing events
-                                        </caption>
-                                        <thead id="timetableHead">
-                                            <tr>
-                                                <th scope="col" class="time-column">Time</th>
-                                                <th scope="col">Monday</th>
-                                                <th scope="col">Tuesday</th>
-                                                <th scope="col">Wednesday</th>
-                                                <th scope="col">Thursday</th>
-                                                <th scope="col">Friday</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody id="timetableBody">
-                                            <!-- JS will populate body -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-    </main>
-</div>
-
-@include('admin.calendar.partials.add_edit_events')
-@include('admin.calendar.partials.events_details')
-@include('admin.calendar.partials.confirmation')
-
-<!-- Add CSS for modern look -->
-<style>
-/* Accessibility improvements */
+    /* Accessibility improvements */
 .visually-hidden {
     position: absolute;
     width: 1px;
@@ -1239,6 +1070,19 @@
     animation: spin 0.8s linear infinite;
 }
 
+/* Auto-hide the calendar loading overlay after 2 seconds */
+#calendarLoadingOverlay {
+    animation: fadeOut 0.5s ease-in-out 2s forwards;
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
@@ -2197,10 +2041,253 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         font-size: 0.95rem;
     }
 }
+.control-panel:focus-within {
+    outline: 2px solid #004a93;
+    outline-offset: 2px;
+}
+
+.btn:focus-visible,
+.form-select:focus-visible {
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
+}
+
 </style>
+
+<!-- Debug: Page is loading -->
+<script>console.log('Calendar view is rendering...', {
+    courseMasterExists: {{ isset($courseMaster) ? 'true' : 'false' }},
+    courseMasterCount: {{ isset($courseMaster) ? $courseMaster->count() : 0 }}
+});</script>
+
+<div class="container-fluid">
+    @if(!isset($courseMaster) || $courseMaster->isEmpty())
+        <div class="alert alert-warning m-4">
+            <h4><i class="bi bi-exclamation-triangle me-2"></i>No Courses Available</h4>
+            <p>No active courses found. Please contact the administrator.</p>
+        </div>
+    @endif
+    
+    <!-- Page Header with ARIA landmark -->
+    @if(hasRole('Admin'))
+        <header aria-label="Page header">
+            <x-breadcrum title="Academic TimeTable" />
+        </header>
+    @endif
+        <div class="course-header mb-3">
+            <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
+            <p class="mb-0 text-white fw-medium">
+                <span class="badge">{{ $courseMaster->first()->couse_short_name ?? 'Course Code' }}</span>
+                | <strong>Year:</strong> {{ $courseMaster->first()->course_year ?? date('Y') }}
+            </p>
+        </div>
+
+    <!-- Main Content Area -->
+    <main id="main-content" role="main">
+        <!-- Action Controls with proper semantics -->
+         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP'))
+        <section
+    class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
+    role="region"
+    aria-labelledby="controlPanelHeading"
+    style="border-left: 4px solid #004a93;"
+>
+    <h2 id="controlPanelHeading" class="visually-hidden">
+        Calendar Control Panel
+    </h2>
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-4">
+
+        <!-- Filters & View Controls -->
+        <fieldset class="d-flex flex-wrap align-items-center gap-3 mb-0">
+            <legend class="visually-hidden">View and Filter Controls</legend>
+
+            <!-- Density Toggle -->
+            <div class="btn-group" role="group" aria-label="Toggle calendar density">
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary d-flex align-items-center gap-2"
+                    id="toggleDensityBtn"
+                    aria-pressed="false"
+                    aria-expanded="false"
+                >
+                    <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
+                    <span class="fw-medium">Compact View</span>
+                </button>
+            </div>
+
+            <!-- Course Filter -->
+            <div class="form-floating">
+                <select
+                    class="form-select"
+                    id="courseFilter"
+                    aria-describedby="courseFilterHelp"
+                >
+                    <option value="">All Courses</option>
+                    @foreach($courseMaster as $course)
+                        <option value="{{ $course->pk }}"
+                            {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
+                            {{ $course->course_name }} ({{ $course->couse_short_name }})
+                        </option>
+                    @endforeach
+                </select>
+                <label for="courseFilter">Filter by Course</label>
+            </div>
+        </fieldset>
+
+        <!-- Primary Actions -->
+        @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP'))
+        <div class="d-flex align-items-center gap-2">
+            <button
+                type="button"
+                class="btn btn-primary px-4 d-flex align-items-center gap-2"
+                id="createEventButton"
+                data-bs-toggle="modal"
+                data-bs-target="#eventModal"
+            >
+                <i class="bi bi-plus-circle" aria-hidden="true"></i>
+                <span>Add New Event</span>
+            </button>
+        </div>
+        @endif
+
+    </div>
+</section>
+
+        @endif
+
+        <!-- Calendar Container -->
+        <section class="calendar-container" aria-label="Academic calendar">
+            <div class="card border-start-4 border-primary shadow-sm">
+                <div class="card-body p-3 p-md-4 position-relative">
+                    
+                    <!-- Loading overlay -->
+                    <div id="calendarLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white" style="min-height: 400px; z-index: 100;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading calendar...</span>
+                            </div>
+                            <p class="mt-3 text-muted">Loading calendar...</p>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        // IMMEDIATE fallback - hide loader after 3 seconds
+                        (function() {
+                            console.log('Inline script: Setting up emergency timeout');
+                            setTimeout(function() {
+                                var overlay = document.getElementById('calendarLoadingOverlay');
+                                if (overlay) {
+                                    console.log('EMERGENCY TIMEOUT: Hiding loader');
+                                    overlay.style.display = 'none';
+                                } else {
+                                    console.error('Overlay element not found in timeout');
+                                }
+                            }, 3000);
+                        })();
+                    </script>
+
+                    <!-- FullCalendar placeholder (you may initialize FullCalendar separately) -->
+                    <div id="calendar" class="fc mb-4" role="application" aria-label="Interactive calendar"></div>
+
+                    <!-- List View -->
+                    <div id="eventListView" class="mt-4 d-none" role="region" aria-label="Weekly timetable">
+                        <div class="timetable-wrapper">
+                            <!-- Timetable Header -->
+                            <div class="timetable-header bg-gradient shadow-sm border rounded-4 p-4 mb-4">
+                                <div class="row align-items-center g-4">
+                                    <div class="col-md-2 text-center text-md-start">
+                                        <div class="logo-wrapper p-2 bg-white rounded-3 shadow-sm d-inline-block">
+                                            <img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo"
+                                                class="img-fluid" width="70" height="70">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 text-center">
+                                        <h1 class="h3 mb-2 fw-bold text-primary">Weekly Timetable</h1>
+                                        <p class="text-muted mb-0 fw-medium" id="weekRangeText" aria-live="polite">
+                                            <i class="bi bi-calendar-week me-2" aria-hidden="true"></i>—
+                                        </p>
+                                    </div>
+
+                                    <div class="col-md-4 text-center text-md-end">
+                                        <div class="week-controls bg-white rounded-3 p-3 shadow-sm d-inline-block">
+                                            <div class="btn-group mb-2" role="group" aria-label="Week navigation">
+                                                <button type="button" class="btn btn-outline-primary" id="prevWeekBtn"
+                                                    aria-label="Previous week">
+                                                    <i class="bi bi-chevron-left"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-primary px-4" id="currentWeekBtn"
+                                                    aria-label="Current week">
+                                                    <i class="bi bi-calendar-check me-2"></i>Today
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary" id="nextWeekBtn"
+                                                    aria-label="Next week">
+                                                    <i class="bi bi-chevron-right"></i>
+                                                </button>
+                                            </div>
+
+                                            <div class="week-badge">
+                                                <span class="badge bg-primary-subtle text-primary fs-6 px-3 py-2">
+                                                    Week <span id="currentWeekNumber" class="fw-bold">—</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Week Cards (Accessible, GIGW-friendly) -->
+                            <div id="weekCards" class="week-cards mb-4" role="region" aria-labelledby="weekCardsTitle">
+                                <h2 id="weekCardsTitle" class="h5 fw-bold text-primary mb-3">Week at a glance</h2>
+                                <div class="row g-3" role="list" aria-label="Days of the week">
+                                    <!-- JS will render day cards here -->
+                                </div>
+                            </div>
+
+                            <!-- Timetable table -->
+                            <div class="timetable-container border rounded-3 overflow-hidden">
+                                <div class="table-responsive" role="region" aria-label="Weekly timetable">
+                                    <table class="table table-bordered timetable-grid" id="timetableTable"
+                                        aria-describedby="timetableDescription">
+                                        <caption class="visually-hidden" id="timetableDescription">
+                                            Weekly academic timetable showing events
+                                        </caption>
+                                        <thead id="timetableHead">
+                                            <tr>
+                                                <th scope="col" class="time-column">Time</th>
+                                                <th scope="col">Monday</th>
+                                                <th scope="col">Tuesday</th>
+                                                <th scope="col">Wednesday</th>
+                                                <th scope="col">Thursday</th>
+                                                <th scope="col">Friday</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody id="timetableBody">
+                                            <!-- JS will populate body -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+@include('admin.calendar.partials.add_edit_events')
+@include('admin.calendar.partials.events_details')
+@include('admin.calendar.partials.confirmation')
+
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
+console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
+
 // Configuration object
 const CalendarConfig = {
     api: {
@@ -2246,27 +2333,61 @@ class CalendarManager {
     }
 
     init() {
-        this.initFullCalendar();
-        this.bindEvents();
-        this.setupAccessibility();
-        this.validateDates();
-        this.updateCurrentWeek();
-        this.observeMoreLinksChanges();
-        this.initDensity();
+        try {
+            console.log('Initializing calendar manager...');
+            this.initFullCalendar();
+            
+            try { this.bindEvents(); } catch (e) { console.error('bindEvents error:', e); }
+            try { this.setupAccessibility(); } catch (e) { console.error('setupAccessibility error:', e); }
+            try { this.validateDates(); } catch (e) { console.error('validateDates error:', e); }
+            try { this.updateCurrentWeek(); } catch (e) { console.error('updateCurrentWeek error:', e); }
+            try { this.observeMoreLinksChanges(); } catch (e) { console.error('observeMoreLinksChanges error:', e); }
+            try { this.initDensity(); } catch (e) { console.error('initDensity error:', e); }
+            
+            console.log('Calendar manager initialized successfully');
+        } catch (error) {
+            console.error('Error in init():', error);
+            // Hide loader on error
+            const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+            if (loadingOverlay) {
+                loadingOverlay.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-danger mb-3">
+                            <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem;"></i>
+                        </div>
+                        <h5 class="text-danger">Calendar Initialization Error</h5>
+                        <p class="text-muted">${error.message}</p>
+                        <button class="btn btn-primary mt-3" onclick="location.reload()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Reload Page
+                        </button>
+                    </div>
+                `;
+            }
+        }
     }
 
     initFullCalendar() {
+        console.log('Starting initFullCalendar...');
         const calendarEl = document.getElementById('calendar');
+        const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+        
+        if (!calendarEl) {
+            throw new Error('Calendar element not found');
+        }
+        
+        console.log('Calendar element found:', calendarEl);
         
         // Get initial course ID from filter dropdown
         const courseFilter = document.getElementById('courseFilter');
         this.selectedCourseId = courseFilter && courseFilter.value ? courseFilter.value : null;
         
+        console.log('Selected course ID:', this.selectedCourseId);
+        
         // Update course header with initial selection
         // this.updateCourseHeader();
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'timeGridWeek',
+            initialView: 'dayGridMonth',
             hiddenDays: [0, 6], // Initially hide Sunday (0) and Saturday (6)
             headerToolbar: {
                 left: 'prev,next today',
@@ -2316,9 +2437,25 @@ class CalendarManager {
                 this.fetchEvents(info, successCallback, failureCallback);
             },
             loading: (isLoading) => {
+                console.log('Calendar loading state:', isLoading);
+                const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+                
                 if (!isLoading) {
                     // Events have finished loading
-                    this.updateWeekendVisibility();
+                    console.log('Events loaded, hiding overlay');
+                    
+                    try {
+                        this.updateWeekendVisibility();
+                    } catch (error) {
+                        console.error('Error updating weekend visibility:', error);
+                    }
+                    
+                    // Hide loading overlay
+                    if (loadingOverlay) {
+                        loadingOverlay.style.display = 'none';
+                    }
+                } else {
+                    console.log('Loading events...');
                 }
             },
             eventContent: this.renderEventContent.bind(this),
@@ -2329,8 +2466,19 @@ class CalendarManager {
         });
 
         this.calendar.render();
+        console.log('Calendar rendered');
+        
         this.styleMoreLinks();
         this.applyDenseMode();
+        
+        // Fallback: Hide loading overlay after calendar renders (in case loading callback doesn't fire)
+        setTimeout(() => {
+            const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+            if (loadingOverlay) {
+                console.log('Timeout fallback: hiding loading overlay');
+                loadingOverlay.style.display = 'none';
+            }
+        }, 2000); // Give calendar 2 seconds to load
     }
 
     fetchEvents(info, successCallback, failureCallback) {
@@ -2352,23 +2500,33 @@ class CalendarManager {
             url += '?' + params.toString();
         }
 
+        console.log('Fetching events from:', url);
+
         fetch(url, {
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}',
                 'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            console.log('Events loaded:', data.length);
             // Filter out holidays and restricted holidays
             const filteredData = data.filter(event => {
                 const type = (event.type || event.event_type || event.session_type || '').toString().toLowerCase();
                 return type !== 'holiday' && type !== 'restricted holiday' && type !== 'restricted' && !type.includes('holiday');
             });
+            console.log('Events after filtering:', filteredData.length);
             successCallback(filteredData);
         })
         .catch(error => {
             console.error('Error fetching events:', error);
+            this.showNotification('Failed to load calendar events. Please refresh the page.', 'danger');
             failureCallback(error);
         });
     }
@@ -2678,6 +2836,7 @@ class CalendarManager {
         document.getElementById('eventVanue').textContent = data.venue_name || '';
         document.getElementById('eventclasssession').textContent = data.class_session || '';
         document.getElementById('eventgroupname').textContent = data.group_name || '';
+        document.getElementById('internal_faculty_name_show').textContent = data.internal_faculty || '';
 
         // Set edit/delete button data
         const editBtn = document.getElementById('editEventBtn');
@@ -3325,7 +3484,9 @@ class CalendarManager {
         document.getElementById('subject_name').value = event.subject_master_pk;
         document.getElementById('topic').value = event.subject_topic;
         document.getElementById('start_datetime').value = event.START_DATE;
-        document.getElementById('faculty').value = event.faculty_master;
+        // Handle multiple faculty selection
+        const facultyIds = Array.isArray(event.faculty_master) ? event.faculty_master : [event.faculty_master];
+        $('#faculty').val(facultyIds).trigger('change');
         document.getElementById('faculty_type').value = event.faculty_type;
         document.getElementById('vanue').value = event.venue_id;
 
@@ -3411,12 +3572,12 @@ async updateinternal_faculty(facultyType) {
 
         }
     }
-   async setInternalFaculty(internalFacultyIds) {
+   async setInternalFaculty_bkp(internalFacultyIds) {
 
     if (!internalFacultyIds) return;
 
     // Agar CSV string aa rahi ho
-    if (typeof internalFacultyIds === 'array') {
+    if (typeof internalFacultyIds === 'string') {
         internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
     }
 
@@ -3425,10 +3586,46 @@ async updateinternal_faculty(facultyType) {
     Array.from(select.options).forEach(option => {
         option.selected = internalFacultyIds.includes(option.value);
     });
+// console.log(internalFacultyIds);
+// console.log([...select.options].map(o => o.value));
 
     // Agar Choices.js / Select2 use kar rahe ho
     select.dispatchEvent(new Event('change'));
 }
+async setInternalFaculty(internalFacultyIds) {
+
+    if (!internalFacultyIds) return;
+
+    // ✅ FIX 1: agar JSON string aa rahi ho
+    if (typeof internalFacultyIds === 'string') {
+
+        internalFacultyIds = internalFacultyIds.trim();
+
+        // JSON array string: '["23","67"]'
+        if (internalFacultyIds.startsWith('[')) {
+            internalFacultyIds = JSON.parse(internalFacultyIds);
+        } 
+        // normal CSV: '23,67'
+        else {
+            internalFacultyIds = internalFacultyIds.split(',').map(id => id.trim());
+        }
+    }
+
+    // ✅ FIX 2: force string comparison
+    internalFacultyIds = internalFacultyIds.map(id => String(id));
+
+    const select = document.getElementById('internal_faculty');
+
+    Array.from(select.options).forEach(option => {
+        option.selected = internalFacultyIds.includes(String(option.value));
+    });
+
+    // console.log(internalFacultyIds);           // ["23","67"]
+    // console.log([...select.options].map(o => o.value));
+
+    select.dispatchEvent(new Event('change'));
+}
+
     async loadGroupTypesForEdit(event) {
         // Set selected group names for edit
         try {
@@ -4024,7 +4221,44 @@ async updateinternal_faculty(facultyType) {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.calendarManager = new CalendarManager();
+    console.log('DOM Content Loaded - Initializing calendar...');
+    console.log('Calendar element exists:', !!document.getElementById('calendar'));
+    console.log('Loading overlay exists:', !!document.getElementById('calendarLoadingOverlay'));
+    
+    // Absolute fallback - hide loader after 3 seconds no matter what
+    setTimeout(() => {
+        const overlay = document.getElementById('calendarLoadingOverlay');
+        if (overlay) {
+            console.log('ABSOLUTE FALLBACK: Hiding loader after 3 seconds');
+            overlay.style.display = 'none';
+        }
+    }, 3000);
+    
+    try {
+        window.calendarManager = new CalendarManager();
+        console.log('Calendar manager initialized successfully');
+    } catch (error) {
+        console.error('Error initializing calendar:', error);
+        console.error('Error stack:', error.stack);
+        
+        // Hide loading overlay and show error message
+        const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+        if (loadingOverlay) {
+            loadingOverlay.innerHTML = `
+                <div class="text-center">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-triangle-fill" style="font-size: 3rem;"></i>
+                    </div>
+                    <h5 class="text-danger">Failed to Load Calendar</h5>
+                    <p class="text-muted">Please refresh the page or contact support if the problem persists.</p>
+                    <p class="text-muted small">Error: ${error.message}</p>
+                    <button class="btn btn-primary mt-3" onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise me-2"></i>Reload Page
+                    </button>
+                </div>
+            `;
+        }
+    }
 });
 
 // Add ARIA live region for announcements

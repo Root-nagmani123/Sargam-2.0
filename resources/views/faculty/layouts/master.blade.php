@@ -305,17 +305,118 @@
     padding: .375rem .75rem;
 }
 
+/* Sidebar toggle icon rotation */
+#sidebarToggleIcon {
+    transition: transform 0.3s ease-in-out;
+    display: inline-block;
+}
+#sidebarToggleIcon.rotated {
+    transform: rotate(180deg);
+}
+.alphabet-loader {
+        position: fixed;
+        inset: 0;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+    }
+
+    .alphabet-loader .letters {
+        display: flex;
+        gap: 8px;
+    }
+
+    .alphabet-loader .letters span {
+        font-size: 32px;
+        font-weight: 700;
+        font-family: 'Poppins', sans-serif;
+        color: #004a93;
+        opacity: 0.2;
+        animation: pulseText 1.2s infinite ease-in-out;
+    }
+
+    .alphabet-loader .letters span:nth-child(1) {
+        animation-delay: 0s;
+    }
+
+    .alphabet-loader .letters span:nth-child(2) {
+        animation-delay: 0.1s;
+    }
+
+    .alphabet-loader .letters span:nth-child(3) {
+        animation-delay: 0.2s;
+    }
+
+    .alphabet-loader .letters span:nth-child(4) {
+        animation-delay: 0.3s;
+    }
+
+    .alphabet-loader .letters span:nth-child(5) {
+        animation-delay: 0.4s;
+    }
+
+    .alphabet-loader .letters span:nth-child(6) {
+        animation-delay: 0.5s;
+    }
+
+    .alphabet-loader .letters span:nth-child(7) {
+        animation-delay: 0.6s;
+    }
+
+    .alphabet-loader .letters span:nth-child(8) {
+        animation-delay: 0.7s;
+    }
+
+    .alphabet-loader .letters span:nth-child(9) {
+        animation-delay: 0.8s;
+    }
+
+    .alphabet-loader .letters span:nth-child(10) {
+        animation-delay: 0.9s;
+    }
+
+    @keyframes pulseText {
+        0% {
+            opacity: 0.2;
+            transform: translateY(0);
+        }
+
+        50% {
+            opacity: 1;
+            transform: translateY(-6px);
+        }
+
+        100% {
+            opacity: 0.2;
+            transform: translateY(0);
+        }
+    }
 
     </style>
+    
+    <!-- Tab Memory System Styles -->
+    <link rel="stylesheet" href="{{ asset('admin_assets/css/tab-memory-styles.css') }}">
 
 </head>
 
 <body data-sidebartype="mini-sidebar">
     <!-- Preloader -->
-    <div class="preloader">
-        <img src="{{ asset('admin_assets/images/logos/favicon.ico') }}" alt="loader" class="lds-ripple img-fluid">
+    <div class="alphabet-loader" id="alphabetLoader">
+        <div class="letters">
+            <span>S</span>
+            <span>A</span>
+            <span>R</span>
+            <span>G</span>
+            <span>A</span>
+            <span>M</span>
+            <span>&nbsp;</span>
+            <span>2</span>
+            <span>.</span>
+            <span>0</span>
+        </div>
     </div>
-    <div class="loading d-none" id="ajaxLoader">Loading&#8230;</div>
     <div id="main-wrapper">
         @include('faculty.layouts.sidebar')
         <div class="page-wrapper">
@@ -356,6 +457,7 @@
     @include('admin.layouts.footer')
     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('js/mobile-sidebar.js') }}"></script>
+    <script src="{{ asset('admin_assets/js/tab-memory.js') }}" defer></script>
     @stack('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -381,7 +483,8 @@ document.addEventListener('DOMContentLoaded', function () {
 document.addEventListener("DOMContentLoaded", function () {
     const sidebar = document.getElementById("main-wrapper");
     const toggleBtn = document.getElementById("headerCollapse");
-    const icon = document.getElementById("sidebarToggleIcon");
+    // Query all icons across all tabs (multiple instances due to tab structure)
+    const icons = document.querySelectorAll("#sidebarToggleIcon");
     const body = document.body;
     const sidebarmenus = document.querySelectorAll(".sidebarmenu");
 
@@ -432,37 +535,48 @@ document.addEventListener("DOMContentLoaded", function () {
         sidebarmenus.forEach(function(el) {
             el.classList.add("close");
         });
-        if (icon) icon.textContent = "keyboard_double_arrow_right";
+        // Set all icon instances to expand (collapsed state)
+        icons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.remove("rotated");
+        });
         setTimeout(adjustAllDataTables, 300);
     } else {
         sidebar.classList.add("show-sidebar");
         sidebarmenus.forEach(function(el) {
             el.classList.remove("close");
         });
-        if (icon) icon.textContent = "keyboard_double_arrow_left";
+        // Set all icon instances to rotated (expanded state)
+        icons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.add("rotated");
+        });
         setTimeout(adjustAllDataTables, 300);
     }
 
-    if (toggleBtn) {
-        toggleBtn.addEventListener("click", function () {
-            sidebar.classList.toggle("show-sidebar");
-            sidebarmenus.forEach(function(el) {
-                el.classList.toggle("close");
-            });
-            
-            const currentType = body.getAttribute("data-sidebartype");
-            if (currentType === "mini-sidebar") {
-                body.setAttribute("data-sidebartype", "full");
-                try { localStorage.setItem('SidebarType', 'full'); } catch (e) {}
-                if (icon) icon.textContent = "keyboard_double_arrow_left";
+    // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
+    function syncIconWithSidebar(type) {
+        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
+        allIcons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            if (type === "full") {
+                icon.classList.add("rotated");
             } else {
-                body.setAttribute("data-sidebartype", "mini-sidebar");
-                try { localStorage.setItem('SidebarType', 'mini-sidebar'); } catch (e) {}
-                if (icon) icon.textContent = "keyboard_double_arrow_right";
+                icon.classList.remove("rotated");
             }
-            setTimeout(adjustAllDataTables, 300);
         });
     }
+
+    const observer = new MutationObserver(function(mutations) {
+        for (const m of mutations) {
+            if (m.attributeName === 'data-sidebartype') {
+                const t = body.getAttribute('data-sidebartype');
+                syncIconWithSidebar(t);
+                setTimeout(adjustAllDataTables, 300);
+            }
+        }
+    });
+    observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
 });
 </script>
 </body>

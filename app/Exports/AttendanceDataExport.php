@@ -315,16 +315,29 @@ class AttendanceDataExport implements FromArray, WithHeadings, ShouldAutoSize, W
         }
 
         try {
-            $timestamp = strtotime($time);
-            if ($timestamp === false) {
-                return false;
+            // First, try to parse as "H:i" or "H:i:s" format directly
+            if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', trim($time), $matches)) {
+                $hours = (int)$matches[1];
+                $minutes = (int)$matches[2];
+                $seconds = isset($matches[3]) ? (int)$matches[3] : 0;
+                
+                // Validate ranges
+                if ($hours >= 0 && $hours <= 23 && $minutes >= 0 && $minutes <= 59 && $seconds >= 0 && $seconds <= 59) {
+                    return ($hours * 3600) + ($minutes * 60) + $seconds;
+                }
             }
+            
+            // Fallback: Try to parse with strtotime (for formats like "10:00 AM")
+            $timestamp = strtotime($time);
+            if ($timestamp !== false) {
+                $hours = (int)date('H', $timestamp);
+                $minutes = (int)date('i', $timestamp);
+                $seconds = (int)date('s', $timestamp);
 
-            $hours = (int)date('H', $timestamp);
-            $minutes = (int)date('i', $timestamp);
-            $seconds = (int)date('s', $timestamp);
-
-            return ($hours * 3600) + ($minutes * 60) + $seconds;
+                return ($hours * 3600) + ($minutes * 60) + $seconds;
+            }
+            
+            return false;
         } catch (\Exception $e) {
             return false;
         }
