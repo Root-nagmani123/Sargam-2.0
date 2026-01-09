@@ -190,30 +190,4 @@ hr {
                 </div>
             </div>
         </div>
-
-        @endsection
-
-        @section('scripts')
-        <script>
-        $(document).ready(function() {
-            // Set today's date if not already set
-            let today = new Date().toISOString().split('T')[0];
-            if (!$('#from_date').val()) {
-                $('#from_date').val(today);
-            }
-            if (!$('#to_date').val()) {
-                $('#to_date').val(today);
-            }
-            
-            // Auto-trigger search on page load if dates are set
-            let fromDate = $('#from_date').val();
-            let toDate = $('#to_date').val();
-            if (fromDate && toDate) {
-                // Small delay to ensure all elements are initialized
-                setTimeout(function() {
-                    performAttendanceSearch();
-                }, 100);
-            }
-        });
-        </script>
         @endsection

@@ -338,7 +338,30 @@
                 </div>
 
                 <div class="card-body">
-                    <div id="contentContainer">
+                    <!-- Tab Navigation -->
+                    <ul class="nav nav-tabs" id="feedbackTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="feedback-tab" data-bs-toggle="tab" 
+                                data-bs-target="#feedback-content" type="button" role="tab" 
+                                aria-controls="feedback-content" aria-selected="true">
+                                <i class="fas fa-comments me-1"></i> Feedback
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="not-given-tab" data-bs-toggle="tab" 
+                                data-bs-target="#not-given-content" type="button" role="tab" 
+                                aria-controls="not-given-content" aria-selected="false">
+                                <i class="fas fa-clipboard-list me-1"></i> Feedback Not Given
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content mt-3" id="feedbackTabContent">
+                        <!-- Feedback Tab -->
+                        <div class="tab-pane fade show active" id="feedback-content" role="tabpanel" 
+                            aria-labelledby="feedback-tab">
+                            <div id="contentContainer">
                     @if ($groupedData->isEmpty())
                         <div class="empty-state">
                             <i class="fas fa-clipboard-list"></i>
@@ -493,6 +516,58 @@
                             </div>
                         @endif
                     @endif
+                            </div>
+                        </div>
+
+                        <!-- Feedback Not Given Tab -->
+                        <div class="tab-pane fade" id="not-given-content" role="tabpanel" 
+                            aria-labelledby="not-given-tab">
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th width="10%">Serial No.</th>
+                                            <th width="30%">OT/Participant Name</th>
+                                            <th width="20%">OT/Participant Code</th>
+                                            <th width="30%">Email</th>
+                                            <th width="10%">Mobile No.</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="notGivenTableBody">
+                                        @if (isset($feedbackNotGiven) && $feedbackNotGiven->isNotEmpty())
+                                            @foreach ($feedbackNotGiven as $index => $participant)
+                                                <tr>
+                                                    <td>{{ $loop->iteration }}</td>
+                                                    <td>{{ $participant->name ?? 'N/A' }}</td>
+                                                    <td>{{ $participant->code ?? 'N/A' }}</td>
+                                                    <td>{{ $participant->email ?? 'N/A' }}</td>
+                                                    <td>{{ $participant->mobile_no ?? 'N/A' }}</td>
+                                                </tr>
+                                            @endforeach
+                                        @else
+                                            <tr>
+                                                <td colspan="4" class="text-center text-muted">
+                                                    <div class="empty-state">
+                                                        <i class="fas fa-check-circle"></i>
+                                                        <h5>All participants have provided feedback</h5>
+                                                        <p class="text-muted">No pending feedback found.</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endif
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Pagination for Not Given Tab -->
+                            @if (isset($feedbackNotGiven) && $feedbackNotGiven->total() > 10)
+                                <nav aria-label="Feedback not given pagination">
+                                    <ul class="pagination justify-content-center">
+                                        {{ $feedbackNotGiven->links() }}
+                                    </ul>
+                                </nav>
+                            @endif
+                        </div>
                     </div>
                 </div>
             </div>
