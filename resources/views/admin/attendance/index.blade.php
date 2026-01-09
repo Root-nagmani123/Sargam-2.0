@@ -66,14 +66,11 @@ hr {
                     <label for="programme" class="form-label fw-semibold">Course Name</label>
                     <select name="course_master_pk" id="programme" class="form-select shadow-sm select2" required>
                         <option value="">Select Course</option>
-                       @foreach($courseMasters as $course)
-                        <option 
-                            value="{{ $course['pk'] }}"
-                            {{ count($courseMasters) === 1 ? 'selected' : '' }}
-                        >
+                        @foreach($courseMasters as $course)
+                        <option value="{{ $course['pk'] }}" {{ count($courseMasters) === 1 ? 'selected' : '' }}>
                             {{ $course['course_name'] }}
                         </option>
-                    @endforeach
+                        @endforeach
 
                     </select>
                 </div>
@@ -178,7 +175,7 @@ hr {
                                     </div>
                                 </td>
                             </tr>
-                            @endif 
+                            @endif
                             @if(hasRole('Internal Faculty'))
                             <tr id="defaultMessageRow">
                                 <td colspan="9" class="text-center py-5">
@@ -193,6 +190,4 @@ hr {
                 </div>
             </div>
         </div>
-
-
         @endsection

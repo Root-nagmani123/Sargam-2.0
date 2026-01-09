@@ -125,64 +125,34 @@
                                 </div>
 
                             </td>
-                            <td class="text-center">
-                                <div class="dropdown">
-                                    <a href="#" id="actionDropdown{{ $encId }}" data-bs-toggle="dropdown" aria-expanded="false" role="button">
-                                        <i class="material-icons material-symbols-rounded"
-                                            style="font-size:24px;cursor:pointer;">
-                                            more_horiz
-                                        </i>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <!-- Edit -->
+                                    <a href="{{ route('admin.notice.edit', $encId) }}"
+                                        class="btn btn-sm btn-outline-primary" title="Edit" aria-label="Edit Notice">
+                                        <span class="material-symbols-rounded fs-5">edit</span>
                                     </a>
 
-                                    <ul class="dropdown-menu dropdown-menu-end"
-                                        aria-labelledby="actionDropdown{{ $encId }}">
+                                    <!-- Delete -->
+                                    @if($n->active_inactive == 0)
+                                    <form id="deleteForm{{ $encId }}"
+                                        action="{{ route('admin.notice.destroy', $encId) }}" method="POST"
+                                        class="d-inline">
+                                        @csrf
+                                        @method('DELETE')
 
-                                        <!-- Edit -->
-                                        <li>
-                                            <a class="dropdown-item" href="{{ route('admin.notice.edit', $encId) }}">
-                                                <i class="material-icons material-symbols-rounded me-2"
-                                                    style="font-size:18px;">
-                                                    edit
-                                                </i>
-                                                Edit
-                                            </a>
-                                        </li>
-
-                                        <li>
-                                            <hr class="dropdown-divider">
-                                        </li>
-
-                                        <!-- Delete -->
-                                        @if($n->active_inactive == 0)
-                                        <li>
-                                            <form id="deleteForm{{ $encId }}"
-                                                action="{{ route('admin.notice.destroy', $encId) }}" method="POST">
-                                                @csrf
-                                                @method('DELETE')
-
-                                                <button type="button" class="dropdown-item text-danger"
-                                                    onclick="deleteConfirm('{{ $encId }}')">
-                                                    <i class="material-icons material-symbols-rounded me-2"
-                                                        style="font-size:18px;">
-                                                        delete
-                                                    </i>
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        </li>
-                                        @else
-                                        <li>
-                                            <button class="dropdown-item text-muted" disabled>
-                                                <i class="material-icons material-symbols-rounded me-2"
-                                                    style="font-size:18px;">
-                                                    block
-                                                </i>
-                                                Delete Disabled
-                                            </button>
-                                        </li>
-                                        @endif
-                                    </ul>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" title="Delete"
+                                            aria-label="Delete Notice" onclick="deleteConfirm('{{ $encId }}')">
+                                            <span class="material-symbols-rounded fs-5">delete</span>
+                                        </button>
+                                    </form>
+                                    @else
+                                    <button class="btn btn-sm btn-outline-secondary" disabled title="Delete Disabled">
+                                        <span class="material-symbols-rounded fs-5">block</span>
+                                    </button>
+                                    @endif
                                 </div>
+
                             </td>
 
 
