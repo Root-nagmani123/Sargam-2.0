@@ -6,6 +6,8 @@ use Closure;
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Session;
+
 use App\Models\User;
 
 class Authenticate extends Middleware
@@ -32,6 +34,16 @@ class Authenticate extends Middleware
             'user' => Auth::check() ? Auth::user()->user_name : 'Not authenticated',
             'session_id' => session()->getId()
         ]);
+        if ($request->has('token') && Auth::check()) {
+                Log::info('Token present but user already logged in, logging out old user', [
+                    'old_user' => Auth::user()->user_name
+                ]);
+
+                Auth::logout();
+                Session::flush();             
+                Session::regenerate();        
+            }
+
 
         // STEP 1: Check for Moodle token authentication if not already authenticated
         if ($request->has('token') && !Auth::check()) {
@@ -75,6 +87,8 @@ class Authenticate extends Middleware
                                 'user_name' => $user->user_name
                             ]);
                             
+                              $roles = ['Student-OT'];
+                            Session::put('user_roles', $roles);
                             // Login the user
                             Auth::login($user);
                             

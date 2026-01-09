@@ -52,48 +52,65 @@ class GroupMappingDataTable extends DataTable
                 $csrf = csrf_token();
 
                 $html = <<<HTML
-<div class="dropdown text-center">
-    <button class="btn btn-link p-0" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions">
-        <span class="material-icons menu-icon material-symbols-rounded" style="font-size: 24px;">more_horiz</span>
-    </button>
-    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-        <li>
-            <a class="dropdown-item d-flex align-items-center" href="{$editUrl}">
-                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">edit</span>
-                Edit
-            </a>
-        </li>
-        <li><hr class="dropdown-divider"></li>
-HTML;
+<td class="text-center">
+    <div class="d-inline-flex align-items-center gap-2"
+         role="group"
+         aria-label="Row actions">
 
-                if ($isActive) {
-                    $html .= <<<HTML
-        <li>
-            <span class="dropdown-item d-flex align-items-center disabled" title="Cannot delete active group mapping" aria-disabled="true">
-                <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
-                Delete
+        <!-- Edit -->
+        <a
+            href="{$editUrl}"
+            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+            aria-label="Edit group name mapping"
+        >
+            <span class="material-icons material-symbols-rounded"
+                  style="font-size:18px;"
+                  aria-hidden="true">
+                edit
             </span>
-        </li>
-HTML;
-                } else {
-                    $formId = 'delete-form-' . $row->pk;
-                    $html .= <<<HTML
-        <li>
-            <form id="{$formId}" action="{$deleteUrl}" method="POST" class="d-inline">
+            <span class="d-none d-lg-inline">Edit</span>
+        </a>
+
+        <!-- Delete -->
+        <?php if ($isActive): ?>
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
+                disabled
+                aria-disabled="true"
+                title="Cannot delete active group mapping"
+            >
+                <span class="material-icons material-symbols-rounded"
+                      style="font-size:18px;"
+                      aria-hidden="true">
+                    delete
+                </span>
+                <span class="d-none d-lg-inline">Delete</span>
+            </button>
+        <?php else: ?>
+            <form action="{$deleteUrl}" method="POST" class="d-inline">
                 <input type="hidden" name="_token" value="{$csrf}">
                 <input type="hidden" name="_method" value="DELETE">
-                <a href="#" class="dropdown-item d-flex align-items-center text-danger" onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this group name mapping?')) document.getElementById('{$formId}').submit();">
-                    <span class="material-icons menu-icon material-symbols-rounded me-2" style="font-size: 20px;">delete</span>
-                    Delete
-                </a>
-            </form>
-        </li>
-HTML;
-                }
 
-                $html .= <<<HTML
-    </ul>
-</div>
+                <button
+                    type="submit"
+                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                    aria-label="Delete group name mapping"
+                    onclick="return confirm('Are you sure you want to delete this group name mapping?');"
+                >
+                    <span class="material-icons material-symbols-rounded"
+                          style="font-size:18px;"
+                          aria-hidden="true">
+                        delete
+                    </span>
+                    <span class="d-none d-lg-inline">Delete</span>
+                </button>
+            </form>
+        <?php endif; ?>
+
+    </div>
+</td>
+
 HTML;
                 return $html;
             })

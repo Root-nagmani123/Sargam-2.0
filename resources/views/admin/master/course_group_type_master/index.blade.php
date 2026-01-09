@@ -56,10 +56,10 @@
                             <thead>
                                 <!-- start row -->
                                 <tr>
-                                    <th>S.No.</th>
-                                    <th>Type Name</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
+                                    <th class="col">S.No.</th>
+                                    <th class="col">Type Name</th>
+                                    <th class="col">Status</th>
+                                    <th class="col">Action</th>
                                 </tr>
                                 <!-- end row -->
                             </thead>
@@ -120,16 +120,21 @@
             var checkbox = $(this); // save reference
             var pk = checkbox.data('id');
             var active_inactive = checkbox.is(':checked') ? 1 : 0;
+            // Dynamic messages
+            var actionText = active_inactive ? 'activate' : 'deactivate';
+            var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+            var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
 
             Swal.fire({
                 title: 'Are you sure?',
-                text: "Are you sure? You want to deactivate this item?",
+                text: `Are you sure you want to ${actionText} this item?`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33',
+                confirmButtonColor: confirmBtnColor,
                 cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, deactivate',
+                confirmButtonText: confirmBtnText,
                 cancelButtonText: 'Cancel'
+
             }).then((result) => {
                 if (result.isConfirmed) {
                     // Set hidden input values if needed
@@ -204,15 +209,15 @@
     }); //endclose
 </script>
 <script>
-    document.getElementById('showAlert').addEventListener('click', function() {
-        Swal.fire({
-            title: '<strong>Add Course Group Type</strong>',
-            html: `
-        <form id="courseGroupTypeForm"
-              action="{{ route('master.course.group.type.store') }}"
-              method="POST">
+
+document.getElementById('showAlert').addEventListener('click', function () {
+
+    Swal.fire({
+        title: '<strong><small>Add Course Group Type</small></strong>',
+        html: `
+        <form id="courseGroupTypeForm">
             <input type="hidden" name="_token" value="{{ csrf_token() }}">
-            
+
             <div class="row mb-1 align-items-center">
                 <label class="col-auto col-form-label fw-semibold">
                     Type Name <span class="text-danger">*</span>
@@ -229,53 +234,92 @@
             </div>
         </form>
         `,
-            showCancelButton: true,
-            confirmButtonText: 'Submit',
-            focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Submit',
+        focusConfirm: false,
 
-            preConfirm: () => {
-                const typeNameInput = Swal.getPopup().querySelector('#type_name');
-                const errorMsg = Swal.getPopup().querySelector('#type_name_error');
+        preConfirm: () => {
+            const typeNameInput = Swal.getPopup().querySelector('#type_name');
+            const errorMsg = Swal.getPopup().querySelector('#type_name_error');
 
-                // reset state
-                typeNameInput.classList.remove('is-invalid');
-                errorMsg.classList.add('d-none');
+            typeNameInput.classList.remove('is-invalid');
+            errorMsg.classList.add('d-none');
 
-                if (!typeNameInput.value.trim()) {
-                    typeNameInput.classList.add('is-invalid');
-                    errorMsg.classList.remove('d-none');
-                    return false;
+            if (!typeNameInput.value.trim()) {
+                typeNameInput.classList.add('is-invalid');
+                errorMsg.classList.remove('d-none');
+                return false;
+            }
+
+            return {
+                type_name: typeNameInput.value.trim()
+            };
+        }
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            fetch(`{{ route('master.course.group.type.store') }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(result.value)
+            })
+            .then(response => response.json())
+            .then(data => {
+             
+                if (data.status === true) {
+                  
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: data.message
+                    });
+                    $('#coursegrouptype').DataTable().ajax.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: data.message
+                    });
                 }
 
-                return true;
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('courseGroupTypeForm').submit();
-            }
-        });
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Server Error',
+                    text: 'Something went wrong!'
+                });
+            });
+        }
     });
+});
+
+
 </script>
 
 <!-- EDIT FORM  -->
 
 <script>
-    $(document).on('click', '.edit-btn', function() {
+  
+$(document).on('click', '.edit-btn', function () {
 
-        let pk = $(this).data('id');
-        //alert(pk);
-        let typeName = $(this).data('type-name');
+    let pk = $(this).data('id');          // encrypted id
+    let typeName = $(this).data('type-name');
 
-        let url = "{{ route('master.course.group.type.updatestatus') }}";
+    let url = "{{ route('master.course.group.type.store') }}";
 
-        Swal.fire({
-            title: '<strong>Edit Course Group Type</strong>',
-            html: `
-            <form id="courseGroupTypeEditForm"
-                  action="${url}"
-              method="POST">
+    Swal.fire({
+        title: '<strong><small>Edit Course Group Type</small></strong>',
+        html: `
+        <form id="courseGroupTypeEditForm">
             <input type="hidden" name="_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="pk" value="${pk}">
+            <input type="hidden" name="id" value="${pk}">
+
             <div class="row mb-1 align-items-center">
                 <label class="col-auto col-form-label fw-semibold">
                     Type Name <span class="text-danger">*</span>
@@ -293,30 +337,71 @@
             </div>
         </form>
         `,
-            showCancelButton: true,
-            confirmButtonText: 'Update',
-            focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Update',
+        focusConfirm: false,
 
-            preConfirm: () => {
-                const typeNameInput = Swal.getPopup().querySelector('#type_name');
-                const errorMsg = Swal.getPopup().querySelector('#type_name_error');
+        preConfirm: () => {
+            const typeNameInput = Swal.getPopup().querySelector('#type_name');
+            const errorMsg = Swal.getPopup().querySelector('#type_name_error');
 
-                typeNameInput.classList.remove('is-invalid');
-                errorMsg.classList.add('d-none');
+            typeNameInput.classList.remove('is-invalid');
+            errorMsg.classList.add('d-none');
 
-                if (!typeNameInput.value.trim()) {
-                    typeNameInput.classList.add('is-invalid');
-                    errorMsg.classList.remove('d-none');
-                    return false;
+            if (!typeNameInput.value.trim()) {
+                typeNameInput.classList.add('is-invalid');
+                errorMsg.classList.remove('d-none');
+                return false;
+            }
+
+            return {
+                id: pk,
+                type_name: typeNameInput.value.trim()
+            };
+        }
+    }).then((result) => {
+
+        if (result.isConfirmed) {
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    id: result.value.id,
+                    type_name: result.value.type_name
+                },
+                success: function (response) {
+
+                    if (response.status === true) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated',
+                            text: response.message
+                        });
+
+                        // 🔁 Reload DataTable if exists
+                         $('#coursegrouptype').DataTable().ajax.reload();
+
+                    } else {
+                        Swal.fire('Error', response.message, 'error');
+                    }
+                },
+                error: function (xhr) {
+
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        Swal.fire('Validation Error', errors.type_name[0], 'error');
+                    } else {
+                        Swal.fire('Error', 'Something went wrong!', 'error');
+                    }
                 }
-                return true;
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                document.getElementById('courseGroupTypeEditForm').submit();
-            }
-        });
+            });
+        }
     });
+});
+
+
 </script>
 @if(session('success'))
 <script>

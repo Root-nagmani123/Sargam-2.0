@@ -33,7 +33,7 @@ class StudentAttendanceListDataTable extends DataTable
             ->filterColumn('student_code', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('generated_OT_code', 'like', "%{$keyword}%")))
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
-
+ 
                 if (!empty($searchValue)) {
                     $query->where(function ($subQuery) use ($searchValue) {
                         $subQuery->whereHas('studentsMaster', function ($studentQuery) use ($searchValue) {
@@ -99,11 +99,11 @@ class StudentAttendanceListDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('OT Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('student_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('student_name')->title('OT/Participant Name')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('student_code')->title('OT/Participant Code')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('attendance_status')->title('Attendance')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_duty')->title('MDO Duty')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('escort_duty')->title('Escort Duty')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('escort_duty')->title('Escort/Moderator Duty')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('medical_exempt')->title('Medical Exemption')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('other_exempt')->title('Other Exemption')->addClass('text-center')->orderable(false)->searchable(false),
         ];
@@ -111,6 +111,41 @@ class StudentAttendanceListDataTable extends DataTable
 
     protected function renderRadio($row, int $value, string $label, string $labelClass = 'text-dark'): string
     {
+        if ($value === 5) {
+
+    $studentId = $row->studentsMaster->pk;
+    $timetable = Timetable::select('START_DATE', 'class_session')
+        ->where('pk', $this->timetable_pk)
+        ->first();
+
+    if ($timetable) {
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+        $escortType = $mdoDutyTypes['escort'] ?? null;
+
+        if ($escortType) {
+            $escortDuty = MDOEscotDutyMap::where([
+                ['course_master_pk', '=', $this->course_pk],
+                ['mdo_duty_type_master_pk', '=', $escortType],
+                ['selected_student_list', '=', $studentId]
+            ])
+            ->whereDate('mdo_date', '=', $timetable->START_DATE)
+            ->first();
+
+            if ($escortDuty && $this->checkTimeOverlap(
+                $timetable->class_session,
+                $escortDuty->Time_from,
+                $escortDuty->Time_to
+            )) {
+                // Escort laga hua hai → sirf text dikhao
+                return "<span class='text-info fw-bold'>Escort/Moderator</span>";
+            }
+        }
+    }
+
+    // Escort nahi hai → N/A
+    return "<span class='text-muted'>N/A</span>";
+}
+
         $studentId = $row->studentsMaster->pk;
         $courseStudent = CourseStudentAttendance::where([
             ['Student_master_pk', '=', $studentId],
@@ -211,10 +246,13 @@ class StudentAttendanceListDataTable extends DataTable
 
         // Determine default checked value
         $defaultCheckedValue = null;
-        
+        // print_r($courseStudent);die;
         // If there's an existing attendance record, use its status
         if ($courseStudent) {
             $defaultCheckedValue = $courseStudent->status;
+            if( $defaultCheckedValue == 5 ){
+                $defaultCheckedValue = 1;
+            }
         } else {
             // Check if student has any exemptions or duties
             $hasExemptionOrDuty = $this->hasExemptionOrDuty($studentId);
@@ -224,6 +262,8 @@ class StudentAttendanceListDataTable extends DataTable
                 $defaultCheckedValue = 1; // Present
             }
         }
+   
+
 
         foreach ($options as $value => $label) {
             $labelClass = match ($value) {
@@ -272,17 +312,17 @@ class StudentAttendanceListDataTable extends DataTable
         }
 
         // Check for Escort duty (value 5)
-        if (!empty($mdoDutyTypes['escort'])) {
-            $escortDuty = MDOEscotDutyMap::where([
-                ['course_master_pk', '=', $this->course_pk],
-                ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
-                ['selected_student_list', '=', $studentId]
-            ])->whereDate('mdo_date', '=', $timetableDate)->first();
+        // if (!empty($mdoDutyTypes['escort'])) {
+        //     $escortDuty = MDOEscotDutyMap::where([
+        //         ['course_master_pk', '=', $this->course_pk],
+        //         ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['escort']],
+        //         ['selected_student_list', '=', $studentId]
+        //     ])->whereDate('mdo_date', '=', $timetableDate)->first();
 
-            if ($escortDuty && $this->checkTimeOverlap($timetable->class_session, $escortDuty->Time_from, $escortDuty->Time_to)) {
-                return true;
-            }
-        }
+        //     if ($escortDuty && $this->checkTimeOverlap($timetable->class_session, $escortDuty->Time_from, $escortDuty->Time_to)) {
+        //         return true;
+        //     }
+        // }
 
         // Check for Other Exemption (value 7)
         if (!empty($mdoDutyTypes['other'])) {
@@ -451,18 +491,30 @@ class StudentAttendanceListDataTable extends DataTable
         }
 
         try {
-            // Try to parse the time string
-            $timestamp = strtotime($time);
-            if ($timestamp === false) {
-                return false;
+            // First, try to parse as "H:i" or "H:i:s" format directly
+            if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', trim($time), $matches)) {
+                $hours = (int)$matches[1];
+                $minutes = (int)$matches[2];
+                $seconds = isset($matches[3]) ? (int)$matches[3] : 0;
+                
+                // Validate ranges
+                if ($hours >= 0 && $hours <= 23 && $minutes >= 0 && $minutes <= 59 && $seconds >= 0 && $seconds <= 59) {
+                    return ($hours * 3600) + ($minutes * 60) + $seconds;
+                }
             }
+            
+            // Fallback: Try to parse with strtotime (for formats like "10:00 AM")
+            $timestamp = strtotime($time);
+            if ($timestamp !== false) {
+                // Extract hours, minutes, seconds
+                $hours = (int)date('H', $timestamp);
+                $minutes = (int)date('i', $timestamp);
+                $seconds = (int)date('s', $timestamp);
 
-            // Extract hours, minutes, seconds
-            $hours = (int)date('H', $timestamp);
-            $minutes = (int)date('i', $timestamp);
-            $seconds = (int)date('s', $timestamp);
-
-            return ($hours * 3600) + ($minutes * 60) + $seconds;
+                return ($hours * 3600) + ($minutes * 60) + $seconds;
+            }
+            
+            return false;
         } catch (\Exception $e) {
             return false;
         }

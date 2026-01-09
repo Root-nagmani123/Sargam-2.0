@@ -31,82 +31,85 @@
                         </div>
                     </div>
                     <hr>
-                    <table class="table">
+                    <div class="table-responsive">
+                        <table class="table w-100 text-nowrap">
 
-                        <thead>
-                            <!-- start row -->
-                            <tr>
-                                <th>S.No</th>
-                                <th>City Name</th>
-                                <th>District</th>
-                                <th>State</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                            <!-- end row -->
-                        </thead>
-                        <tbody>
-                            @foreach($cities as $key => $city)
-                            <tr>
-                                <td>{{ $cities->firstItem() + $key }}</td>
-                                <td>{{ $city->city_name }}</td>
-                                <td>{{ optional($city->state)->state_name ?? 'N/A' }}</td>
-                                <td>{{ $city->district?->district_name ?? 'N/A' }}</td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="city_master" data-column="active_inactive"
-                                            data-id="{{ $city->pk }}"
-                                            {{ $city->active_inactive == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                                <td class="text-start">
-                                    <div class="dropdown">
-                                        <a href="javascript:void(0)" id="actionMenu{{ $city->pk }}"
-                                            data-bs-toggle="dropdown" aria-expanded="false">
-                                            <span class="material-symbols-rounded fs-5">more_horiz</span>
-                                        </a>
+                            <thead>
+                                <!-- start row -->
+                                <tr>
+                                    <th>S.No</th>
+                                    <th>City Name</th>
+                                    <th>District</th>
+                                    <th>State</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                                <!-- end row -->
+                            </thead>
+                            <tbody>
+                                @foreach($cities as $key => $city)
+                                <tr>
+                                    <td>{{ $cities->firstItem() + $key }}</td>
+                                    <td>{{ $city->city_name }}</td>
+                                    <td>{{ optional($city->state)->state_name ?? 'N/A' }}</td>
+                                    <td>{{ $city->district?->district_name ?? 'N/A' }}</td>
+                                    <td>
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                data-table="city_master" data-column="active_inactive"
+                                                data-id="{{ $city->pk }}"
+                                                {{ $city->active_inactive == 1 ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
+                                    <td class="text-start">
+                                        <div class="dropdown">
+                                            <a href="javascript:void(0)" id="actionMenu{{ $city->pk }}"
+                                                data-bs-toggle="dropdown" aria-expanded="false">
+                                                <span class="material-symbols-rounded fs-5">more_horiz</span>
+                                            </a>
 
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm"
-                                            aria-labelledby="actionMenu{{ $city->pk }}">
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm"
+                                                aria-labelledby="actionMenu{{ $city->pk }}">
 
-                                            <!-- Edit -->
-                                            <li>
-                                                <a href="{{ route('master.city.edit', $city->pk) }}"
-                                                    class="dropdown-item d-flex align-items-center gap-2">
-                                                    <span class="material-symbols-rounded text-primary fs-6">edit</span>
-                                                    Edit
-                                                </a>
-                                            </li>
+                                                <!-- Edit -->
+                                                <li>
+                                                    <a href="{{ route('master.city.edit', $city->pk) }}"
+                                                        class="dropdown-item d-flex align-items-center gap-2">
+                                                        <span
+                                                            class="material-symbols-rounded text-primary fs-6">edit</span>
+                                                        Edit
+                                                    </a>
+                                                </li>
 
-                                            <!-- Delete -->
-                                            <li>
-                                                <form action="{{ route('master.city.delete', $city->pk) }}"
-                                                    method="POST" class="d-inline">
-                                                    @csrf
-                                                    @method('DELETE')
+                                                <!-- Delete -->
+                                                <li>
+                                                    <form action="{{ route('master.city.delete', $city->pk) }}"
+                                                        method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
 
-                                                    <button type="button"
-                                                        class="dropdown-item d-flex align-items-center gap-2 text-danger"
-                                                        onclick="event.preventDefault();
+                                                        <button type="button"
+                                                            class="dropdown-item d-flex align-items-center gap-2 text-danger"
+                                                            onclick="event.preventDefault();
                             if({{ $city->active_inactive }} == 1) return;
                             if(confirm('Are you sure you want to delete this?')) {
                                 this.closest('form').submit();
                             }" {{ $city->active_inactive == 1 ? 'disabled' : '' }}>
-                                                        <span class="material-symbols-rounded fs-6">delete</span>
-                                                        Delete
-                                                    </button>
-                                                </form>
-                                            </li>
+                                                            <span class="material-symbols-rounded fs-6">delete</span>
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                </li>
 
-                                        </ul>
-                                    </div>
-                                </td>
+                                            </ul>
+                                        </div>
+                                    </td>
 
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                     <!-- Pagination -->
                     <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
 

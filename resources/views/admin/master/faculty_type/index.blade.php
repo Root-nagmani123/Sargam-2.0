@@ -30,9 +30,9 @@
                         </div>
                     </div>
                     <hr>
-                    <div>
-                        <table class="table text-nowrap w-100" style="border-radius: 10px; overflow: hidden;">
-                            <thead style="background-color: #af2910;">
+                    <div class="table-responsive">
+                        <table class="table text-nowrap w-100">
+                            <thead>
                                 <!-- start row -->
                                 <tr>
                                     <th>S.No.</th>
@@ -61,51 +61,47 @@
                                     <td class="text-nowrap">
 
                                         <!-- 3-Dots Dropdown -->
-                                        <div class="dropdown">
+                                        <div class="d-inline-flex align-items-center gap-2" role="group"
+                                            aria-label="Faculty type actions">
 
-                                            <a href="javascript:void(0)" type="button"
-                                                id="actionMenu{{ $facultyType->pk }}" data-bs-toggle="dropdown"
-                                                aria-expanded="false" aria-label="Actions">
-                                                <i class="material-icons material-symbols-rounded me-2"
-                                                    style="font-size: 20px;">more_horiz</i>
+                                            <!-- Edit -->
+                                            <a href="{{ route('master.faculty.type.master.edit', ['id' => encrypt($facultyType->pk)]) }}"
+                                                class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                                                aria-label="Edit faculty type">
+                                                <i class="material-icons material-symbols-rounded"
+                                                    style="font-size:18px;" aria-hidden="true">edit</i>
+                                                <span class="d-none d-md-inline">Edit</span>
                                             </a>
 
-                                            <ul class="dropdown-menu dropdown-menu-end"
-                                                aria-labelledby="actionMenu{{ $facultyType->pk }}"
-                                                style="min-width: 150px;">
+                                            <!-- Delete -->
+                                            @if($facultyType->active_inactive == 1)
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                                disabled aria-disabled="true" title="Cannot delete active Faculty Type">
+                                                <i class="material-icons material-symbols-rounded"
+                                                    style="font-size:18px;" aria-hidden="true">delete</i>
+                                                <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                            @else
+                                            <form
+                                                action="{{ route('master.faculty.type.master.delete', ['id' => encrypt($facultyType->pk)]) }}"
+                                                method="POST" class="d-inline"
+                                                onsubmit="return confirm('Are you sure you want to delete this record?');">
+                                                @csrf
+                                                @method('DELETE')
 
-                                                <!-- Edit -->
-                                                <li>
-                                                    <a class="dropdown-item d-flex align-items-center gap-2"
-                                                        href="{{ route('master.faculty.type.master.edit', ['id' => encrypt($facultyType->pk)]) }}">
-                                                        <i class="material-icons material-symbols-rounded me-2"
-                                                            style="font-size: 20px;">edit</i> Edit
-                                                    </a>
-                                                </li>
-
-                                                <!-- Delete -->
-                                                <li>
-                                                    <form
-                                                        action="{{ route('master.faculty.type.master.delete', ['id' => encrypt($facultyType->pk)]) }}"
-                                                        method="POST"
-                                                        onsubmit="return confirm('Are you sure you want to delete this record?');">
-
-                                                        @csrf
-                                                        @method('DELETE')
-
-                                                        <button type="submit"
-                                                            class="dropdown-item text-danger d-flex align-items-center gap-2"
-                                                            {{ $facultyType->active_inactive == 1 ? 'disabled' : '' }}
-                                                            title="{{ $facultyType->active_inactive == 1 ? 'Cannot delete active Faculty Type' : 'Delete Faculty Type' }}">
-                                                            <i class="material-icons material-symbols-rounded me-2"
-                                                                style="font-size: 20px;">delete</i> Delete
-                                                        </button>
-                                                    </form>
-                                                </li>
-
-                                            </ul>
+                                                <button type="submit"
+                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                                    aria-label="Delete faculty type" title="Delete Faculty Type">
+                                                    <i class="material-icons material-symbols-rounded"
+                                                        style="font-size:18px;" aria-hidden="true">delete</i>
+                                                    <span class="d-none d-md-inline">Delete</span>
+                                                </button>
+                                            </form>
+                                            @endif
 
                                         </div>
+
 
                                     </td>
 

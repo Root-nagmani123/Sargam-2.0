@@ -356,6 +356,25 @@
                 <h4 class="mb-0 text-white" style="font-family:Inter;font-weight:700;">Session Feedbacks</h4>
             </div>
 
+            <!-- Date Filter -->
+            <div class="card-header bg-light border-bottom-0 px-4 py-3">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <label for="date-filter" class="form-label mb-0 fw-semibold">
+                            <i class="bi bi-calendar-event me-2"></i>Filter by Date:
+                        </label>
+                        <input type="date" class="form-control form-control-sm mt-2" id="date-filter" 
+                            style="max-width: 200px;">
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-date-filter" 
+                            style="display: none;">
+                            <i class="bi bi-x-circle me-1"></i>Clear Filter
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Tabs Navigation -->
             <div class="card-header bg-light border-bottom-0">
                 <ul class="nav nav-tabs nav-fill border-0" id="feedbackTabs" role="tablist">
@@ -430,7 +449,7 @@
                                             @php $pendingIndex = 0; @endphp
                                             @foreach ($pendingData as $feedback)
                                                 @if ($feedback->feedback_checkbox == 1)
-                                                    <tr class="text-center">
+                                                    <tr class="text-center" data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
                                                         <td class="text-center">{{ ++$pendingIndex }}</td>
                                                         <td>
                                                             {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
@@ -573,7 +592,7 @@
                                     @if ($submittedData->count() > 0)
                                         @php $submittedIndex = 0; @endphp
                                         @foreach ($submittedData as $feedback)
-                                            <tr class="text-center">
+                                            <tr class="text-center" data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
                                                 <td class="text-center">{{ ++$submittedIndex }}</td>
                                                 <td>
                                                     {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
@@ -784,6 +803,85 @@
                     window.location.hash = 'submitted';
                 } else if (tabId === 'pending-tab') {
                     window.location.hash = 'pending';
+                }
+            });
+
+            // Date Filter Functionality
+            $('#date-filter').on('change', function() {
+                const selectedDate = $(this).val();
+                filterByDate(selectedDate);
+                
+                // Show/hide clear button
+                if (selectedDate) {
+                    $('#clear-date-filter').show();
+                } else {
+                    $('#clear-date-filter').hide();
+                }
+            });
+
+            // Clear Date Filter
+            $('#clear-date-filter').on('click', function() {
+                $('#date-filter').val('');
+                filterByDate('');
+                $(this).hide();
+            });
+
+            // Function to filter rows by date
+            function filterByDate(selectedDate) {
+                // Get active tab
+                const activeTab = $('.tab-pane.active');
+                const tbody = activeTab.find('tbody');
+                
+                let visibleCount = 0;
+                const dataRows = tbody.find('tr[data-feedback-date]');
+                const emptyStateRow = tbody.find('tr:not([data-feedback-date])');
+                
+                if (selectedDate) {
+                    // Filter rows based on selected date
+                    dataRows.each(function() {
+                        const rowDate = $(this).attr('data-feedback-date');
+                        if (rowDate === selectedDate) {
+                            $(this).show();
+                            visibleCount++;
+                        } else {
+                            $(this).hide();
+                        }
+                    });
+                    
+                    // Hide empty state row if we have matching rows, show it if no matches
+                    if (visibleCount > 0) {
+                        emptyStateRow.hide();
+                    } else {
+                        emptyStateRow.show();
+                    }
+                } else {
+                    // Show all data rows
+                    dataRows.each(function() {
+                        $(this).show();
+                        visibleCount++;
+                    });
+                    
+                    // Show empty state only if there are no data rows at all
+                    if (dataRows.length === 0) {
+                        emptyStateRow.show();
+                    } else {
+                        emptyStateRow.hide();
+                    }
+                }
+                
+                // Update badge counts based on active tab
+                if (activeTab.attr('id') === 'pending-tab-pane') {
+                    $('#pending-count').text(visibleCount);
+                } else if (activeTab.attr('id') === 'submitted-tab-pane') {
+                    $('#submitted-count').text(visibleCount);
+                }
+            }
+
+            // Re-apply filter when tab changes
+            $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function() {
+                const selectedDate = $('#date-filter').val();
+                if (selectedDate) {
+                    filterByDate(selectedDate);
                 }
             });
         });

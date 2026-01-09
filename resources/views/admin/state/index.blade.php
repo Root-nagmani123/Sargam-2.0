@@ -32,7 +32,7 @@
                     <hr>
                     <div class="table-responsive">
 
-                        <table class="table">
+                        <table class="table w-100 text-nowrap">
                             <thead>
                                 <!-- start row -->
                                 <tr>
@@ -59,37 +59,47 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="dropdown">
-                                            <a href="javascript:void(0)"
-                                                id="actionMenu{{ $state->pk }}"
-                                                data-bs-toggle="dropdown" aria-expanded="false">
-                                                <span class="material-symbols-rounded fs-5">more_horiz</span>
-                                            </a>
+                                       <div class="d-inline-flex align-items-center gap-2"
+     role="group"
+     aria-label="State actions">
 
-                                            <ul class="dropdown-menu shadow-sm">
-                                                <!-- Edit -->
-                                                <li>
-                                                    <a href="{{ route('master.state.edit', $state->pk) }}"
-                                                        class="dropdown-item">
-                                                        <span class="material-symbols-rounded fs-5">edit</span> Edit
-                                                    </a>
-                                                </li>
+    <!-- Edit -->
+    <a href="{{ route('master.state.edit', $state->pk) }}"
+       class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+       aria-label="Edit state">
+        <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
+        <span class="d-none d-md-inline">Edit</span>
+    </a>
 
-                                                <!-- Delete -->
-                                                <li>
-                                                    <form action="{{ route('master.state.delete', $state->pk) }}"
-                                                        method="POST"
-                                                        onsubmit="return confirm('Are you sure you want to delete this?')">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button class="dropdown-item text-danger"
-                                                            {{ $state->active_inactive == 1 ? 'disabled' : '' }}>
-                                                            <span class="material-symbols-rounded fs-5">delete</span> Delete
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                            </ul>
-                                        </div>
+    <!-- Delete -->
+    @if($state->active_inactive == 1)
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                disabled
+                aria-disabled="true"
+                title="Cannot delete active state">
+            <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
+            <span class="d-none d-md-inline">Delete</span>
+        </button>
+    @else
+        <form action="{{ route('master.state.delete', $state->pk) }}"
+              method="POST"
+              class="d-inline"
+              onsubmit="return confirm('Are you sure you want to delete this?');">
+            @csrf
+            @method('DELETE')
+
+            <button type="submit"
+                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                    aria-label="Delete state">
+                <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>
+        </form>
+    @endif
+
+</div>
+
                                     </td>
 
                                 </tr>

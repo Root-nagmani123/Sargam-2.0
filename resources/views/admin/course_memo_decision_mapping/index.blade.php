@@ -49,45 +49,53 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <div class="dropdown">
-                                            <a href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false"
-                                                style="border-radius: 50%; width: 36px; height: 36px; display: flex; justify-content: center; align-items: center;">
-                                                <i class="material-icons material-symbols-rounded"
-                                                    style="font-size: 22px;">more_horiz</i>
-                                            </a>
+                                        <div class="d-inline-flex align-items-center gap-2"
+     role="group"
+     aria-label="Memo decision actions">
 
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+    <!-- Edit -->
+    <a href="{{ route('course.memo.decision.edit', ['id' => encrypt($mapping->pk)]) }}"
+       class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1"
+       aria-label="Edit memo decision">
+        <i class="material-icons material-symbols-rounded"
+           style="font-size:18px;"
+           aria-hidden="true">edit</i>
+        <span class="d-none d-md-inline">Edit</span>
+    </a>
 
-                                                <!-- Edit -->
-                                                <li>
-                                                    <a class="dropdown-item d-flex align-items-center"
-                                                        href="{{ route('course.memo.decision.edit', ['id' => encrypt($mapping->pk)]) }}">
-                                                        <i class="material-icons material-symbols-rounded text-warning me-2"
-                                                            style="font-size: 20px;">edit</i>
-                                                        Edit
-                                                    </a>
-                                                </li>
+    <!-- Delete -->
+    @if($mapping->active_inactive == 1)
+        <button type="button"
+                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                disabled
+                aria-disabled="true"
+                title="Cannot delete active memo decision">
+            <i class="material-icons material-symbols-rounded"
+               style="font-size:18px;"
+               aria-hidden="true">delete</i>
+            <span class="d-none d-md-inline">Delete</span>
+        </button>
+    @else
+        <form action="{{ route('course.memo.decision.delete', ['id' => encrypt($mapping->pk)]) }}"
+              method="POST"
+              class="d-inline">
+            @csrf
+            @method('DELETE')
 
-                                                <!-- Delete -->
-                                                <li>
-                                                    <form
-                                                        action="{{ route('course.memo.decision.delete', ['id' => encrypt($mapping->pk)]) }}"
-                                                        method="POST" class="d-inline w-100">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <a class="dropdown-item d-flex align-items-center text-danger"
-                                                            href="javascript:void(0)"
-                                                            onclick="event.preventDefault(); if(confirm('Are you sure you want to delete this memo type?')) { this.closest('form').submit(); }"
-                                                            {{ $mapping->active_inactive == 1 ? 'disabled' : '' }}>
-                                                            <i class="material-icons material-symbols-rounded me-2"
-                                                                style="font-size: 20px;">delete</i>
-                                                            Delete
-                                                        </a>
-                                                    </form>
-                                                </li>
+            <button type="submit"
+                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                    aria-label="Delete memo decision"
+                    onclick="return confirm('Are you sure you want to delete this memo type?');">
+                <i class="material-icons material-symbols-rounded"
+                   style="font-size:18px;"
+                   aria-hidden="true">delete</i>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>
+        </form>
+    @endif
 
-                                            </ul>
-                                        </div>
+</div>
+
                                     </td>
 
 

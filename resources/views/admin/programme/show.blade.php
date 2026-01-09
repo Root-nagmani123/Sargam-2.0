@@ -1,67 +1,6 @@
-<!DOCTYPE html>
-<html lang="en" dir="ltr">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Course details for {{ $course->course_name }} - Lal Bahadur Shastri National Academy of Administration">
-    <title>{{ $course->course_name }} - Course Details | LBSNAA</title>
-    <!-- Favicon -->
-    <link rel="shortcut icon" type="image/ico" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    
-    <!-- GIGW Compliance: Skip Navigation for Accessibility -->
-    <style>
-    .skip-nav {
-        position: absolute;
-        top: -40px;
-        left: 0;
-        background: #004a93;
-        color: white;
-        padding: 8px;
-        z-index: 9999;
-        text-decoration: none;
-    }
-    .skip-nav:focus {
-        top: 0;
-    }
-    </style>
-</head>
-
-<body class="bg-light" style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;">
-    
-    <!-- Skip Navigation for Accessibility (GIGW Compliance) -->
-    <a href="#main-content" class="skip-nav">Skip to main content</a>
-
-    <!-- Government Header with Accessibility -->
-    <header class="bg-white border-bottom border-3 border-primary" role="banner">
-        <div class="container-fluid px-4">
-            <div class="row align-items-center py-3">
-                <div class="col-md-6">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="bg-primary rounded-3 p-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="white" class="bi bi-building" viewBox="0 0 16 16">
-                                <path d="M4 2.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3 0a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1ZM4 5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM7.5 5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1ZM4.5 8a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Zm2.5.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1Zm3.5-.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5h-1Z"/>
-                                <path d="M2 1a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V1Zm11 0H3v14h3v-2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V15h3V1Z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <h1 class="h4 mb-1 fw-bold text-primary">Lal Bahadur Shastri National Academy of Administration</h1>
-                            <p class="mb-0 text-muted small">Government of India</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <span class="badge bg-secondary">Education Portal</span>
-                </div>
-            </div>
-        </div>
-    </header>
-
+@extends('admin.layouts.timetable')
+@section('title', 'Course Details')
+@section('content')
     <main class="container-fluid px-4 py-4" id="main-content" role="main">
         <!-- Action Bar -->
         <div class="no-print mb-4">
@@ -188,10 +127,16 @@
                                         <span class="text-muted">Total Faculty</span>
                                         <span class="badge bg-info rounded-pill">{{ count($assistantCoordinatorsData) + 1 }}</span>
                                     </div>
-                                    @if($course->start_date)
+                                    @if($course->start_year)
                                     <div class="list-group-item d-flex justify-content-between align-items-center px-0">
                                         <span class="text-muted">Start Date</span>
-                                        <span class="fw-semibold">{{ \Carbon\Carbon::parse($course->start_date)->format('d M Y') }}</span>
+                                        <span class="fw-semibold">{{ \Carbon\Carbon::parse($course->start_year)->format('d M Y') }}</span>
+                                    </div>
+                                    @endif
+                                    @if($course->end_date)
+                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                        <span class="text-muted">End Date</span>
+                                        <span class="fw-semibold">{{ \Carbon\Carbon::parse($course->end_date)->format('d M Y') }}</span>
                                     </div>
                                     @endif
                                 </div>
@@ -406,9 +351,6 @@
             </p>
         </footer>
     </main>
-
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Enhanced JavaScript for Better UX -->
     <script>
@@ -582,5 +524,4 @@
             }
         }
     </style>
-</body>
-</html>
+@endsection

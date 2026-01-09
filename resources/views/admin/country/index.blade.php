@@ -24,8 +24,7 @@
                             </a>
 
                             <!-- Export Button -->
-                            <a href=""
-                                class="px-3 py-2">
+                            <a href="" class="px-3 py-2">
                                 <i class="material-icons menu-icon material-symbols-rounded"
                                     style="font-size: 20px; vertical-align: middle;">search</i>
                             </a>
@@ -36,7 +35,7 @@
             </div>
             <hr>
             <div class="table-responsive">
-                <table class="table">
+                <table class="table w-100 text-nowrap">
                     <thead>
                         <tr>
                             <th class="col">#</th>
@@ -62,47 +61,43 @@
                             </td>
                             <td class="text-center">
 
-                                <div class="dropdown">
-                                    <a href="javascript:void(0)"
-                                        id="actionMenu{{ $country->pk }}" data-bs-toggle="dropdown"
-                                        aria-expanded="false">
-                                        <span class="material-symbols-rounded fs-5">more_horiz</span>
+                                <div class="d-inline-flex align-items-center gap-2" role="group"
+                                    aria-label="Country actions">
+
+                                    <!-- Edit -->
+                                    <a href="{{ route('master.country.edit', $country->pk) }}"
+                                        class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                                        aria-label="Edit country">
+                                        <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
+                                        <span class="d-none d-md-inline">Edit</span>
                                     </a>
 
-                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm"
-                                        aria-labelledby="actionMenu{{ $country->pk }}">
+                                    <!-- Delete -->
+                                    @if($country->active_inactive == 1)
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+                                        disabled aria-disabled="true" title="Cannot delete active country">
+                                        <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
+                                        <span class="d-none d-md-inline">Delete</span>
+                                    </button>
+                                    @else
+                                    <form action="{{ route('master.country.delete', $country->pk) }}" method="POST"
+                                        class="d-inline"
+                                        onsubmit="return confirm('Are you sure you want to delete this?');">
+                                        @csrf
+                                        @method('DELETE')
 
-                                        <!-- Edit -->
-                                        <li>
-                                            <a href="{{ route('master.country.edit', $country->pk) }}"
-                                                class="dropdown-item d-flex align-items-center gap-2">
-                                                <span class="material-symbols-rounded text-primary fs-6">edit</span>
-                                                Edit
-                                            </a>
-                                        </li>
+                                        <button type="submit"
+                                            class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                            aria-label="Delete country">
+                                            <span class="material-symbols-rounded fs-6" aria-hidden="true">delete</span>
+                                            <span class="d-none d-md-inline">Delete</span>
+                                        </button>
+                                    </form>
+                                    @endif
 
-                                        <!-- Delete -->
-                                        <li>
-                                            <form action="{{ route('master.country.delete', $country->pk) }}"
-                                                method="POST" class="d-inline">
-                                                @csrf
-                                                @method('DELETE')
-
-                                                <button type="button"
-                                                    class="dropdown-item d-flex align-items-center gap-2 text-danger"
-                                                    onclick="event.preventDefault();
-                                if({{ $country->active_inactive }} == 1) return;
-                                if(confirm('Are you sure you want to delete this?')) {
-                                    this.closest('form').submit();
-                                }" {{ $country->active_inactive == 1 ? 'disabled' : '' }}>
-                                                    <span class="material-symbols-rounded fs-6">delete</span>
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        </li>
-
-                                    </ul>
                                 </div>
+
 
                             </td>
 

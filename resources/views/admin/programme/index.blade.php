@@ -66,21 +66,61 @@
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
 
-                <div class="row">
-                    <div class="col-6">
-                        <h4>Course Master</h4>
-                    </div>
-                    <div class="col-6">
-                        <div class="d-flex justify-content-end align-items-center gap-2">
-                            <!-- Add Group Mapping -->
-                            <a href="{{route('programme.create')}}"
-                                class="btn btn-primary d-flex align-items-center">
-                                <iconify-icon icon="ep:circle-plus-filled" class="me-1"></iconify-icon>
-                                Add Course
-                            </a>
-                        </div>
-                    </div>
-                </div>
+               <section class="row align-items-center mb-4" role="region" aria-labelledby="courseMasterHeading">
+
+    <!-- Page Title -->
+    <div class="col-md-4 col-lg-3">
+        <h1 id="courseMasterHeading" class="h4 fw-bold mb-2 mb-md-0">
+            Course Master
+        </h1>
+    </div>
+
+    <!-- Controls -->
+    <div class="col-md-8 col-lg-9">
+        <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
+
+            <!-- Status Filter -->
+            <div class="btn-group shadow-sm rounded-pill"
+                 role="group"
+                 aria-label="Filter courses by status">
+                 
+                <button
+                    type="button"
+                    class="btn btn-success px-4 fw-semibold active"
+                    id="filterActive"
+                    aria-pressed="true"
+                    aria-current="true"
+                >
+                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                    <span>Active</span>
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary px-4 fw-semibold"
+                    id="filterArchive"
+                    aria-pressed="false"
+                >
+                    <i class="bi bi-archive me-1" aria-hidden="true"></i>
+                    <span>Archived</span>
+                </button>
+            </div>
+
+            <!-- Primary Action -->
+            <a
+                href="{{ route('programme.create') }}"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4"
+                aria-label="Add a new course"
+            >
+                <iconify-icon icon="ep:circle-plus-filled" aria-hidden="true"></iconify-icon>
+                <span class="fw-semibold">Add Course</span>
+            </a>
+
+        </div>
+    </div>
+
+</section>
+
                 <hr>
 
                 <!-- Filter Buttons -->
@@ -98,19 +138,6 @@
                         <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
                             <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
                         </button>
-                    </div>
-                    <div class="col-6 text-end">
-                        <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
-                            aria-label="Course Status Filter">
-                            <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
-                                aria-pressed="true">
-                                <i class="bi bi-check-circle me-1"></i> Active
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" id="filterArchive"
-                                aria-pressed="false">
-                                <i class="bi bi-archive me-1"></i> Archive
-                            </button>
-                        </div>
                     </div>
                 </div>
                 <div class="table-responsive">

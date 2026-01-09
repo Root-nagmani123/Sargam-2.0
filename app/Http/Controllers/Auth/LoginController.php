@@ -120,7 +120,8 @@ class LoginController extends Controller
                 }else{
                     return redirect()->back()->with('error', 'Invalid username or password.');
                 }
-            }elseif (Adldap::auth()->attempt($username, $password)) {
+            }elseif($user->user_category != 'S') {
+            // }elseif (Adldap::auth()->attempt($username, $password)) {
                 $user = User::where('user_name', $username)->first();
                 if ($user) {
 
