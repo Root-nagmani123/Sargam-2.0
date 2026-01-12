@@ -761,7 +761,11 @@ class CalendarController extends Controller
                 })
 
                 ->where('t.feedback_checkbox', 1)
-
+                ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->where('csa.Student_master_pk', '=', $student_pk)
+                        ->where('csa.status', 1);
+                })
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
                         ->from('topic_feedback as tf')
@@ -913,7 +917,11 @@ class CalendarController extends Controller
                 })
 
                 ->where('t.feedback_checkbox', 1)
-
+                ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->where('csa.Student_master_pk', '=', $student_pk)
+                        ->where('csa.status', 1);
+                })
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
                         ->from('topic_feedback as tf')
@@ -921,7 +929,7 @@ class CalendarController extends Controller
                         ->where('tf.student_master_pk', $student_pk)
                         ->where('tf.is_submitted', 1);
                 })
-                 ->whereRaw("
+                ->whereRaw("
                         TIMESTAMP(
                         t.END_DATE,
                         STR_TO_DATE(

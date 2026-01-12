@@ -1541,6 +1541,25 @@ if ($programs->isEmpty()) {
                         ->orWhereDate('end_date', '<', Carbon::today());
                 });
             }
+           if(hasrole('Internal Faculty') || hasrole('Guest Faculty')){
+            
+            $employeePk = Auth::user()->user_id;
+
+            $coordinatorCourseIds = DB::table('course_coordinator_master as ccm')
+                ->leftJoin('faculty_master as fm', 'ccm.Coordinator_name', '=', 'fm.pk')
+                ->leftJoin('faculty_master as fmd', 'ccm.Assistant_Coordinator_name', '=', 'fmd.pk')
+                ->where(function ($q) use ($employeePk) {
+                    $q->where('fm.employee_master_pk', $employeePk)
+                    ->orWhere('fmd.employee_master_pk', $employeePk);
+                })
+                ->select('ccm.courses_master_pk')
+                ->distinct()          // ✅ SAME COURSE EK BAAR HI AAYEGA
+                ->pluck('ccm.courses_master_pk')
+                ->toArray();
+            $programsQuery->whereIn('pk', $coordinatorCourseIds);
+           }
+
+
 
             $programs = $programsQuery->orderBy('course_name')
                 ->pluck('course_name', 'id');
@@ -1548,7 +1567,7 @@ if ($programs->isEmpty()) {
             if ($programs->isEmpty()) {
                 $programs = collect([]);
             }
-
+// print_r($programs->toArray());die;
             // Define faculty types
             $facultyTypes = [
                 '2' => 'Guest',
@@ -1656,6 +1675,10 @@ if ($programs->isEmpty()) {
                 $query->where('cm.active_inactive', 1)
                     ->whereDate('cm.end_date', '>=', Carbon::today());
             }
+            if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+                $facultyPk = (Auth::user()->user_id);
+                $query->where('fm.employee_master_pk', $facultyPk);
+            }
 
             // Order by
             $query->orderBy('tt.START_DATE', 'DESC')
@@ -1720,6 +1743,7 @@ if ($programs->isEmpty()) {
             $groupedData = $processedData->groupBy(function ($item) {
                 return $item['program_name'] . '|' . $item['faculty_name'] . '|' . $item['topic_name'];
             });
+            // print_r($groupedData);
 
             // Prepare response based on request type
             if ($request->ajax() || $request->wantsJson()) {
