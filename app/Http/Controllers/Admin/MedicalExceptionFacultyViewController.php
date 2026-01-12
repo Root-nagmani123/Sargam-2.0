@@ -17,36 +17,119 @@ use Illuminate\Pagination\LengthAwarePaginator;
 
 class MedicalExceptionFacultyViewController extends Controller
 {
+
     public function index(Request $request)
     {
-        // Check if user is logged in
-        if (!Auth::check()) {
-            return redirect()->route('login')->with('error', 'Please login to access this page.');
-        }
+        if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+            $employeeMasterPk = Auth::user()->user_id;
+        
+            $facultyPk = DB::table('faculty_master')
+                ->where('employee_master_pk', $employeeMasterPk)
+                ->value('pk');
+        
+            if (!$facultyPk) {
+                return view('courses.index');
+            }
+        
+            // Get filter parameters
+            $courseFilter = $request->get('course');
+            $dateFromFilter = $request->get('date_from');
+        
+            // Build query
+            $query = DB::table('student_medical_exemption as sme')
+                ->join('course_master as cm', 'cm.pk', '=', 'sme.course_master_pk')
+                ->join('student_master as sm', 'sm.pk', '=', 'sme.student_master_pk')
+                ->join('employee_master as em', 'em.pk', '=', 'sme.employee_master_pk')
+                ->leftJoin('exemption_medical_speciality_master as ems', 'ems.pk', '=', 'sme.exemption_medical_speciality_pk')
+                ->whereIn('sme.course_master_pk', function ($q) use ($facultyPk) {
+                    $q->select('course_coordinator_master.courses_master_pk')
+                      ->from('course_coordinator_master')
+                      ->where('course_coordinator_master.Coordinator_name', $facultyPk)
+                      ->orWhereRaw('FIND_IN_SET(?, course_coordinator_master.Assistant_Coordinator_name)', [$facultyPk]);
+                })
+                ->where('cm.active_inactive', 1)
+                ->where('sme.active_inactive', 1);
+        
+            // Apply course filter
+            if ($courseFilter) {
+                $query->where('sme.course_master_pk', $courseFilter);
+            }
+        
+            // Apply date filter
+            if ($dateFromFilter) {
+                $query->whereDate('sme.from_date', '>=', $dateFromFilter);
+            }
+        
+            // Select fields
+            $data = $query->select([
+                    'cm.course_name',
+                    DB::raw("CONCAT_WS(' ', em.first_name, em.middle_name, em.last_name) as faculty_name"),
+                    'sme.description as topics',
+                    'sm.display_name as student_name',
+                    'sme.from_date',
+                    'sme.to_date',
+                    'sm.generated_OT_code as ot_code',
+                    'sme.doc_upload as medical_document',
+                    'ems.speciality_name as application_type',
+                    DB::raw('COUNT(sme.pk) OVER (PARTITION BY sme.course_master_pk) as exemption_count'),
+                    'sme.created_date as submitted_on'
+                ])
+                ->orderBy('cm.course_name')
+                ->orderBy('sme.from_date', 'desc')
+                ->get();
+        
+            // Get courses for filter dropdown
+            $courses = DB::table('course_master as cm')
+                ->join('course_coordinator_master as ccm', 'ccm.courses_master_pk', '=', 'cm.pk')
+                ->where(function($q) use ($facultyPk) {
+                    $q->where('ccm.Coordinator_name', $facultyPk)
+                      ->orWhereRaw('FIND_IN_SET(?, ccm.Assistant_Coordinator_name)', [$facultyPk]);
+                })
+                ->where('cm.active_inactive', 1)
+                ->select('cm.pk', 'cm.course_name')
+                ->orderBy('cm.course_name')
+                ->get();
 
-        $user = Auth::user();
-        $currentDate = now()->format('Y-m-d');
-        
-        // Check if user_category = 'F' (Faculty)
-        $userCategory = DB::table('user_credentials')
-            ->where('pk', $user->pk)
-            ->value('user_category');
-        
-        if ($userCategory === 'F') {
-            // Faculty Login View - Show only their courses
-            return $this->facultyLoginView($request, $user, $currentDate);
-        }
-        
-        // Only show admin view if user is NOT a student (S) or faculty (F)
-        // This ensures students and faculty don't see other users' data
-        if ($userCategory === 'S') {
-            // Students should not access faculty view
+            return view('admin.medical_exception.faculty_view', compact('data', 'courses', 'courseFilter', 'dateFromFilter'));
+        }        
+        else {
             return redirect()->back()->with('error', 'Access denied. This page is for faculty members only.');
         }
-        
-        // Admin View - Show all faculties with filters (only for admin users)
-        return $this->adminView($request, $currentDate);
     }
+
+
+
+
+    // public function index(Request $request)
+    // {
+    //     // Check if user is logged in
+    //     if (!Auth::check()) {
+    //         return redirect()->route('login')->with('error', 'Please login to access this page.');
+    //     }
+
+    //     $user = Auth::user();
+    //     $currentDate = now()->format('Y-m-d');
+        
+    //     // Check if user_category = 'F' (Faculty)
+    //     $userCategory = DB::table('user_credentials')
+    //         ->where('pk', $user->pk)
+    //         ->value('user_category');
+        
+    //     if ($userCategory === 'F') {
+    //         // Faculty Login View - Show only their courses
+    //         return $this->facultyLoginView($request, $user, $currentDate);
+    //     }
+        
+    //     // Only show admin view if user is NOT a student (S) or faculty (F)
+    //     // This ensures students and faculty don't see other users' data
+    //     if ($userCategory === 'S') {
+    //         // Students should not access faculty view
+    //         return redirect()->back()->with('error', 'Access denied. This page is for faculty members only.');
+    //     }
+        
+    //     // Admin View - Show all faculties with filters (only for admin users)
+    //     return $this->adminView($request, $currentDate);
+    // }
     
     /**
      * Faculty Login View - Shows medical exceptions for courses where faculty is coordinator

@@ -144,12 +144,12 @@ hr {
 
             <hr class="mt-4">
 
-            <!-- Search Button -->
+            <!-- Reset Button -->
             <div class="text-end mb-4">
-                <button class="btn btn-primary px-4 py-2 shadow-sm d-inline-flex align-items-center"
-                    id="searchAttendance" type="button">
-                    <span class="material-symbols-rounded me-2 fs-6">search</span>
-                    Search
+                <button class="btn btn-secondary px-4 py-2 shadow-sm d-inline-flex align-items-center"
+                    id="resetAttendance" type="button">
+                    <span class="material-symbols-rounded me-2 fs-6">refresh</span>
+                    Reset
                 </button>
             </div>
 
