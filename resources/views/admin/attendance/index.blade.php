@@ -82,13 +82,13 @@ hr {
                 <div class="col-md-3">
                     <label for="from_date" class="form-label fw-semibold">From Date</label>
                     <input type="date" class="form-control shadow-sm" id="from_date" name="from_date"
-                        placeholder="From Date">
+                        placeholder="From Date" value="{{ date('Y-m-d') }}">
                 </div>
 
                 <!-- To Date -->
                 <div class="col-md-3">
                     <label for="to_date" class="form-label fw-semibold">To Date</label>
-                    <input type="date" class="form-control shadow-sm" id="to_date" name="to_date" placeholder="To Date">
+                    <input type="date" class="form-control shadow-sm" id="to_date" name="to_date" placeholder="To Date" value="{{ date('Y-m-d') }}">
                 </div>
 
                 <!-- Attendance Type -->
@@ -194,5 +194,29 @@ hr {
             </div>
         </div>
 
+        @endsection
 
+        @section('scripts')
+        <script>
+        $(document).ready(function() {
+            // Set today's date if not already set
+            let today = new Date().toISOString().split('T')[0];
+            if (!$('#from_date').val()) {
+                $('#from_date').val(today);
+            }
+            if (!$('#to_date').val()) {
+                $('#to_date').val(today);
+            }
+            
+            // Auto-trigger search on page load if dates are set
+            let fromDate = $('#from_date').val();
+            let toDate = $('#to_date').val();
+            if (fromDate && toDate) {
+                // Small delay to ensure all elements are initialized
+                setTimeout(function() {
+                    performAttendanceSearch();
+                }, 100);
+            }
+        });
+        </script>
         @endsection
