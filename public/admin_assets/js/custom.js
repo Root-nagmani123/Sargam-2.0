@@ -1585,7 +1585,8 @@ document.addEventListener('DOMContentLoaded', function () {
 // END MDO/Escort Exemption
 
 // Attendance
-$(document).on('click', '#searchAttendance', function () {
+// Reusable function to perform attendance search
+function performAttendanceSearch() {
     let programme = $('#programme').val();
     let fromDate = $('#from_date').val();
     let toDate = $('#to_date').val();
@@ -1599,8 +1600,6 @@ $(document).on('click', '#searchAttendance', function () {
     if(attendanceType === 'manual') {
         sessionTypeValue = $('#manual_session').val();
     }
-
-
 
     // || !viewType
     // Validate inputs
@@ -1638,6 +1637,67 @@ $(document).on('click', '#searchAttendance', function () {
             alert('Failed to fetch attendance data.');
         }
     });
+}
+
+// Auto-trigger search when date is selected
+$(document).on('change', '#from_date, #to_date', function () {
+    // Only trigger if at least one date is selected
+    let fromDate = $('#from_date').val();
+    let toDate = $('#to_date').val();
+    
+    if (fromDate || toDate) {
+        performAttendanceSearch();
+    }
+});
+
+// Reset attendance filter
+$(document).on('click', '#resetAttendance', function () {
+    // Clear date fields
+    $('#from_date').val('');
+    $('#to_date').val('');
+    
+    // Reset course dropdown - if select2 is initialized, use select2 method
+    if ($('#programme').hasClass('select2-hidden-accessible')) {
+        $('#programme').val('').trigger('change.select2');
+    } else {
+        $('#programme').val('');
+    }
+    
+    // Reset attendance type to 'full_day'
+    $('#full_day').prop('checked', true);
+    $('input[name="attendance_type"]').trigger('change');
+    
+    // Clear and hide session dropdowns
+    if ($('#session').hasClass('select2-hidden-accessible')) {
+        $('#session').val('').trigger('change.select2');
+    } else {
+        $('#session').val('');
+    }
+    
+    if ($('#manual_session').hasClass('select2-hidden-accessible')) {
+        $('#manual_session').val('').trigger('change.select2');
+    } else {
+        $('#manual_session').val('');
+    }
+    
+    // Hide session containers
+    $('#normal_session_container').hide();
+    $('#manual_session_container').hide();
+    
+    // Destroy DataTable if it exists
+    if ($.fn.DataTable.isDataTable('#attendanceTable')) {
+        attendanceTable.destroy();
+        attendanceTable = null;
+    }
+    
+    // Restore default message row - show all elements with this ID
+    $('#defaultMessageRow').show();
+    
+    // If no default message row exists, the table body should be empty after destroy
+    // DataTable destroy should restore original HTML, but ensure default message is visible
+    if ($('#attendanceTable tbody tr').length === 0) {
+        $('#defaultMessageRow').show();
+    }
 });
 
 let attendanceTable; // global variable
@@ -1786,8 +1846,6 @@ $(document).ready(function () {
             let floorStart = floorMasterPk.substring(0, 4);
             let prepend = $('.floor_room_name').html(buildingStart+'-'+floorStart);
         }
-
-
     });
 
     $('#room_type').change(function () {

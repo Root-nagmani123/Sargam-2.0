@@ -22,15 +22,18 @@
                     </div>
                 </div>
             </div>
-            <form class="row" role="search" aria-label="Medical exception filters">
+            <form class="row" role="search" aria-label="Medical exception filters" method="GET" action="{{ route('medical.exception.faculty.view') }}">
                 <div class="col-5">
                     <div class="mb-3">
                         <label for="filter_course" class="form-label">Course Name</label>
                         <select name="course" id="filter_course" class="form-control"
                             aria-describedby="filter_course_help">
                             <option value="">Select</option>
-                            <option value="A01">A01</option>
-                            <option value="A02">A02</option>
+                            @foreach($courses ?? [] as $course)
+                                <option value="{{ $course->pk }}" {{ (isset($courseFilter) && $courseFilter == $course->pk) ? 'selected' : '' }}>
+                                    {{ $course->course_name }}
+                                </option>
+                            @endforeach
                         </select>
                         <small id="filter_course_help" class="form-text text-muted">Choose the course to filter
                             records.</small>
@@ -38,13 +41,14 @@
                 </div>
                 <div class="col-5">
                     <div class="mb-3">
-                                <label for="filter_date_from" class="form-label">Date From</label>
-                                <input type="date" name="date_from" id="filter_date_from" class="form-control">
-                            </div>
+                        <label for="filter_date_from" class="form-label">Date From</label>
+                        <input type="date" name="date_from" id="filter_date_from" class="form-control" value="{{ $dateFromFilter ?? '' }}">
+                    </div>
                 </div>
                 <div class="col-2">
-                    <div class="mb-3 d-flex align-items-end">
-                        <button type="reset" class="btn btn-primary w-100">Reset</button>
+                    <div class="mb-3 d-flex align-items-end gap-2">
+                        <button type="submit" class="btn btn-success w-100">Filter</button>
+                        <a href="{{ route('medical.exception.faculty.view') }}" class="btn btn-primary w-100">Reset</a>
                     </div>
                 </div>
             </form>
@@ -71,24 +75,52 @@
                         </tr>
                     </thead>
                     <tbody id="facultyAccordion">
-                        <tr class="accordion-toggle" data-bs-toggle="collapse" data-bs-target="#row1"
-                            aria-expanded="false" aria-controls="row1" role="button" tabindex="0">
-                            <td>1</td>
-                            <td>
-                                IAS Professional Course Phase-I 2025 Batch
-                            </td>
-                            <td>Premkumar VR</td>
-                            <td>PRIYANKA DAS</td>
-                            <td>BAGADI GAUTHAM</td>
-                            <td>Phase-II 2024</td>
-                            <td>Premkumar VR</td>
-                            <td>PRIYANKA DAS</td>
-                            <td>BAGADI GAUTHAM</td>
-                            <td>Phase-II 2024</td>
-                            <td>20</td>
-                            <td>2</td>
-
-                        </tr>
+                        @forelse($data ?? [] as $index => $record)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $record->course_name ?? 'N/A' }}</td>
+                                <td>{{ $record->faculty_name ?? 'N/A' }}</td>
+                                <td>{{ $record->topics ?? 'N/A' }}</td>
+                                <td>{{ $record->student_name ?? 'N/A' }}</td>
+                                <td>
+                                    @if($record->from_date)
+                                        {{ \Carbon\Carbon::parse($record->from_date)->format('d-m-Y') }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>
+                                    @if($record->from_date)
+                                        {{ \Carbon\Carbon::parse($record->from_date)->format('h:i A') }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>{{ $record->ot_code ?? 'N/A' }}</td>
+                                <td>
+                                    @if($record->medical_document)
+                                        <a href="{{ asset('storage/' . $record->medical_document) }}" target="_blank" class="btn btn-sm btn-info">
+                                            <i class="material-icons" style="font-size: 18px;">visibility</i> View
+                                        </a>
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                                <td>{{ $record->application_type ?? 'N/A' }}</td>
+                                <td>{{ $record->exemption_count ?? 0 }}</td>
+                                <td>
+                                    @if($record->submitted_on)
+                                        {{ \Carbon\Carbon::parse($record->submitted_on)->format('d-m-Y h:i A') }}
+                                    @else
+                                        N/A
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="12" class="text-center">No medical exception records found.</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
