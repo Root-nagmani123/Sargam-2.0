@@ -1541,23 +1541,7 @@ if ($programs->isEmpty()) {
                         ->orWhereDate('end_date', '<', Carbon::today());
                 });
             }
-           if(hasrole('Internal Faculty') || hasrole('Guest Faculty')){
-            
-            $employeePk = Auth::user()->user_id;
-
-            $coordinatorCourseIds = DB::table('course_coordinator_master as ccm')
-                ->leftJoin('faculty_master as fm', 'ccm.Coordinator_name', '=', 'fm.pk')
-                ->leftJoin('faculty_master as fmd', 'ccm.Assistant_Coordinator_name', '=', 'fmd.pk')
-                ->where(function ($q) use ($employeePk) {
-                    $q->where('fm.employee_master_pk', $employeePk)
-                    ->orWhere('fmd.employee_master_pk', $employeePk);
-                })
-                ->select('ccm.courses_master_pk')
-                ->distinct()          // ✅ SAME COURSE EK BAAR HI AAYEGA
-                ->pluck('ccm.courses_master_pk')
-                ->toArray();
-            $programsQuery->whereIn('pk', $coordinatorCourseIds);
-           }
+           
 
 
 

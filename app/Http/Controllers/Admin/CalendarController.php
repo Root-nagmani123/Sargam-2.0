@@ -750,7 +750,13 @@ class CalendarController extends Controller
                     ) as session_end_time
                 ")
                 ])
-                ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+                ->join('faculty_master as f', function ($join) {
+                    $join->whereRaw(
+                        "JSON_CONTAINS(t.faculty_master, JSON_QUOTE(CAST(f.pk AS CHAR)))"
+                    );
+                })
+
+                // ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
 
@@ -764,7 +770,8 @@ class CalendarController extends Controller
                 ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
                     $join->on('csa.timetable_pk', '=', 't.pk')
                         ->where('csa.Student_master_pk', '=', $student_pk)
-                        ->where('csa.status', 1);
+                        // ->where('csa.status', 1);
+                        ->where('csa.status', '1');
                 })
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
@@ -795,6 +802,7 @@ class CalendarController extends Controller
                 ->orderBy('t.START_DATE', 'asc')
                 ->orderBy('session_end_time', 'asc')
                 ->get();
+                // print_r($pendingData);die;
 
             $submittedData = DB::table('topic_feedback as tf')
                 ->select([
