@@ -750,13 +750,32 @@ class CalendarController extends Controller
                     ) as session_end_time
                 ")
                 ])
-                ->join('faculty_master as f', function ($join) {
-                    $join->whereRaw(
-                        "JSON_CONTAINS(t.faculty_master, JSON_QUOTE(CAST(f.pk AS CHAR)))"
-                    );
-                })
+                // ->leftJoin('faculty_master as f', function ($join) {
+                //     $join->whereRaw(
+                //         "JSON_CONTAINS(t.faculty_master, JSON_QUOTE(CAST(f.pk AS CHAR)))"
+                //     );
+                // })
+//                 ->join('faculty_master as f', function ($join) {
+//     $join->whereRaw("
+//         (
+//             -- Case 1 & 2 & 3: faculty_master is JSON array
+//             JSON_VALID(t.faculty_master)
+//             AND JSON_CONTAINS(
+//                 t.faculty_master,
+//                 JSON_QUOTE(CAST(f.pk AS CHAR))
+//             )
+//         )
+//         OR
+//         (
+//             -- Case 1: faculty_master is single value (93)
+//             NOT JSON_VALID(t.faculty_master)
+//             AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
+//         )
+//     ");
+// })
 
-                // ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+
+                ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
 
