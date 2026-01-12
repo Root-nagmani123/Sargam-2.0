@@ -69,31 +69,51 @@ class AttendanceController extends Controller
                 ->select('class_session')
                 ->get();
 
-            if(!empty($data_course_id)){
-                $courseMasterPK = CalendarEvent::active()->select('course_master_pk')
-                                ->whereIn('course_master_pk',$data_course_id)
-                                ->groupBy('course_master_pk')->get()->toArray();
+            // Get courses based on attendance records for the logged-in user
+            $userId = auth()->user()->user_id;
+            
+            // Get distinct course IDs from attendance records for this user
+            $attendanceCourseIds = CourseStudentAttendance::where('Student_master_pk', $userId)
+                ->distinct()
+                ->pluck('course_master_pk')
+                ->toArray();
+
+            // If user has attendance records, filter courses by those attendance records
+            if (!empty($attendanceCourseIds)) {
+                // Get active courses that have attendance records for this user
+                $courseMasters = CourseMaster::whereIn('course_master.pk', $attendanceCourseIds)
+                    ->where('course_master.active_inactive', 1)
+                    ->select('course_master.course_name', 'course_master.pk')
+                    ->orderBy('course_master.course_name')
+                    ->get()
+                    ->toArray();
+            } else {
+                // Fallback to original logic if no attendance records found
+                // This handles Faculty/Admin users or users without attendance records
+                if(!empty($data_course_id)){
+                    $courseMasterPK = CalendarEvent::active()->select('course_master_pk')
+                                    ->whereIn('course_master_pk',$data_course_id)
+                                    ->groupBy('course_master_pk')->get()->toArray();
+                }
+                else{
+                    $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
+                }
+                $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
+                            ->select('course_master.course_name', 'course_master.pk');
+
+                        if (hasRole('Student-OT')) {
+                            $courseMasters = $courseMasters->join(
+                                'student_master_course__map',
+                                'student_master_course__map.course_master_pk',
+                                '=',
+                                'course_master.pk'
+                            )
+                            ->where('student_master_course__map.student_master_pk', $userId);
+                        }
+                        $courseMasters->where('course_master.active_inactive', 1);
+
+                        $courseMasters = $courseMasters->orderBy('course_master.course_name')->get()->toArray();
             }
-            else{
-                $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
-            }
-            $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
-                        ->select('course_master.course_name', 'course_master.pk');
-
-                    if (hasRole('Student-OT')) {
-
-                        $courseMasters = $courseMasters->join(
-                            'student_master_course__map',
-                            'student_master_course__map.course_master_pk',
-                            '=',
-                            'course_master.pk'
-                        )
-                        ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
-                    }
-                    $courseMasters->where('course_master.active_inactive', 1);
-
-
-                    $courseMasters = $courseMasters->get()->toArray();
 
 
             return view('admin.attendance.index', compact('courseMasters', 'sessions', 'maunalSessions'));
