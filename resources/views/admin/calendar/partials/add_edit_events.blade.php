@@ -537,7 +537,7 @@
                                 </label>
                                 <select name="internal_faculty[]" id="internal_faculty" class="form-control" required
                                     aria-required="true" multiple>
-                                    @foreach($internal_faculty as $faculty)
+                                    @foreach($facultyMaster as $faculty)
                                     <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
                                         {{ $faculty->full_name }}
                                     </option>
@@ -719,11 +719,11 @@ document.addEventListener('DOMContentLoaded', function() {
     feedbackToggle.addEventListener('change', function() {
         if (this.checked) {
             feedbackOptions.classList.remove('d-none');
-            if (internalFacultyDiv.style.display === 'block') {
-                faculty_review_rating.classList.remove('d-none');
-            } else {
-                faculty_review_rating.classList.add('d-none');
-            }
+            // if (internalFacultyDiv.style.display === 'block') {
+            //     faculty_review_rating.classList.remove('d-none');
+            // } else {
+            //     faculty_review_rating.classList.add('d-none');
+            // }
 
         } else {
             feedbackOptions.classList.add('d-none');
@@ -734,7 +734,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const internalFacultyDiv = document.getElementById('internalFacultyDiv');
     const facultySelect = document.getElementById('faculty');
     const faculty_type = document.getElementById('faculty_type');
-    internalFacultyDiv.style.display = 'none'; // Hide initially
+    // internalFacultyDiv.style.display = 'none'; // Hide initially
 
     // Initialize Select2 when modal is shown
     $('#eventModal').on('shown.bs.modal', function() {
@@ -794,14 +794,14 @@ document.addEventListener('DOMContentLoaded', function() {
         switch (facultyType) {
             case '1': // Internal
             case 1:
-                internalFacultyDiv.style.display = 'none';
+                // internalFacultyDiv.style.display = 'none';
                 break;
             case '2': // Guest
             case 2:
                 internalFacultyDiv.style.display = 'block';
                 break;
             default:
-                internalFacultyDiv.style.display = 'none';
+                // internalFacultyDiv.style.display = 'none';
         }
     }
 });
