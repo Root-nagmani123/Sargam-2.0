@@ -189,15 +189,13 @@ document.getElementById('showAlert').addEventListener('click', function () {
         title: '<strong>Add Exemption Category</strong>',
         html: `
             <form id="exemptionCategoryForm">
-                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                
 
                 <div class="row mb-2">
                     <label class="col-auto fw-semibold">
                         Type Name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <input type="text" name="exemp_category_name" id="exemp_category_name" class="form-control">
+                        <input type="text" id="exemp_category_name" class="form-control">
                         <small class="text-danger d-none" id="exemp_category_name_error">Required</small>
                     </div>
                 </div>
@@ -207,7 +205,7 @@ document.getElementById('showAlert').addEventListener('click', function () {
                         Short Name <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <input type="text" name="exemp_cat_short_name" id="exemp_cat_short_name" class="form-control">
+                        <input type="text" id="exemp_cat_short_name" class="form-control">
                         <small class="text-danger d-none" id="exemp_cat_short_name_error">Required</small>
                     </div>
                 </div>
@@ -217,7 +215,7 @@ document.getElementById('showAlert').addEventListener('click', function () {
                         Status <span class="text-danger">*</span>
                     </label>
                     <div class="col">
-                        <select name="status" id="status" class="form-control">
+                        <select id="status" class="form-control">
                             <option value="">Select</option>
                             <option value="1">Active</option>
                             <option value="0">Inactive</option>
@@ -233,10 +231,42 @@ document.getElementById('showAlert').addEventListener('click', function () {
 
         preConfirm: () => {
 
-            const popup = Swal.getPopup();
-            const form = popup.querySelector('#exemptionCategoryForm');
+            // Fields
+            const name = document.getElementById('exemp_category_name');
+            const shortName = document.getElementById('exemp_cat_short_name');
+            const status = document.getElementById('status');
 
-            const formData = new FormData(form);
+            // Errors
+            let isValid = true;
+            document.querySelectorAll('small.text-danger').forEach(e => e.classList.add('d-none'));
+
+            if (!name.value.trim()) {
+                document.getElementById('exemp_category_name_error').classList.remove('d-none');
+                name.focus();
+                isValid = false;
+            }
+
+            else if (!shortName.value.trim()) {
+                document.getElementById('exemp_cat_short_name_error').classList.remove('d-none');
+                shortName.focus();
+                isValid = false;
+            }
+
+            else if (!status.value) {
+                document.getElementById('status_error').classList.remove('d-none');
+                status.focus();
+                isValid = false;
+            }
+
+            if (!isValid) {
+                return false; // ❌ stop submission
+            }
+
+            // ✅ submit only if valid
+            const formData = new FormData();
+            formData.append('exemp_category_name', name.value);
+            formData.append('exemp_cat_short_name', shortName.value);
+            formData.append('status', status.value);
 
             return fetch("{{ route('master.exemption.category.master.store') }}", {
                 method: 'POST',
@@ -246,18 +276,9 @@ document.getElementById('showAlert').addEventListener('click', function () {
                 },
                 body: formData
             })
-            .then(response => response.text())
-            .then(text => {
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    throw new Error(text); // HTML response caught here
-                }
-            })
-            .catch(error => {
-                Swal.showValidationMessage(
-                    'Server Error or Session Expired'
-                );
+            .then(res => res.json())
+            .catch(() => {
+                Swal.showValidationMessage('Server Error or Session Expired');
             });
         }
     }).then(result => {

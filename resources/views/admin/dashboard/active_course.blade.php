@@ -12,7 +12,7 @@
             <hr class="my-2">
             <div class="datatables">
                 <div class="table-responsive">
-                    <table class="table" id="">
+                    <table class="table" id="active_course">
                         <thead>
                             <tr>
                                 <th scope="col">Sl. No.</th>
@@ -48,3 +48,13 @@
 
 
 @endsection
+
+@push('scripts')
+<script src="{{ asset('js/jquery-3.7.1.min.js') }}"></script>
+
+<script>
+$(document).ready(function (){
+    $('#active_course').DataTable();
+});
+</script>
+@endpush
