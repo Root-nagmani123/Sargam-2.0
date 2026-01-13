@@ -278,7 +278,9 @@ public function store(Request $request)
             })
 
             ->addColumn('created_date', function ($row) {
-                return $row->created_date ?? 'N/A';
+             return $row->created_date
+                ? \Carbon\Carbon::parse($row->created_date)->format('d-m-Y')
+                : 'N/A';
             })
 
             /* ===============================

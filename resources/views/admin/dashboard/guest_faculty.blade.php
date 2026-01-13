@@ -11,7 +11,7 @@
             <hr class="my-2">
             <div class="datatables">
                 <div class="table-responsive">
-                    <table class="table" id="dom_jq_event">
+                    <table class="table" id="guess_faculty">
                         <thead>
                             <tr>
                                 <th scope="col">Sl. No.</th>
@@ -45,3 +45,12 @@
 
 
 @endsection
+@push('scripts')
+<script src="{{ asset('js/jquery-3.7.1.min.js') }}"></script>
+
+<script>
+$(document).ready(function (){
+    $('#guess_faculty').DataTable();
+});
+</script>
+@endpush
