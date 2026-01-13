@@ -755,24 +755,24 @@ class CalendarController extends Controller
                 //         "JSON_CONTAINS(t.faculty_master, JSON_QUOTE(CAST(f.pk AS CHAR)))"
                 //     );
                 // })
-//                 ->join('faculty_master as f', function ($join) {
-//     $join->whereRaw("
-//         (
-//             -- Case 1 & 2 & 3: faculty_master is JSON array
-//             JSON_VALID(t.faculty_master)
-//             AND JSON_CONTAINS(
-//                 t.faculty_master,
-//                 JSON_QUOTE(CAST(f.pk AS CHAR))
-//             )
-//         )
-//         OR
-//         (
-//             -- Case 1: faculty_master is single value (93)
-//             NOT JSON_VALID(t.faculty_master)
-//             AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
-//         )
-//     ");
-// })
+                //                 ->join('faculty_master as f', function ($join) {
+                //     $join->whereRaw("
+                //         (
+                //             -- Case 1 & 2 & 3: faculty_master is JSON array
+                //             JSON_VALID(t.faculty_master)
+                //             AND JSON_CONTAINS(
+                //                 t.faculty_master,
+                //                 JSON_QUOTE(CAST(f.pk AS CHAR))
+                //             )
+                //         )
+                //         OR
+                //         (
+                //             -- Case 1: faculty_master is single value (93)
+                //             NOT JSON_VALID(t.faculty_master)
+                //             AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
+                //         )
+                //     ");
+                // })
 
 
                 ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
@@ -821,7 +821,7 @@ class CalendarController extends Controller
                 ->orderBy('t.START_DATE', 'asc')
                 ->orderBy('session_end_time', 'asc')
                 ->get();
-                // print_r($pendingData);die;
+            // print_r($pendingData);die;
 
             $submittedData = DB::table('topic_feedback as tf')
                 ->select([
@@ -933,7 +933,18 @@ class CalendarController extends Controller
                     ) as session_end_time
                 ")
                 ])
-                ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+                ->join('faculty_master as f', function ($join) {
+                    $join->whereRaw("
+        (
+            t.faculty_master = f.pk
+            OR JSON_CONTAINS(
+                t.faculty_master,
+                JSON_QUOTE(CAST(f.pk AS CHAR))
+            )
+        )
+    ");
+                })
+                // ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
 
