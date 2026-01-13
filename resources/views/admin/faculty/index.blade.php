@@ -4,6 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
+<x-breadcrum title="Faculty"></x-breadcrum>
     <!--<x-session_message />-->
     <div id="status-msg"></div>
 
@@ -38,7 +39,7 @@
                                     <span class="material-symbols-rounded fs-5">export_notes</span>
                                     Export Excel
                                 </a>
-                                <a href="{{ route('faculty.printBlank') }}"  class="btn btn-success">
+                                <a href="{{ route('faculty.printBlank') }}"  class="btn btn-outline-success">
 									<i class="material-icons">print</i> Print Blank Form
 								</a>
 
