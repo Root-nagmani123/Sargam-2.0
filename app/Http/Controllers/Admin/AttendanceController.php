@@ -464,17 +464,9 @@ $currentPath = $segments[1] ?? null;
 
             // Get filter parameters
             $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
-            $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
+            $filterStatus = $request->input('filter_status');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
-
-            // Get sessions for filter dropdown
-            $sessions = ClassSessionMaster::get();
-            $maunalSessions = Timetable::select('class_session')
-                ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
-                ->groupBy('class_session')
-                ->select('class_session')
-                ->get();
 
             // Get archived courses for the student (only when in archive mode)
             $archivedCourses = [];
@@ -534,18 +526,6 @@ $currentPath = $segments[1] ?? null;
             if ($filterDate) {
                 $query->whereHas('timetable', function ($q) use ($filterDate) {
                     $q->whereDate('START_DATE', '=', $filterDate);
-                });
-            }
-
-            // Apply session time filter
-            if ($filterSessionTime) {
-                $query->whereHas('timetable', function ($q) use ($filterSessionTime) {
-                    // Check if filterSessionTime is a class_session_master_pk (numeric) or a manual session string
-                    if (is_numeric($filterSessionTime)) {
-                        $q->where('class_session', $filterSessionTime);
-                    } else {
-                        $q->where('class_session', $filterSessionTime);
-                    }
                 });
             }
 
@@ -750,15 +730,21 @@ $currentPath = $segments[1] ?? null;
                 $attendanceRecords[] = $record;
             }
 
+            // Apply attendance status filter
+            if ($filterStatus) {
+                $attendanceRecords = array_filter($attendanceRecords, function($record) use ($filterStatus) {
+                    return $record['attendance_status'] === $filterStatus;
+                });
+                $attendanceRecords = array_values($attendanceRecords); // Re-index array
+            }
+
             return view('admin.attendance.ot-student-view', compact(
                 'course',
                 'student',
                 'attendanceRecords',
-                'sessions',
-                'maunalSessions',
                 'filterDate',
-                'filterSessionTime',
                 'filterCourse',
+                'filterStatus',
                 'archivedCourses',
                 'archiveMode',
                 'group_pk',
