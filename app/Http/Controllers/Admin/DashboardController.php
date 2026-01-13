@@ -22,15 +22,8 @@ function active_course(Request $request)
     return view('admin.dashboard.active_course', compact('active_courses'));
     
 }
-function incoming_course(Request $request)
-{
-   $incoming_courses = DB::table('course_master')
-        ->where('active_inactive', 1)
-        ->where('start_year', '>', now())
-        ->get();
-    return view('admin.dashboard.incoming_course', compact('incoming_courses'));
 
-}
+
 function guest_faculty()
 {
    $guest_faculty = DB::table('faculty_master')->where('faculty_type', 2)->where('active_inactive', 1)->get();

@@ -13,7 +13,7 @@
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Exemption categories</h4>
+                            <h4>Exemption medical speciality</h4>
                         </div>
                         <div class="col-6">
                              <!-- <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button> -->
@@ -184,7 +184,7 @@
 <script>
 document.getElementById('showAlert').addEventListener('click', function () {
     Swal.fire({
-        title: '<strong>Add Exemption Category</strong>',
+        title: '<strong>Add Exemption medical speciality</strong>',
         html: `
             <form id="exemptionCategoryForm">
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
@@ -303,7 +303,7 @@ $(document).on('click', '.edit-btn', function () {
     let status          = $(this).data('active_inactive');
 
     Swal.fire({
-        title: '<strong>Edit Medical Speciality</strong>',
+        title: '<strong><small>Edit Exemption medical speciality</small></strong>',
         html: `
             <form id="exemptionCategoryeditForm">
                 <input type="hidden" id="id" value="${id}">

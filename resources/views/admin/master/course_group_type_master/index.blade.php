@@ -116,54 +116,53 @@
 
         });
 
-        $(document).on('change', '.plain-status-toggle', function() {
-            var checkbox = $(this); // save reference
-            var pk = checkbox.data('id');
-            var active_inactive = checkbox.is(':checked') ? 1 : 0;
-            // Dynamic messages
-            var actionText = active_inactive ? 'activate' : 'deactivate';
-            var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
-            var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
+        $(document).on('change', '.plain-status-toggle', function () {
+    var checkbox = $(this);
+    var previousState = !checkbox.is(':checked'); // save previous state
+    var pk = checkbox.data('id');
+    var active_inactive = checkbox.is(':checked') ? 1 : 0;
+
+    var actionText = active_inactive ? 'activate' : 'deactivate';
+    var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+    var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: `Are you sure you want to ${actionText} this item?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: confirmBtnColor,
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: confirmBtnText,
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $('#pk').val(pk);
+            $('#active_inactive').val(active_inactive);
+            table.ajax.reload(null, false);
 
             Swal.fire({
-                title: 'Are you sure?',
-                text: `Are you sure you want to ${actionText} this item?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: confirmBtnColor,
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: confirmBtnText,
-                cancelButtonText: 'Cancel'
-
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Set hidden input values if needed
-                    $('#pk').val(pk);
-                    $('#active_inactive').val(active_inactive);
-                    table.ajax.reload(null, false);
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Updated!',
-                        text: 'Status has been updated successfully.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                }
-                // else if (result.dismiss === Swal.DismissReason.cancel) {
-                //     // Revert the checkbox state
-                //     checkbox.prop('checked', !active_inactive);
-
-                //     // Show cancel message
-                //     Swal.fire({
-                //         icon: 'info',
-                //         title: 'Cancelled',
-                //         text: 'Status change has been cancelled.',
-                //         timer: 1500,
-                //         showConfirmButton: false
-                //     });
-                // }
+                icon: 'success',
+                title: 'Updated!',
+                text: 'Status has been updated successfully.',
+                timer: 1500,
+                showConfirmButton: false
             });
-        });
+        } else {
+            // revert checkbox to previous state
+            checkbox.prop('checked', previousState);
+
+            Swal.fire({
+                icon: 'info',
+                title: 'Cancelled',
+                text: 'Status change has been cancelled.',
+                timer: 1200,
+                showConfirmButton: false
+            });
+        }
+    });
+});
+
 
 
 
