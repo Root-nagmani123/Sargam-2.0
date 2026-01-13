@@ -88,18 +88,10 @@ class MemberDataTable extends DataTable
                     ->selectStyleSingle()
                     ->parameters([
                         'order' => [],
-                        'ordering' => false,
+                        'ordering' => true,
                         'searching' => true,
                         'lengthChange' => true,
                         'pageLength' => 10,
-                        'language' => [
-                            'paginate' => [
-                                'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">chevron_left</i>',
-                                'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">chevron_right</i>'
-                            ]
-                        ],
                     ])
                     ->buttons([
                         Button::make('excel'),
