@@ -11,7 +11,7 @@
             <hr class="my-2">
             <div class="datatables">
                 <div class="table-responsive">
-               <table class="table" id="dom_jq_event">
+               <table class="table" id="inhouse">
                     <thead>
                         <tr>
                             <th scope="col">Sl. No.</th>
@@ -25,15 +25,12 @@
                         @foreach($inhouse_faculty as $index => $faculty)
                         <tr>
                             <td>{{ $index + 1 }}</td>
-                            <td class="  text-center"><span class="badge bg-success-subtle text-success">Inhouse</span></td>
+                            <td class="text-center"><span class="badge bg-success-subtle text-success">Inhouse</span></td>
                             <td>{{ $faculty->full_name }}</td>
                             <td>{{ $faculty->mobile_no }}</td>
                             <td class="  text-center"><span class="badge bg-success-subtle text-success">@if($faculty->faculty_sector == 1){{ 'Government' }}@elseif($faculty->faculty_sector == 2){{ 'Private' }}@else{{ 'Other' }}@endif</span></td>
                              </tr>
                         @endforeach
-
-
-
                     </tbody>
                 </table>
             </div>
@@ -41,6 +38,16 @@
         </div>
     </div>
 </div>
-
-
 @endsection
+@push('scripts')
+<script src="{{ asset('js/jquery-3.7.1.min.js') }}"></script>
+
+<script>
+$(document).ready(function (){
+    $('#inhouse').DataTable();
+});
+</script>
+@endpush
+
+
+
