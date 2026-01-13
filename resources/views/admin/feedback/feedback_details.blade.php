@@ -237,52 +237,52 @@
                     </div>
 
                     <!-- Faculty Type -->
-                     @if (!hasRole('Internal Faculty') && !hasRole('Guest Faculty'))
-                    <div class="col-lg-2 col-md-6 mb-3">
-                        <fieldset>
-                            <legend class="fs-6 fw-semibold mb-2">Faculty Type</legend>
-                            <div class="form-check">
-                                <input class="form-check-input faculty-type-checkbox" type="checkbox" name="faculty_type[]"
-                                    value="2" id="faculty_type_guest"
-                                    {{ in_array('2', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="faculty_type_guest">Guest</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input faculty-type-checkbox" type="checkbox" name="faculty_type[]"
-                                    value="1" id="faculty_type_internal"
-                                    {{ in_array('1', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
-                                <label class="form-check-label" for="faculty_type_internal">Internal</label>
-                            </div>
-                        </fieldset>
-                    </div>
-                   
-
-                    <!-- Faculty Name -->
-                    <div class="col-lg-2 col-md-6 mb-3 suggestions-container">
-                        <label for="facultySearch" class="form-label">Faculty Name</label>
-                        <input type="text" id="facultySearch" class="form-control" name="faculty_name"
-                            value="{{ $currentFaculty ?? '' }}" placeholder="Type to search..." autocomplete="off" />
-
-                        <!-- Suggestions dropdown -->
-                        <div class="suggestions-list" id="facultySuggestions">
-                            @if ($facultySuggestions->isNotEmpty())
-                                @foreach ($facultySuggestions as $faculty)
-                                    <div class="suggestion-item" data-value="{{ $faculty->full_name }}">
-                                        {{ $faculty->full_name }}
-                                        @php
-                                            $typeMap = ['1' => 'Internal', '2' => 'Guest'];
-                                            $typeDisplay =
-                                                $typeMap[$faculty->faculty_type] ?? ucfirst($faculty->faculty_type);
-                                        @endphp
-                                        <span class="faculty-type-badge ms-2">{{ $typeDisplay }}</span>
-                                    </div>
-                                @endforeach
-                            @else
-                                <div class="suggestion-item text-muted">No faculty found</div>
-                            @endif
+                    @if (!hasRole('Internal Faculty') && !hasRole('Guest Faculty'))
+                        <div class="col-lg-2 col-md-6 mb-3">
+                            <fieldset>
+                                <legend class="fs-6 fw-semibold mb-2">Faculty Type</legend>
+                                <div class="form-check">
+                                    <input class="form-check-input faculty-type-checkbox" type="checkbox"
+                                        name="faculty_type[]" value="2" id="faculty_type_guest"
+                                        {{ in_array('2', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="faculty_type_guest">Guest</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input faculty-type-checkbox" type="checkbox"
+                                        name="faculty_type[]" value="1" id="faculty_type_internal"
+                                        {{ in_array('1', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="faculty_type_internal">Internal</label>
+                                </div>
+                            </fieldset>
                         </div>
-                    </div>
-                     @endif
+
+
+                        <!-- Faculty Name -->
+                        <div class="col-lg-2 col-md-6 mb-3 suggestions-container">
+                            <label for="facultySearch" class="form-label">Faculty Name</label>
+                            <input type="text" id="facultySearch" class="form-control" name="faculty_name"
+                                value="{{ $currentFaculty ?? '' }}" placeholder="Type to search..." autocomplete="off" />
+
+                            <!-- Suggestions dropdown -->
+                            <div class="suggestions-list" id="facultySuggestions">
+                                @if ($facultySuggestions->isNotEmpty())
+                                    @foreach ($facultySuggestions as $faculty)
+                                        <div class="suggestion-item" data-value="{{ $faculty->full_name }}">
+                                            {{ $faculty->full_name }}
+                                            @php
+                                                $typeMap = ['1' => 'Internal', '2' => 'Guest'];
+                                                $typeDisplay =
+                                                    $typeMap[$faculty->faculty_type] ?? ucfirst($faculty->faculty_type);
+                                            @endphp
+                                            <span class="faculty-type-badge ms-2">{{ $typeDisplay }}</span>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="suggestion-item text-muted">No faculty found</div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="d-flex align-items-center">
@@ -301,6 +301,11 @@
                             <i class="fas fa-redo me-1"></i> Reset Filters
                         </button>
                     </div>
+                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-sm btn-warning ms-2">
+                        <i class="fas fa-user-clock me-1"></i>
+                        Pending Feedback (Students)
+                    </a>
+
                 </div>
 
             </div>
@@ -591,11 +596,11 @@
                             <div class="col-md-4">
                                 <h6 class="mb-1"><strong>Topic:</strong> ${topicName}</h6>
                                 ${firstRecord.start_date ? `
-                                                            <small class="text-muted d-block">
-                                                                <strong>Session:</strong> ${firstRecord.start_date}
-                                                                ${firstRecord.end_date ? `- ${firstRecord.end_date}` : ''}
-                                                            </small>
-                                                        ` : ''}
+                                                                    <small class="text-muted d-block">
+                                                                        <strong>Session:</strong> ${firstRecord.start_date}
+                                                                        ${firstRecord.end_date ? `- ${firstRecord.end_date}` : ''}
+                                                                    </small>
+                                                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -615,32 +620,32 @@
                             </thead>
                             <tbody>
                                 ${group.map((item, index) => `
-                                                            <tr>
-                                                                <td>${index + 1}</td>
-                                                                <td>${item.ot_name || ''}</td>
-                                                                <td>${item.ot_code || ''}</td>
-                                                                <td class="text-center">
-                                                                    <span class="rating-badge rating-${item.content}">
-                                                                        ${item.content}
-                                                                    </span>
-                                                                </td>
-                                                                <td class="text-center">
-                                                                    <span class="rating-badge rating-${item.presentation}">
-                                                                        ${item.presentation}
-                                                                    </span>
-                                                                </td>
-                                                                <td>
-                                                                    ${item.remark ? `
+                                                                    <tr>
+                                                                        <td>${index + 1}</td>
+                                                                        <td>${item.ot_name || ''}</td>
+                                                                        <td>${item.ot_code || ''}</td>
+                                                                        <td class="text-center">
+                                                                            <span class="rating-badge rating-${item.content}">
+                                                                                ${item.content}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <span class="rating-badge rating-${item.presentation}">
+                                                                                ${item.presentation}
+                                                                            </span>
+                                                                        </td>
+                                                                        <td>
+                                                                            ${item.remark ? `
                                                 <div class="remark-text">${item.remark}</div>
                                             ` : `
                                                 <span class="text-muted fst-italic">No remarks</span>
                                             `}
-                                                                </td>
-                                                                <td>
-                                                                    <small class="text-muted">${item.feedback_date || ''}</small>
-                                                                </td>
-                                                            </tr>
-                                                        `).join('')}
+                                                                        </td>
+                                                                        <td>
+                                                                            <small class="text-muted">${item.feedback_date || ''}</small>
+                                                                        </td>
+                                                                    </tr>
+                                                                `).join('')}
                             </tbody>
                         </table>
                     </div>

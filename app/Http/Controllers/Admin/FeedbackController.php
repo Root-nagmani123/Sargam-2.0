@@ -18,6 +18,12 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Color;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str; // Add this import
+use App\Exports\PendingFeedbackExport;
+
+
+
 
 class FeedbackController extends Controller
 {
@@ -32,10 +38,10 @@ class FeedbackController extends Controller
             $data_course_id =  get_Role_by_course();
             // Fetch active courses
             $courses = CourseMaster::where('active_inactive', 1);
-            if(!empty($data_course_id)){
-                $courses->whereIn('pk',$data_course_id);
+            if (!empty($data_course_id)) {
+                $courses->whereIn('pk', $data_course_id);
             }
-                $courses = $courses->select('pk', 'course_name')
+            $courses = $courses->select('pk', 'course_name')
                 ->orderBy('course_name')
                 ->get();
 
@@ -289,7 +295,7 @@ class FeedbackController extends Controller
 
     public function showFacultyAverage(Request $request)
     {
-            $data_course_id =  get_Role_by_course();
+        $data_course_id =  get_Role_by_course();
 
 
         // Get filter parameters with defaults
@@ -301,18 +307,18 @@ class FeedbackController extends Controller
 
         // 1. Get programs from course_master table
         $programs = DB::table('course_master')
-    ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
-        $query->whereIn('pk', $data_course_id);
-    })
-    ->distinct()
-    ->orderBy('course_name')
-    ->pluck('course_name', 'course_name');
+            ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
+                $query->whereIn('pk', $data_course_id);
+            })
+            ->distinct()
+            ->orderBy('course_name')
+            ->pluck('course_name', 'course_name');
 
-if ($programs->isEmpty()) {
-    $programs = collect([
-        'Phase-I 2024' => 'Phase-I 2024'
-    ]);
-}
+        if ($programs->isEmpty()) {
+            $programs = collect([
+                'Phase-I 2024' => 'Phase-I 2024'
+            ]);
+        }
 
 
         // 2. Get faculties from faculty_master
@@ -535,8 +541,8 @@ if ($programs->isEmpty()) {
                     ->orWhereDate('end_date', '<', Carbon::today());
             });
         }
-        if(!empty($data_course_id)){
-            $programsQuery->whereIn('pk',$data_course_id);
+        if (!empty($data_course_id)) {
+            $programsQuery->whereIn('pk', $data_course_id);
         }
 
         $programs = $programsQuery->orderBy('course_name')
@@ -598,11 +604,11 @@ if ($programs->isEmpty()) {
                 DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
                 DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND tf.remark != "" THEN tf.remark END SEPARATOR "|||") as remarks')
             );
-            $query->where('tf.is_submitted', 1);
-            if(!empty($data_course_id)){
-                $query->whereIn('cm.pk',$data_course_id);
-            }
-            $query->whereNotNull('tf.presentation')
+        $query->where('tf.is_submitted', 1);
+        if (!empty($data_course_id)) {
+            $query->whereIn('cm.pk', $data_course_id);
+        }
+        $query->whereNotNull('tf.presentation')
             ->whereNotNull('tf.content')
             ->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tf.timetable_pk');
 
@@ -1532,16 +1538,16 @@ if ($programs->isEmpty()) {
             if ($courseType === 'current') {
                 $programsQuery->where('active_inactive', 1)
                     ->whereDate('end_date', '>=', Carbon::today());
-                    if(!empty($data_course_id)){
-                        $programsQuery->whereIn('pk', $data_course_id);
-                    }
+                if (!empty($data_course_id)) {
+                    $programsQuery->whereIn('pk', $data_course_id);
+                }
             } else {
                 $programsQuery->where(function ($query) {
                     $query->where('active_inactive', 0)
                         ->orWhereDate('end_date', '<', Carbon::today());
                 });
             }
-           
+
 
 
 
@@ -1551,7 +1557,7 @@ if ($programs->isEmpty()) {
             if ($programs->isEmpty()) {
                 $programs = collect([]);
             }
-// print_r($programs->toArray());die;
+            // print_r($programs->toArray());die;
             // Define faculty types
             $facultyTypes = [
                 '2' => 'Guest',
@@ -1618,10 +1624,10 @@ if ($programs->isEmpty()) {
                 )
 
                 ->where('tf.is_submitted', 1);
-                if(!empty($data_course_id)){
-                   $query->whereIn('cm.pk', $data_course_id);
-                }
-                 $query->whereNotNull('tf.presentation')
+            if (!empty($data_course_id)) {
+                $query->whereIn('cm.pk', $data_course_id);
+            }
+            $query->whereNotNull('tf.presentation')
                 ->whereNotNull('tf.content')
                 ->where('tf.presentation', '!=', '')
                 ->where('tf.content', '!=', '');
@@ -2228,12 +2234,579 @@ if ($programs->isEmpty()) {
         return $pdf->download('feedback_details_' . date('Y_m_d_H_i') . '.pdf');
     }
 
-    // private function getProgramName($programId)
+    //     public function pendingStudents(Request $request)
     // {
-    //     $program = DB::table('course_master')
-    //         ->where('pk', $programId)
-    //         ->first();
+    //     /* -----------------------------------
+    //      | 1. Course dropdown (ALWAYS load)
+    //      -----------------------------------*/
+    //     $courses = DB::table('course_master')
+    //         ->select('pk', 'course_name')
+    //         ->where('active_inactive', 1)
+    //         ->orderBy('course_name')
+    //         ->get();
 
-    //     return $program ? $program->course_name : 'Unknown Program';
+    //     /* -----------------------------------
+    //      | 2. Main pending feedback query
+    //      -----------------------------------*/
+    //     $pendingQuery = DB::table('timetable as t')
+    //         ->select([
+    //             't.pk as timetable_pk',
+    //             't.subject_topic',
+    //             't.START_DATE as session_date',
+    //             't.class_session',
+
+    //             'c.pk as course_pk',
+    //             'c.course_name',
+
+    //             DB::raw("
+    //                 TRIM(
+    //                     CONCAT(
+    //                         sm.first_name, ' ',
+    //                         IFNULL(sm.middle_name, ''), ' ',
+    //                         IFNULL(sm.last_name, '')
+    //                     )
+    //                 ) AS student_name
+    //             "),
+
+    //             'sm.email',
+    //             'sm.contact_no',
+    //             'sm.generated_OT_code as ot_code'
+    //         ])
+
+    //         ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+
+    //         ->join('student_master_course__map as smcm', function ($join) {
+    //             $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+    //                  ->where('smcm.active_inactive', 1);
+    //         })
+
+    //         ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+
+    //         ->leftJoin('course_student_attendance as csa', function ($join) {
+    //             $join->on('csa.timetable_pk', '=', 't.pk')
+    //                  ->on('csa.Student_master_pk', '=', 'sm.pk')
+    //                  ->where('csa.status', '1');
+    //         })
+
+    //         ->where('t.feedback_checkbox', 1)
+
+    //         ->whereNotExists(function ($q) {
+    //             $q->select(DB::raw(1))
+    //               ->from('topic_feedback as tf')
+    //               ->whereColumn('tf.timetable_pk', 't.pk')
+    //               ->whereColumn('tf.student_master_pk', 'sm.pk')
+    //               ->where('tf.is_submitted', 1);
+    //         });
+
+    //     /* -----------------------------------
+    //      | 3. Course filter (AJAX + normal)
+    //      -----------------------------------*/
+    //     if (!empty($request->course_pk)) {
+    //         $pendingQuery->where('t.course_master_pk', $request->course_pk);
+    //     }
+
+    //     /* -----------------------------------
+    //      | 4. Pagination
+    //      -----------------------------------*/
+    //     $pendingStudents = $pendingQuery
+    //         ->orderBy('t.START_DATE', 'asc')
+    //         ->paginate(10)
+    //         ->withQueryString(); // keeps filter on page change
+
+    //     /* -----------------------------------
+    //      | 5. Single view return (NO partials)
+    //      -----------------------------------*/
+    //     return view(
+    //         'admin.feedback.pending_students',
+    //         compact('pendingStudents', 'courses')
+    //     );
     // }
+
+    // public function pendingStudents(Request $request)
+    // {
+    //     // Always load courses for filter
+    //     $courses = DB::table('course_master')
+    //         ->select('pk', 'course_name')
+    //         ->where('active_inactive', 1)
+    //         ->orderBy('course_name')
+    //         ->get();
+
+    //     // Pending feedback query for all students
+    //     $pendingQuery = DB::table('timetable as t')
+    //         ->select([
+    //             't.pk as timetable_pk',
+    //             't.subject_topic',
+    //             't.Ratting_checkbox',
+    //             't.feedback_checkbox',
+    //             't.Remark_checkbox',
+    //             't.faculty_master as faculty_pk',
+    //             'f.full_name as faculty_name',
+    //             'c.course_name',
+    //             'v.venue_name',
+    //             DB::raw('t.START_DATE as from_date'),
+    //             't.class_session',
+    //             DB::raw("
+    //             TRIM(
+    //                 CONCAT(
+    //                     sm.first_name, ' ',
+    //                     IFNULL(sm.middle_name, ''), ' ',
+    //                     IFNULL(sm.last_name, '')
+    //                 )
+    //             ) as student_name
+    //         "),
+    //             'sm.email',
+    //             'sm.contact_no',
+    //             'sm.generated_OT_code',
+    //             DB::raw("
+    //             STR_TO_DATE(
+    //                 TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+    //                 '%h:%i %p'
+    //             ) as session_end_time
+    //         ")
+    //         ])
+    //         ->leftJoin('faculty_master as f', function ($join) {
+    //             $join->whereRaw("
+    //             (JSON_VALID(t.faculty_master)
+    //              AND JSON_CONTAINS(t.faculty_master, JSON_QUOTE(CAST(f.pk AS CHAR))))
+    //             OR
+    //             (NOT JSON_VALID(t.faculty_master)
+    //              AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR))
+    //         ");
+    //         })
+    //         ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+    //         ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+    //         ->join('student_master_course__map as smcm', function ($join) {
+    //             $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+    //                 ->where('smcm.active_inactive', '=', 1);
+    //         })
+    //         ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+    //         ->join('course_student_attendance as csa', function ($join) {
+    //             $join->on('csa.timetable_pk', '=', 't.pk')
+    //                 ->on('csa.Student_master_pk', '=', 'sm.pk')
+    //                 ->where('csa.status', '1');
+    //         })
+    //         ->where('t.feedback_checkbox', 1)
+    //         ->whereNotExists(function ($sub) {
+    //             $sub->select(DB::raw(1))
+    //                 ->from('topic_feedback as tf')
+    //                 ->whereColumn('tf.timetable_pk', 't.pk')
+    //                 ->whereColumn('tf.student_master_pk', 'sm.pk')
+    //                 ->where('tf.is_submitted', 1);
+    //         })
+    //         ->whereRaw("
+    //         TIMESTAMP(
+    //             t.END_DATE,
+    //             STR_TO_DATE(
+    //                 TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+    //                 '%h:%i %p'
+    //             )
+    //         ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+    //     ");
+
+    //     if ($request->course_pk) {
+    //         $pendingQuery->where('t.course_master_pk', $request->course_pk);
+    //     }
+
+    //     $pendingStudents = $pendingQuery
+    //         ->orderBy('t.START_DATE', 'asc')
+    //         ->orderBy('session_end_time', 'asc')
+    //         ->paginate(10);
+
+    //     return view('admin.feedback.pending_students', compact('pendingStudents', 'courses'));
+    // }
+
+
+
+
+
+    /**
+     * Show pending feedback students for admin
+     */
+   public function pendingStudents(Request $request)
+{
+    $courses = Cache::remember('active_courses', 3600, function () {
+        return DB::table('course_master')
+            ->where('active_inactive', 1)
+            ->orderBy('course_name')
+            ->get();
+    });
+
+    $query = $this->buildPendingQuery();
+
+    if ($request->filled('course_pk')) {
+        $query->where('t.course_master_pk', $request->course_pk);
+    }
+
+    $pendingStudents = $query
+        ->orderBy('from_date', 'asc')
+        ->orderBy('session_end_time', 'asc')
+        ->paginate(20)
+        ->appends($request->query());
+
+    return view('admin.feedback.pending_students', compact('pendingStudents', 'courses'));
 }
+
+
+    /**
+     * Export pending feedback as PDF
+     */
+ public function exportPendingStudentsPDF(Request $request)
+{
+    set_time_limit(300);
+    ini_set('memory_limit', '1024M');
+
+    $query = $this->buildPendingQuery();
+
+    if ($request->filled('course_pk')) {
+        $query->where('t.course_master_pk', $request->course_pk);
+    }
+
+    $students = collect();
+
+    // 🔁 Chunking prevents memory crash
+    $query->orderBy('t.START_DATE')->chunk(200, function ($rows) use (&$students) {
+        $students = $students->merge($rows);
+    });
+
+    if ($students->isEmpty()) {
+        return back()->with('error', 'No pending feedback records found.');
+    }
+
+    $pdf = PDF::loadView('admin.feedback.pending_students_pdf', [
+        'students' => $students,
+        'course_name' => $this->getCourseName($request->course_pk),
+        'export_date' => now()->format('d-m-Y H:i:s'),
+    ])
+    ->setPaper('A4', 'landscape');
+
+    return $pdf->download('pending_feedback_' . now()->format('Ymd_His') . '.pdf');
+}
+
+
+
+
+    /**
+     * Export pending feedback as Excel
+     */
+  public function exportPendingStudentsExcel(Request $request)
+{
+    $request->validate([
+        'course_pk' => 'nullable|integer|exists:course_master,pk'
+    ]);
+
+    $query = $this->buildPendingQuery();
+
+    if ($request->filled('course_pk')) {
+        $query->where('t.course_master_pk', $request->course_pk);
+    }
+
+    return Excel::download(
+        new PendingFeedbackExport(clone $query),
+        'pending_feedback_' . now()->format('Y-m-d_H-i') . '.xlsx'
+    );
+}
+
+
+    /**
+     * Build optimized pending feedback query
+     */
+   private function buildPendingQuery()
+{
+    return DB::table('timetable as t')
+        ->select([
+            't.pk as timetable_pk',
+            't.subject_topic',
+            'c.course_name',
+            'v.venue_name',
+            'f.full_name as faculty_name',
+            DB::raw("TRIM(CONCAT(
+                sm.first_name,' ',
+                IFNULL(sm.middle_name,''),' ',
+                IFNULL(sm.last_name,'')
+            )) as student_name"),
+            'sm.email',
+            'sm.contact_no',
+            'sm.generated_OT_code',
+            't.START_DATE as from_date',
+            DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as formatted_date"),
+            't.class_session',
+            DB::raw("
+                STR_TO_DATE(
+                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                    '%h:%i %p'
+                ) as session_end_time
+            ")
+        ])
+        ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+        ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+        ->leftJoin('faculty_master as f', function ($join) {
+            $join->whereRaw("
+                f.pk = (
+                    CASE 
+                        WHEN JSON_VALID(t.faculty_master) 
+                        THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]')) AS UNSIGNED)
+                        ELSE CAST(t.faculty_master AS UNSIGNED)
+                    END
+                )
+            ");
+        })
+        ->join('student_master_course__map as smcm', function ($join) {
+            $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                 ->where('smcm.active_inactive', 1);
+        })
+        ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+        ->join('course_student_attendance as csa', function ($join) {
+            $join->on('csa.timetable_pk', '=', 't.pk')
+                 ->on('csa.Student_master_pk', '=', 'sm.pk')
+                 ->where('csa.status', '1');
+        })
+        ->leftJoin('topic_feedback as tf', function ($join) {
+            $join->on('tf.timetable_pk', '=', 't.pk')
+                 ->on('tf.student_master_pk', '=', 'sm.pk')
+                 ->where('tf.is_submitted', 1);
+        })
+        ->where('t.feedback_checkbox', 1)
+        ->whereNull('tf.pk')
+        ->whereRaw("
+            TIMESTAMP(
+                t.END_DATE,
+                STR_TO_DATE(
+                    TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                    '%h:%i %p'
+                )
+            ) <= NOW()
+        ")
+        ->distinct();
+}
+
+
+    /**
+     * Get pending students optimized for export
+     */
+    private function getPendingStudentsOptimized($course_pk = null)
+    {
+        // Step 1: Get filtered timetable IDs
+        $timetableQuery = DB::table('timetable as t')
+            ->select('t.pk')
+            ->where('t.feedback_checkbox', 1)
+            ->whereRaw("
+                TIMESTAMP(
+                    t.END_DATE,
+                    STR_TO_DATE(
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
+                    )
+                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+            ");
+
+        if ($course_pk) {
+            $timetableQuery->where('t.course_master_pk', $course_pk);
+        }
+
+        $timetableIds = $timetableQuery->pluck('pk')->toArray();
+
+        if (empty($timetableIds)) {
+            return collect();
+        }
+
+        // Step 2: Process in chunks for memory efficiency
+        $chunkSize = 1000;
+        $results = collect();
+        
+        foreach (array_chunk($timetableIds, $chunkSize) as $chunk) {
+            $query = DB::table('timetable as t')
+                ->select([
+                    't.pk as timetable_pk',
+                    't.subject_topic',
+                    'c.course_name',
+                    'v.venue_name',
+                    'f.full_name as faculty_name',
+                    DB::raw("TRIM(CONCAT(sm.first_name,' ',IFNULL(sm.middle_name,''),' ',IFNULL(sm.last_name,''))) as student_name"),
+                    'sm.email',
+                    'sm.contact_no',
+                    'sm.generated_OT_code',
+                    't.START_DATE as from_date',
+                    DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as formatted_date"),
+                    't.class_session'
+                ])
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->leftJoin('faculty_master as f', function ($join) {
+                    $join->whereRaw("
+                        f.pk = (
+                            CASE 
+                                WHEN JSON_VALID(t.faculty_master) 
+                                THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]')) AS UNSIGNED)
+                                ELSE CAST(t.faculty_master AS UNSIGNED)
+                            END
+                        )
+                    ");
+                })
+                ->join('student_master_course__map as smcm', function($join) {
+                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                         ->where('smcm.active_inactive', 1);
+                })
+                ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+                ->join('course_student_attendance as csa', function($join) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                         ->on('csa.Student_master_pk', '=', 'sm.pk')
+                         ->where('csa.status', '1');
+                })
+                ->leftJoin('topic_feedback as tf', function($join) {
+                    $join->on('tf.timetable_pk', '=', 't.pk')
+                         ->on('tf.student_master_pk', '=', 'sm.pk')
+                         ->where('tf.is_submitted', 1);
+                })
+                ->whereIn('t.pk', $chunk)
+                ->whereNull('tf.pk')
+                ->orderBy('t.START_DATE', 'asc');
+
+            $chunkResults = $query->get();
+            
+            // FIXED: Ensure we merge properly
+            if ($chunkResults && count($chunkResults) > 0) {
+                $results = $results->merge($chunkResults);
+            }
+            
+            // Clear memory
+            unset($chunkResults);
+            if (function_exists('gc_collect_cycles')) {
+                gc_collect_cycles();
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Generate PDF
+     */
+    private function generatePDF($students, $course_name)
+    {
+        // FIXED: Ensure $students is a collection, not a string
+        if (!($students instanceof Collection)) {
+            if (is_array($students)) {
+                $students = collect($students);
+            } elseif (is_string($students)) {
+                $students = collect();
+            } else {
+                $students = collect();
+            }
+        }
+
+        $data = [
+            'students' => $students,
+            'course_name' => $course_name,
+            'export_date' => now()->format('d-m-Y H:i:s'),
+            'total_count' => $students->count()
+        ];
+
+        return PDF::loadView('admin.feedback.pending_students_pdf', $data)
+            ->setPaper('A4', 'landscape')
+            ->setOption('defaultFont', 'sans-serif')
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('isRemoteEnabled', false);
+    }
+
+    /**
+     * Get course name helper
+     */
+   /**
+ * Get course name helper - SIMPLIFIED VERSION
+ */
+private function getCourseName($course_pk)
+{
+    if (!$course_pk) {
+        return 'All Courses';
+    }
+
+    try {
+        // Direct query without caching to avoid issues
+        $result = DB::table('course_master')
+            ->where('pk', $course_pk)
+            ->value('course_name'); // Use value() to get just the course_name
+        
+        return $result ?: 'All Courses';
+    } catch (\Exception $e) {
+        \Log::error('Error getting course name for pk ' . $course_pk . ': ' . $e->getMessage());
+        return 'All Courses';
+    }
+}
+
+    /**
+     * Simple slug creation function (alternative to Str::slug)
+     */
+    private function createSlug($text)
+    {
+        // Replace spaces and special characters with underscores
+        $text = preg_replace('/[^a-zA-Z0-9]+/', '_', $text);
+        
+        // Convert to lowercase
+        $text = strtolower($text);
+        
+        // Trim underscores from start and end
+        $text = trim($text, '_');
+        
+        // Replace multiple underscores with single
+        $text = preg_replace('/_+/', '_', $text);
+        
+        return $text;
+    }
+
+    /**
+     * Get statistics for dashboard
+     */
+    public function getPendingStats(Request $request)
+    {
+        $cacheKey = 'pending_feedback_stats_' . ($request->course_pk ?? 'all');
+        
+        $stats = Cache::remember($cacheKey, 300, function () use ($request) {
+            $query = DB::table('timetable as t')
+                ->select([
+                    DB::raw('COUNT(DISTINCT t.pk) as total_sessions'),
+                    DB::raw('COUNT(DISTINCT sm.pk) as total_students'),
+                    DB::raw('COUNT(DISTINCT c.pk) as total_courses')
+                ])
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('student_master_course__map as smcm', 'smcm.course_master_pk', '=', 'c.pk')
+                ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+                ->join('course_student_attendance as csa', function($join) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                         ->on('csa.Student_master_pk', '=', 'sm.pk')
+                         ->where('csa.status', '1');
+                })
+                ->leftJoin('topic_feedback as tf', function($join) {
+                    $join->on('tf.timetable_pk', '=', 't.pk')
+                         ->on('tf.student_master_pk', '=', 'sm.pk')
+                         ->where('tf.is_submitted', 1);
+                })
+                ->where('t.feedback_checkbox', 1)
+                ->whereRaw("
+                    TIMESTAMP(
+                        t.END_DATE,
+                        STR_TO_DATE(
+                            TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                            '%h:%i %p'
+                        )
+                    ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+                ")
+                ->whereNull('tf.pk');
+
+            if ($request->filled('course_pk')) {
+                $query->where('t.course_master_pk', $request->course_pk);
+            }
+
+            $result = $query->first();
+            
+            // FIXED: Ensure we return an object, not a string
+            return $result ?: (object) [
+                'total_sessions' => 0,
+                'total_students' => 0,
+                'total_courses' => 0
+            ];
+        });
+
+        return response()->json($stats);
+    }
+}
+    

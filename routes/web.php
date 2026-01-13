@@ -316,7 +316,7 @@ Route::middleware(['auth'])->group(function () {
         // Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}/{student_pk}', 'OTmarkAttendanceView')->name('OT.student_mark.student');
         Route::get('/student_mark/{group_pk}/{course_pk}/{timetable_pk}/{student_pk}', 'OTmarkAttendanceView')->name('OT.student_mark.student');
     });
-    
+
     Route::get('/getstudentmarks', [AttendanceController::class, 'OTmarkAttendanceData'])->name('ot.student.attendance.data');
     Route::prefix('student-medical-exemption')->name('student.medical.exemption.')->controller(StudentMedicalExemptionController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -594,9 +594,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
 
-       Route::get('/upcoming-events', function () {
-         return view('admin.dashboard.upcoming_events');
-     })->name('admin.dashboard.upcoming_events');
+    Route::get('/upcoming-events', function () {
+        return view('admin.dashboard.upcoming_events');
+    })->name('admin.dashboard.upcoming_events');
 
     //    Route::get('/guest-faculty', function () {
     //      return view('admin.dashboard.guest_faculty');
@@ -622,4 +622,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });
 
-   Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+// Change export routes to POST
+Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+    ->name('admin.feedback.export.pdf');
+
+Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
+    ->name('admin.feedback.export.excel');
