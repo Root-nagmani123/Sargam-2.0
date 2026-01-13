@@ -753,18 +753,18 @@ class CalendarController extends Controller
                 ->leftJoin('faculty_master as f', function ($join) {
                     $join->whereRaw("
                     (
-                        JSON_VALID(t.faculty_master) 
-                        AND JSON_LENGTH(t.faculty_master) > 0
-                        AND JSON_CONTAINS(t.faculty_master, CAST(f.pk AS JSON))
+                        JSON_VALID(t.faculty_master)
+                        AND JSON_CONTAINS(
+                            t.faculty_master,
+                            JSON_QUOTE(CAST(f.pk AS CHAR))
+                        )
                     )
                     OR
                     (
-                        NOT JSON_VALID(t.faculty_master) 
-                        AND t.faculty_master IS NOT NULL
-                        AND t.faculty_master != ''
-                        AND t.faculty_master = f.pk
+                        NOT JSON_VALID(t.faculty_master)
+                        AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
                     )
-                 ");
+                ");
                 })
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
@@ -868,7 +868,6 @@ class CalendarController extends Controller
         }
     }
 
-
     public function studentFacultyFeedback(Request $request)
     {
         try {
@@ -876,6 +875,7 @@ class CalendarController extends Controller
                 abort(403, 'Missing token');
             }
 
+            // ================= TOKEN AUTH =================
             $key = config('services.moodle.key');
             $iv  = config('services.moodle.iv');
 
@@ -896,6 +896,7 @@ class CalendarController extends Controller
 
             $student_pk = auth()->user()->user_id;
 
+            // ================= PENDING FEEDBACK =================
             $pendingQuery = DB::table('timetable as t')
                 ->select([
                     't.pk as timetable_pk',
@@ -909,7 +910,6 @@ class CalendarController extends Controller
                     'v.venue_name',
                     DB::raw('t.START_DATE as from_date'),
                     't.class_session',
-
                     DB::raw("
                     STR_TO_DATE(
                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
@@ -917,42 +917,37 @@ class CalendarController extends Controller
                     ) as session_end_time
                 "),
                 ])
-
+                // ===== FACULTY (JSON + SINGLE VALUE SUPPORT) =====
                 ->leftJoin('faculty_master as f', function ($join) {
                     $join->whereRaw("
                     (
-                        JSON_VALID(t.faculty_master) 
-                        AND JSON_LENGTH(t.faculty_master) > 0
-                        AND JSON_CONTAINS(t.faculty_master, CAST(f.pk AS JSON))
+                        JSON_VALID(t.faculty_master)
+                        AND JSON_CONTAINS(
+                            t.faculty_master,
+                            JSON_QUOTE(CAST(f.pk AS CHAR))
+                        )
                     )
                     OR
                     (
-                        NOT JSON_VALID(t.faculty_master) 
-                        AND t.faculty_master IS NOT NULL
-                        AND t.faculty_master != ''
-                        AND t.faculty_master = f.pk
+                        NOT JSON_VALID(t.faculty_master)
+                        AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
                     )
                 ");
                 })
-
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
-
                 ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
                     $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
                         ->where('smcm.student_master_pk', $student_pk)
                         ->where('smcm.active_inactive', 1);
                 })
-
                 ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
                     $join->on('csa.timetable_pk', '=', 't.pk')
                         ->where('csa.Student_master_pk', $student_pk)
                         ->where('csa.status', '1');
                 })
-
                 ->where('t.feedback_checkbox', 1)
                 ->where('t.active_inactive', 1)
-
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
                         ->from('topic_feedback as tf')
@@ -960,9 +955,9 @@ class CalendarController extends Controller
                         ->where('tf.student_master_pk', $student_pk)
                         ->where('tf.is_submitted', 1);
                 })
-
                 ->whereDate('t.END_DATE', '<=', now()->toDateString());
 
+            // ===== OT GROUP FILTER =====
             if (hasRole('Student-OT')) {
                 $pendingQuery
                     ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
@@ -975,6 +970,7 @@ class CalendarController extends Controller
                 ->orderByRaw('session_end_time IS NULL, session_end_time')
                 ->get();
 
+            // ================= SUBMITTED FEEDBACK =================
             $submittedData = DB::table('topic_feedback as tf')
                 ->select([
                     'tf.pk as feedback_pk',
@@ -997,13 +993,11 @@ class CalendarController extends Controller
                 ])
                 ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-
                 ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
                     $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
                         ->where('smcm.student_master_pk', $student_pk)
                         ->where('smcm.active_inactive', 1);
                 })
-
                 ->leftJoin('faculty_master as f', function ($join) {
                     $join->whereRaw("
                     (
@@ -1020,7 +1014,6 @@ class CalendarController extends Controller
                     )
                 ");
                 })
-
                 ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
                 ->where('tf.student_master_pk', $student_pk)
                 ->where('tf.is_submitted', 1)
@@ -1036,6 +1029,8 @@ class CalendarController extends Controller
             return back()->with('error', 'Something went wrong');
         }
     }
+
+
 
 
 
