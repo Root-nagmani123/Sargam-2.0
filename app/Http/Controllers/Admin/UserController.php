@@ -86,6 +86,7 @@ class UserController extends Controller
         $exemptionCount = 0;
         $MDO_count = 0;
         $todayTimetable = collect([]);
+        $totalSessions = 0;
         $userId = Auth::user()->user_id;
          if(hasRole('Student-OT')){
              $exemptionQuery = StudentMedicalExemption::where('student_master_pk', $userId)
@@ -99,8 +100,30 @@ class UserController extends Controller
             // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
          }
+         
+         // Calculate total sessions for Internal Faculty or Guest Faculty
+         if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
+             // Get faculty_master.pk from user_id
+             $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
+             
+             if ($faculty) {
+                 $facultyPk = $faculty->pk;
+                 $totalSessions = CalendarEvent::where('active_inactive', 1)
+                     ->whereDate('END_DATE', '<', now())
+                     ->where(function ($query) use ($facultyPk) {
+                         $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
+                               ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
+                     })
+                     ->count();
+             } else {
+                 $totalSessions = 0;
+             }
+             
+             // Fetch today's timetable for the logged-in faculty
+             $todayTimetable = $this->getTodayTimetableForFaculty($userId);
+         }
 
-        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable'));
+        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions'));
     }
 
    public function index(Request $request)
@@ -537,6 +560,92 @@ public function uploadPdf(Request $request)
     }
 
     /**
+     * Get today's timetable for a specific faculty member
+     *
+     * @param int $facultyUserId
+     * @return \Illuminate\Support\Collection
+     */
+    private function getTodayTimetableForFaculty($facultyUserId)
+    {
+        $today = Carbon::today()->toDateString();
+        
+        // Get faculty_master.pk from user_id
+        $faculty = FacultyMaster::where('employee_master_pk', $facultyUserId)->first();
+        
+        if (!$faculty) {
+            return collect([]);
+        }
+
+        $facultyPk = $faculty->pk;
+
+        // Simple query: get today's classes assigned to this faculty
+        $timetableEntries = CalendarEvent::where('active_inactive', 1)
+            ->whereDate('START_DATE', '<=', $today)
+            ->whereDate('END_DATE', '>=', $today)
+            ->where(function ($query) use ($facultyPk) {
+                $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
+                      ->orWhere('faculty_master', $facultyPk);
+            })
+            ->with(['faculty', 'venue', 'classSession'])
+            ->orderBy('class_session')
+            ->get();
+
+        // Format the timetable data
+        return $timetableEntries->map(function ($entry, $index) {
+            // Format session time based on session_type
+            $sessionTime = 'N/A';
+            if ($entry->session_type == 1) {
+                // session_type 1: class_session is a reference to class_session_master
+                if ($entry->classSession) {
+                    // Try to get time from class_session_master
+                    if (isset($entry->classSession->start_time) && isset($entry->classSession->end_time)) {
+                        $sessionTime = $entry->classSession->start_time . ' - ' . $entry->classSession->end_time;
+                    } elseif (isset($entry->classSession->shift_time)) {
+                        $sessionTime = $entry->classSession->shift_time;
+                    } else {
+                        $sessionTime = $entry->class_session ?? 'N/A';
+                    }
+                } else {
+                    $sessionTime = $entry->class_session ?? 'N/A';
+                }
+            } else {
+                // session_type 2: class_session is a manual time string (e.g., "10:00 AM - 11:30 AM")
+                $sessionTime = $entry->class_session ?? 'N/A';
+            }
+
+            // Format date
+            $sessionDate = $entry->START_DATE ? Carbon::parse($entry->START_DATE)->format('Y-m-d') : '';
+
+            // Handle faculty name - faculty_master can be JSON array or single ID
+            $facultyName = 'N/A';
+            if ($entry->faculty_master) {
+                // Check if it's JSON array
+                $facultyIds = json_decode($entry->faculty_master, true);
+                if (is_array($facultyIds) && !empty($facultyIds)) {
+                    // Get all faculty names from JSON array
+                    $facultyNames = FacultyMaster::whereIn('pk', $facultyIds)
+                        ->pluck('full_name')
+                        ->filter()
+                        ->toArray();
+                    $facultyName = !empty($facultyNames) ? implode(', ', $facultyNames) : 'N/A';
+                } elseif ($entry->faculty) {
+                    // Single ID - use relationship
+                    $facultyName = $entry->faculty->full_name ?? 'N/A';
+                }
+            }
+
+            return [
+                'sno' => $index + 1,
+                'session_time' => $sessionTime,
+                'topic' => $entry->subject_topic ?? 'N/A',
+                'faculty_name' => $facultyName,
+                'session_date' => $sessionDate,
+                'session_venue' => $entry->venue ? $entry->venue->venue_name : 'N/A',
+            ];
+        });
+    }
+
+    /**
      * Get today's timetable for a specific student
      *
      * @param int $studentId
@@ -606,11 +715,29 @@ public function uploadPdf(Request $request)
             // Format date
             $sessionDate = $entry->START_DATE ? Carbon::parse($entry->START_DATE)->format('Y-m-d') : '';
 
+            // Handle faculty name - faculty_master can be JSON array or single ID
+            $facultyName = 'N/A';
+            if ($entry->faculty_master) {
+                // Check if it's JSON array
+                $facultyIds = json_decode($entry->faculty_master, true);
+                if (is_array($facultyIds) && !empty($facultyIds)) {
+                    // Get all faculty names from JSON array
+                    $facultyNames = FacultyMaster::whereIn('pk', $facultyIds)
+                        ->pluck('full_name')
+                        ->filter()
+                        ->toArray();
+                    $facultyName = !empty($facultyNames) ? implode(', ', $facultyNames) : 'N/A';
+                } elseif ($entry->faculty) {
+                    // Single ID - use relationship
+                    $facultyName = $entry->faculty->full_name ?? 'N/A';
+                }
+            }
+
             return [
                 'sno' => $index + 1,
                 'session_time' => $sessionTime,
                 'topic' => $entry->subject_topic ?? 'N/A',
-                'faculty_name' => $entry->faculty ? $entry->faculty->full_name : 'N/A',
+                'faculty_name' => $facultyName,
                 'session_date' => $sessionDate,
                 'session_venue' => $entry->venue ? $entry->venue->venue_name : 'N/A',
             ];
