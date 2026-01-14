@@ -1035,72 +1035,142 @@ class CalendarController extends Controller
 
 
 
+    // public function submitFeedback(Request $request)
+    // {
+    //     $request->validate([
+    //         'timetable_pk' => 'required|array|min:1',
+    //     ]);
+
+    //     $studentId = auth()->user()->user_id;
+    //     $now = now();
+
+    //     // 👇 If individual button clicked
+    //     if ($request->has('submit_index')) {
+    //         $indexes = [$request->submit_index];
+    //     }
+    //     // 👇 Bulk submit
+    //     else {
+    //         $indexes = array_keys($request->timetable_pk);
+    //     }
+
+    //     $inserted = 0;
+
+    //     foreach ($indexes as $i) {
+
+    //         $content      = $request->content[$i] ?? null;
+    //         $presentation = $request->presentation[$i] ?? null;
+    //         $remarks      = $request->remarks[$i] ?? null;
+
+    //         // ⛔ Skip empty rows
+    //         if (empty($content) && empty($presentation) && empty($remarks)) {
+    //             continue;
+    //         }
+
+    //         // ✅ Validate only filled fields
+    //         $rules = [];
+    //         if ($content) {
+    //             $rules["content.$i"] = 'in:1,2,3,4,5';
+    //         }
+    //         if ($presentation) {
+    //             $rules["presentation.$i"] = 'in:1,2,3,4,5';
+    //         }
+    //         if ($remarks) {
+    //             $rules["remarks.$i"] = 'string|max:255';
+    //         }
+
+    //         if ($rules) {
+    //             $request->validate($rules);
+    //         }
+
+    //         DB::table('topic_feedback')->insert([
+    //             'timetable_pk'      => $request->timetable_pk[$i],
+    //             'student_master_pk' => $studentId,
+    //             'topic_name'        => $request->topic_name[$i] ?? '',
+    //             'faculty_pk'        => $request->faculty_pk[$i] ?? null,
+    //             'content'           => $content,
+    //             'presentation'      => $presentation,
+    //             'remark'            => $remarks,
+    //             'created_date'      => $now,
+    //             'modified_date'     => $now,
+    //         ]);
+
+    //         $inserted++;
+    //     }
+
+    //     if ($inserted === 0) {
+    //         return back()->withErrors(['error' => 'Please fill at least one feedback before submitting.']);
+    //     }
+
+    //     return back()->with('success', 'Feedback submitted successfully!');
+    // }
+
     public function submitFeedback(Request $request)
-    {
-        $request->validate([
-            'timetable_pk' => 'required|array|min:1',
+{
+    $request->validate([
+        'timetable_pk' => 'required|array|min:1',
+    ]);
+
+    $studentId = auth()->user()->user_id;
+    $now = now();
+
+    $indexes = $request->has('submit_index')
+        ? [$request->submit_index]
+        : array_keys($request->timetable_pk);
+
+    $inserted = 0;
+
+    foreach ($indexes as $i) {
+
+
+        $facultyRaw = $request->faculty_pk[$i] ?? null;
+
+        if (is_string($facultyRaw)) {
+            $decoded = json_decode($facultyRaw, true);
+            $facultyPk = (json_last_error() === JSON_ERROR_NONE)
+                ? ($decoded[0] ?? null)
+                : $facultyRaw;
+        } elseif (is_array($facultyRaw)) {
+            $facultyPk = $facultyRaw[0] ?? null;
+        } else {
+            $facultyPk = null;
+        }
+
+        if (!$facultyPk) {
+            continue;
+        }
+
+
+        $content      = $request->content[$i] ?? null;
+        $presentation = $request->presentation[$i] ?? null;
+        $remarks      = $request->remarks[$i] ?? null;
+
+        if (!$content && !$presentation && !$remarks) {
+            continue;
+        }
+
+
+        DB::table('topic_feedback')->insert([
+            'timetable_pk'      => $request->timetable_pk[$i],
+            'student_master_pk' => $studentId,
+            'topic_name'        => $request->topic_name[$i] ?? '',
+            'faculty_pk'        => $facultyPk,
+            'content'           => $content,
+            'presentation'      => $presentation,
+            'remark'            => $remarks,
+            'created_date'      => $now,
+            'modified_date'     => $now,
         ]);
 
-        $studentId = auth()->user()->user_id;
-        $now = now();
-
-        // 👇 If individual button clicked
-        if ($request->has('submit_index')) {
-            $indexes = [$request->submit_index];
-        }
-        // 👇 Bulk submit
-        else {
-            $indexes = array_keys($request->timetable_pk);
-        }
-
-        $inserted = 0;
-
-        foreach ($indexes as $i) {
-
-            $content      = $request->content[$i] ?? null;
-            $presentation = $request->presentation[$i] ?? null;
-            $remarks      = $request->remarks[$i] ?? null;
-
-            // ⛔ Skip empty rows
-            if (empty($content) && empty($presentation) && empty($remarks)) {
-                continue;
-            }
-
-            // ✅ Validate only filled fields
-            $rules = [];
-            if ($content) {
-                $rules["content.$i"] = 'in:1,2,3,4,5';
-            }
-            if ($presentation) {
-                $rules["presentation.$i"] = 'in:1,2,3,4,5';
-            }
-            if ($remarks) {
-                $rules["remarks.$i"] = 'string|max:255';
-            }
-
-            if ($rules) {
-                $request->validate($rules);
-            }
-
-            DB::table('topic_feedback')->insert([
-                'timetable_pk'      => $request->timetable_pk[$i],
-                'student_master_pk' => $studentId,
-                'topic_name'        => $request->topic_name[$i] ?? '',
-                'faculty_pk'        => $request->faculty_pk[$i] ?? null,
-                'content'           => $content,
-                'presentation'      => $presentation,
-                'remark'            => $remarks,
-                'created_date'      => $now,
-                'modified_date'     => $now,
-            ]);
-
-            $inserted++;
-        }
-
-        if ($inserted === 0) {
-            return back()->withErrors(['error' => 'Please fill at least one feedback before submitting.']);
-        }
-
-        return back()->with('success', 'Feedback submitted successfully!');
+        $inserted++;
     }
+
+    if ($inserted === 0) {
+        return back()->withErrors([
+            'error' => 'Please submit at least one feedback.'
+        ]);
+    }
+
+    return back()->with('success', 'Feedback submitted successfully.');
+}
+
 }
