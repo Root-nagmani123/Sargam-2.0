@@ -32,6 +32,10 @@ use App\Models\StudentCourseGroupMap;
 use App\Models\CalendarEvent;
 use App\Models\ClassSessionMaster;
 use App\Models\VenueMaster;
+use App\Models\CourseCordinatorMaster;
+use App\Models\StudentMasterCourseMap;
+use App\Models\StudentMaster;
+use App\Models\CourseStudentAttendance;
 use Carbon\Carbon;
 
 
@@ -87,6 +91,8 @@ class UserController extends Controller
         $MDO_count = 0;
         $todayTimetable = collect([]);
         $totalSessions = 0;
+        $totalStudents = 0;
+        $isCCorACC = false;
         $userId = Auth::user()->user_id;
          if(hasRole('Student-OT')){
              $exemptionQuery = StudentMedicalExemption::where('student_master_pk', $userId)
@@ -115,6 +121,30 @@ class UserController extends Controller
                                ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
                      })
                      ->count();
+                 
+                 // Check if faculty is CC or ACC
+                 $coordinatorCourses = CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
+                     $query->where('Coordinator_name', $facultyPk)
+                           ->orWhere('Assistant_Coordinator_name', $facultyPk);
+                 })->pluck('courses_master_pk')->unique();
+                 
+                 if ($coordinatorCourses->isNotEmpty()) {
+                     $isCCorACC = true;
+                     // Get active courses where faculty is CC/ACC
+                     $activeCourseIds = CourseMaster::whereIn('pk', $coordinatorCourses)
+                         ->where('active_inactive', 1)
+                         ->where('end_date', '>=', now())
+                         ->pluck('pk');
+                     
+                     // Count total students enrolled in these courses
+                     if ($activeCourseIds->isNotEmpty()) {
+                         $totalStudents = StudentMasterCourseMap::whereIn('course_master_pk', $activeCourseIds)
+                             ->where('active_inactive', 1)
+                             ->pluck('student_master_pk')
+                             ->unique()
+                             ->count();
+                     }
+                 }
              } else {
                  $totalSessions = 0;
              }
@@ -123,7 +153,140 @@ class UserController extends Controller
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
          }
 
-        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions'));
+        return view('admin.dashboard', compact('year', 'month', 'events','emp_dob_data', 'totalActiveCourses', 'upcomingCourses', 'total_guest_faculty', 'total_internal_faculty', 'exemptionCount', 'MDO_count', 'todayTimetable', 'totalSessions', 'totalStudents', 'isCCorACC'));
+    }
+
+    /**
+     * Display student list for CC/ACC faculty
+     *
+     * @return \Illuminate\View\View
+     */
+    public function studentList()
+    {
+        $userId = Auth::user()->user_id;
+        $students = collect([]);
+        $availableCourses = collect([]);
+        
+        // Check if user is Internal Faculty or Guest Faculty
+        if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
+            // Get faculty_master.pk from user_id
+            $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
+            
+            if ($faculty) {
+                $facultyPk = $faculty->pk;
+                
+                // Check if faculty is CC or ACC
+                $coordinatorCourses = CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
+                    $query->where('Coordinator_name', $facultyPk)
+                          ->orWhere('Assistant_Coordinator_name', $facultyPk);
+                })->pluck('courses_master_pk')->unique();
+                
+                if ($coordinatorCourses->isNotEmpty()) {
+                    // Get active courses where faculty is CC/ACC
+                    $activeCourseIds = CourseMaster::whereIn('pk', $coordinatorCourses)
+                        ->where('active_inactive', 1)
+                        ->where('end_date', '>=', now())
+                        ->pluck('pk');
+                    
+                    // Get students enrolled in these courses
+                    if ($activeCourseIds->isNotEmpty()) {
+                        $students = StudentMasterCourseMap::with(['studentMaster', 'course'])
+                            ->whereIn('course_master_pk', $activeCourseIds)
+                            ->where('active_inactive', 1)
+                            ->get()
+                            ->unique('student_master_pk')
+                            ->values();
+                        
+                        // Get unique courses from the student list
+                        $availableCourses = $students->pluck('course')
+                            ->filter()
+                            ->unique('pk')
+                            ->map(function($course) {
+                                return [
+                                    'pk' => $course->pk,
+                                    'course_name' => $course->course_name
+                                ];
+                            })
+                            ->values()
+                            ->sortBy('course_name');
+                    }
+                }
+            }
+        }
+        
+        return view('admin.dashboard.student_list', compact('students', 'availableCourses'));
+    }
+
+    /**
+     * Display complete student details
+     *
+     * @param int $id Student ID (encrypted)
+     * @return \Illuminate\View\View
+     */
+    public function studentDetail($id)
+    {
+        try {
+            $studentPk = decrypt($id);
+        } catch (\Exception $e) {
+            return redirect()->route('admin.dashboard.students')
+                ->with('error', 'Invalid student ID.');
+        }
+
+        // Get student basic information
+        $student = StudentMaster::with(['service', 'courses'])->find($studentPk);
+        
+        if (!$student) {
+            return redirect()->route('admin.dashboard.students')
+                ->with('error', 'Student not found.');
+        }
+
+        // Get medical exceptions
+        $medicalExemptions = StudentMedicalExemption::with(['course', 'category', 'speciality', 'employee'])
+            ->where('student_master_pk', $studentPk)
+            ->where('active_inactive', 1)
+            ->orderBy('from_date', 'desc')
+            ->get();
+
+        // Get MDO/Escort duties
+        $duties = MDOEscotDutyMap::with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
+            ->where('selected_student_list', $studentPk)
+            ->orderBy('mdo_date', 'desc')
+            ->get();
+
+        // Get notices using OTNoticeMemoService
+        $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+        $notices = $noticeMemoService->getNotices($studentPk);
+        $memos = $noticeMemoService->getMemos($studentPk);
+
+        // Get enrolled courses
+        $enrolledCourses = StudentMasterCourseMap::with('course')
+            ->where('student_master_pk', $studentPk)
+            ->where('active_inactive', 1)
+            ->get();
+
+        // Get attendance records summary
+        $attendanceSummary = CourseStudentAttendance::where('Student_master_pk', $studentPk)
+            ->selectRaw('
+                COUNT(*) as total_sessions,
+                SUM(CASE WHEN status = 1 THEN 1 ELSE 0 END) as present_count,
+                SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as late_count,
+                SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) as absent_count,
+                SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as mdo_count,
+                SUM(CASE WHEN status = 5 THEN 1 ELSE 0 END) as escort_count,
+                SUM(CASE WHEN status = 6 THEN 1 ELSE 0 END) as medical_exempt_count,
+                SUM(CASE WHEN status = 7 THEN 1 ELSE 0 END) as other_exempt_count
+            ')
+            ->first();
+
+        return view('admin.dashboard.student_detail', compact(
+            'student',
+            'medicalExemptions',
+            'duties',
+            'notices',
+            'memos',
+            'enrolledCourses',
+            'attendanceSummary'
+        ));
     }
 
    public function index(Request $request)
