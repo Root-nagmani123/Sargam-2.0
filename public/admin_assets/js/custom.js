@@ -1639,6 +1639,15 @@ function performAttendanceSearch() {
     });
 }
 
+// Auto-trigger search when course is selected
+$(document).on('change', '#programme', function () {
+    // Trigger search when course is selected
+    let programme = $(this).val();
+    if (programme) {
+        performAttendanceSearch();
+    }
+});
+
 // Auto-trigger search when date is selected
 $(document).on('change', '#from_date, #to_date', function () {
     // Only trigger if at least one date is selected
