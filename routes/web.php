@@ -90,6 +90,8 @@ Route::middleware(['auth'])->group(function () {
     // })->name('admin.dashboard');
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
+    Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
 
 
     Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');

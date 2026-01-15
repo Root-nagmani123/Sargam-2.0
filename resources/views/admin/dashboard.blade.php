@@ -798,6 +798,23 @@ table>thead {
         </div>
         @endif
 
+        @if(isset($isCCorACC) && $isCCorACC)
+        <!-- Total Students - Only for CC/ACC -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard.students') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-green">
+                        <img src="{{ asset('images/classes.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Total Students</div>
+                        <div class="stat-value">{{ $totalStudents }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+
 
     </div>
 
