@@ -35,17 +35,40 @@ class FeedbackController extends Controller
     public function database()
     {
         try {
-            $data_course_id =  get_Role_by_course();
-            // Fetch active courses
-            $courses = CourseMaster::where('active_inactive', 1);
+            $userId = auth()->id(); // current logged-in user
+
+            // Get role-based course IDs if needed
+            $data_course_id = get_Role_by_course();
+
+            // Current date
+            $currentDate = now()->toDateString();
+
+            // Fetch only courses that are active and assigned to user
+            $coursesQuery = CourseMaster::where('active_inactive', 1)
+                ->where(function ($q) use ($currentDate) {
+                    // Course is active if end_date is null OR end_date >= today
+                    $q->whereNull('end_date')
+                        ->orWhere('end_date', '>=', $currentDate);
+                });
+
+            // Apply role-based filtering if exists
             if (!empty($data_course_id)) {
-                $courses->whereIn('pk', $data_course_id);
+                $coursesQuery->whereIn('pk', $data_course_id);
             }
-            $courses = $courses->select('pk', 'course_name')
+
+            // Optional: If user is a student, only show courses they are enrolled in
+            if (auth()->user()->role == 'student') {
+                $coursesQuery->whereHas('students', function ($q) use ($userId, $currentDate) {
+                    $q->where('student_master_pk', $userId)
+                        ->where('active_inactive', 1);
+                });
+            }
+
+            $courses = $coursesQuery->select('pk', 'course_name')
                 ->orderBy('course_name')
                 ->get();
 
-            // Fetch all faculties for dropdown
+            // Fetch all active faculties for dropdown
             $faculties = FacultyMaster::where('active_inactive', 1)
                 ->select('pk', 'full_name')
                 ->orderBy('full_name')
@@ -55,123 +78,128 @@ class FeedbackController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error in FeedbackController@database: ' . $e->getMessage());
 
-            // Fallback
+            // Fallback empty collections
             $courses = collect();
             $faculties = collect();
             return view('admin.feedback.feedback_database', compact('courses', 'faculties'));
         }
     }
 
+
+    private function baseDatabaseQuery(Request $request)
+    {
+        $query = DB::table('topic_feedback as tf')
+            ->select([
+                'f.pk as faculty_id',
+                'f.full_name as faculty_name',
+                'f.email_id as faculty_email',
+                DB::raw('IFNULL(f.Permanent_Address, "N/A") as faculty_address'),
+                'c.course_name',
+                't.subject_topic',
+
+                DB::raw('ROUND(AVG(tf.content) * 20, 2) as avg_content_percent'),
+                DB::raw('ROUND(AVG(tf.presentation) * 20, 2) as avg_presentation_percent'),
+
+                DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
+                DB::raw('DATE(t.START_DATE) as session_date'),
+                DB::raw('GROUP_CONCAT(DISTINCT tf.remark SEPARATOR " | ") as all_comments'),
+
+                't.pk as timetable_pk'
+            ])
+            ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+            ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            ->where('t.course_master_pk', $request->course_id)
+            ->where('t.START_DATE', '>=', Carbon::now()->subYears(2));
+
+        /* 🔍 Filters */
+        if ($request->search_param === 'faculty' && $request->filled('faculty_id')) {
+            $query->where('f.pk', $request->faculty_id);
+        }
+
+        if ($request->search_param === 'topic' && $request->filled('topic_value')) {
+            $query->where('t.subject_topic', 'like', "%{$request->topic_value}%");
+        }
+
+        $query->groupBy(
+            'f.pk',
+            'f.full_name',
+            'f.email_id',
+            'f.Permanent_Address',
+            'c.course_name',
+            't.subject_topic',
+            't.START_DATE',
+            't.pk'
+        )
+            ->orderBy('t.START_DATE', 'DESC');
+
+        return $query;
+    }
+
+
     public function getDatabaseData(Request $request)
     {
         try {
+            /* ---------------- Validation ---------------- */
             $validated = $request->validate([
-                'course_id' => 'required|integer',
+                'course_id'    => 'required|integer',
                 'search_param' => 'nullable|string|in:all,faculty,topic',
-                'search_value' => 'nullable|string',
-                'faculty_id' => 'nullable|integer',
-                'topic_value' => 'nullable|string',
+                'faculty_id'   => 'nullable|integer',
+                'topic_value'  => 'nullable|string',
+                'per_page'     => 'nullable|integer',
+                'page'         => 'nullable|integer',
             ]);
 
-            $courseId = $request->course_id;
+            /* ---------------- Base Query ---------------- */
+            $query = $this->baseDatabaseQuery($request);
 
-            // Main query - removed ROW_NUMBER() window function
-            $query = DB::table('topic_feedback as tf')
-                ->select([
-                    'f.pk as faculty_id',
-                    'f.full_name as faculty_name',
-                    'f.email_id as faculty_email',
-                    DB::raw('IFNULL(f.Permanent_Address, "N/A") as faculty_address'),
-                    'c.course_name',
-                    't.subject_topic',
-                    DB::raw('AVG(tf.content) * 20 as avg_content_percent'),
-                    DB::raw('AVG(tf.presentation) * 20 as avg_presentation_percent'),
-                    DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
-                    DB::raw('DATE(t.START_DATE) as session_date'),
-                    DB::raw('GROUP_CONCAT(DISTINCT tf.remark SEPARATOR " | ") as all_comments'),
-                    't.pk as timetable_pk',
-                    'tf.created_date' // Added for ordering
-                ])
-                ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
-                ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
-                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-                ->where('t.course_master_pk', $courseId);
+            /* ---------------- Pagination ---------------- */
+            $perPage = $request->per_page ?? 10;
+            $page    = $request->page ?? 1;
 
-            // Apply search filters based on search_param
-            if ($request->filled('search_param')) {
-                switch ($request->search_param) {
-                    case 'faculty':
-                        if ($request->filled('faculty_id')) {
-                            $query->where('f.pk', $request->faculty_id);
-                        }
-                        break;
-                    case 'topic':
-                        if ($request->filled('topic_value')) {
-                            $query->where('t.subject_topic', 'like', "%{$request->topic_value}%");
-                        }
-                        break;
-                }
-            }
-
-            // Apply date filter for performance (last 2 years)
-            $query->where('t.START_DATE', '>=', Carbon::now()->subYears(2));
-
-            // Group by - added all selected columns
-            $query->groupBy(
-                'f.pk',
-                'f.full_name',
-                'f.email_id',
-                'f.Residence_address',
-                'f.Permanent_Address',
-                'c.course_name',
-                't.subject_topic',
-                't.START_DATE',
-                't.pk',
-                'tf.created_date' // Added to GROUP BY
-            )
-                ->orderBy('t.START_DATE', 'DESC');
-
-            // Get total count for pagination
+            // Total rows count
             $total = DB::table(DB::raw("({$query->toSql()}) as sub"))
                 ->mergeBindings($query)
                 ->count();
 
-            // Apply pagination
-            $perPage = $request->per_page ?? 10;
-            $page = $request->page ?? 1;
-
-            $feedbackData = $query->offset(($page - 1) * $perPage)
+            // Fetch paginated data
+            $data = $query
+                ->offset(($page - 1) * $perPage)
                 ->limit($perPage)
                 ->get();
 
-            // Calculate row numbers manually
-            $feedbackData = $feedbackData->map(function ($item, $index) use ($page, $perPage) {
+            /* ---------------- Row Number + Encrypt ---------------- */
+            $data->transform(function ($item, $index) use ($page, $perPage) {
                 $item->row_num = (($page - 1) * $perPage) + $index + 1;
-                // ✅ MATCH faculty decrypt($id) logic
                 $item->faculty_enc_id = encrypt($item->faculty_id);
                 return $item;
             });
 
+            /* ---------------- Response ---------------- */
             return response()->json([
-                'success' => true,
-                'data' => $feedbackData,
-                'total' => $total,
-                'page' => $page,
-                'per_page' => $perPage,
-                'total_pages' => ceil($total / $perPage)
+                'success'      => true,
+                'data'         => $data,
+                'total'        => $total,
+                'page'         => (int) $page,
+                'per_page'     => (int) $perPage,
+                'total_pages'  => ceil($total / $perPage),
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error in getDatabaseData: ' . $e->getMessage());
-            \Log::error('Error Trace:', ['trace' => $e->getTraceAsString()]);
+
+            \Log::error('Error in getDatabaseData', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'Error loading data: ' . $e->getMessage(),
-                'data' => [],
-                'total' => 0
+                'error'   => 'Error loading feedback database data',
+                'data'    => [],
+                'total'   => 0
             ], 500);
         }
     }
+
 
     public function getTopicsForCourse(Request $request)
     {
@@ -204,97 +232,102 @@ class FeedbackController extends Controller
     {
         try {
             $validated = $request->validate([
-                'course_id' => 'required|integer',
-                'export_type' => 'required|in:excel,csv,pdf',
-                'search_param' => 'nullable|string',
-                'faculty_id' => 'nullable|integer',
-                'topic_value' => 'nullable|string'
+                'course_id'    => 'required|integer',
+                'export_type'  => 'required|in:excel,csv,pdf',
+                'search_param' => 'nullable|string|in:all,faculty,topic',
+                'faculty_id'   => 'nullable|integer',
+                'topic_value'  => 'nullable|string',
             ]);
 
-            $data = $this->getDatabaseQuery($request)->get();
+            $data = $this->baseDatabaseQuery($request)->get();
 
-            // Transform for export
             $exportData = $data->map(function ($item, $index) {
                 return [
                     'S.No.' => $index + 1,
-                    'Faculty Name' => $item->faculty_name ?? 'N/A',
-                    'Course Name' => $item->course_name ?? 'N/A',
+                    'Faculty Name' => $item->faculty_name,
+                    'Course Name' => $item->course_name,
                     'Faculty Address' => ($item->faculty_address ?? 'N/A') .
                         ($item->faculty_email ? "\n" . $item->faculty_email : ''),
-                    'Topic' => $item->subject_topic ?? 'N/A',
-                    'Content (%)' => $item->avg_content_percent ?
-                        number_format($item->avg_content_percent, 2) : '0.00',
-                    'Presentation (%)' => $item->avg_presentation_percent ?
-                        number_format($item->avg_presentation_percent, 2) : '0.00',
-                    'No. of Participants' => $item->participant_count ?? 0,
-                    'Session Date' => $item->session_date ?
-                        Carbon::parse($item->session_date)->format('d-m-Y') : 'N/A',
-                    'Comments' => $item->all_comments ?? 'No comments'
+
+                    'Topic' => $item->subject_topic,
+
+                    'Content (%)' => number_format($item->avg_content_percent, 2),
+                    'Presentation (%)' => number_format($item->avg_presentation_percent, 2),
+
+                    'No. of Participants' => $item->participant_count,
+                    'Session Date' => \Carbon\Carbon::parse($item->session_date)->format('d-m-Y'),
+                    'Comments' => $item->all_comments ?: 'No comments',
                 ];
             });
 
             return response()->json([
-                'success' => true,
-                'data' => $exportData,
-                'filename' => 'feedback_database_' . date('Y_m_d_H_i_s')
+                'success'  => true,
+                'data'     => $exportData,
+                'filename' => 'feedback_database_' . now()->format('Y_m_d_H_i_s'),
             ]);
         } catch (\Exception $e) {
-            \Log::error('Error in exportDatabase: ' . $e->getMessage());
+
+            \Log::error('Error in exportDatabase', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString()
+            ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'Export failed: ' . $e->getMessage()
+                'error'   => 'Export failed. Please try again.',
             ], 500);
         }
     }
 
-    private function getDatabaseQuery(Request $request)
-    {
-        $query = DB::table('topic_feedback as tf')
-            ->select([
-                'f.pk as faculty_id',
-                'f.full_name as faculty_name',
-                'f.email_id as faculty_email',
-                DB::raw('IFNULL(f.Permanent_Address, "N/A") as faculty_address'),
-                'c.course_name',
-                't.subject_topic',
-                DB::raw('AVG(tf.content) * 20 as avg_content_percent'),
-                DB::raw('AVG(tf.presentation) * 20 as avg_presentation_percent'),
-                DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
-                DB::raw('DATE(t.START_DATE) as session_date'),
-                DB::raw('GROUP_CONCAT(DISTINCT tf.remark SEPARATOR " | ") as all_comments')
-            ])
-            ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
-            ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
-            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-            ->where('t.course_master_pk', $request->course_id);
 
-        // Apply filters
-        if ($request->filled('search_param')) {
-            if ($request->search_param === 'faculty' && $request->filled('faculty_id')) {
-                $query->where('f.pk', $request->faculty_id);
-            } elseif ($request->search_param === 'topic' && $request->filled('topic_value')) {
-                $query->where('t.subject_topic', 'like', "%{$request->topic_value}%");
-            }
-        }
+    // private function getDatabaseQuery(Request $request)
+    // {
+    //     $query = DB::table('topic_feedback as tf')
+    //         ->select([
+    //             'f.pk as faculty_id',
+    //             'f.full_name as faculty_name',
+    //             'f.email_id as faculty_email',
+    //             DB::raw('IFNULL(f.Permanent_Address, "N/A") as faculty_address'),
+    //             'c.course_name',
+    //             't.subject_topic',
+    //             DB::raw('AVG(tf.content) * 20 as avg_content_percent'),
+    //             DB::raw('AVG(tf.presentation) * 20 as avg_presentation_percent'),
+    //             DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
+    //             DB::raw('DATE(t.START_DATE) as session_date'),
+    //             DB::raw('GROUP_CONCAT(DISTINCT tf.remark SEPARATOR " | ") as all_comments')
+    //         ])
+    //         ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+    //         ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+    //         ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+    //         ->where('t.course_master_pk', $request->course_id);
 
-        $query->groupBy(
-            'f.pk',
-            'f.full_name',
-            'f.email_id',
-            'f.Residence_address',
-            'f.Permanent_Address',
-            'c.course_name',
-            't.subject_topic',
-            't.START_DATE'
-        )
-            ->orderBy('t.START_DATE', 'DESC');
+    //     // Apply filters
+    //     if ($request->filled('search_param')) {
+    //         if ($request->search_param === 'faculty' && $request->filled('faculty_id')) {
+    //             $query->where('f.pk', $request->faculty_id);
+    //         } elseif ($request->search_param === 'topic' && $request->filled('topic_value')) {
+    //             $query->where('t.subject_topic', 'like', "%{$request->topic_value}%");
+    //         }
+    //     }
 
-        return $query;
-    }
+    //     $query->groupBy(
+    //         'f.pk',
+    //         'f.full_name',
+    //         'f.email_id',
+    //         'f.Residence_address',
+    //         'f.Permanent_Address',
+    //         'c.course_name',
+    //         't.subject_topic',
+    //         't.START_DATE'
+    //     )
+    //         ->orderBy('t.START_DATE', 'DESC');
+
+    //     return $query;
+    // }
 
     public function showFacultyAverage(Request $request)
     {
+        // dd($request->all());
         $data_course_id =  get_Role_by_course();
 
 
@@ -303,16 +336,39 @@ class FeedbackController extends Controller
         $facultyName = $request->input('faculty_name');
         $fromDate = $request->input('from_date');
         $toDate = $request->input('to_date');
-        $courseType = $request->input('course_type', 'archived');
+        $courseType = $request->input('course_type', 'current');
 
         // 1. Get programs from course_master table
-        $programs = DB::table('course_master')
+        $currentDate = now()->toDateString();
+
+        $currentDate = now()->toDateString();
+
+        // Fetch programs based on selected course type
+        $programsQuery = DB::table('course_master')
+            ->where('active_inactive', 1)
+            ->when($courseType === 'current', function ($q) use ($currentDate) {
+                $q->where(function ($q2) use ($currentDate) {
+                    $q2->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $currentDate);
+                });
+            })
+            ->when($courseType === 'archived', function ($q) use ($currentDate) {
+                $q->whereDate('end_date', '<', $currentDate);
+            })
             ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
                 $query->whereIn('pk', $data_course_id);
             })
-            ->distinct()
-            ->orderBy('course_name')
-            ->pluck('course_name', 'course_name');
+            ->orderBy('course_name');
+
+        $programs = $programsQuery->pluck('course_name', 'pk');
+
+        // Default fallback if no programs found
+        if ($programs->isEmpty()) {
+            $programs = collect([
+                'Phase-I 2024' => 'Phase-I 2024'
+            ]);
+        }
+
 
         if ($programs->isEmpty()) {
             $programs = collect([
@@ -372,8 +428,16 @@ class FeedbackController extends Controller
             ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name');
 
         // Apply filters
-        if ($programName && $programName !== 'All Programs') {
-            $query->where('cm.course_name', 'LIKE', '%' . $programName . '%');
+        // if ($programName && $programName !== 'All Programs') {
+        //     $query->where('cm.course_name', 'LIKE', '%' . $programName . '%');
+        // }
+        if (!empty($programName)) {
+            $query->where('cm.pk', $programName);
+        }
+        $currentProgramName = null;
+
+        if (!empty($programName) && $programs->has($programName)) {
+            $currentProgramName = $programs[$programName]; // course_name
         }
 
         if ($facultyName && $facultyName !== 'All Faculty') {
@@ -388,10 +452,19 @@ class FeedbackController extends Controller
             $query->whereDate('tf.created_date', '<=', $toDate);
         }
 
-        // For archived courses - filter by end date
+        // Course type filter (IMPORTANT)
         if ($courseType === 'archived') {
-            $query->whereDate('tt.END_DATE', '<', Carbon::today());
+            $query->whereDate('cm.end_date', '<', Carbon::today());
         }
+
+        if ($courseType === 'current') {
+            $query->where(function ($q) {
+                $q->whereNull('cm.end_date')
+                    ->orWhereDate('cm.end_date', '>=', Carbon::today());
+            });
+        }
+
+
 
         // Execute query
         $feedbackData = $query->get();
@@ -491,11 +564,15 @@ class FeedbackController extends Controller
             'programs' => $programs,
             'faculties' => $faculties,
             'currentProgram' => $programName,
+            'currentProgramName' => $currentProgramName, // NAME (for heading)
             'currentFaculty' => $facultyName,
             'fromDate' => $fromDate,
             'toDate' => $toDate,
             'courseType' => $courseType,
             'refreshTime' => now()->format('d-M-Y H:i'),
+            // 👇 NEW FIELDS
+            'session_date'            => $row->START_DATE,
+            'class_session'           => $row->class_session,
         ]);
     }
 
