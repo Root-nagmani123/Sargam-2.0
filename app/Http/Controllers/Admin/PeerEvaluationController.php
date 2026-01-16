@@ -62,15 +62,25 @@ class PeerEvaluationController extends Controller
         ]);
 
         try {
-            PeerCourse::create([
+            $course = PeerCourse::create([
                 'course_name' => $request->course_name,
                 'is_active' => true
             ]);
 
-            return response()->json([
+          /*   return response()->json([
                 'success' => true,
                 'message' => 'Course added successfully'
-            ]);
+            ]); */
+			return response()->json([
+            'success' => true,
+            'message' => 'Course added successfully',
+            'course' => [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'events_count' => 0,
+                'groups_count' => 0
+            ]
+			]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
