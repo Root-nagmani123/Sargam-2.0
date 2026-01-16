@@ -40,6 +40,9 @@
                 <input type="text" id="course_name" class="form-control" placeholder="Enter Course Name">
                 <button class="btn btn-info" id="addCourseBtn">Add Course</button>
             </div>
+			<div class="input-group mb-3">
+			<div id="courseMessage" class="small mt-1" style="display:none;"></div>
+			</div>
 
             {{-- Courses List --}}
             <div class="mt-3">
@@ -530,7 +533,8 @@ $(document).ready(function() {
                 });
 
                 // Add Course
-                $('#addCourseBtn').click(function() {
+				
+               /* $('#addCourseBtn').click(function() {
                     const courseName = $('#course_name').val();
                     if (!courseName) {
                         alert('Please enter course name');
@@ -550,9 +554,118 @@ $(document).ready(function() {
                         alert('Error adding course');
                     });
                 });
+*/
+
+function validateCourseName() {
+    const courseName = $('#course_name').val().trim();
+
+    if (!courseName) {
+        $('#courseMessage')
+            .removeClass('text-success')
+            .addClass('text-danger')
+            .text('Please enter course name')
+            .show();
+        return false;
+    }
+
+    $('#courseMessage').hide().text('');
+    return true;
+}
+
+
+$('#course_name').on('keyup', function () {
+    if ($(this).val().trim().length > 0) {
+        $('#courseMessage').fadeOut();
+    }
+});
+
+$('#course_name').on('blur', function () {
+    validateCourseName();
+});
+
+$('#addCourseBtn').click(function () {
+
+    const courseName = $('#course_name').val().trim();
+
+    $('#courseMessage').hide().removeClass('text-success text-danger').text('');
+
+   /* if (!courseName) {
+        $('#courseMessage').addClass('text-danger')
+            .text('Please enter course name')
+            .show();
+        return;
+    }*/
+	  if (!validateCourseName()) {
+        return;
+    }
+
+    $.post('{{ route('admin.peer.course.add') }}', {
+        _token: '{{ csrf_token() }}',
+        course_name: courseName
+    }, function (response) {
+
+        if (response.success) {
+
+          
+            $('#courseMessage')
+                .addClass('text-success')
+                .text(response.message)
+                .show();
+
+            $('#course_name').val('');
+
+            setTimeout(() => $('#courseMessage').fadeOut(), 3000);
+
+           
+            const course = response.course;
+
+            const html = `
+            <div class="accordion-item mb-2">
+                <h2 class="accordion-header" id="heading${course.id}">
+                    <button class="accordion-button collapsed" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapse${course.id}">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <strong>${course.course_name}</strong>
+                            <div>
+                                <span class="badge bg-primary">0 Events</span>
+                                <span class="badge bg-secondary ms-1">0 Groups</span>
+                            </div>
+                        </div>
+                    </button>
+                </h2>
+
+                <div id="collapse${course.id}" class="accordion-collapse collapse"
+                    data-bs-parent="#coursesAccordion">
+                    <div class="accordion-body">
+                        <div class="input-group input-group-sm mb-3">
+                            <input type="text" class="form-control event-input"
+                                placeholder="Add Event to ${course.course_name}"
+                                data-course-id="${course.id}">
+                            <button class="btn btn-outline-primary add-event-btn"
+                                data-course-id="${course.id}">
+                                Add Event
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+            $('#coursesAccordion').prepend(html);
+        }
+
+    }).fail(function () {
+        $('#courseMessage').addClass('text-danger')
+            .text('Error adding course')
+            .show();
+    });
+});
+
+
 
                 // Add Event to Course
-                $('.add-event-btn').click(function() {
+                //$('.add-event-btn').click(function() {
+			$(document).on('click', '.add-event-btn', function () {
                     const courseId = $(this).data('course-id');
                     const eventInput = $(`.event-input[data-course-id="${courseId}"]`);
                     const eventName = eventInput.val();
