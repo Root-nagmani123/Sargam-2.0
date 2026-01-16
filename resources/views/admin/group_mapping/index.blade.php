@@ -280,7 +280,7 @@
                                                 </span>
                                                 <input type="text" class="form-control border-start-0"
                                                     id="studentSearchInput"
-                                                    placeholder="Search students by name, email, or contact number..."
+                                                    placeholder="Search students by name, OT code, email, or contact number..."
                                                     autocomplete="off">
                                                 <button class="btn btn-outline-secondary border-start-0" type="button"
                                                     id="clearStudentSearch" style="display: none;">
