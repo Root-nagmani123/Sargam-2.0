@@ -47,6 +47,7 @@
                         </th>
                         <th>#</th>
                         <th>Name</th>
+                        <th>OT Code</th>
                         <th>Email</th>
                         <th>Contact No</th>
                         <th class="text-center">Actions</th>
@@ -71,6 +72,7 @@
 
                         <td>{{ $loop->iteration + ($students->currentPage() - 1) * $students->perPage() }}</td>
                         <td class="fw-semibold">{{ $student->display_name ?? 'N/A' }}</td>
+                        <td>{{ $student->generated_OT_code ?? 'N/A' }}</td>
                         <td>{{ $student->email ?? 'N/A' }}</td>
                         <td>{{ $student->contact_no ?? 'N/A' }}</td>
 
@@ -101,7 +103,7 @@
 
                     @empty
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             No students found.
                         </td>
                     </tr>
