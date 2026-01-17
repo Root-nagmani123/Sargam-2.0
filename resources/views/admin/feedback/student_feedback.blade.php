@@ -68,21 +68,21 @@
             display: none;
         }
 
-.star-rating label {
-    font-size: 1.25rem;
-    color: transparent;
-    cursor: pointer;
-    transition: color 0.2s ease-in-out;
-    padding: 0 1px;
-    -webkit-text-stroke: 2px #af2910;
-    text-stroke: 2px #af2910;
-}
+        .star-rating label {
+            font-size: 1.25rem;
+            color: transparent;
+            cursor: pointer;
+            transition: color 0.2s ease-in-out;
+            padding: 0 1px;
+            -webkit-text-stroke: 2px #af2910;
+            text-stroke: 2px #af2910;
+        }
 
-.star-rating input:not(:checked)~label {
-    color: transparent;
-    -webkit-text-stroke: 2px #af2910;
-    text-stroke: 2px #af2910;
-}
+        .star-rating input:not(:checked)~label {
+            color: transparent;
+            -webkit-text-stroke: 2px #af2910;
+            text-stroke: 2px #af2910;
+        }
 
         .table td,
         .table th {
@@ -208,31 +208,31 @@
                 transform: rotate(360deg);
             }
         }
+
         .rating-legend {
-    font-size: 0.875rem;
-}
+            font-size: 0.875rem;
+        }
 
-.rating-legend .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 20px;
-    background: #f8f9fa;
-    border: 1px solid #e5e7eb;
-}
+        .rating-legend .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 20px;
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+        }
 
-.rating-legend .stars {
-    color: #af2910;
-    letter-spacing: 1px;
-    font-size: 0.95rem;
-}
+        .rating-legend .stars {
+            color: #af2910;
+            letter-spacing: 1px;
+            font-size: 0.95rem;
+        }
 
-.rating-legend .text {
-    color: #374151;
-    font-weight: 500;
-}
-
+        .rating-legend .text {
+            color: #374151;
+            font-weight: 500;
+        }
     </style>
 </head>
 <x-session_message />
@@ -363,11 +363,11 @@
                         <label for="date-filter" class="form-label mb-0 fw-semibold">
                             <i class="bi bi-calendar-event me-2"></i>Filter by Date:
                         </label>
-                        <input type="date" class="form-control form-control-sm mt-2" id="date-filter" 
+                        <input type="date" class="form-control form-control-sm mt-2" id="date-filter"
                             style="max-width: 200px;">
                     </div>
                     <div class="col-md-6 text-end">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-date-filter" 
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-date-filter"
                             style="display: none;">
                             <i class="bi bi-x-circle me-1"></i>Clear Filter
                         </button>
@@ -401,6 +401,7 @@
             <!-- Tabs Content -->
             <div class="tab-content" id="feedbackTabsContent">
                 <!-- Pending Feedback Tab -->
+                <!-- Pending Feedback Tab -->
                 <div class="tab-pane fade show active" id="pending-tab-pane" role="tabpanel"
                     aria-labelledby="pending-tab" tabindex="0">
                     @if ($pendingData->count() > 0)
@@ -409,27 +410,27 @@
                             <div class="card-body mb-4 p-0">
                                 <div class="table-responsive">
                                     <div class="rating-legend d-flex flex-wrap gap-3 align-items-center mt-2 mb-3">
-                                    <span class="legend-item">
-                                        <span class="stars">★★★★★</span>
-                                        <span class="text">Excellent</span>
-                                    </span>
-                                    <span class="legend-item">
-                                        <span class="stars">★★★★</span>
-                                        <span class="text">Very Good</span>
-                                    </span>
-                                    <span class="legend-item">
-                                        <span class="stars">★★★</span>
-                                        <span class="text">Good</span>
-                                    </span>
-                                    <span class="legend-item">
-                                        <span class="stars">★★</span>
-                                        <span class="text">Average</span>
-                                    </span>
-                                    <span class="legend-item">
-                                        <span class="stars">★</span>
-                                        <span class="text">Below Average</span>
-                                    </span>
-                                </div>
+                                        <span class="legend-item">
+                                            <span class="stars">★★★★★</span>
+                                            <span class="text">Excellent</span>
+                                        </span>
+                                        <span class="legend-item">
+                                            <span class="stars">★★★★</span>
+                                            <span class="text">Very Good</span>
+                                        </span>
+                                        <span class="legend-item">
+                                            <span class="stars">★★★</span>
+                                            <span class="text">Good</span>
+                                        </span>
+                                        <span class="legend-item">
+                                            <span class="stars">★★</span>
+                                            <span class="text">Average</span>
+                                        </span>
+                                        <span class="legend-item">
+                                            <span class="stars">★</span>
+                                            <span class="text">Below Average</span>
+                                        </span>
+                                    </div>
                                     <table class="table rounded">
                                         <thead class="bg-danger text-white">
                                             <tr>
@@ -449,7 +450,8 @@
                                             @php $pendingIndex = 0; @endphp
                                             @foreach ($pendingData as $feedback)
                                                 @if ($feedback->feedback_checkbox == 1)
-                                                    <tr class="text-center" data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
+                                                    <tr class="text-center"
+                                                        data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
                                                         <td class="text-center">{{ ++$pendingIndex }}</td>
                                                         <td>
                                                             {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
@@ -504,20 +506,24 @@
                                                             @endif
                                                         </td>
                                                         <td>
-                                                            <button type="submit" name="submit_index"
-                                                                value="{{ $loop->index }}"
+                                                            <button type="button"
+                                                                onclick="submitIndividual({{ $loop->index }})"
                                                                 class="individual-feedback-submit-btn">
                                                                 Submit
                                                             </button>
                                                         </td>
 
+                                                        <!-- Hidden Inputs -->
                                                         <input type="hidden"
                                                             name="timetable_pk[{{ $loop->index }}]"
+                                                            value="{{ $feedback->timetable_pk . '_' . $feedback->faculty_pk }}">
+                                                        <input type="hidden" name="faculty_pk[{{ $loop->index }}]"
+                                                            value="{{ $feedback->faculty_pk }}">
+                                                        <input type="hidden"
+                                                            name="original_timetable_pk[{{ $loop->index }}]"
                                                             value="{{ $feedback->timetable_pk }}">
                                                         <input type="hidden" name="topic_name[{{ $loop->index }}]"
                                                             value="{{ $feedback->subject_topic }}">
-                                                        <input type="hidden" name="faculty_pk[{{ $loop->index }}]"
-                                                            value="{{ $feedback->faculty_pk ?? '' }}">
                                                         <input type="hidden"
                                                             name="Ratting_checkbox[{{ $loop->index }}]"
                                                             value="{{ $feedback->Ratting_checkbox }}">
@@ -529,21 +535,19 @@
                                             @endforeach
                                         </tbody>
                                     </table>
-                                    {{-- Loader inside table --}}
-                                    {{-- Loader inside table --}}
                                     <div id="table-loader"
                                         style="
-                                                 display: none;
-                                                 position: absolute;
-                                                 top: 0;
-                                                 left: 0;
-                                                 width: 100%;
-                                                 height: 100%;
-                                                 background: rgba(255, 255, 255, 0.7);
-                                                 justify-content: center;
-                                                 align-items: center;
-                                                 z-index: 10;
-                                                 ">
+                                display: none;
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                background: rgba(255, 255, 255, 0.7);
+                                justify-content: center;
+                                align-items: center;
+                                z-index: 10;
+                                ">
                                         <div style="text-align:center;">
                                             <svg class="spinner" width="32" height="32" viewBox="0 0 50 50">
                                                 <circle cx="25" cy="25" r="20" stroke="#004A93"
@@ -559,7 +563,6 @@
                                     Submit All Feedback
                                 </button>
                             </div>
-
                         </form>
                     @else
                         <div class="text-center py-5">
@@ -592,7 +595,8 @@
                                     @if ($submittedData->count() > 0)
                                         @php $submittedIndex = 0; @endphp
                                         @foreach ($submittedData as $feedback)
-                                            <tr class="text-center" data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
+                                            <tr class="text-center"
+                                                data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
                                                 <td class="text-center">{{ ++$submittedIndex }}</td>
                                                 <td>
                                                     {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
@@ -715,207 +719,244 @@
 
     <!-- JavaScript for Tab Functionality -->
     <script>
-        $(document).ready(function() {
-            // Initialize Bootstrap tabs
-            const feedbackTabs = document.getElementById('feedbackTabs');
-            const tab = new bootstrap.Tab(feedbackTabs.querySelector('button[data-bs-target="#pending-tab-pane"]'));
+    $(document).ready(function() {
+        // Initialize Bootstrap tabs
+        const feedbackTabs = document.getElementById('feedbackTabs');
+        const tab = new bootstrap.Tab(feedbackTabs.querySelector('button[data-bs-target="#pending-tab-pane"]'));
 
-            // Handle tab click events
-            $('#submitted-tab').on('click', function() {
-                // Tab switching handled by Bootstrap
-            });
-
-            // Handle form submission success
-            @if (session('success'))
-                const successAlert = `
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>`;
-                $('.container.my-5').prepend(successAlert);
-
-                setTimeout(function() {
-                    const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
-                    submittedTab.show();
-
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 500);
-                }, 1500);
-            @endif
-
-            @if (session('error'))
-                const errorAlert = `
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>`;
-                $('.container.my-5').prepend(errorAlert);
-            @endif
-
-            // Add form validation
-            $('#vertical-wizard').validate({
-                rules: {
-                    'timetable_pk[]': {
-                        required: false
-                    }
-                },
-                errorPlacement: function(error, element) {
-                    if (element.attr("name").includes("presentation") || element.attr("name").includes(
-                            "content")) {
-                        error.insertAfter(element.closest('td'));
-                    } else if (element.attr("name").includes("remarks")) {
-                        error.insertAfter(element);
-                    } else {
-                        error.insertAfter(element);
-                    }
-                },
-                submitHandler: function(form) {
-                    // Show loader centered inside table
-                    $('#table-loader').show();
-
-                    // Disable all buttons while submitting
-                    $(form).find('button[type="submit"], .btn-individual').prop('disabled', true);
-
-                    form.submit();
+        // Add form validation - PLACE IT HERE
+        $('#vertical-wizard').validate({
+            rules: {
+                'timetable_pk[]': {
+                    required: true
                 }
-            });
+            },
+            errorPlacement: function(error, element) {
+                if (element.attr("name").includes("presentation") || element.attr("name").includes(
+                        "content")) {
+                    error.insertAfter(element.closest('td'));
+                } else if (element.attr("name").includes("remarks")) {
+                    error.insertAfter(element);
+                } else {
+                    error.insertAfter(element);
+                }
+            },
+            submitHandler: function(form) {
+                // Show loader centered inside table
+                $('#table-loader').show();
 
-            // Prevent double form submission
-            $('#vertical-wizard').on('submit', function(e) {
-                const submitBtn = $(this).find('button[type="submit"]');
-                if (submitBtn.prop('disabled')) {
-                    e.preventDefault();
+                // Disable all buttons while submitting
+                $(form).find('button[type="submit"], .individual-feedback-submit-btn').prop('disabled', true);
+                
+                // Filter out rows that don't have any feedback
+                let hasFeedback = false;
+                $('tr[data-feedback-date]').each(function() {
+                    const contentChecked = $(this).find('input[name^="content"]:checked').length;
+                    const presentationChecked = $(this).find('input[name^="presentation"]:checked').length;
+                    const remarks = $(this).find('textarea[name^="remarks"]').val().trim();
+                    
+                    if (contentChecked > 0 || presentationChecked > 0 || remarks !== '') {
+                        hasFeedback = true;
+                    }
+                });
+                
+                if (!hasFeedback) {
+                    $('#table-loader').hide();
+                    $(form).find('button[type="submit"], .individual-feedback-submit-btn').prop('disabled', false);
+                    alert('Please provide feedback for at least one session.');
                     return false;
                 }
-            });
 
-            // Auto-load submitted tab if URL has hash
-            if (window.location.hash === '#submitted') {
-                const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
-                submittedTab.show();
+                form.submit();
             }
-
-            // Update URL hash when tabs change
-            $('button[data-bs-toggle="tab"]').on('click', function() {
-                const tabId = $(this).attr('id');
-                if (tabId === 'submitted-tab') {
-                    window.location.hash = 'submitted';
-                } else if (tabId === 'pending-tab') {
-                    window.location.hash = 'pending';
-                }
-            });
-
-            // Date Filter Functionality
-            $('#date-filter').on('change', function() {
-                const selectedDate = $(this).val();
-                filterByDate(selectedDate);
-                
-                // Show/hide clear button
-                if (selectedDate) {
-                    $('#clear-date-filter').show();
-                } else {
-                    $('#clear-date-filter').hide();
-                }
-            });
-
-            // Clear Date Filter
-            $('#clear-date-filter').on('click', function() {
-                $('#date-filter').val('');
-                filterByDate('');
-                $(this).hide();
-            });
-
-            // Function to filter rows by date
-            function filterByDate(selectedDate) {
-                // Get active tab
-                const activeTab = $('.tab-pane.active');
-                const tbody = activeTab.find('tbody');
-                
-                let visibleCount = 0;
-                const dataRows = tbody.find('tr[data-feedback-date]');
-                const emptyStateRow = tbody.find('tr:not([data-feedback-date])');
-                
-                if (selectedDate) {
-                    // Filter rows based on selected date
-                    dataRows.each(function() {
-                        const rowDate = $(this).attr('data-feedback-date');
-                        if (rowDate === selectedDate) {
-                            $(this).show();
-                            visibleCount++;
-                        } else {
-                            $(this).hide();
-                        }
-                    });
-                    
-                    // Hide empty state row if we have matching rows, show it if no matches
-                    if (visibleCount > 0) {
-                        emptyStateRow.hide();
-                    } else {
-                        emptyStateRow.show();
-                    }
-                } else {
-                    // Show all data rows
-                    dataRows.each(function() {
-                        $(this).show();
-                        visibleCount++;
-                    });
-                    
-                    // Show empty state only if there are no data rows at all
-                    if (dataRows.length === 0) {
-                        emptyStateRow.show();
-                    } else {
-                        emptyStateRow.hide();
-                    }
-                }
-                
-                // Update badge counts based on active tab
-                if (activeTab.attr('id') === 'pending-tab-pane') {
-                    $('#pending-count').text(visibleCount);
-                } else if (activeTab.attr('id') === 'submitted-tab-pane') {
-                    $('#submitted-count').text(visibleCount);
-                }
-            }
-
-            // Re-apply filter when tab changes
-            $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function() {
-                const selectedDate = $('#date-filter').val();
-                if (selectedDate) {
-                    filterByDate(selectedDate);
-                }
-            });
         });
 
-        // Individual row submission
-        function submitIndividual(index) {
-            // Show loader inside table
-            $('#table-loader').show();
+        // Handle tab click events
+        $('#submitted-tab').on('click', function() {
+            // Tab switching handled by Bootstrap
+        });
 
-            // Disable all buttons
-            $('.btn-individual, .btn-bulk').prop('disabled', true);
+        // Handle form submission success
+        @if (session('success'))
+            const successAlert = `
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+            $('.container.my-5').prepend(successAlert);
 
-            // Create a temporary form for single row submission
-            const form = $('<form>', {
-                method: 'POST',
-                action: '{{ route('feedback.submit.feedback') }}'
-            }).append('@csrf');
-
-            // Append only the row inputs
-            $(`input[name^="timetable_pk"][name$="[${index}]"]`).clone().appendTo(form);
-            $(`input[name^="topic_name"][name$="[${index}]"]`).clone().appendTo(form);
-            $(`input[name^="faculty_pk"][name$="[${index}]"]`).clone().appendTo(form);
-            $(`input[name^="Ratting_checkbox"][name$="[${index}]"]`).clone().appendTo(form);
-            $(`input[name^="Remark_checkbox"][name$="[${index}]"]`).clone().appendTo(form);
-            $(`input[name^="content"][name$="[${index}]"]:checked`).clone().appendTo(form);
-            $(`input[name^="presentation"][name$="[${index}]"]:checked`).clone().appendTo(form);
-            $(`textarea[name^="remarks"][name$="[${index}]"]`).clone().appendTo(form);
-
-            $('body').append(form);
             setTimeout(function() {
-                form.submit();
-            }, 700); // 700ms delay
+                const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
+                submittedTab.show();
+
+                setTimeout(function() {
+                    window.location.reload();
+                }, 500);
+            }, 1500);
+        @endif
+
+        @if (session('error'))
+            const errorAlert = `
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        {{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>`;
+            $('.container.my-5').prepend(errorAlert);
+        @endif
+
+        // Prevent double form submission
+        $('#vertical-wizard').on('submit', function(e) {
+            const submitBtn = $(this).find('button[type="submit"]');
+            if (submitBtn.prop('disabled')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Auto-load submitted tab if URL has hash
+        if (window.location.hash === '#submitted') {
+            const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
+            submittedTab.show();
         }
-    </script>
+
+        // Update URL hash when tabs change
+        $('button[data-bs-toggle="tab"]').on('click', function() {
+            const tabId = $(this).attr('id');
+            if (tabId === 'submitted-tab') {
+                window.location.hash = 'submitted';
+            } else if (tabId === 'pending-tab') {
+                window.location.hash = 'pending';
+            }
+        });
+
+        // Date Filter Functionality
+        $('#date-filter').on('change', function() {
+            const selectedDate = $(this).val();
+            filterByDate(selectedDate);
+            
+            // Show/hide clear button
+            if (selectedDate) {
+                $('#clear-date-filter').show();
+            } else {
+                $('#clear-date-filter').hide();
+            }
+        });
+
+        // Clear Date Filter
+        $('#clear-date-filter').on('click', function() {
+            $('#date-filter').val('');
+            filterByDate('');
+            $(this).hide();
+        });
+
+        // Function to filter rows by date
+        function filterByDate(selectedDate) {
+            // Get active tab
+            const activeTab = $('.tab-pane.active');
+            const tbody = activeTab.find('tbody');
+            
+            let visibleCount = 0;
+            const dataRows = tbody.find('tr[data-feedback-date]');
+            const emptyStateRow = tbody.find('tr:not([data-feedback-date])');
+            
+            if (selectedDate) {
+                // Filter rows based on selected date
+                dataRows.each(function() {
+                    const rowDate = $(this).attr('data-feedback-date');
+                    if (rowDate === selectedDate) {
+                        $(this).show();
+                        visibleCount++;
+                    } else {
+                        $(this).hide();
+                    }
+                });
+                
+                // Hide empty state row if we have matching rows, show it if no matches
+                if (visibleCount > 0) {
+                    emptyStateRow.hide();
+                } else {
+                    emptyStateRow.show();
+                }
+            } else {
+                // Show all data rows
+                dataRows.each(function() {
+                    $(this).show();
+                    visibleCount++;
+                });
+                
+                // Show empty state only if there are no data rows at all
+                if (dataRows.length === 0) {
+                    emptyStateRow.show();
+                } else {
+                    emptyStateRow.hide();
+                }
+            }
+            
+            // Update badge counts based on active tab
+            if (activeTab.attr('id') === 'pending-tab-pane') {
+                $('#pending-count').text(visibleCount);
+            } else if (activeTab.attr('id') === 'submitted-tab-pane') {
+                $('#submitted-count').text(visibleCount);
+            }
+        }
+
+        // Re-apply filter when tab changes
+        $('button[data-bs-toggle="tab"]').on('shown.bs.tab', function() {
+            const selectedDate = $('#date-filter').val();
+            if (selectedDate) {
+                filterByDate(selectedDate);
+            }
+        });
+    });
+
+    // Individual row submission
+    function submitIndividual(index) {
+        // Show loader inside table
+        $('#table-loader').show();
+        
+        // Disable all buttons
+        $('.individual-feedback-submit-btn, .bulk-feedback-submit-btn').prop('disabled', true);
+        
+        // Create a temporary form for single row submission
+        const form = $('<form>', {
+            method: 'POST',
+            action: '{{ route('feedback.submit.feedback') }}',
+            id: 'individual-form-' + index
+        }).append('@csrf');
+        
+        // Add a hidden input to indicate this is an individual submission
+        form.append('<input type="hidden" name="submit_index" value="' + index + '">');
+        
+        // Append only the row inputs for this specific index
+        $(`input[name="timetable_pk[${index}]"]`).clone().appendTo(form);
+        $(`input[name="faculty_pk[${index}]"]`).clone().appendTo(form);
+        $(`input[name="original_timetable_pk[${index}]"]`).clone().appendTo(form);
+        $(`input[name="topic_name[${index}]"]`).clone().appendTo(form);
+        $(`input[name="Ratting_checkbox[${index}]"]`).clone().appendTo(form);
+        $(`input[name="Remark_checkbox[${index}]"]`).clone().appendTo(form);
+        
+        // Get checked radio buttons
+        const contentChecked = $(`input[name="content[${index}]"]:checked`);
+        if (contentChecked.length > 0) {
+            contentChecked.clone().appendTo(form);
+        }
+        
+        const presentationChecked = $(`input[name="presentation[${index}]"]:checked`);
+        if (presentationChecked.length > 0) {
+            presentationChecked.clone().appendTo(form);
+        }
+        
+        // Get remarks textarea
+        $(`textarea[name="remarks[${index}]"]`).clone().appendTo(form);
+        
+        $('body').append(form);
+        
+        // Submit the form
+        setTimeout(function() {
+            form.submit();
+        }, 100);
+    }
+</script>
 
 </body>
 
