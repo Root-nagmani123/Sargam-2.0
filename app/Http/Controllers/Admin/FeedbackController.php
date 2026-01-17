@@ -408,6 +408,8 @@ class FeedbackController extends Controller
                 'fm.full_name as faculty_name', // Get faculty name directly
                 'tf.topic_name',
                 'cm.course_name as program_name',
+                'tt.START_DATE as session_date',
+                'tt.class_session',
                 DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
                 // Presentation rating counts
                 DB::raw('SUM(CASE WHEN tf.presentation = "5" THEN 1 ELSE 0 END) as presentation_5'),
@@ -425,7 +427,7 @@ class FeedbackController extends Controller
             ->where('tf.is_submitted', 1)
             ->whereNotNull('tf.presentation')
             ->whereNotNull('tf.content')
-            ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name');
+            ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
 
         // Apply filters
         // if ($programName && $programName !== 'All Programs') {
@@ -542,6 +544,8 @@ class FeedbackController extends Controller
                 'participants' => (int)$item->participants,
                 'presentation_percentage' => $presentationPercentage,
                 'content_percentage' => $contentPercentage,
+                'session_date' => $item->session_date,
+                'class_session' => $item->class_session,
                 'presentation_counts' => [
                     '5' => $presentation_5,
                     '4' => $presentation_4,
@@ -570,9 +574,6 @@ class FeedbackController extends Controller
             'toDate' => $toDate,
             'courseType' => $courseType,
             'refreshTime' => now()->format('d-M-Y H:i'),
-            // 👇 NEW FIELDS
-            'session_date'            => $row->START_DATE,
-            'class_session'           => $row->class_session,
         ]);
     }
 
