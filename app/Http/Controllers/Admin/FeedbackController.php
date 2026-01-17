@@ -575,6 +575,7 @@ class FeedbackController extends Controller
         }
 
         // Build query for detailed feedback data
+        // Build query for detailed feedback data
         $query = DB::table('topic_feedback as tf')
             ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
             ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
@@ -602,15 +603,20 @@ class FeedbackController extends Controller
                 DB::raw('SUM(CASE WHEN tf.presentation = "2" THEN 1 ELSE 0 END) as presentation_2'),
                 DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
                 DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
-                DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND tf.remark != "" THEN tf.remark END SEPARATOR "|||") as remarks')
+                DB::raw('GROUP_CONCAT(DISTINCT CASE 
+                    WHEN tf.remark IS NOT NULL 
+                    AND TRIM(tf.remark) != "" 
+                    THEN tf.remark 
+                    ELSE NULL 
+                 END SEPARATOR "|||") as remarks')
             );
         $query->where('tf.is_submitted', 1);
         if (!empty($data_course_id)) {
             $query->whereIn('cm.pk', $data_course_id);
         }
-        $query->whereNotNull('tf.presentation')
-            ->whereNotNull('tf.content')
-            ->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tf.timetable_pk');
+
+        // Group by without filtering out NULL ratings
+        $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tf.timetable_pk');
 
         // Apply filters
         if ($programId && $programId !== '') {
@@ -644,8 +650,11 @@ class FeedbackController extends Controller
                 ->whereDate('cm.end_date', '>=', Carbon::today());
         }
 
+        // Increase GROUP_CONCAT max length BEFORE getting data
+        DB::statement("SET SESSION group_concat_max_len = 1000000;");
+
         // Get the data
-        $feedbackData = $query->get();
+        $feedbackData = $query->get();      
 
         // Process ALL data for display
         $processedData = $feedbackData->map(function ($item) {
@@ -662,14 +671,6 @@ class FeedbackController extends Controller
             $presentation_2 = (int)$item->presentation_2;
             $presentation_1 = (int)$item->presentation_1;
 
-            // Calculate percentages
-            // $contentWeightedSum = (5 * $content_5) + (4 * $content_4) + (3 * $content_3) + (2 * $content_2) + (1 * $content_1);
-            // $contentTotal = $content_5 + $content_4 + $content_3 + $content_2 + $content_1;
-            // $contentPercentage = $contentTotal > 0 ? round(($contentWeightedSum / ($contentTotal * 5)) * 100, 2) : 0;
-
-            // $presentationWeightedSum = (5 * $presentation_5) + (4 * $presentation_4) + (3 * $presentation_3) + (2 * $presentation_2) + (1 * $presentation_1);
-            // $presentationTotal = $presentation_5 + $presentation_4 + $presentation_3 + $presentation_2 + $presentation_1;
-            // $presentationPercentage = $presentationTotal > 0 ? round(($presentationWeightedSum / ($presentationTotal * 5)) * 100, 2) : 0;
             $contentWeightedSum =
                 (5 * $content_5) +
                 (4 * $content_4) +
@@ -720,7 +721,7 @@ class FeedbackController extends Controller
                 $rawRemarks = explode('|||', $item->remarks);
                 $remarks = array_filter(array_map('trim', $rawRemarks));
                 $remarks = array_unique($remarks);
-                $remarks = array_slice($remarks, 0, 10);
+                // $remarks = array_slice($remarks, 0, 10);
             }
 
             // Get faculty type display name
@@ -809,6 +810,205 @@ class FeedbackController extends Controller
         ]);
     }
 
+    //     public function facultyView(Request $request)
+    // {
+    //     /* -------------------- REQUEST PARAMS -------------------- */
+    //     if ($request->isMethod('post')) {
+    //         $programId   = $request->input('program_id');
+    //         $facultyName = $request->input('faculty_name');
+    //         $fromDate    = $request->input('from_date');
+    //         $toDate      = $request->input('to_date');
+    //         $courseType  = $request->input('course_type', 'archived');
+    //         $facultyType = $request->input('faculty_type', []);
+    //         $page        = $request->input('page', 1);
+    //     } else {
+    //         $programId   = $request->input('program_id', '');
+    //         $facultyName = $request->input('faculty_name', '');
+    //         $fromDate    = $request->input('from_date', '');
+    //         $toDate      = $request->input('to_date', '');
+    //         $courseType  = $request->input('course_type', 'archived');
+    //         $facultyType = $request->input('faculty_type', []);
+    //         $page        = $request->input('page', 1);
+    //     }
+
+    //     if (is_string($facultyType)) {
+    //         $facultyType = [$facultyType];
+    //     }
+
+    //     $data_course_id = get_Role_by_course();
+
+    //     /* -------------------- PROGRAM LIST -------------------- */
+    //     $programsQuery = DB::table('course_master')
+    //         ->select('pk as id', 'course_name', 'active_inactive', 'start_year', 'end_date');
+
+    //     if ($courseType === 'current') {
+    //         $programsQuery->where('active_inactive', 1)
+    //             ->whereDate('end_date', '>=', Carbon::today());
+    //     } else {
+    //         $programsQuery->where(function ($q) {
+    //             $q->where('active_inactive', 0)
+    //               ->orWhereDate('end_date', '<', Carbon::today());
+    //         });
+    //     }
+
+    //     if (!empty($data_course_id)) {
+    //         $programsQuery->whereIn('pk', $data_course_id);
+    //     }
+
+    //     $programs = $programsQuery->orderBy('course_name')->pluck('course_name', 'id');
+
+    //     /* -------------------- FACULTY TYPES -------------------- */
+    //     $facultyTypes = [
+    //         '1' => 'Internal',
+    //         '2' => 'Guest',
+    //     ];
+
+    //     /* -------------------- MAIN FEEDBACK QUERY -------------------- */
+    //     $query = DB::table('topic_feedback as tf')
+    //         ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+    //         ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
+    //         ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+    //         ->select(
+    //             'tf.topic_name',
+    //             'cm.pk as program_id',
+    //             'cm.course_name as program_name',
+    //             'cm.active_inactive as program_status',
+    //             'cm.end_date as program_end_date',
+    //             'fm.full_name as faculty_name',
+    //             'fm.faculty_type',
+    //             'tf.faculty_pk',
+    //             'tt.START_DATE',
+    //             'tt.END_DATE',
+    //             'tf.timetable_pk',
+
+    //             DB::raw('SUM(tf.content = 5) as content_5'),
+    //             DB::raw('SUM(tf.content = 4) as content_4'),
+    //             DB::raw('SUM(tf.content = 3) as content_3'),
+    //             DB::raw('SUM(tf.content = 2) as content_2'),
+    //             DB::raw('SUM(tf.content = 1) as content_1'),
+
+    //             DB::raw('SUM(tf.presentation = 5) as presentation_5'),
+    //             DB::raw('SUM(tf.presentation = 4) as presentation_4'),
+    //             DB::raw('SUM(tf.presentation = 3) as presentation_3'),
+    //             DB::raw('SUM(tf.presentation = 2) as presentation_2'),
+    //             DB::raw('SUM(tf.presentation = 1) as presentation_1'),
+
+    //             DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants')
+    //         )
+    //         ->where('tf.is_submitted', 1)
+    //         // ->whereNotNull('tf.presentation')
+    //         // ->whereNotNull('tf.content');
+    //         ->where(function ($q) {
+    //     $q->whereNotNull('tf.presentation')
+    //       ->orWhereNotNull('tf.content');
+    // });
+
+
+    //     if (!empty($data_course_id)) {
+    //         $query->whereIn('cm.pk', $data_course_id);
+    //     }
+
+    //     if ($programId) {
+    //         $query->where('cm.pk', $programId);
+    //     }
+
+    //     if ($facultyName && $facultyName !== 'All Faculty') {
+    //         $query->where('fm.full_name', 'LIKE', "%$facultyName%");
+    //     }
+
+    //     if (!empty($facultyType)) {
+    //         $query->whereIn('fm.faculty_type', $facultyType);
+    //     }
+
+    //     if ($fromDate) {
+    //         $query->whereDate('tt.START_DATE', '>=', $fromDate);
+    //     }
+
+    //     if ($toDate) {
+    //         $query->whereDate('tt.END_DATE', '<=', $toDate);
+    //     }
+
+    //     if ($courseType === 'archived') {
+    //         $query->where(function ($q) {
+    //             $q->where('cm.active_inactive', 0)
+    //               ->orWhereDate('cm.end_date', '<', Carbon::today());
+    //         });
+    //     } else {
+    //         $query->where('cm.active_inactive', 1)
+    //               ->whereDate('cm.end_date', '>=', Carbon::today());
+    //     }
+
+    //     $query->groupBy(
+    //         'tf.topic_name',
+    //         'cm.pk',
+    //         'cm.course_name',
+    //         'cm.active_inactive',
+    //         'cm.end_date',
+    //         'fm.full_name',
+    //         'fm.faculty_type',
+    //         'tf.faculty_pk',
+    //         'tt.START_DATE',
+    //         'tt.END_DATE',
+    //         'tf.timetable_pk'
+    //     );
+
+    //     $feedbackData = $query->get();
+
+    //     /* -------------------- ✅ FIXED REMARK QUERY -------------------- */
+    //     $remarksQuery = DB::table('topic_feedback')
+    //         ->select('topic_name', 'timetable_pk', 'remark')
+    //         ->where('is_submitted', 1)
+    //         ->whereNotNull('remark')
+    //         ->where('remark', '!=', '');
+
+    //     if (!empty($data_course_id)) {
+    //         $remarksQuery->whereIn('timetable_pk', function ($q) use ($data_course_id) {
+    //             $q->select('pk')->from('timetable')
+    //               ->whereIn('course_master_pk', $data_course_id);
+    //         });
+    //     }
+
+    //     $remarksByTopic = $remarksQuery
+    //         ->get()
+    //         ->groupBy(fn ($r) => $r->topic_name . '_' . $r->timetable_pk);
+
+    //     /* -------------------- PROCESS DATA -------------------- */
+    //     $processedData = $feedbackData->map(function ($item) use ($remarksByTopic) {
+
+    //         $key = $item->topic_name . '_' . $item->timetable_pk;
+
+    //         $remarks = $remarksByTopic[$key] ?? collect();
+
+    //         return [
+    //             'topic_name' => $item->topic_name,
+    //             'remarks' => $remarks->pluck('remark')->values()->toArray(),
+    //             'remark_count' => $remarks->count(),
+    //             'faculty_name' => $item->faculty_name,
+    //             'participants' => (int)$item->participants,
+    //         ];
+    //     });
+
+    //     /* -------------------- PAGINATION -------------------- */
+    //     $perPage = 1;
+    //     $totalRecords = $processedData->count();
+    //     $totalPages = ceil($totalRecords / $perPage);
+
+    //     $currentPageData = $processedData
+    //         ->slice(($page - 1) * $perPage, $perPage)
+    //         ->values();
+
+    //     return view('admin.feedback.faculty_view', [
+    //         'feedbackData' => $currentPageData,
+    //         'currentPage' => $page,
+    //         'totalPages' => $totalPages,
+    //         'totalRecords' => $totalRecords,
+    //         'programs' => $programs,
+    //         'facultyTypes' => $facultyTypes,
+    //         'refreshTime' => now()->format('d-M-Y H:i'),
+    //     ]);
+    // }
+
+
     public function getFacultySuggestions(Request $request)
     {
         // Handle faculty_type parameter - it might be string or array
@@ -872,256 +1072,294 @@ class FeedbackController extends Controller
     }
 
     public function exportFacultyFeedback(Request $request)
-    {
-        // Get filter parameters
-        $programId = $request->input('program_id');
-        $facultyName = $request->input('faculty_name');
-        $fromDate = $request->input('from_date');
-        $toDate = $request->input('to_date');
-        $courseType = $request->input('course_type', 'archived');
-        $facultyType = $request->input('faculty_type', []);
-        $exportType = $request->input('export_type', 'excel');
+{
+    // Get filter parameters
+    $programId = $request->input('program_id');
+    $facultyName = $request->input('faculty_name');
+    $fromDate = $request->input('from_date');
+    $toDate = $request->input('to_date');
+    $courseType = $request->input('course_type', 'archived');
+    $facultyType = $request->input('faculty_type', []);
+    $exportType = $request->input('export_type', 'excel');
 
-        // Ensure faculty_type is always an array
-        if (is_string($facultyType)) {
-            $facultyType = [$facultyType];
+    // Ensure faculty_type is always an array
+    if (is_string($facultyType)) {
+        $facultyType = [$facultyType];
+    }
+
+    $data_course_id = get_Role_by_course();
+
+    // Define faculty type map here - BEFORE using it in the map function
+    $facultyTypeMap = [
+        '1' => 'Internal',
+        '2' => 'Guest',
+    ];
+
+    // Build query for detailed feedback data (same as facultyView)
+    $query = DB::table('topic_feedback as tf')
+        ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
+        ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
+        ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
+        ->select(
+            'tf.topic_name',
+            'cm.pk as program_id',
+            'cm.course_name as program_name',
+            'cm.active_inactive as program_status',
+            'cm.end_date as program_end_date',
+            'fm.full_name as faculty_name',
+            'fm.faculty_type',
+            'tf.faculty_pk',
+            'tt.START_DATE',
+            'tt.END_DATE',
+            'tf.timetable_pk',
+            DB::raw('SUM(CASE WHEN tf.content = "5" THEN 1 ELSE 0 END) as content_5'),
+            DB::raw('SUM(CASE WHEN tf.content = "4" THEN 1 ELSE 0 END) as content_4'),
+            DB::raw('SUM(CASE WHEN tf.content = "3" THEN 1 ELSE 0 END) as content_3'),
+            DB::raw('SUM(CASE WHEN tf.content = "2" THEN 1 ELSE 0 END) as content_2'),
+            DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "5" THEN 1 ELSE 0 END) as presentation_5'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "4" THEN 1 ELSE 0 END) as presentation_4'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "3" THEN 1 ELSE 0 END) as presentation_3'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "2" THEN 1 ELSE 0 END) as presentation_2'),
+            DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
+            DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
+            DB::raw('GROUP_CONCAT(DISTINCT CASE 
+                        WHEN tf.remark IS NOT NULL 
+                        AND TRIM(tf.remark) != "" 
+                        THEN tf.remark 
+                        ELSE NULL 
+                     END SEPARATOR "|||") as remarks')
+        )
+        ->where('tf.is_submitted', 1);
+    
+    // Add course filter if applicable
+    if (!empty($data_course_id)) {
+        $query->whereIn('cm.pk', $data_course_id);
+    }
+    
+    // Remove whereNotNull conditions to include all feedback
+    $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tf.timetable_pk');
+
+    // Apply filters
+    if ($programId && $programId !== '') {
+        $query->where('cm.pk', $programId);
+    }
+
+    if ($facultyName && $facultyName !== 'All Faculty') {
+        $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
+    }
+
+    if (!empty($facultyType)) {
+        $query->whereIn('fm.faculty_type', $facultyType);
+    }
+
+    if ($fromDate) {
+        $query->whereDate('tt.START_DATE', '>=', $fromDate);
+    }
+
+    if ($toDate) {
+        $query->whereDate('tt.END_DATE', '<=', $toDate);
+    }
+
+    // Course type filter
+    if ($courseType === 'archived') {
+        $query->where(function ($q) {
+            $q->where('cm.active_inactive', 0)
+                ->orWhereDate('cm.end_date', '<', Carbon::today());
+        });
+    } elseif ($courseType === 'current') {
+        $query->where('cm.active_inactive', 1)
+            ->whereDate('cm.end_date', '>=', Carbon::today());
+    }
+
+    // Increase GROUP_CONCAT max length BEFORE getting data
+    DB::statement("SET SESSION group_concat_max_len = 1000000;");
+
+    // Get the data
+    $feedbackData = $query->get();
+
+    // Process data for export - use the $facultyTypeMap defined above
+    $processedData = $feedbackData->map(function ($item) use ($facultyTypeMap) {
+        // Convert to integers
+        $content_5 = (int)$item->content_5;
+        $content_4 = (int)$item->content_4;
+        $content_3 = (int)$item->content_3;
+        $content_2 = (int)$item->content_2;
+        $content_1 = (int)$item->content_1;
+
+        $presentation_5 = (int)$item->presentation_5;
+        $presentation_4 = (int)$item->presentation_4;
+        $presentation_3 = (int)$item->presentation_3;
+        $presentation_2 = (int)$item->presentation_2;
+        $presentation_1 = (int)$item->presentation_1;
+        
+        // Calculate content percentages
+        $contentWeightedSum =
+            (5 * $content_5) +
+            (4 * $content_4) +
+            (3 * $content_3) +
+            (2 * $content_2) +
+            (1 * $content_1);
+
+        $contentTotal =
+            $content_5 + $content_4 + $content_3 + $content_2 + $content_1;
+
+        // find max rating actually used
+        $contentMaxRating = 0;
+        if ($content_5 > 0) $contentMaxRating = 5;
+        elseif ($content_4 > 0) $contentMaxRating = 4;
+        elseif ($content_3 > 0) $contentMaxRating = 3;
+        elseif ($content_2 > 0) $contentMaxRating = 2;
+        elseif ($content_1 > 0) $contentMaxRating = 1;
+
+        $contentPercentage = ($contentTotal > 0 && $contentMaxRating > 0)
+            ? round(($contentWeightedSum / ($contentTotal * $contentMaxRating)) * 100, 2)
+            : 0;
+
+        // Calculate presentation percentages
+        $presentationWeightedSum =
+            (5 * $presentation_5) +
+            (4 * $presentation_4) +
+            (3 * $presentation_3) +
+            (2 * $presentation_2) +
+            (1 * $presentation_1);
+
+        $presentationTotal =
+            $presentation_5 + $presentation_4 + $presentation_3 + $presentation_2 + $presentation_1;
+
+        // find max rating actually used
+        $presentationMaxRating = 0;
+        if ($presentation_5 > 0) $presentationMaxRating = 5;
+        elseif ($presentation_4 > 0) $presentationMaxRating = 4;
+        elseif ($presentation_3 > 0) $presentationMaxRating = 3;
+        elseif ($presentation_2 > 0) $presentationMaxRating = 2;
+        elseif ($presentation_1 > 0) $presentationMaxRating = 1;
+
+        $presentationPercentage = ($presentationTotal > 0 && $presentationMaxRating > 0)
+            ? round(($presentationWeightedSum / ($presentationTotal * $presentationMaxRating)) * 100, 2)
+            : 0;
+
+        // Process remarks (same as web view)
+        $remarks = [];
+        if (!empty($item->remarks)) {
+            $rawRemarks = explode('|||', $item->remarks);
+            $remarks = array_filter(array_map('trim', $rawRemarks));
+            $remarks = array_unique($remarks);
+            // Don't limit remarks in export
         }
 
-        // Define faculty type map here - BEFORE using it in the map function
-        $facultyTypeMap = [
-            '1' => 'Internal',
-            '2' => 'Guest',
+        // Get faculty type display name using the $facultyTypeMap from use()
+        $facultyTypeDisplay = $facultyTypeMap[$item->faculty_type] ?? ucfirst($item->faculty_type);
+
+        // Determine course status (same as web view)
+        $courseStatus = 'Archived';
+        if ($item->program_status == 1 && Carbon::parse($item->program_end_date)->gte(Carbon::today())) {
+            $courseStatus = 'Current';
+        }
+
+        // Format date and time
+        $lectureDate = '';
+        $startTime = '';
+        $endTime = '';
+
+        if ($item->START_DATE) {
+            $lectureDate = Carbon::parse($item->START_DATE)->format('d-M-Y');
+            $startTime = Carbon::parse($item->START_DATE)->format('H:i');
+        }
+
+        if ($item->END_DATE) {
+            $endTime = Carbon::parse($item->END_DATE)->format('H:i');
+        }
+
+        // Prepare time display
+        $timeDisplay = '';
+        if ($startTime && $endTime) {
+            $timeDisplay = "({$startTime} – {$endTime})";
+        } elseif ($startTime) {
+            $timeDisplay = "({$startTime})";
+        }
+
+        // Join remarks with newlines
+        $remarksText = implode("\n", $remarks);
+
+        return [
+            'Program Name' => $item->program_name ?? '',
+            'Course Status' => $courseStatus,
+            'Faculty Name' => $item->faculty_name ?? '',
+            'Faculty Type' => $facultyTypeDisplay,
+            'Topic' => $item->topic_name ?? '',
+            'Lecture Date' => $lectureDate,
+            'Time' => $timeDisplay,
+            'Total Participants' => (int)($item->participants ?? 0),
+            'Content - Excellent' => $content_5,
+            'Content - Very Good' => $content_4,
+            'Content - Good' => $content_3,
+            'Content - Average' => $content_2,
+            'Content - Below Average' => $content_1,
+            'Content Percentage' => number_format($contentPercentage, 2) . '%',
+            'Presentation - Excellent' => $presentation_5,
+            'Presentation - Very Good' => $presentation_4,
+            'Presentation - Good' => $presentation_3,
+            'Presentation - Average' => $presentation_2,
+            'Presentation - Below Average' => $presentation_1,
+            'Presentation Percentage' => number_format($presentationPercentage, 2) . '%',
+            'Remarks' => $remarksText,
+        ];
+    });
+
+    // Export based on type
+    if ($exportType === 'excel') {
+        return $this->exportExcelWithDesign($processedData, $request);
+    } else {
+        // PDF Export with exact web view design
+        // Get program name if program filter is applied
+        $programName = 'All Programs';
+        if ($programId) {
+            $program = DB::table('course_master')->where('pk', $programId)->first();
+            $programName = $program ? $program->course_name : 'All Programs';
+        }
+
+        // Get faculty type display for filter summary
+        $facultyTypeDisplay = 'All Types';
+        if (!empty($facultyType)) {
+            if (count($facultyType) === 2) {
+                $facultyTypeDisplay = 'All Types';
+            } else {
+                $facultyTypeDisplay = in_array('1', $facultyType) ? 'Internal' : 'Guest';
+            }
+        }
+
+        $data = [
+            'feedbackData' => $processedData,
+            'filters' => [
+                'program' => $programName,
+                'faculty_name' => $facultyName ?: 'All Faculty',
+                'date_range' => ($fromDate && $toDate) ?
+                    Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') :
+                    'All Dates',
+                'course_type' => $courseType === 'current' ? 'Current Courses' : 'Archived Courses',
+                'faculty_type' => $facultyTypeDisplay,
+            ],
+            'export_date' => now()->format('d-M-Y H:i'),
         ];
 
-        // Build query for detailed feedback data (same as facultyView)
-        $query = DB::table('topic_feedback as tf')
-            ->join('timetable as tt', 'tf.timetable_pk', '=', 'tt.pk')
-            ->join('course_master as cm', 'tt.course_master_pk', '=', 'cm.pk')
-            ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk')
-            ->select(
-                'tf.topic_name',
-                'cm.course_name as program_name',
-                'cm.active_inactive as program_status',
-                'cm.end_date as program_end_date',
-                'fm.full_name as faculty_name',
-                'fm.faculty_type',
-                'tt.START_DATE',
-                'tt.END_DATE',
-                DB::raw('SUM(CASE WHEN tf.content = "5" THEN 1 ELSE 0 END) as content_5'),
-                DB::raw('SUM(CASE WHEN tf.content = "4" THEN 1 ELSE 0 END) as content_4'),
-                DB::raw('SUM(CASE WHEN tf.content = "3" THEN 1 ELSE 0 END) as content_3'),
-                DB::raw('SUM(CASE WHEN tf.content = "2" THEN 1 ELSE 0 END) as content_2'),
-                DB::raw('SUM(CASE WHEN tf.content = "1" THEN 1 ELSE 0 END) as content_1'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "5" THEN 1 ELSE 0 END) as presentation_5'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "4" THEN 1 ELSE 0 END) as presentation_4'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "3" THEN 1 ELSE 0 END) as presentation_3'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "2" THEN 1 ELSE 0 END) as presentation_2'),
-                DB::raw('SUM(CASE WHEN tf.presentation = "1" THEN 1 ELSE 0 END) as presentation_1'),
-                DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
-                DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND tf.remark != "" THEN tf.remark END SEPARATOR "|||") as remarks')
-            )
-            ->where('tf.is_submitted', 1)
-            ->whereNotNull('tf.presentation')
-            ->whereNotNull('tf.content')
-            ->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tt.START_DATE', 'tt.END_DATE');
+        $pdf = PDF::loadView('admin.feedback.faculty_feedback_pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => true,
+                'dpi' => 96,
+                'margin_top' => 15,
+                'margin_right' => 15,
+                'margin_bottom' => 15,
+                'margin_left' => 15,
+            ]);
 
-        // Apply filters
-        if ($programId && $programId !== '') {
-            $query->where('cm.pk', $programId);
-        }
-
-        if ($facultyName && $facultyName !== 'All Faculty') {
-            $query->where('fm.full_name', 'LIKE', '%' . $facultyName . '%');
-        }
-
-        if (!empty($facultyType)) {
-            $query->whereIn('fm.faculty_type', $facultyType);
-        }
-
-        if ($fromDate) {
-            $query->whereDate('tt.START_DATE', '>=', $fromDate);
-        }
-
-        if ($toDate) {
-            $query->whereDate('tt.END_DATE', '<=', $toDate);
-        }
-
-        // Course type filter
-        if ($courseType === 'archived') {
-            $query->where(function ($q) {
-                $q->where('cm.active_inactive', 0)
-                    ->orWhereDate('cm.end_date', '<', Carbon::today());
-            });
-        } elseif ($courseType === 'current') {
-            $query->where('cm.active_inactive', 1)
-                ->whereDate('cm.end_date', '>=', Carbon::today());
-        }
-
-        // Get the data
-        $feedbackData = $query->get();
-
-        // Process data for export - use the $facultyTypeMap defined above
-        $processedData = $feedbackData->map(function ($item) use ($facultyTypeMap) {
-            // Convert to integers
-            $content_5 = (int)$item->content_5;
-            $content_4 = (int)$item->content_4;
-            $content_3 = (int)$item->content_3;
-            $content_2 = (int)$item->content_2;
-            $content_1 = (int)$item->content_1;
-
-            $presentation_5 = (int)$item->presentation_5;
-            $presentation_4 = (int)$item->presentation_4;
-            $presentation_3 = (int)$item->presentation_3;
-            $presentation_2 = (int)$item->presentation_2;
-            $presentation_1 = (int)$item->presentation_1;
-
-            // Calculate percentages (same as web view)
-            // ================= PRESENTATION =================
-            $presentationWeightedSum =
-                (5 * $presentation_5) +
-                (4 * $presentation_4) +
-                (3 * $presentation_3) +
-                (2 * $presentation_2) +
-                (1 * $presentation_1);
-
-            $presentationTotal =
-                $presentation_5 + $presentation_4 +
-                $presentation_3 + $presentation_2 +
-                $presentation_1;
-
-            // dynamic max rating used
-            $presentationMaxRating = 0;
-            if ($presentation_5 > 0) $presentationMaxRating = 5;
-            elseif ($presentation_4 > 0) $presentationMaxRating = 4;
-            elseif ($presentation_3 > 0) $presentationMaxRating = 3;
-            elseif ($presentation_2 > 0) $presentationMaxRating = 2;
-            elseif ($presentation_1 > 0) $presentationMaxRating = 1;
-
-            $presentationPercentage = ($presentationTotal > 0 && $presentationMaxRating > 0)
-                ? round(($presentationWeightedSum / ($presentationTotal * $presentationMaxRating)) * 100, 2)
-                : 0;
-
-
-            $contentWeightedSum =
-                (5 * $content_5) +
-                (4 * $content_4) +
-                (3 * $content_3) +
-                (2 * $content_2) +
-                (1 * $content_1);
-
-            $contentTotal =
-                $content_5 + $content_4 +
-                $content_3 + $content_2 +
-                $content_1;
-
-            $contentMaxRating = 0;
-            if ($content_5 > 0) $contentMaxRating = 5;
-            elseif ($content_4 > 0) $contentMaxRating = 4;
-            elseif ($content_3 > 0) $contentMaxRating = 3;
-            elseif ($content_2 > 0) $contentMaxRating = 2;
-            elseif ($content_1 > 0) $contentMaxRating = 1;
-
-            $contentPercentage = ($contentTotal > 0 && $contentMaxRating > 0)
-                ? round(($contentWeightedSum / ($contentTotal * $contentMaxRating)) * 100, 2)
-                : 0;
-
-
-            // Process remarks (same as web view)
-            $remarks = [];
-            if (!empty($item->remarks)) {
-                $rawRemarks = explode('|||', $item->remarks);
-                $remarks = array_filter(array_map('trim', $rawRemarks));
-                $remarks = array_unique($remarks);
-                $remarks = array_slice($remarks, 0, 10);
-            }
-
-            // Get faculty type display name using the $facultyTypeMap from use()
-            $facultyTypeDisplay = $facultyTypeMap[$item->faculty_type] ?? ucfirst($item->faculty_type);
-
-            // Determine course status (same as web view)
-            $courseStatus = 'Archived';
-            if ($item->program_status == 1 && Carbon::parse($item->program_end_date)->gte(Carbon::today())) {
-                $courseStatus = 'Current';
-            }
-
-            // Format date and time
-            $lectureDate = '';
-            $startTime = '';
-            $endTime = '';
-
-            if ($item->START_DATE) {
-                $lectureDate = Carbon::parse($item->START_DATE)->format('d-M-Y');
-                $startTime = Carbon::parse($item->START_DATE)->format('H:i');
-            }
-
-            if ($item->END_DATE) {
-                $endTime = Carbon::parse($item->END_DATE)->format('H:i');
-            }
-
-            return [
-                'Program Name' => $item->program_name ?? '',
-                'Course Status' => $courseStatus,
-                'Faculty Name' => $item->faculty_name ?? '',
-                'Faculty Type' => $facultyTypeDisplay,
-                'Topic' => $item->topic_name ?? '',
-                'Lecture Date' => $lectureDate,
-                'Start Time' => $startTime,
-                'End Time' => $endTime,
-                'Total Participants' => (int)($item->participants ?? 0),
-                'Content - Excellent' => $content_5,
-                'Content - Very Good' => $content_4,
-                'Content - Good' => $content_3,
-                'Content - Average' => $content_2,
-                'Content - Below Average' => $content_1,
-                'Content Percentage' => number_format($contentPercentage, 2) . '%',
-                'Presentation - Excellent' => $presentation_5,
-                'Presentation - Very Good' => $presentation_4,
-                'Presentation - Good' => $presentation_3,
-                'Presentation - Average' => $presentation_2,
-                'Presentation - Below Average' => $presentation_1,
-                'Presentation Percentage' => number_format($presentationPercentage, 2) . '%',
-                'Remarks' => implode("\n", $remarks),
-            ];
-        });
-
-        // Export based on type
-        if ($exportType === 'excel') {
-            return $this->exportExcelWithDesign($processedData, $request);
-        } else {
-            // PDF Export with exact web view design
-            $data = [
-                'feedbackData' => $processedData,
-                'filters' => [
-                    'program' => $programId ? $this->getProgramName($programId) : 'All Programs',
-                    'faculty_name' => $facultyName ?: 'All Faculty',
-                    'date_range' => ($fromDate && $toDate) ?
-                        Carbon::parse($fromDate)->format('d-M-Y') . ' to ' . Carbon::parse($toDate)->format('d-M-Y') :
-                        'All Dates',
-                    'course_type' => $courseType === 'current' ? 'Current Courses' : 'Archived Courses',
-                    'faculty_type' => !empty($facultyType) ?
-                        (count($facultyType) === 2 ? 'All Types' : (in_array('1', $facultyType) ? 'Internal' : 'Guest')) :
-                        'All Types',
-                ],
-                'export_date' => now()->format('d-M-Y H:i'),
-            ];
-
-            $pdf = PDF::loadView('admin.feedback.faculty_feedback_pdf', $data)
-                ->setPaper('a4', 'portrait')
-                ->setOptions([
-                    'defaultFont' => 'Arial',
-                    'isHtml5ParserEnabled' => true,
-                    'isRemoteEnabled' => true,
-                    'isPhpEnabled' => true,
-                    'dpi' => 96,
-                    'margin_top' => 15,
-                    'margin_right' => 15,
-                    'margin_bottom' => 15,
-                    'margin_left' => 15,
-                ]);
-
-            return $pdf->download('faculty_feedback_' . date('Y_m_d') . '.pdf');
-        }
+        return $pdf->download('faculty_feedback_' . date('Y_m_d') . '.pdf');
     }
+}
 
     private function getProgramName($programId)
     {
@@ -2241,65 +2479,65 @@ class FeedbackController extends Controller
     /**
      * Show pending feedback students for admin
      */
-   public function pendingStudents(Request $request)
-{
-    $courses = Cache::remember('active_courses', 3600, function () {
-        return DB::table('course_master')
-            ->where('active_inactive', 1)
-            ->orderBy('course_name')
-            ->get();
-    });
+    public function pendingStudents(Request $request)
+    {
+        $courses = Cache::remember('active_courses', 3600, function () {
+            return DB::table('course_master')
+                ->where('active_inactive', 1)
+                ->orderBy('course_name')
+                ->get();
+        });
 
-    $query = $this->buildPendingQuery();
+        $query = $this->buildPendingQuery();
 
-    if ($request->filled('course_pk')) {
-        $query->where('t.course_master_pk', $request->course_pk);
+        if ($request->filled('course_pk')) {
+            $query->where('t.course_master_pk', $request->course_pk);
+        }
+
+        $pendingStudents = $query
+            ->orderBy('from_date', 'asc')
+            ->orderBy('session_end_time', 'asc')
+            ->paginate(20)
+            ->appends($request->query());
+
+        return view('admin.feedback.pending_students', compact('pendingStudents', 'courses'));
     }
-
-    $pendingStudents = $query
-        ->orderBy('from_date', 'asc')
-        ->orderBy('session_end_time', 'asc')
-        ->paginate(20)
-        ->appends($request->query());
-
-    return view('admin.feedback.pending_students', compact('pendingStudents', 'courses'));
-}
 
 
     /**
      * Export pending feedback as PDF
      */
- public function exportPendingStudentsPDF(Request $request)
-{
-    set_time_limit(300);
-    ini_set('memory_limit', '1024M');
+    public function exportPendingStudentsPDF(Request $request)
+    {
+        set_time_limit(300);
+        ini_set('memory_limit', '1024M');
 
-    $query = $this->buildPendingQuery();
+        $query = $this->buildPendingQuery();
 
-    if ($request->filled('course_pk')) {
-        $query->where('t.course_master_pk', $request->course_pk);
+        if ($request->filled('course_pk')) {
+            $query->where('t.course_master_pk', $request->course_pk);
+        }
+
+        $students = collect();
+
+        // 🔁 Chunking prevents memory crash
+        $query->orderBy('t.START_DATE')->chunk(200, function ($rows) use (&$students) {
+            $students = $students->merge($rows);
+        });
+
+        if ($students->isEmpty()) {
+            return back()->with('error', 'No pending feedback records found.');
+        }
+
+        $pdf = PDF::loadView('admin.feedback.pending_students_pdf', [
+            'students' => $students,
+            'course_name' => $this->getCourseName($request->course_pk),
+            'export_date' => now()->format('d-m-Y H:i:s'),
+        ])
+            ->setPaper('A4', 'landscape');
+
+        return $pdf->download('pending_feedback_' . now()->format('Ymd_His') . '.pdf');
     }
-
-    $students = collect();
-
-    // 🔁 Chunking prevents memory crash
-    $query->orderBy('t.START_DATE')->chunk(200, function ($rows) use (&$students) {
-        $students = $students->merge($rows);
-    });
-
-    if ($students->isEmpty()) {
-        return back()->with('error', 'No pending feedback records found.');
-    }
-
-    $pdf = PDF::loadView('admin.feedback.pending_students_pdf', [
-        'students' => $students,
-        'course_name' => $this->getCourseName($request->course_pk),
-        'export_date' => now()->format('d-m-Y H:i:s'),
-    ])
-    ->setPaper('A4', 'landscape');
-
-    return $pdf->download('pending_feedback_' . now()->format('Ymd_His') . '.pdf');
-}
 
 
 
@@ -2307,59 +2545,59 @@ class FeedbackController extends Controller
     /**
      * Export pending feedback as Excel
      */
-  public function exportPendingStudentsExcel(Request $request)
-{
-    $request->validate([
-        'course_pk' => 'nullable|integer|exists:course_master,pk'
-    ]);
+    public function exportPendingStudentsExcel(Request $request)
+    {
+        $request->validate([
+            'course_pk' => 'nullable|integer|exists:course_master,pk'
+        ]);
 
-    $query = $this->buildPendingQuery();
+        $query = $this->buildPendingQuery();
 
-    if ($request->filled('course_pk')) {
-        $query->where('t.course_master_pk', $request->course_pk);
+        if ($request->filled('course_pk')) {
+            $query->where('t.course_master_pk', $request->course_pk);
+        }
+
+        return Excel::download(
+            new PendingFeedbackExport(clone $query),
+            'pending_feedback_' . now()->format('Y-m-d_H-i') . '.xlsx'
+        );
     }
-
-    return Excel::download(
-        new PendingFeedbackExport(clone $query),
-        'pending_feedback_' . now()->format('Y-m-d_H-i') . '.xlsx'
-    );
-}
 
 
     /**
      * Build optimized pending feedback query
      */
-   private function buildPendingQuery()
-{
-    return DB::table('timetable as t')
-        ->select([
-            't.pk as timetable_pk',
-            't.subject_topic',
-            'c.course_name',
-            'v.venue_name',
-            'f.full_name as faculty_name',
-            DB::raw("TRIM(CONCAT(
+    private function buildPendingQuery()
+    {
+        return DB::table('timetable as t')
+            ->select([
+                't.pk as timetable_pk',
+                't.subject_topic',
+                'c.course_name',
+                'v.venue_name',
+                'f.full_name as faculty_name',
+                DB::raw("TRIM(CONCAT(
                 sm.first_name,' ',
                 IFNULL(sm.middle_name,''),' ',
                 IFNULL(sm.last_name,'')
             )) as student_name"),
-            'sm.email',
-            'sm.contact_no',
-            'sm.generated_OT_code',
-            't.START_DATE as from_date',
-            DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as formatted_date"),
-            't.class_session',
-            DB::raw("
+                'sm.email',
+                'sm.contact_no',
+                'sm.generated_OT_code',
+                't.START_DATE as from_date',
+                DB::raw("DATE_FORMAT(t.START_DATE, '%d-%m-%Y') as formatted_date"),
+                't.class_session',
+                DB::raw("
                 STR_TO_DATE(
                     TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                     '%h:%i %p'
                 ) as session_end_time
             ")
-        ])
-        ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-        ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
-        ->leftJoin('faculty_master as f', function ($join) {
-            $join->whereRaw("
+            ])
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+            ->leftJoin('faculty_master as f', function ($join) {
+                $join->whereRaw("
                 f.pk = (
                     CASE 
                         WHEN JSON_VALID(t.faculty_master) 
@@ -2368,25 +2606,25 @@ class FeedbackController extends Controller
                     END
                 )
             ");
-        })
-        ->join('student_master_course__map as smcm', function ($join) {
-            $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                 ->where('smcm.active_inactive', 1);
-        })
-        ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-        ->join('course_student_attendance as csa', function ($join) {
-            $join->on('csa.timetable_pk', '=', 't.pk')
-                 ->on('csa.Student_master_pk', '=', 'sm.pk')
-                 ->where('csa.status', '1');
-        })
-        ->leftJoin('topic_feedback as tf', function ($join) {
-            $join->on('tf.timetable_pk', '=', 't.pk')
-                 ->on('tf.student_master_pk', '=', 'sm.pk')
-                 ->where('tf.is_submitted', 1);
-        })
-        ->where('t.feedback_checkbox', 1)
-        ->whereNull('tf.pk')
-        ->whereRaw("
+            })
+            ->join('student_master_course__map as smcm', function ($join) {
+                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                    ->where('smcm.active_inactive', 1);
+            })
+            ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
+            ->join('course_student_attendance as csa', function ($join) {
+                $join->on('csa.timetable_pk', '=', 't.pk')
+                    ->on('csa.Student_master_pk', '=', 'sm.pk')
+                    ->where('csa.status', '1');
+            })
+            ->leftJoin('topic_feedback as tf', function ($join) {
+                $join->on('tf.timetable_pk', '=', 't.pk')
+                    ->on('tf.student_master_pk', '=', 'sm.pk')
+                    ->where('tf.is_submitted', 1);
+            })
+            ->where('t.feedback_checkbox', 1)
+            ->whereNull('tf.pk')
+            ->whereRaw("
             TIMESTAMP(
                 t.END_DATE,
                 STR_TO_DATE(
@@ -2395,8 +2633,8 @@ class FeedbackController extends Controller
                 )
             ) <= NOW()
         ")
-        ->distinct();
-}
+            ->distinct();
+    }
 
 
     /**
@@ -2431,7 +2669,7 @@ class FeedbackController extends Controller
         // Step 2: Process in chunks for memory efficiency
         $chunkSize = 1000;
         $results = collect();
-        
+
         foreach (array_chunk($timetableIds, $chunkSize) as $chunk) {
             $query = DB::table('timetable as t')
                 ->select([
@@ -2461,32 +2699,32 @@ class FeedbackController extends Controller
                         )
                     ");
                 })
-                ->join('student_master_course__map as smcm', function($join) {
+                ->join('student_master_course__map as smcm', function ($join) {
                     $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                         ->where('smcm.active_inactive', 1);
+                        ->where('smcm.active_inactive', 1);
                 })
                 ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-                ->join('course_student_attendance as csa', function($join) {
+                ->join('course_student_attendance as csa', function ($join) {
                     $join->on('csa.timetable_pk', '=', 't.pk')
-                         ->on('csa.Student_master_pk', '=', 'sm.pk')
-                         ->where('csa.status', '1');
+                        ->on('csa.Student_master_pk', '=', 'sm.pk')
+                        ->where('csa.status', '1');
                 })
-                ->leftJoin('topic_feedback as tf', function($join) {
+                ->leftJoin('topic_feedback as tf', function ($join) {
                     $join->on('tf.timetable_pk', '=', 't.pk')
-                         ->on('tf.student_master_pk', '=', 'sm.pk')
-                         ->where('tf.is_submitted', 1);
+                        ->on('tf.student_master_pk', '=', 'sm.pk')
+                        ->where('tf.is_submitted', 1);
                 })
                 ->whereIn('t.pk', $chunk)
                 ->whereNull('tf.pk')
                 ->orderBy('t.START_DATE', 'asc');
 
             $chunkResults = $query->get();
-            
+
             // FIXED: Ensure we merge properly
             if ($chunkResults && count($chunkResults) > 0) {
                 $results = $results->merge($chunkResults);
             }
-            
+
             // Clear memory
             unset($chunkResults);
             if (function_exists('gc_collect_cycles')) {
@@ -2530,27 +2768,27 @@ class FeedbackController extends Controller
     /**
      * Get course name helper
      */
-   /**
- * Get course name helper - SIMPLIFIED VERSION
- */
-private function getCourseName($course_pk)
-{
-    if (!$course_pk) {
-        return 'All Courses';
-    }
+    /**
+     * Get course name helper - SIMPLIFIED VERSION
+     */
+    private function getCourseName($course_pk)
+    {
+        if (!$course_pk) {
+            return 'All Courses';
+        }
 
-    try {
-        // Direct query without caching to avoid issues
-        $result = DB::table('course_master')
-            ->where('pk', $course_pk)
-            ->value('course_name'); // Use value() to get just the course_name
-        
-        return $result ?: 'All Courses';
-    } catch (\Exception $e) {
-        \Log::error('Error getting course name for pk ' . $course_pk . ': ' . $e->getMessage());
-        return 'All Courses';
+        try {
+            // Direct query without caching to avoid issues
+            $result = DB::table('course_master')
+                ->where('pk', $course_pk)
+                ->value('course_name'); // Use value() to get just the course_name
+
+            return $result ?: 'All Courses';
+        } catch (\Exception $e) {
+            \Log::error('Error getting course name for pk ' . $course_pk . ': ' . $e->getMessage());
+            return 'All Courses';
+        }
     }
-}
 
     /**
      * Simple slug creation function (alternative to Str::slug)
@@ -2559,16 +2797,16 @@ private function getCourseName($course_pk)
     {
         // Replace spaces and special characters with underscores
         $text = preg_replace('/[^a-zA-Z0-9]+/', '_', $text);
-        
+
         // Convert to lowercase
         $text = strtolower($text);
-        
+
         // Trim underscores from start and end
         $text = trim($text, '_');
-        
+
         // Replace multiple underscores with single
         $text = preg_replace('/_+/', '_', $text);
-        
+
         return $text;
     }
 
@@ -2578,7 +2816,7 @@ private function getCourseName($course_pk)
     public function getPendingStats(Request $request)
     {
         $cacheKey = 'pending_feedback_stats_' . ($request->course_pk ?? 'all');
-        
+
         $stats = Cache::remember($cacheKey, 300, function () use ($request) {
             $query = DB::table('timetable as t')
                 ->select([
@@ -2589,15 +2827,15 @@ private function getCourseName($course_pk)
                 ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
                 ->join('student_master_course__map as smcm', 'smcm.course_master_pk', '=', 'c.pk')
                 ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-                ->join('course_student_attendance as csa', function($join) {
+                ->join('course_student_attendance as csa', function ($join) {
                     $join->on('csa.timetable_pk', '=', 't.pk')
-                         ->on('csa.Student_master_pk', '=', 'sm.pk')
-                         ->where('csa.status', '1');
+                        ->on('csa.Student_master_pk', '=', 'sm.pk')
+                        ->where('csa.status', '1');
                 })
-                ->leftJoin('topic_feedback as tf', function($join) {
+                ->leftJoin('topic_feedback as tf', function ($join) {
                     $join->on('tf.timetable_pk', '=', 't.pk')
-                         ->on('tf.student_master_pk', '=', 'sm.pk')
-                         ->where('tf.is_submitted', 1);
+                        ->on('tf.student_master_pk', '=', 'sm.pk')
+                        ->where('tf.is_submitted', 1);
                 })
                 ->where('t.feedback_checkbox', 1)
                 ->whereRaw("
@@ -2616,7 +2854,7 @@ private function getCourseName($course_pk)
             }
 
             $result = $query->first();
-            
+
             // FIXED: Ensure we return an object, not a string
             return $result ?: (object) [
                 'total_sessions' => 0,
@@ -2628,4 +2866,3 @@ private function getCourseName($course_pk)
         return response()->json($stats);
     }
 }
-    
