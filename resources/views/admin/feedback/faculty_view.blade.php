@@ -156,10 +156,8 @@
                 <div class="card filter-card">
                     <div class="card-header">Options</div>
                     <div class="card-body">
-                        <!-- Change form method to POST -->
                         <form method="POST" action="{{ route('admin.feedback.faculty_view') }}" id="filterForm">
                             @csrf
-                            <!-- Add hidden page input -->
                             <input type="hidden" name="page" id="pageInput" value="{{ $currentPage ?? 1 }}">
 
                             <fieldset class="mb-3">
@@ -167,13 +165,13 @@
                                 <div class="form-check">
                                     <input class="form-check-input course-type-radio" type="radio" name="course_type"
                                         value="current" id="current"
-                                        {{ ($courseType ?? 'archived') == 'current' ? 'checked' : '' }}>
+                                        {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="current">Current Courses</label>
                                 </div>
                                 <div class="form-check">
                                     <input class="form-check-input course-type-radio" type="radio" name="course_type"
                                         value="archived" id="archived"
-                                        {{ ($courseType ?? 'archived') == 'archived' ? 'checked' : '' }}>
+                                        {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="archived">Archived Courses</label>
                                 </div>
                             </fieldset>
@@ -328,13 +326,13 @@
                                                     class="faculty-type-badge ms-2">{{ $data['faculty_type'] ?? '' }}</span>
                                             </p>
                                             <p class="mb-1"><strong>Topic:</strong> {{ $data['topic_name'] ?? '' }}</p>
+                                            {{-- In your Blade template --}}
                                             @if (!empty($data['start_date']))
                                                 <p class="mb-0">
                                                     <strong>Lecture Date:</strong>
-                                                    {{ \Carbon\Carbon::parse($data['start_date'])->format('d-M-Y') }}
-                                                    @if (!empty($data['end_date']))
-                                                        ({{ \Carbon\Carbon::parse($data['start_date'])->format('H:i') }} –
-                                                        {{ \Carbon\Carbon::parse($data['end_date'])->format('H:i') }})
+                                                    {{ $data['formatted_start_date'] ?? \Carbon\Carbon::parse($data['start_date'])->format('d-M-Y') }}
+                                                    @if (!empty($data['time_display']))
+                                                        {{ $data['time_display'] }}
                                                     @endif
                                                 </p>
                                             @endif
@@ -399,8 +397,8 @@
                                                     </tr>
                                                 </tbody>
                                             </table>
-                                            <small>* is defined as Total Student Count:
-                                                {{ $data['participants'] ?? 0 }}</small>
+                                            {{-- <small>* is defined as Total Student Count:
+                                                {{ $data['participants'] ?? 0 }}</small> --}}
                                         </div>
 
                                         <!-- REMARKS -->
