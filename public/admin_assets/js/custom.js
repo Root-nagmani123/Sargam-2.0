@@ -160,11 +160,11 @@ $(document).on('mousedown', 'select[data-readonly]', function (e) {
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
     let table = $checkbox.data('table');
+    
     let column = $checkbox.data('column');
     let id = $checkbox.data('id');
     let id_column = $checkbox.data('id_column');
     let status = $checkbox.is(':checked') ? 1 : 0;
-
 
     table = $(this).data('table');
     column = $(this).data('column');
@@ -212,10 +212,8 @@ $(document).on('change', '.status-toggle', function () {
                     </div>
                 `);
                  setTimeout(function() {
-       location.reload();
-
-       //console.log(data);
-    }, 1000);
+                 $('.dataTable ').DataTable().ajax.reload();
+                }, 500);
             },
             error: function () {
                 Swal.fire('Error', 'Status update failed', 'error');

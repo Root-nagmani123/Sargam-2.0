@@ -42,55 +42,54 @@ class MemoTypeMasterDataTable extends DataTable
                 $formId = 'delete-form-' . $row->pk;
 
                 $html = <<<HTML
-<div class="d-inline-flex align-items-center gap-2"
-     role="group"
-     aria-label="Memo type actions">
+                <div class="d-inline-flex align-items-center gap-2"
+                    role="group"
+                    aria-label="Memo type actions">
 
-    <!-- Edit -->
-    <a href="{$editUrl}"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-       aria-label="Edit memo type">
-        <span class="material-icons material-symbols-rounded"
-              style="font-size:18px;"
-              aria-hidden="true">edit</span>
-        <span class="d-none d-md-inline">Edit</span>
-    </a>
+                    <!-- Edit -->
+                    <a href="{$editUrl}"
+                    class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                    aria-label="Edit memo type">
+                        <span class="material-icons material-symbols-rounded"
+                            style="font-size:18px;"
+                            aria-hidden="true">edit</span>
+                        <span class="d-none d-md-inline">Edit</span>
+                    </a>
 
-    <!-- Delete -->
-    <?php if ($isActive): ?>
-        <button type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
-                disabled
-                aria-disabled="true"
-                title="Cannot delete active memo type">
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">delete</span>
-            <span class="d-none">Delete</span>
-        </button>
-    <?php else: ?>
-        <form id="<?= $formId ?>"
-              action="<?= $deleteUrl ?>"
-              method="POST"
-              class="d-inline">
-            <input type="hidden" name="_token" value="<?= $csrf ?>">
-            <input type="hidden" name="_method" value="DELETE">
+                    <!-- Delete -->
+                    <?php if ($isActive): ?>
+                        <button type="button"
+                                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
+                                disabled
+                                aria-disabled="true"
+                                title="Cannot delete active memo type">
+                            <span class="material-icons material-symbols-rounded"
+                                style="font-size:18px;"
+                                aria-hidden="true">delete</span>
+                            <span class="d-none">Delete</span>
+                        </button>
+                    <?php else: ?>
+                        <form id="<?= $formId ?>"
+                            action="<?= $deleteUrl ?>"
+                            method="POST"
+                            class="d-inline">
+                            <input type="hidden" name="_token" value="<?= $csrf ?>">
+                            <input type="hidden" name="_method" value="DELETE">
 
-            <button type="submit"
-                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-                    aria-label="Delete memo type"
-                    onclick="return confirm('Are you sure you want to delete this memo type?');">
-                <span class="material-icons material-symbols-rounded"
-                      style="font-size:18px;"
-                      aria-hidden="true">delete</span>
-                <span class="d-none d-md-inline">Delete</span>
-            </button>
-        </form>
-    <?php endif; ?>
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
+                                    aria-label="Delete memo type"
+                                    onclick="return confirm('Are you sure you want to delete this memo type?');">
+                                <span class="material-icons material-symbols-rounded"
+                                    style="font-size:18px;"
+                                    aria-hidden="true">delete</span>
+                                <span class="d-none d-md-inline">Delete</span>
+                            </button>
+                        </form>
+                    <?php endif; ?>
 
-</div>
-
-HTML;
+                </div>
+                HTML;
 
                 return $html;
             })
