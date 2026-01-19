@@ -88,6 +88,52 @@ class PeerEvaluationController extends Controller
             ], 500);
         }
     }
+	
+		/**
+		 * Update exiting course
+		 */
+		public function updateCourse(Request $request)
+		{
+			$request->validate([
+				'course_id' => 'required|exists:peer_courses,id',
+				'course_name' => 'required|string|max:255|unique:peer_courses,course_name,' . $request->course_id
+			]);
+
+			PeerCourse::where('id', $request->course_id)->update([
+				'course_name' => $request->course_name
+			]);
+
+			return response()->json([
+				'success' => true,
+				'message' => 'You have successfully updated the course!' 
+			]);
+		}
+
+
+		/**
+		 * Delete exiting course
+		 */
+		public function deleteCourse($id)
+		{
+			$course = PeerCourse::withCount(['events', 'groups'])->findOrFail($id);
+
+			if ($course->events_count > 0 || $course->groups_count > 0) {
+				return response()->json([
+					'success' => false,
+					'message' => 'Cannot delete course with events or groups'
+				], 400);
+			}
+
+			$course->delete();
+			//return response()->json(['success' => true]);
+			return response()->json([
+				'success' => true,
+				 'message' => 'Course deleted successfully!'
+			]);
+		}
+
+
+
 
     // ==================== EVENT MANAGEMENT METHODS ====================
 

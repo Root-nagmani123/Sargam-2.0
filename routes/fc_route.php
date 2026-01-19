@@ -371,6 +371,16 @@ Route::post('/admin/peer/groups/update-marks', [PeerEvaluationController::class,
 // Courses
 Route::post('/admin/peer/course/add', [PeerEvaluationController::class, 'addCourse'])->name('admin.peer.course.add');
 
+//update course
+Route::post('/admin/peer/course/update', [PeerEvaluationController::class, 'updateCourse'])
+    ->name('admin.peer.course.update');
+	
+//delete course
+Route::delete('/admin/peer/course/delete/{id}', [PeerEvaluationController::class, 'deleteCourse'])
+    ->name('admin.peer.course.delete');
+
+
+
 // Events (now belong to courses)
 Route::post('/admin/peer/event/add', [PeerEvaluationController::class, 'addEvent'])->name('admin.peer.event.add');
 Route::get('/admin/peer/events/{courseId}', [PeerEvaluationController::class, 'getEventsByCourse']); // Changed from getCoursesByEvent
