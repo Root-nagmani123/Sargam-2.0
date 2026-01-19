@@ -8,7 +8,7 @@
     <x-breadcrum title="Notice notification List" />
     <x-session_message />
 
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         @if ($errors->any())
             <div class="alert alert-danger">
                 <ul>

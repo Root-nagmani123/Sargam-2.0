@@ -101,12 +101,13 @@
                                 <legend class="fs-6 fw-semibold">Course Status</legend>
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="course_type" value="archived"
-                                        id="archived" {{ ($courseType ?? 'archived') == 'archived' ? 'checked' : '' }}>
+                                        id="archived" {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="archived">Archived Courses</label>
                                 </div>
+
                                 <div class="form-check">
                                     <input class="form-check-input" type="radio" name="course_type" value="current"
-                                        id="current" {{ ($courseType ?? '') == 'current' ? 'checked' : '' }}>
+                                        id="current" {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
                                     <label class="form-check-label" for="current">Current Courses</label>
                                 </div>
                             </fieldset>
@@ -121,6 +122,7 @@
                                         </option>
                                     @endforeach
                                 </select>
+
                             </div>
 
                             <div class="mb-3">
@@ -174,9 +176,9 @@
 
                         <!-- Table Container (initially visible) -->
                         <div id="tableContainer">
-                            @if ($currentProgram)
+                            @if (!empty($currentProgramName))
                                 <div class="text-center mb-3">
-                                    <h6 class="fw-semibold mb-0">{{ $currentProgram }}</h6>
+                                    <h6 class="fw-semibold mb-0">{{ $currentProgramName }}</h6>
                                 </div>
                             @endif
 
@@ -195,6 +197,7 @@
                                                 <th>Content (%)</th>
                                                 <th>Presentation (%)</th>
                                                 <th>Participants</th>
+                                                <th>Session Date & Time</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -211,6 +214,15 @@
                                                         {{ number_format($data['presentation_percentage'], 2) }}
                                                     </td>
                                                     <td class="text-center">{{ $data['participants'] }}</td>
+                                                    <td>
+                                                        <div class="fw-semibold">
+                                                            {{ \Carbon\Carbon::parse($data['session_date'])->format('d M Y') }}
+                                                        </div>
+                                                        <div class="text-muted small">
+                                                            {{ $data['class_session'] }}
+                                                        </div>
+                                                    </td>
+
                                                 </tr>
                                             @endforeach
                                         </tbody>
@@ -337,6 +349,23 @@
             document.getElementById('filterForm').addEventListener('submit', function(e) {
                 e.preventDefault(); // Prevent form submission
                 loadFeedbackData(); // Load data via AJAX
+            });
+        });
+        document.querySelectorAll('input[name="course_type"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const courseType = this.value;
+                fetch(`{{ route('feedback.average') }}?course_type=${courseType}`)
+                    .then(res => res.text())
+                    .then(html => {
+                        // Extract new program options from response
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newSelect = doc.querySelector('select[name="program_name"]');
+                        if (newSelect) {
+                            document.querySelector('select[name="program_name"]').innerHTML = newSelect
+                                .innerHTML;
+                        }
+                    });
             });
         });
     </script>

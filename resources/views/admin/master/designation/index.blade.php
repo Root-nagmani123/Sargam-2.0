@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-
+<x-breadcrum title="Designation Master"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">

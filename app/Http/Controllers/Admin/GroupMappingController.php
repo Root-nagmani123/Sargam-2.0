@@ -264,7 +264,6 @@ class GroupMappingController extends Controller
             );
 
             Excel::import($import, $request->file('file'));
-
             $failures = $import->sheet1Import->failures;
 
             if (count($failures) > 0) {

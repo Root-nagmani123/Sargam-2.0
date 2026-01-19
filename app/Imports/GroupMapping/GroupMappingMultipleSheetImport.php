@@ -7,13 +7,11 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 class GroupMappingMultipleSheetImport implements WithMultipleSheets
 {
     public $sheet1Import;
+    public $courseType;
 
-    public $courseMasterPk;
-
-    public function __construct($courseMasterPk)
+    public function __construct($courseType)
     {
-        $this->courseMasterPk = $courseMasterPk;
-        $this->sheet1Import = new GroupMappingImport($courseMasterPk);
+        $this->sheet1Import = new GroupMappingImport($courseType);
     }
 
     public function sheets(): array

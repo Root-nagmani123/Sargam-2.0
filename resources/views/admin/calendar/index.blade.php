@@ -2724,9 +2724,9 @@ class CalendarManager {
                         ${type ? `<span class="event-badge flex-shrink-0" style="margin-left: 0.5rem;">${type}</span>` : ''}
                     </div>
                     <div class="event-meta" style="width: 100%;">
-                        ${arg.timeText ? `<span class=\"meta-item meta-item--time\"><i class=\"bi bi-clock-fill\" aria-hidden=\"true\"></i><span>${arg.timeText}</span></span>` : ''}
-                        ${venue ? `<span class=\"meta-item meta-item--venue\"><i class=\"bi bi-geo-alt-fill\" aria-hidden=\"true\"></i><span>${venue}</span></span>` : ''}
-                        ${faculty ? `<span class=\"meta-item meta-item--faculty\"><i class=\"bi bi-person-fill\" aria-hidden=\"true\"></i><span>${faculty}</span></span>` : ''}
+                        ${arg.timeText ? `<span class=\"meta-item meta-item--time\"><i class=\"material-icons material-icons-rounded\" aria-hidden=\"true\">clock</i><span>${arg.timeText}</span></span>` : ''}
+                        ${venue ? `<span class=\"meta-item meta-item--venue\"><i class=\"material-icons material-icons-rounded\" aria-hidden=\"true\">home_pin</i><span>${venue}</span></span>` : ''}
+                        ${faculty ? `<span class=\"meta-item meta-item--faculty\"><i class=\"material-icons material-icons-rounded\" aria-hidden=\"true\">person</i><span>${faculty}</span></span>` : ''}
                     </div>
                     <span class="visually-hidden" id="${descId}">${type ? `${type} ` : ''}${arg.timeText ? `${arg.timeText} ` : ''}${venue ? `at ${venue} ` : ''}${faculty ? `with ${faculty}` : ''}</span>
                 </div>

@@ -134,6 +134,23 @@
                                                         style="font-size: 20px;">chevron_right</i>
                                                 </a>
                                             </li>
+                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
+                                                id="mini-8">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Mess Management">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">add_notes</i>
+                                                        <span class="mini-nav-title fs-4 text-dark text-wrap">Mess Management</span>
+                                                    </div>
+
+                                                    <i class="material-icons material-symbols-rounded"
+                                                        style="font-size: 20px;">chevron_right</i>
+                                                </a>
+                                            </li>
                                             @endif
 
                                             @endif
@@ -181,6 +198,10 @@
                     <!-- Forms -->
                     <!-- ---------------------------------- -->
                     <x-menu.fc-sidebar />
+
+                    <!-- Mess Management -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_mess_management />
 
                 </div>
             </div>
