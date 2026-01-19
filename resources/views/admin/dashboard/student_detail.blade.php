@@ -108,7 +108,7 @@
                             @foreach($enrolledCourses as $enrollment)
                                 <tr>
                                     <td>{{ $enrollment->course->course_name ?? 'N/A' }}</td>
-                                    <td>{{ $enrollment->created_date ? \Carbon\Carbon::parse($enrollment->created_date)->format('d M Y') : 'N/A' }}</td>
+                                    <td>{{ $enrollment->created_date ? \Carbon\Carbon::parse($enrollment->created_date)->format('d M Y h:i A') : 'N/A' }}</td>
                                     <td>
                                         <span class="badge {{ $enrollment->active_inactive ? 'bg-success' : 'bg-secondary' }}">
                                             {{ $enrollment->active_inactive ? 'Active' : 'Inactive' }}
@@ -150,17 +150,29 @@
                                 <th>Category</th>
                                 <th>Speciality</th>
                                 <th>Description</th>
+                                <th>Document</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($medicalExemptions as $exemption)
                                 <tr>
                                     <td>{{ $exemption->course->course_name ?? 'N/A' }}</td>
-                                    <td>{{ $exemption->from_date ? \Carbon\Carbon::parse($exemption->from_date)->format('d M Y') : 'N/A' }}</td>
-                                    <td>{{ $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d M Y') : 'N/A' }}</td>
-                                    <td>{{ $exemption->category->exemption_category_name ?? 'N/A' }}</td>
-                                    <td>{{ $exemption->speciality->exemption_medical_speciality_name ?? 'N/A' }}</td>
+                                    <td>{{ $exemption->from_date ? \Carbon\Carbon::parse($exemption->from_date)->format('d M Y h:i A') : 'N/A' }}</td>
+                                    <td>{{ $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d M Y h:i A') : 'N/A' }}</td>
+                                    <td>{{ $exemption->category->exemp_category_name ?? 'N/A' }}</td>
+                                    <td>{{ $exemption->speciality->speciality_name ?? 'N/A' }}</td>
                                     <td>{{ $exemption->Description ?? 'N/A' }}</td>
+                                    <td class="text-center">
+                                        @if($exemption->Doc_upload)
+                                            <a href="{{ asset('storage/' . $exemption->Doc_upload) }}" target="_blank"
+                                                class="btn btn-sm btn-info" title="View Document" data-bs-toggle="tooltip"
+                                                data-bs-placement="top">
+                                                <i class="fas fa-file-pdf"></i> View
+                                            </a>
+                                        @else
+                                            <span class="text-muted">N/A</span>
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -209,7 +221,7 @@
                                             {{ $duty->mdoDutyTypeMaster->mdo_duty_type_name ?? 'N/A' }}
                                         </span>
                                     </td>
-                                    <td>{{ $duty->mdo_date ? \Carbon\Carbon::parse($duty->mdo_date)->format('d M Y') : 'N/A' }}</td>
+                                    <td>{{ $duty->mdo_date ? \Carbon\Carbon::parse($duty->mdo_date)->format('d M Y h:i A') : 'N/A' }}</td>
                                     <td>{{ $duty->Time_from ?? 'N/A' }}</td>
                                     <td>{{ $duty->Time_to ?? 'N/A' }}</td>
                                     <td>{{ $duty->facultyMaster->full_name ?? 'N/A' }}</td>
@@ -254,7 +266,7 @@
                             @foreach($notices as $notice)
                                 <tr>
                                     <td>{{ $notice->course_name ?? 'N/A' }}</td>
-                                    <td>{{ $notice->session_date ? \Carbon\Carbon::parse($notice->session_date)->format('d M Y') : 'N/A' }}</td>
+                                    <td>{{ $notice->session_date ? \Carbon\Carbon::parse($notice->session_date)->format('d M Y h:i A') : 'N/A' }}</td>
                                     <td>{{ $notice->topic ?? 'N/A' }}</td>
                                     <td>
                                         @if($notice->status == 1)
@@ -307,7 +319,7 @@
                             @foreach($memos as $memo)
                                 <tr>
                                     <td>{{ $memo->course_name ?? 'N/A' }}</td>
-                                    <td>{{ $memo->session_date ? \Carbon\Carbon::parse($memo->session_date)->format('d M Y') : 'N/A' }}</td>
+                                    <td>{{ $memo->session_date ? \Carbon\Carbon::parse($memo->session_date)->format('d M Y h:i A') : 'N/A' }}</td>
                                     <td>{{ $memo->topic ?? 'N/A' }}</td>
                                     <td>{{ $memo->conclusion_type ?? 'N/A' }}</td>
                                     <td>
@@ -514,6 +526,13 @@
         clonedTable.querySelectorAll('.badge').forEach(badge => {
             badge.parentElement.textContent = badge.textContent.trim();
         });
+        
+        // Convert document links to text for Excel export
+        clonedTable.querySelectorAll('a[target="_blank"]').forEach(link => {
+            if (link.textContent.includes('View')) {
+                link.outerHTML = 'Available';
+            }
+        });
 
         // Create workbook and worksheet
         const wb = XLSX.utils.table_to_book(clonedTable, {sheet: fileName});
@@ -546,6 +565,13 @@
         clonedTable.querySelectorAll('.badge').forEach(badge => {
             const text = badge.textContent.trim();
             badge.outerHTML = text;
+        });
+        
+        // Convert document links to text for print
+        clonedTable.querySelectorAll('a[target="_blank"]').forEach(link => {
+            if (link.textContent.includes('View')) {
+                link.outerHTML = 'Available';
+            }
         });
         
         // Create print window
