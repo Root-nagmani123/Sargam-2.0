@@ -29,9 +29,16 @@ class PeerEvaluationController extends Controller
     public function index()
     {
         // Get courses with their events and group counts
-        $courses = PeerCourse::with(['events' => function ($query) {
+       /*  $courses = PeerCourse::with(['events' => function ($query) {
             $query->active()->withCount('groups');
-        }])->active()->withCount(['events', 'groups'])->get();
+        }])->active()->withCount(['events', 'groups'])->get(); */
+		
+		$courses = PeerCourse::with(['events' => function ($query) {
+		$query->active()->withCount('groups');
+		}])
+		->active()
+		->withCount(['events', 'groups'])
+		->paginate(5); 
 
         // Get events with their course and group counts
         $events = PeerEvent::active()->withCount('groups')->get();

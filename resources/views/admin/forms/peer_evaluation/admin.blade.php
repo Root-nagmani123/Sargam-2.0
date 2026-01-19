@@ -148,7 +148,9 @@
     </div>
 @endforeach
 </div>
-
+<div class="mt-3 d-flex justify-content-center">
+     {{ $courses->onEachSide(1)->links('pagination::bootstrap-5') }}
+</div>
 </div>
 
         </div>
@@ -316,7 +318,7 @@
     <h6>Existing Columns:</h6>
     <div class="table-responsive">
     <table class="table table-bordered align-middle" id="datatable-groups">
-            <thead class="table-light">
+            <thead class="bg-primary text-white">
                 <tr>
                     <th scope="col">Column Name</th>
                     <th scope="col">Course</th>
@@ -420,7 +422,7 @@
     <div class="table-responsive">
     <table class="table table-bordered align-middle" id="datatable-columns">
 
-            <thead class="table-light">
+            <thead class="bg-primary text-white">
                 <tr>
                     <th scope="col">Field Label</th>
                     <th scope="col">Course</th>
