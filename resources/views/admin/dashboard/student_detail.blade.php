@@ -368,34 +368,54 @@
                         <td>{{ $attendanceSummary->absent_count ?? 0 }}</td>
                     </tr>
                     <tr>
-                        <td>Total Sessions</td>
+                        <td>Not Marked</td>
+                        <td>{{ $attendanceSummary->not_marked_count ?? 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Marked Sessions</td>
                         <td>{{ $attendanceSummary->total_sessions ?? 0 }}</td>
+                    </tr>
+                    <tr>
+                        <td>Total Sessions</td>
+                        <td>{{ $attendanceSummary->total_expected_sessions ?? 0 }}</td>
                     </tr>
                 </tbody>
             </table>
             <!-- Display cards -->
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="text-center p-3 bg-light rounded">
                         <h4 class="text-success">{{ $attendanceSummary->present_count ?? 0 }}</h4>
                         <small>Present</small>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="text-center p-3 bg-light rounded">
                         <h4 class="text-warning">{{ $attendanceSummary->late_count ?? 0 }}</h4>
                         <small>Late</small>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="text-center p-3 bg-light rounded">
                         <h4 class="text-danger">{{ $attendanceSummary->absent_count ?? 0 }}</h4>
                         <small>Absent</small>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <div class="text-center p-3 bg-light rounded">
-                        <h4 class="text-primary">{{ $attendanceSummary->total_sessions ?? 0 }}</h4>
+                        <h4 class="text-secondary">{{ $attendanceSummary->not_marked_count ?? 0 }}</h4>
+                        <small>Not Marked</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3 bg-light rounded">
+                        <h4 class="text-info">{{ $attendanceSummary->total_sessions ?? 0 }}</h4>
+                        <small>Marked Sessions</small>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="text-center p-3 bg-light rounded">
+                        <h4 class="text-primary">{{ $attendanceSummary->total_expected_sessions ?? 0 }}</h4>
                         <small>Total Sessions</small>
                     </div>
                 </div>

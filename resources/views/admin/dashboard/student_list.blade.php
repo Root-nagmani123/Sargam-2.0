@@ -33,6 +33,9 @@
                                 <th scope="col">Student Name</th>
                                 <th scope="col">OT Code</th>
                                 <th scope="col">Course Name</th>
+                                <th scope="col">Group Type</th>
+                                <th scope="col">Group Name</th>
+                                <th scope="col">Faculty</th>
                                 <th scope="col">Action</th>
                             </tr>
                         </thead>
@@ -41,12 +44,25 @@
                                 @php
                                     $student = $studentMap->studentMaster;
                                     $course = $studentMap->course;
+                                    $groupMapping = $studentMap->groupMapping ?? null;
+                                    $groupType = $groupMapping && $groupMapping->groupTypeMasterCourseMasterMap && $groupMapping->groupTypeMasterCourseMasterMap->courseGroupType 
+                                        ? $groupMapping->groupTypeMasterCourseMasterMap->courseGroupType->type_name 
+                                        : 'N/A';
+                                    $groupName = $groupMapping && $groupMapping->groupTypeMasterCourseMasterMap 
+                                        ? $groupMapping->groupTypeMasterCourseMasterMap->group_name 
+                                        : 'N/A';
+                                    $faculty = $groupMapping && $groupMapping->groupTypeMasterCourseMasterMap && $groupMapping->groupTypeMasterCourseMasterMap->Faculty 
+                                        ? $groupMapping->groupTypeMasterCourseMasterMap->Faculty->full_name 
+                                        : 'N/A';
                                 @endphp
                                 <tr data-course-id="{{ $course->pk ?? '' }}">
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $student->display_name ?? ($student->first_name ?? '') . ' ' . ($student->last_name ?? '') }}</td>
                                     <td>{{ $student->generated_OT_code ?? 'N/A' }}</td>
                                     <td>{{ $course->course_name ?? 'N/A' }}</td>
+                                    <td>{{ $groupType }}</td>
+                                    <td>{{ $groupName }}</td>
+                                    <td>{{ $faculty }}</td>
                                     <td>
                                         <a href="{{ route('admin.dashboard.students.detail', encrypt($student->pk)) }}" 
                                            class="btn btn-sm btn-primary">
@@ -56,7 +72,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center">
+                                    <td colspan="8" class="text-center">
                                         <div class="alert alert-info mb-0">
                                             <i class="fas fa-info-circle me-2"></i>
                                             No students found. You are not assigned as Course Coordinator or Assistant Course Coordinator for any active courses.
@@ -71,6 +87,7 @@
         </div>
     </div>
 </div>
+
 
 @push('scripts')
 <script>
@@ -104,9 +121,20 @@
                     "search": "_INPUT_",
                     "searchPlaceholder": "Search students..."
                 },
-                "responsive": true
+                "responsive": false
             });
         @endif
+        
+        // Simple redirect handler - works on any click
+        $(document).on('click', '#studentListTable tbody a.btn-primary', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var url = $(this).attr('href');
+            if (url) {
+                window.location.href = url;
+            }
+            return false;
+        });
 
         // Handle course filter change
         $('#courseFilter').on('change', function() {

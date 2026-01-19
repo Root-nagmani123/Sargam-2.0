@@ -36,6 +36,7 @@ use App\Models\CourseCordinatorMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\StudentMaster;
 use App\Models\CourseStudentAttendance;
+use App\Models\CourseGroupTimetableMapping;
 use Carbon\Carbon;
 
 
@@ -115,7 +116,6 @@ class UserController extends Controller
              if ($faculty) {
                  $facultyPk = $faculty->pk;
                  $totalSessions = CalendarEvent::where('active_inactive', 1)
-                     ->whereDate('END_DATE', '<', now())
                      ->where(function ($query) use ($facultyPk) {
                          $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
                                ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
@@ -131,10 +131,10 @@ class UserController extends Controller
                  if ($coordinatorCourses->isNotEmpty()) {
                      $isCCorACC = true;
                      // Get active courses where faculty is CC/ACC
-                     $activeCourseIds = CourseMaster::whereIn('pk', $coordinatorCourses)
-                         ->where('active_inactive', 1)
-                         ->where('end_date', '>=', now())
-                         ->pluck('pk');
+                    $activeCourseIds = CourseMaster::whereIn('pk', $coordinatorCourses)
+                        ->where('active_inactive', 1)
+                        ->where('end_date', '>=', now())
+                        ->pluck('pk');
                      
                      // Count total students enrolled in these courses
                      if ($activeCourseIds->isNotEmpty()) {
@@ -190,12 +190,36 @@ class UserController extends Controller
                     
                     // Get students enrolled in these courses
                     if ($activeCourseIds->isNotEmpty()) {
-                        $students = StudentMasterCourseMap::with(['studentMaster', 'course'])
+                        $students = StudentMasterCourseMap::with([
+                            'studentMaster', 
+                            'course'
+                        ])
                             ->whereIn('course_master_pk', $activeCourseIds)
                             ->where('active_inactive', 1)
                             ->get()
                             ->unique('student_master_pk')
                             ->values();
+                        
+                        // Load group information for each student
+                        foreach ($students as $studentMap) {
+                            $studentPk = $studentMap->student_master_pk;
+                            $coursePk = $studentMap->course_master_pk;
+                            
+                            // Get the active group mapping for this student-course combination
+                            $groupMap = StudentCourseGroupMap::with([
+                                'groupTypeMasterCourseMasterMap.courseGroupType',
+                                'groupTypeMasterCourseMasterMap.Faculty'
+                            ])
+                                ->where('student_master_pk', $studentPk)
+                                ->where('active_inactive', 1)
+                                ->whereHas('groupTypeMasterCourseMasterMap', function($query) use ($coursePk) {
+                                    $query->where('course_name', $coursePk);
+                                })
+                                ->first();
+                            
+                            // Attach group info to the student map
+                            $studentMap->groupMapping = $groupMap;
+                        }
                         
                         // Get unique courses from the student list
                         $availableCourses = $students->pluck('course')
@@ -274,9 +298,40 @@ class UserController extends Controller
                 SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) as mdo_count,
                 SUM(CASE WHEN status = 5 THEN 1 ELSE 0 END) as escort_count,
                 SUM(CASE WHEN status = 6 THEN 1 ELSE 0 END) as medical_exempt_count,
-                SUM(CASE WHEN status = 7 THEN 1 ELSE 0 END) as other_exempt_count
+                SUM(CASE WHEN status = 7 THEN 1 ELSE 0 END) as other_exempt_count,
+                SUM(CASE WHEN status = 0 OR status IS NULL THEN 1 ELSE 0 END) as not_marked_count
             ')
             ->first();
+
+        // Calculate total expected sessions (timetables) for student's course groups
+        $studentGroupPks = StudentCourseGroupMap::where('student_master_pk', $studentPk)
+            ->where('active_inactive', 1)
+            ->pluck('group_type_master_course_master_map_pk')
+            ->toArray();
+
+        $totalExpectedSessions = 0;
+        if (!empty($studentGroupPks)) {
+            $result = CourseGroupTimetableMapping::whereIn('group_pk', $studentGroupPks)
+                ->selectRaw('COUNT(DISTINCT timetable_pk) as count')
+                ->first();
+            $totalExpectedSessions = $result ? (int)$result->count : 0;
+        }
+
+        // Calculate not marked count: sessions without attendance records or with status 0/NULL
+        $markedResult = CourseStudentAttendance::where('Student_master_pk', $studentPk)
+            ->whereNotNull('status')
+            ->where('status', '!=', 0)
+            ->selectRaw('COUNT(DISTINCT timetable_pk) as count')
+            ->first();
+        $markedSessions = $markedResult ? (int)$markedResult->count : 0;
+
+        $notMarkedCount = max(0, $totalExpectedSessions - $markedSessions);
+        
+        // Add not_marked_count to attendance summary if it doesn't exist
+        if ($attendanceSummary) {
+            $attendanceSummary->not_marked_count = $notMarkedCount;
+            $attendanceSummary->total_expected_sessions = $totalExpectedSessions;
+        }
 
         return view('admin.dashboard.student_detail', compact(
             'student',
