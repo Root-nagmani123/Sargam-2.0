@@ -120,11 +120,7 @@
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">add_notes</i>
-                                                        <span class="mini-nav-title fs-4 text-dark text-wrap">Mess Management</span>
                                                     </div>
-
-                                                    <i class="material-icons material-symbols-rounded"
-                                                        style="font-size: 20px;">chevron_right</i>
                                                 </a>
                                             </li>
                                             @endif
