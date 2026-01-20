@@ -8,6 +8,7 @@ use App\Models\ExemptionCategoryMaster;
 use App\Models\ExemptionMedicalSpecialityMaster;
 use Yajra\DataTables\Facades\DataTables;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 
 
@@ -15,7 +16,7 @@ class ExemptionCategoryController extends Controller
 {
 
     public function index()
-    {
+    {    
         $categories = ExemptionCategoryMaster::paginate(10);
         return view('admin.master.exemption_categories_master.index');
     }
