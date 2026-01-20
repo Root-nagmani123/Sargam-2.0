@@ -21,6 +21,7 @@
 
         @php
         $roles = session('user_roles', []);
+        
         if(in_array('Student-OT', $roles)){
         $service_find = service_find();
         $roles = ['Student-OT ('.$service_find.')'];
