@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             <li class="nav-small-cap">
-                                <span class="hide-menu">Notifictions</span>
+                                <span class="hide-menu small small-sm-normal text-nowrap">Notifictions</span>
                             </li>
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
@@ -21,67 +21,67 @@
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Notice</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Start Conversation</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Start Conversation</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">View Sent Conversation</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">View Sent Conversation</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Campus Tweet</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Campus Tweet</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Announcement</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Announcement</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">System Announcement</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">System Announcement</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Conversation (Thread/Email)</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Conversation (Thread/Email)</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Send Email/Message</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Send Email/Message</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Notice Approval</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice Approval</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">View Closed Conversation</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">View Closed Conversation</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Send Email/Message Acc</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Send Email/Message Acc</span>
                                 </a>
                             </li>
 

@@ -41,34 +41,34 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#employeeCollapse" role="button"
                                     aria-expanded="false" aria-controls="employeeCollapse">
-                                    <span class="hide-menu fw-bold">Employee</span>
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Employee</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="employeeCollapse">
                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('member.index') }}">
-                                            <span class="hide-menu">Employee Master</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Employee Master</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('master.employee.type.index') }}">
-                                            <span class="hide-menu">Employee Type</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Employee Type</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('master.employee.group.index') }}">
-                                            <span class="hide-menu">Employee Group</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Employee Group</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('master.department.master.index') }}">
-                                            <span class="hide-menu">Department Master</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Department Master</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('master.designation.index') }}">
-                                            <span class="hide-menu">Designation Master</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Designation Master</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link"
                                             href="{{ route('master.caste.category.index') }}">
-                                            <span class="hide-menu">Caste Category</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Caste Category</span>
                                         </a></li>
                             </ul>
 
@@ -82,22 +82,22 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#facultyCollapse" role="button"
                                     aria-expanded="false" aria-controls="facultyCollapse">
-                                    <span class="hide-menu fw-bold">Faculty</span>
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Faculty</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.faculty.expertise.index') }}">
-                                        <span class="hide-menu">Faculty Expertise</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty Expertise</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('master.faculty.type.master.index') }}">
-                                        <span class="hide-menu">Faculty Type</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty Type</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.index') }}">
-                                        <span class="hide-menu">Faculty</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty</span>
                                     </a></li>
                             </ul>
 
@@ -110,19 +110,19 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#userManagementCollapse" role="button"
                                     aria-expanded="false" aria-controls="userManagementCollapse">
-                                    <span class="hide-menu fw-bold">Roles & Permissions</span>
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Roles & Permissions</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="userManagementCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.roles.index') }}">
-                                        <span class="hide-menu">Roles</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Roles</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.users.index') }}">
-                                        <span class="hide-menu">User Permissions</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">User Permissions</span>
                                     </a></li>
 
                                 {{-- <li class="sidebar-item"><a class="sidebar-link"
