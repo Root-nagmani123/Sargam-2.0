@@ -8,6 +8,8 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
+use Illuminate\Support\Facades\Storage;
+
 
 class MemoTypeMasterDataTable extends DataTable
 {
@@ -35,64 +37,57 @@ class MemoTypeMasterDataTable extends DataTable
                 }
             }, true)
             ->addColumn('actions', function ($row) {
-                $editUrl = route('master.memo.type.master.edit', ['id' => encrypt($row->pk)]);
-                $deleteUrl = route('master.memo.type.master.delete', ['id' => encrypt($row->pk)]);
-                $isActive = $row->active_inactive == 1;
-                $csrf = csrf_token();
-                $formId = 'delete-form-' . $row->pk;
 
-                $html = <<<HTML
-                <div class="d-inline-flex align-items-center gap-2"
-                    role="group"
-                    aria-label="Memo type actions">
+    $editUrl   = route('master.memo.type.master.edit', ['id' => $row->pk]);
+    $deleteUrl = route('master.memo.type.master.delete', ['id' => encrypt($row->pk)]);
+    $isActive  = ($row->active_inactive == 1);
 
-                    <!-- Edit -->
-                    <a href="{$editUrl}"
-                    class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-                    aria-label="Edit memo type">
-                        <span class="material-icons material-symbols-rounded"
-                            style="font-size:18px;"
-                            aria-hidden="true">edit</span>
-                        <span class="d-none d-md-inline">Edit</span>
-                    </a>
+    // 🔹 Delete button logic (NO Blade here)
+    if ($isActive) {
+        $deleteButton = '
+            <button type="button"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                disabled
+                title="Cannot delete active memo type">
+                <span class="material-icons material-symbols-rounded" style="font-size:18px;">
+                    delete
+                </span>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>';
+    } else {
+        $deleteButton = '
+            <button type="button"
+                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 deleteBtn"
+                data-pk="' . $row->pk . '"
+                data-url="' . $deleteUrl . '"
+                aria-label="Delete memo type">
+                <span class="material-icons material-symbols-rounded" style="font-size:18px;">
+                    delete
+                </span>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>';
+    }
 
-                    <!-- Delete -->
-                    <?php if ($isActive): ?>
-                        <button type="button"
-                                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none"
-                                disabled
-                                aria-disabled="true"
-                                title="Cannot delete active memo type">
-                            <span class="material-icons material-symbols-rounded"
-                                style="font-size:18px;"
-                                aria-hidden="true">delete</span>
-                            <span class="d-none">Delete</span>
-                        </button>
-                    <?php else: ?>
-                        <form id="<?= $formId ?>"
-                            action="<?= $deleteUrl ?>"
-                            method="POST"
-                            class="d-inline">
-                            <input type="hidden" name="_token" value="<?= $csrf ?>">
-                            <input type="hidden" name="_method" value="DELETE">
+    return '
+        <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Memo type actions">
 
-                            <button type="submit"
-                                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-                                    aria-label="Delete memo type"
-                                    onclick="return confirm('Are you sure you want to delete this memo type?');">
-                                <span class="material-icons material-symbols-rounded"
-                                    style="font-size:18px;"
-                                    aria-hidden="true">delete</span>
-                                <span class="d-none d-md-inline">Delete</span>
-                            </button>
-                        </form>
-                    <?php endif; ?>
+            <!-- Edit -->
+            <a href="javascript:void(0);"
+                class="editMemo btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                data-pk="' . $row->pk . '"
+                data-name="' . e($row->memo_type_name) . '"
+                data-status="' . $row->active_inactive . '"
+                data-file="' . ($row->memo_doc_upload ? asset('storage/' . $row->memo_doc_upload) : '') . '">
+                <span class="material-icons material-symbols-rounded" style="font-size:18px;">edit</span>
+                <span class="d-none d-md-inline">Edit</span>
+            </a>
 
-                </div>
-                HTML;
+            <!-- Delete -->
+            ' . $deleteButton . '
 
-                return $html;
-            })
+        </div>';
+})
+
             ->addColumn('status', function ($row) {
                 return '<div class="form-check form-switch d-inline-block">
                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
