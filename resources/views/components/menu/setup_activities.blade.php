@@ -130,6 +130,10 @@
                                 <span class="hide-menu">Permissions</span>
                                 </a></li> --}}
                             </ul>
+                            <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('course-repository.index') }}">
+                                <span class="hide-menu">Course Repository</span>
+                                </a></li>
                             
                             @endif
 
