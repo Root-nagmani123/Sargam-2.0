@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Exemption categories')
+@section('title', 'Exemption medical speciality')
 
 @section('setup_content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Exemption categories" />
+    <x-breadcrum title="Exemption medical speciality" />
     <div class="datatables">
         <!-- start Zero Configuration -->
         <div class="card" style="border-left: 4px solid #004a93;">
@@ -18,7 +18,7 @@
                         <div class="col-6">
                              <!-- <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button> -->
                             <div class="float-end gap-2">
-                                 <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button>
+                                 <button id="showAlert" class="btn btn-primary">+ Add Exemption medical speciality</button>
                                 <!-- <a href="{{route('master.exemption.category.master.create')}}" class="btn btn-primary">+
                                     Add Exemption categories</a> -->
                             </div>

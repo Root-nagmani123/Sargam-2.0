@@ -20,6 +20,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Yajra\DataTables\Facades\DataTables;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 
 
 class StudentMedicalExemptionController extends Controller
@@ -239,17 +240,20 @@ class StudentMedicalExemptionController extends Controller
     $data_course_id =  get_Role_by_course();
     if(!empty($data_course_id))
     {
-        $courses = $courses->whereIn('pk',$data_course_id);
-    }
+        $courses = CourseMaster::where('active_inactive', '1');
+        $data_course_id =  get_Role_by_course();
+        if (!empty($data_course_id)) {
+            $courses = $courses->whereIn('pk', $data_course_id);
+        }
         $courses = $courses->where('end_date', '>', now())
-        ->get();
-  
-    $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
-    $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
+            ->get();
 
-    return view('admin.student_medical_exemption.create', compact('courses', 'categories', 'specialities'));
+        $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
+        $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
+
+        return view('admin.student_medical_exemption.create', compact('courses', 'categories', 'specialities'));
+    }
 }
-
 
     /**
      * Check if a date-time range overlaps with existing exemptions for the same student
@@ -258,226 +262,225 @@ class StudentMedicalExemptionController extends Controller
     private function checkOverlap($studentId, $fromDate, $toDate, $excludeId = null)
     {
         $query = StudentMedicalExemption::where('student_master_pk', $studentId);
-        
+
         // Exclude current record when updating
         if ($excludeId !== null) {
             $query->where('pk', '!=', $excludeId);
         }
-        
+
         $existingExemptions = $query->get();
-        
+
         $newFrom = \Carbon\Carbon::parse($fromDate);
         // Use a far future date if to_date is null (ongoing exemption)
         $newTo = $toDate ? \Carbon\Carbon::parse($toDate) : \Carbon\Carbon::create(2099, 12, 31, 23, 59, 59);
-        
+
         foreach ($existingExemptions as $exemption) {
             $existingFrom = \Carbon\Carbon::parse($exemption->from_date);
             // Use a far future date if to_date is null (ongoing exemption)
             $existingTo = $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date) : \Carbon\Carbon::create(2099, 12, 31, 23, 59, 59);
-            
+
             // Check for overlap: new_start < existing_end AND new_end > existing_start
             $overlaps = $newFrom < $existingTo && $newTo > $existingFrom;
-            
+
             if ($overlaps) {
                 $existingFromFormatted = $existingFrom->format('d M Y H:i');
                 $existingToFormatted = $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d M Y H:i') : 'Ongoing';
                 return "This time range overlaps with an existing exemption for this student (from {$existingFromFormatted} to {$existingToFormatted}).";
             }
         }
-        
+
         return null;
     }
 
     public function store(Request $request)
-{
-    
-    $validated = $request->validate([
-        'course_master_pk' => 'required|numeric',
-        'student_master_pk' => 'required|numeric',
-        'employee_master_pk' => 'required|numeric',
-        'exemption_category_master_pk' => 'required|numeric',
-        'from_date' => 'required|date',
-        'to_date' => 'nullable|date|after_or_equal:from_date',
-        'opd_category' => 'nullable|string|max:50',
-        'exemption_medical_speciality_pk' => 'required|numeric',
-        'Description' => 'nullable|string',
-        'active_inactive' => 'nullable|boolean',
-    ]);
-
-    // Check for overlapping time ranges for the same student
-    $overlapError = $this->checkOverlap(
-        $validated['student_master_pk'],
-        $validated['from_date'],
-        $validated['to_date']
-    );
-    
-    if ($overlapError) {
-        return redirect()
-            ->back()
-            ->withInput()
-            ->withErrors(['from_date' => $overlapError]);
-    }
-
-    // Set default status to Active (1) if not provided
-    if (!isset($validated['active_inactive'])) {
-        $validated['active_inactive'] = 1;
-    }
-
-    // Handle file upload if exists
-    if ($request->hasFile('Doc_upload')) {
-        $file = $request->file('Doc_upload');
-        $filename = time() . '_' . $file->getClientOriginalName();
-        $path = $file->storeAs('uploads/exemptions', $filename, 'public');
-        $validated['Doc_upload'] = $path;
-    }
-
-    $medicalExemption = StudentMedicalExemption::create($validated);
-
-    // Send notifications to relevant users
-    try {
-        $notificationService = app(NotificationService::class);
-        $receiverService = app(NotificationReceiverService::class);
-
-        // Get student and course information for notification
-        $student = StudentMaster::find($validated['student_master_pk']);
-        $course = CourseMaster::find($validated['course_master_pk']);
-
-        $studentName = $student ? $student->display_name : 'Student';
-        $courseName = $course ? $course->course_name : 'Course';
-        $fromDate = date('d M Y', strtotime($validated['from_date']));
-        $toDate = $validated['to_date'] ? date('d M Y', strtotime($validated['to_date'])) : 'Ongoing';
-
-        // Get receiver user_ids
-        $receiverUserIds = $receiverService->getMedicalExemptionReceivers(
-            $validated['student_master_pk'],
-            $validated['course_master_pk']
-        );
-
-        if (!empty($receiverUserIds)) {
-            $title = 'Medical Exemption Added';
-            $message = "A medical exemption has been added for student {$studentName} (Course: {$courseName}) from {$fromDate} to {$toDate}.";
-
-            // Send notifications to all receivers
-            $notificationService->createMultiple(
-                $receiverUserIds,
-                'medical_exemption',
-                'Medical Exemption',
-                $medicalExemption->pk,
-                $title,
-                $message
-            );
-        }
-    } catch (\Exception $e) {
-        // Log error but don't fail the request
-        \Log::error('Failed to send medical exemption notifications: ' . $e->getMessage());
-    }
-
-    return redirect()->route('student.medical.exemption.index')->with('success', 'Record created successfully.');
-}
-
-
-   public function edit($id)
-{
-    $record = StudentMedicalExemption::findOrFail(decrypt($id));
-
-    $courses = CourseMaster::where('active_inactive', '1');
-    $data_course_id =  get_Role_by_course();
-    if(!empty($data_course_id))
     {
-        $courses = $courses->whereIn('pk',$data_course_id);
-    }
-    $courses = $courses->where('end_date', '>', now())
-        ->get();
-    $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
-        ->where('status', '1')
-        ->orderBy('display_name', 'asc')
-        ->get();
-    $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
-    $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
 
-    return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities'));
-}
-public function update(Request $request, $id)
-{
-    $validated = $request->validate([
-        'course_master_pk' => 'required|numeric',
-        'student_master_pk' => 'required|numeric',
-        'employee_master_pk' => 'nullable|numeric',
-        'exemption_category_master_pk' => 'required|numeric',
-        'from_date' => 'required|date',
-        'to_date' => 'nullable|date|after_or_equal:from_date',
-        'opd_category' => 'nullable|string|max:50',
-        'exemption_medical_speciality_pk' => 'required|numeric',
-        'Description' => 'nullable|string',
-        'active_inactive' => 'required|boolean',
-    ]);
+        $validated = $request->validate([
+            'course_master_pk' => 'required|numeric',
+            'student_master_pk' => 'required|numeric',
+            'employee_master_pk' => 'required|numeric',
+            'exemption_category_master_pk' => 'required|numeric',
+            'from_date' => 'required|date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
+            'opd_category' => 'nullable|string|max:50',
+            'exemption_medical_speciality_pk' => 'required|numeric',
+            'Description' => 'nullable|string',
+            'active_inactive' => 'nullable|boolean',
+        ]);
 
-    $record = StudentMedicalExemption::findOrFail(decrypt($id));
-    
-    // Check for overlapping time ranges for the same student (excluding current record)
-    $overlapError = $this->checkOverlap(
-        $validated['student_master_pk'],
-        $validated['from_date'],
-        $validated['to_date'],
-        $record->pk
-    );
-    
-    if ($overlapError) {
-        return redirect()
-            ->back()
-            ->withInput()
-            ->withErrors(['from_date' => $overlapError]);
-    }
-
-    if ($request->hasFile('Doc_upload')) {
-        $file = $request->file('Doc_upload');
-        $filename = time() . '_' . $file->getClientOriginalName();
-        $validated['Doc_upload'] = $file->storeAs('uploads/exemptions', $filename, 'public');
-    }
-
-    $record->update($validated);
-
-    // Send notifications to relevant users
-    try {
-        $notificationService = app(NotificationService::class);
-        $receiverService = app(NotificationReceiverService::class);
-
-        // Get student and course information for notification
-        $student = StudentMaster::find($validated['student_master_pk']);
-        $course = CourseMaster::find($validated['course_master_pk']);
-
-        $studentName = $student ? $student->display_name : 'Student';
-        $courseName = $course ? $course->course_name : 'Course';
-        $fromDate = date('d M Y', strtotime($validated['from_date']));
-        $toDate = $validated['to_date'] ? date('d M Y', strtotime($validated['to_date'])) : 'Ongoing';
-
-        // Get receiver user_ids
-        $receiverUserIds = $receiverService->getMedicalExemptionReceivers(
+        // Check for overlapping time ranges for the same student
+        $overlapError = $this->checkOverlap(
             $validated['student_master_pk'],
-            $validated['course_master_pk']
+            $validated['from_date'],
+            $validated['to_date']
         );
 
-        if (!empty($receiverUserIds)) {
-            $title = 'Medical Exemption Updated';
-            $message = "A medical exemption has been updated for student {$studentName} (Course: {$courseName}) from {$fromDate} to {$toDate}.";
-
-            // Send notifications to all receivers
-            $notificationService->createMultiple(
-                $receiverUserIds,
-                'medical_exemption',
-                'Medical Exemption',
-                $record->pk,
-                $title,
-                $message
-            );
+        if ($overlapError) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['from_date' => $overlapError]);
         }
-    } catch (\Exception $e) {
-        // Log error but don't fail the request
-        \Log::error('Failed to send medical exemption notifications: ' . $e->getMessage());
+
+        // Set default status to Active (1) if not provided
+        if (!isset($validated['active_inactive'])) {
+            $validated['active_inactive'] = 1;
+        }
+
+        // Handle file upload if exists
+        if ($request->hasFile('Doc_upload')) {
+            $file = $request->file('Doc_upload');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $path = $file->storeAs('uploads/exemptions', $filename, 'public');
+            $validated['Doc_upload'] = $path;
+        }
+
+        $medicalExemption = StudentMedicalExemption::create($validated);
+
+        // Send notifications to relevant users
+        try {
+            $notificationService = app(NotificationService::class);
+            $receiverService = app(NotificationReceiverService::class);
+
+            // Get student and course information for notification
+            $student = StudentMaster::find($validated['student_master_pk']);
+            $course = CourseMaster::find($validated['course_master_pk']);
+
+            $studentName = $student ? $student->display_name : 'Student';
+            $courseName = $course ? $course->course_name : 'Course';
+            $fromDate = date('d M Y', strtotime($validated['from_date']));
+            $toDate = $validated['to_date'] ? date('d M Y', strtotime($validated['to_date'])) : 'Ongoing';
+
+            // Get receiver user_ids
+            $receiverUserIds = $receiverService->getMedicalExemptionReceivers(
+                $validated['student_master_pk'],
+                $validated['course_master_pk']
+            );
+
+            if (!empty($receiverUserIds)) {
+                $title = 'Medical Exemption Added';
+                $message = "A medical exemption has been added for student {$studentName} (Course: {$courseName}) from {$fromDate} to {$toDate}.";
+
+                // Send notifications to all receivers
+                $notificationService->createMultiple(
+                    $receiverUserIds,
+                    'medical_exemption',
+                    'Medical Exemption',
+                    $medicalExemption->pk,
+                    $title,
+                    $message
+                );
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            Log::error('Failed to send medical exemption notifications: ' . $e->getMessage());
+        }
+
+        return redirect()->route('student.medical.exemption.index')->with('success', 'Record created successfully.');
     }
 
-    return redirect()->route('student.medical.exemption.index')->with('success', 'Record updated successfully.');
-}
+
+    public function edit($id)
+    {
+        $record = StudentMedicalExemption::findOrFail(decrypt($id));
+
+        $courses = CourseMaster::where('active_inactive', '1');
+        $data_course_id =  get_Role_by_course();
+        if (!empty($data_course_id)) {
+            $courses = $courses->whereIn('pk', $data_course_id);
+        }
+        $courses = $courses->where('end_date', '>', now())
+            ->get();
+        $students = StudentMaster::select('pk', 'generated_OT_code', 'display_name')
+            ->where('status', '1')
+            ->orderBy('display_name', 'asc')
+            ->get();
+        $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
+        $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
+
+        return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities'));
+    }
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'course_master_pk' => 'required|numeric',
+            'student_master_pk' => 'required|numeric',
+            'employee_master_pk' => 'nullable|numeric',
+            'exemption_category_master_pk' => 'required|numeric',
+            'from_date' => 'required|date',
+            'to_date' => 'nullable|date|after_or_equal:from_date',
+            'opd_category' => 'nullable|string|max:50',
+            'exemption_medical_speciality_pk' => 'required|numeric',
+            'Description' => 'nullable|string',
+            'active_inactive' => 'required|boolean',
+        ]);
+
+        $record = StudentMedicalExemption::findOrFail(decrypt($id));
+
+        // Check for overlapping time ranges for the same student (excluding current record)
+        $overlapError = $this->checkOverlap(
+            $validated['student_master_pk'],
+            $validated['from_date'],
+            $validated['to_date'],
+            $record->pk
+        );
+
+        if ($overlapError) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->withErrors(['from_date' => $overlapError]);
+        }
+
+        if ($request->hasFile('Doc_upload')) {
+            $file = $request->file('Doc_upload');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $validated['Doc_upload'] = $file->storeAs('uploads/exemptions', $filename, 'public');
+        }
+
+        $record->update($validated);
+
+        // Send notifications to relevant users
+        try {
+            $notificationService = app(NotificationService::class);
+            $receiverService = app(NotificationReceiverService::class);
+
+            // Get student and course information for notification
+            $student = StudentMaster::find($validated['student_master_pk']);
+            $course = CourseMaster::find($validated['course_master_pk']);
+
+            $studentName = $student ? $student->display_name : 'Student';
+            $courseName = $course ? $course->course_name : 'Course';
+            $fromDate = date('d M Y', strtotime($validated['from_date']));
+            $toDate = $validated['to_date'] ? date('d M Y', strtotime($validated['to_date'])) : 'Ongoing';
+
+            // Get receiver user_ids
+            $receiverUserIds = $receiverService->getMedicalExemptionReceivers(
+                $validated['student_master_pk'],
+                $validated['course_master_pk']
+            );
+
+            if (!empty($receiverUserIds)) {
+                $title = 'Medical Exemption Updated';
+                $message = "A medical exemption has been updated for student {$studentName} (Course: {$courseName}) from {$fromDate} to {$toDate}.";
+
+                // Send notifications to all receivers
+                $notificationService->createMultiple(
+                    $receiverUserIds,
+                    'medical_exemption',
+                    'Medical Exemption',
+                    $record->pk,
+                    $title,
+                    $message
+                );
+            }
+        } catch (\Exception $e) {
+            // Log error but don't fail the request
+            Log::error('Failed to send medical exemption notifications: ' . $e->getMessage());
+        }
+
+        return redirect()->route('student.medical.exemption.index')->with('success', 'Record updated successfully.');
+    }
 
 
     public function delete($id)
@@ -491,7 +494,7 @@ public function update(Request $request, $id)
     public function getStudentsByCourse(Request $request)
     {
         $courseId = $request->input('course_id');
-        
+
         // Get students from Course Group Mapping (Phase-1 mapped students)
         // Join: StudentCourseGroupMap -> GroupTypeMasterCourseMasterMap -> Course
         $students = DB::table('student_course_group_map')
@@ -503,9 +506,8 @@ public function update(Request $request, $id)
             ->distinct()
             ->orderBy('student_master.display_name', 'asc')
             ->get();
-       
-       return response()->json(['students' => $students]);
 
+        return response()->json(['students' => $students]);
     }
 
     public function export(Request $request)
@@ -515,9 +517,9 @@ public function update(Request $request, $id)
         $fromDateFilter = $request->get('from_date_filter');
         $toDateFilter = $request->get('to_date_filter');
         $search = $request->get('search');
-        
+
         $fileName = 'medical-exemption-export-' . now()->format('Y-m-d_H-i-s') . '.xlsx';
-        
+
         return Excel::download(
             new StudentMedicalExemptionExport($filter, $courseFilter, $search, $fromDateFilter, $toDateFilter),
             $fileName

@@ -168,11 +168,14 @@
                     <div class="col-lg-4 col-md-6">
                         <div class="d-flex justify-content-md-end justify-content-start flex-wrap gap-2">
 
-                            <button type="button" class="btn btn-outline-info d-flex align-items-center gap-1 px-3">
-                                <i class="material-icons material-symbols-rounded" style="font-size:22px;"
-                                    aria-hidden="true">print</i>
-                                <span class="d-none d-md-inline">Print</span>
-                            </button>
+                            <button type="button"
+        class="btn btn-outline-info d-flex align-items-center gap-1 px-3"
+        onclick="printTable()">
+    <i class="material-icons material-symbols-rounded"
+       style="font-size:22px;"
+       aria-hidden="true">print</i>
+    <span class="d-none d-md-inline">Print</span>
+</button>
 
                             <a href="{{ route('student.medical.exemption.export') }}" class="btn btn-outline-success d-flex align-items-center gap-1 px-3">
                                 <i class="material-icons material-symbols-rounded" style="font-size:22px;"
@@ -206,7 +209,7 @@
                                     style="font-size: 20px;">search</i>
                             </span>
                             <input type="text" name="search" id="search" class="form-control"
-                                placeholder="Search student, OT code, course..." value="{{ $search ?? '' }}">
+                                placeholder="Search student, OT code, course..." value="">
                         </div>
                     </div>
 

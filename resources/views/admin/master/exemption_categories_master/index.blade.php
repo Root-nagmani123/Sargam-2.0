@@ -410,6 +410,57 @@ document.getElementById('showAlert').addEventListener('click', function () {
     });
 });
 
+$(document).on('click', '.deleteBtn', function (e) {
+    e.preventDefault();
+
+    const btn = $(this);
+    const url = btn.data('url');
+    const pk  = btn.data('pk');
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: 'This action cannot be undone!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {
+                    _method: 'DELETE',
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                beforeSend: function () {
+                    btn.prop('disabled', true);
+                },
+                success: function (res) {
+                    if (res.status) {
+                        Swal.fire('Deleted!', res.message, 'success');
+
+                        // ✅ Reload DataTable without page reload
+                        $('#memotypemaster-table')
+                            .DataTable()
+                            .ajax.reload(null, false);
+                    } else {
+                        Swal.fire('Error!', res.message, 'error');
+                        btn.prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error!', 'Something went wrong.', 'error');
+                    btn.prop('disabled', false);
+                }
+            });
+
+        }
+    });
+});
+
+
 </script>
 @if(session('success'))
 <script>
