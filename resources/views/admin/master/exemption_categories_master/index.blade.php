@@ -190,7 +190,6 @@ document.getElementById('showAlert').addEventListener('click', function () {
         html: `
             <form id="exemptionCategoryForm">
                 <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                
 
                 <div class="row mb-2">
                     <label class="col-auto fw-semibold">
@@ -232,11 +231,42 @@ document.getElementById('showAlert').addEventListener('click', function () {
         focusConfirm: false,
 
         preConfirm: () => {
-
             const popup = Swal.getPopup();
-            const form = popup.querySelector('#exemptionCategoryForm');
 
-            const formData = new FormData(form);
+            const name = popup.querySelector('#exemp_category_name');
+            const shortName = popup.querySelector('#exemp_cat_short_name');
+            const status = popup.querySelector('#status');
+
+            const nameError = popup.querySelector('#exemp_category_name_error');
+            const shortNameError = popup.querySelector('#exemp_cat_short_name_error');
+            const statusError = popup.querySelector('#status_error');
+
+            // Reset errors
+            [nameError, shortNameError, statusError].forEach(e => e.classList.add('d-none'));
+
+            let isValid = true;
+
+            if (!name.value.trim()) {
+                nameError.classList.remove('d-none');
+                isValid = false;
+            }
+
+            if (!shortName.value.trim()) {
+                shortNameError.classList.remove('d-none');
+                isValid = false;
+            }
+
+            if (!status.value) {
+                statusError.classList.remove('d-none');
+                isValid = false;
+            }
+
+            // ❌ stop submission if validation fails
+            if (!isValid) {
+                return false;
+            }
+
+            const formData = new FormData(popup.querySelector('#exemptionCategoryForm'));
 
             return fetch("{{ route('master.exemption.category.master.store') }}", {
                 method: 'POST',
@@ -251,13 +281,11 @@ document.getElementById('showAlert').addEventListener('click', function () {
                 try {
                     return JSON.parse(text);
                 } catch (e) {
-                    throw new Error(text); // HTML response caught here
+                    throw new Error(text);
                 }
             })
-            .catch(error => {
-                Swal.showValidationMessage(
-                    'Server Error or Session Expired'
-                );
+            .catch(() => {
+                Swal.showValidationMessage('Server Error or Session Expired');
             });
         }
     }).then(result => {
@@ -388,6 +416,57 @@ document.getElementById('showAlert').addEventListener('click', function () {
         }
     });
 });
+
+$(document).on('click', '.deleteBtn', function (e) {
+    e.preventDefault();
+
+    const btn = $(this);
+    const url = btn.data('url');
+    const pk  = btn.data('pk');
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: 'This action cannot be undone!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, delete it!',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: {
+                    _method: 'DELETE',
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                beforeSend: function () {
+                    btn.prop('disabled', true);
+                },
+                success: function (res) {
+                    if (res.status) {
+                        Swal.fire('Deleted!', res.message, 'success');
+
+                        // ✅ Reload DataTable without page reload
+                        $('#memotypemaster-table')
+                            .DataTable()
+                            .ajax.reload(null, false);
+                    } else {
+                        Swal.fire('Error!', res.message, 'error');
+                        btn.prop('disabled', false);
+                    }
+                },
+                error: function () {
+                    Swal.fire('Error!', 'Something went wrong.', 'error');
+                    btn.prop('disabled', false);
+                }
+            });
+
+        }
+    });
+});
+
 
 </script>
 @if(session('success'))

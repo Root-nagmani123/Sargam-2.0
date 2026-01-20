@@ -44,9 +44,10 @@ class GroupMappingController extends Controller
             ->pluck('course_name', 'pk')
             ->toArray();
 
-        $groupTypes = CourseGroupTypeMaster::orderBy('type_name')
-            ->pluck('type_name', 'pk')
-            ->toArray();
+        $groupTypes = CourseGroupTypeMaster::where('active_inactive', 1)
+                        ->orderBy('type_name')
+                        ->pluck('type_name', 'pk')
+                        ->toArray();
 
         return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
     }
