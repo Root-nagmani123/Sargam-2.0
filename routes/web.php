@@ -41,10 +41,6 @@ use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
 
-
-
-
-
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
     Artisan::call('config:clear');
@@ -355,7 +351,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/create', 'create')->name('create');
             Route::post('/store', 'store')->name('store');
             Route::get('/edit/{id}', 'edit')->name('edit');
-            Route::post('/update/{id}', 'update')->name('update');
+            Route::post('/update', 'update')->name('update');
             Route::delete('/delete/{id}', 'destroy')->name('delete');
         });
     Route::prefix('admin/memo-notice-management')
@@ -628,5 +624,18 @@ Route::middleware(['auth'])->group(function () {
     [FeedbackController::class, 'pendingFeedbackIndex']
 )->name('admin.feedback.pending');
 
+
+Route::get('/memo/view/{file}', function ($file) {
+
+    $path = 'memo_documents/' . $file;
+
+    if (!Storage::disk('public')->exists($path)) {
+        abort(404);
+    }
+
+    return response()->file(
+        storage_path('app/public/' . $path)
+    );
+});
 
 
