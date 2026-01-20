@@ -15,14 +15,14 @@
                             <li class="sidebar-item">
                                 <a class="sidebar-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
                                     href="{{ route('admin.dashboard') }}">
-                                    <span class="hide-menu">Dashboard</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Dashboard</span>
                                 </a>
                             </li>
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <!-- Notice Notification Route -->
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('admin.notice.index') }}">
-                                        <span class="hide-menu">Notice Notifications</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Notice Notifications</span>
                                     </a></li>
                                     @endif
 
@@ -30,7 +30,7 @@
                             @if(hasRole('Doctor'))
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('student.medical.exemption.index') }}">
-                                    <span class="hide-menu">Student Medical Exemption (Doctor)</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Student Medical Exemption (Doctor)</span>
                                 </a></li>
                             @endif
 
@@ -45,32 +45,32 @@
                                     <a class="sidebar-link d-flex justify-content-between align-items-center"
                                         data-bs-toggle="collapse" href="#generalCollapse" role="button"
                                         aria-expanded="false" aria-controls="generalCollapse">
-                                        <span class="hide-menu fw-bold">Quick Links</span>
+                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Quick Links</span>
                                         <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">keyboard_arrow_down</i>
+                                            style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                     </a>
                                 </li>
                                 <ul class="collapse list-unstyled ps-3" id="generalCollapse">
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">E-Office</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">E-Office</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">Medical Center</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Medical Center</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">E-Learning</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">E-Learning</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">Library</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Library</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">OM & Circular of DOPT</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">OM & Circular of DOPT</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">Photo Gallery</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Photo Gallery</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">OT Missconduct Complaint</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">OT Missconduct Complaint</span>
                                         </a></li>
                                 </ul>
 
@@ -83,32 +83,32 @@
                                     <a class="sidebar-link d-flex justify-content-between align-items-center"
                                         data-bs-toggle="collapse" href="#courseCollapse" role="button"
                                         aria-expanded="false" aria-controls="courseCollapse">
-                                        <span class="hide-menu fw-bold">Usefull Links</span>
+                                        <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Usefull Links</span>
                                         <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">keyboard_arrow_down</i>
+                                            style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                     </a>
                                 </li>
                                 <ul class="collapse list-unstyled ps-3" id="courseCollapse">
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">About Academy</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">About Academy</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">About Mussoorie</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">About Mussoorie</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">SOP</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">SOP</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">Required Items Mess</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Required Items Mess</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">LBSNAA Telephone Director</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">LBSNAA Telephone Director</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">Organisation Structure</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Organisation Structure</span>
                                         </a></li>
                                     <li class="sidebar-item"><a class="sidebar-link" href="#">
-                                            <span class="hide-menu">LBSNAA Website</span>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">LBSNAA Website</span>
                                         </a></li>
                                 </ul>
                             </ul>

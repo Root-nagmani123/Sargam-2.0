@@ -38,20 +38,6 @@
     opacity: 0.8;
 }
 
-@media (max-width: 991.98px) {
-    .navbar-nav {
-        border-radius: 0.5rem;
-        flex-direction: column;
-        align-items: flex-start;
-        width: 100%;
-    }
-
-    .navbar-nav .nav-link {
-        width: 100%;
-        border-radius: 0.5rem;
-    }
-}
-
 /* --- Search Animation --- */
 .search-wrapper {
     position: relative;
@@ -82,6 +68,69 @@
 
 .input-group-sm .btn {
     border-radius: 0 50rem 50rem 0;
+}
+
+/* Mobile-first: Bottom navigation for mobile devices only */
+@media (max-width: 991.98px) {
+    #mainNavbar {
+        display: flex !important;
+        visibility: visible !important;
+        position: fixed !important;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1030;
+        background: white;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    
+    #mainNavbar .navbar-nav {
+        justify-content: space-around;
+        width: 100%;
+        border-radius: 0 !important;
+    }
+    
+    /* Add padding to body to prevent content from being hidden behind fixed bottom nav */
+    body {
+        padding-bottom: 70px;
+    }
+    
+    .navbar-nav {
+        border-radius: 0.5rem;
+        flex-direction: row !important;
+        align-items: center;
+        width: 100%;
+    }
+
+    .navbar-nav .nav-link {
+        width: auto;
+        border-radius: 0.5rem;
+    }
+}
+
+/* Desktop view: Keep original positioning */
+@media (min-width: 992px) {
+    #mainNavbar {
+        position: static !important;
+        box-shadow: none !important;
+    }
+    
+    body {
+        padding-bottom: 0;
+    }
+    
+    .navbar-nav {
+        border-radius: 0.5rem;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    .navbar-nav .nav-link {
+        width: 100%;
+        border-radius: 0.5rem;
+    }
 }
 </style>
 
@@ -499,6 +548,54 @@ document.addEventListener('DOMContentLoaded', function() {
     showPane(initial);
     // Apply default submenu/content for initial tab
     activateDefaultSubmenuForPane(initial);
+});
+
+// Mobile Sidebar Toggle
+document.addEventListener('DOMContentLoaded', function() {
+    const sidebarToggler = document.getElementById('headerCollapse');
+    const sidebar = document.querySelector('.left-sidebar');
+    const body = document.body;
+    
+    if (!sidebar) return; // Exit if no sidebar exists
+    
+    // Create overlay if it doesn't exist
+    let overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        body.appendChild(overlay);
+    }
+    
+    // Toggle sidebar function
+    function toggleSidebar() {
+        sidebar.classList.toggle('show-sidebar');
+        overlay.classList.toggle('show');
+        body.style.overflow = sidebar.classList.contains('show-sidebar') ? 'hidden' : '';
+    }
+    
+    // Sidebar toggler click
+    if (sidebarToggler) {
+        sidebarToggler.addEventListener('click', function(e) {
+            e.preventDefault();
+            toggleSidebar();
+        });
+    }
+    
+    // Close sidebar when clicking overlay
+    if (overlay) {
+        overlay.addEventListener('click', function() {
+            toggleSidebar();
+        });
+    }
+    
+    // Close sidebar on window resize if larger than mobile
+    window.addEventListener('resize', function() {
+        if (window.innerWidth >= 992) {
+            sidebar.classList.remove('show-sidebar');
+            overlay.classList.remove('show');
+            body.style.overflow = '';
+        }
+    });
 });
 </script>
 <!-- 🌟 Header End -->

@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             <li class="nav-small-cap">
-                                <span class="hide-menu">Role Management</span>
+                                <span class="hide-menu small small-sm-normal text-nowrap">Role Management</span>
                             </li>
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
@@ -21,25 +21,25 @@
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Role Master</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Role Master</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Role Permissions</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Role Permissions</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Profile Edit Permission</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Profile Edit Permission</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Institute Management Mapping</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Institute Management Mapping</span>
                                 </a>
                             </li>
 
