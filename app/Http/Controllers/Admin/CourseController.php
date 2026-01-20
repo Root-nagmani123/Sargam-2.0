@@ -18,6 +18,8 @@ use App\Services\CourseService;
 
 class CourseController extends Controller
 {
+
+    
     public function index(CourseMasterDataTable $dataTable)
     {
         $data_course_id =  get_Role_by_course();

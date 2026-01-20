@@ -29,9 +29,16 @@ class PeerEvaluationController extends Controller
     public function index()
     {
         // Get courses with their events and group counts
-        $courses = PeerCourse::with(['events' => function ($query) {
+       /*  $courses = PeerCourse::with(['events' => function ($query) {
             $query->active()->withCount('groups');
-        }])->active()->withCount(['events', 'groups'])->get();
+        }])->active()->withCount(['events', 'groups'])->get(); */
+		
+		$courses = PeerCourse::with(['events' => function ($query) {
+		$query->active()->withCount('groups');
+		}])
+		->active()
+		->withCount(['events', 'groups'])
+		->paginate(5); 
 
         // Get events with their course and group counts
         $events = PeerEvent::active()->withCount('groups')->get();
@@ -62,15 +69,25 @@ class PeerEvaluationController extends Controller
         ]);
 
         try {
-            PeerCourse::create([
+            $course = PeerCourse::create([
                 'course_name' => $request->course_name,
                 'is_active' => true
             ]);
 
-            return response()->json([
+          /*   return response()->json([
                 'success' => true,
                 'message' => 'Course added successfully'
-            ]);
+            ]); */
+			return response()->json([
+            'success' => true,
+            'message' => 'Course added successfully',
+            'course' => [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'events_count' => 0,
+                'groups_count' => 0
+            ]
+			]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -78,6 +95,52 @@ class PeerEvaluationController extends Controller
             ], 500);
         }
     }
+	
+		/**
+		 * Update exiting course
+		 */
+		public function updateCourse(Request $request)
+		{
+			$request->validate([
+				'course_id' => 'required|exists:peer_courses,id',
+				'course_name' => 'required|string|max:255|unique:peer_courses,course_name,' . $request->course_id
+			]);
+
+			PeerCourse::where('id', $request->course_id)->update([
+				'course_name' => $request->course_name
+			]);
+
+			return response()->json([
+				'success' => true,
+				'message' => 'You have successfully updated the course!' 
+			]);
+		}
+
+
+		/**
+		 * Delete exiting course
+		 */
+		public function deleteCourse($id)
+		{
+			$course = PeerCourse::withCount(['events', 'groups'])->findOrFail($id);
+
+			if ($course->events_count > 0 || $course->groups_count > 0) {
+				return response()->json([
+					'success' => false,
+					'message' => 'Cannot delete course with events or groups'
+				], 400);
+			}
+
+			$course->delete();
+			//return response()->json(['success' => true]);
+			return response()->json([
+				'success' => true,
+				 'message' => 'Course deleted successfully!'
+			]);
+		}
+
+
+
 
     // ==================== EVENT MANAGEMENT METHODS ====================
 
