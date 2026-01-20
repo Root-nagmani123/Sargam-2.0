@@ -20,6 +20,7 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
     {
         return [
             'Sr. No.',
+            'Faculty Code',
             'Faculty Type',
             'First Name',
             'Middle Name',
@@ -122,6 +123,7 @@ class FacultyExport implements FromCollection, WithHeadings, WithMapping, Should
 
         return [
             ++$this->index,
+            $faculty->faculty_code ?? '',
             optional($faculty->facultyTypeMaster)->faculty_type_name,
             $faculty->first_name ?? '',
             $faculty->middle_name ?? '',

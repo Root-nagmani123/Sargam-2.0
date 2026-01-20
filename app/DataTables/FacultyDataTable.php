@@ -37,6 +37,12 @@ class FacultyDataTable extends DataTable
             ->addColumn('full_name', function($row) {
                 return $row->full_name ?? '';
             })
+            ->addColumn('faculty_code', function($row) {
+                return $row->faculty_code ?? '';
+            })
+            ->addColumn('faculty_email', function($row) {
+                return $row->email_id ?? '';
+            })
             ->addColumn('mobile_number', function($row) {
                 return $row->mobile_no ?? '';
             })
@@ -86,6 +92,12 @@ class FacultyDataTable extends DataTable
             ->filterColumn('full_name', function ($query, $keyword) {
                 $query->where('full_name', 'like', "%{$keyword}%");
             })
+            ->filterColumn('faculty_code', function ($query, $keyword) {
+                $query->where('faculty_code', 'like', "%{$keyword}%");
+            })
+            ->filterColumn('faculty_email', function ($query, $keyword) {
+                $query->where('email_id', 'like', "%{$keyword}%");
+            })
             ->filterColumn('mobile_number', function ($query, $keyword) {
                 $query->where('mobile_no', 'like', "%{$keyword}%");
             })
@@ -95,7 +107,9 @@ class FacultyDataTable extends DataTable
                 if (!empty($searchValue)) {
                     $query->where(function ($subQuery) use ($searchValue) {
                         $subQuery->where('full_name', 'like', "%{$searchValue}%")
-                            ->orWhere('mobile_no', 'like', "%{$searchValue}%");
+                            ->orWhere('mobile_no', 'like', "%{$searchValue}%")
+                            ->orWhere('faculty_code', 'like', "%{$searchValue}%")
+                            ->orWhere('email_id', 'like', "%{$searchValue}%");
                     });
                 }
             }, true)
@@ -162,6 +176,16 @@ class FacultyDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
+            Column::make('faculty_code')
+                ->title('Faculty Code')
+                ->addClass('text-center')
+                ->searchable(true)
+                ->orderable(false),
+            Column::make('faculty_email')
+                ->title('Faculty Email')
+                ->addClass('text-center')
+                ->searchable(true)
+                ->orderable(false),
             Column::make('faculty_type')
                 ->title('Faculty Type')
                 ->addClass('text-center')
