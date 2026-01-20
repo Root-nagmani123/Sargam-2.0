@@ -469,6 +469,8 @@
      <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {
