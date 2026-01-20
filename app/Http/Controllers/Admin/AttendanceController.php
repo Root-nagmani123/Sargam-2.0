@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CourseMaster;
 use Illuminate\Http\Request;
-use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance, Timetable, StudentMaster, MDOEscotDutyMap, StudentMedicalExemption, StudentMasterCourseMap};
+use App\Models\{CalendarEvent, GroupTypeMasterCourseMasterMap, CourseGroupTimetableMapping, StudentCourseGroupMap, ClassSessionMaster, VenueMaster, FacultyMaster, CourseStudentAttendance, Timetable, StudentMaster, MDOEscotDutyMap, StudentMedicalExemption, StudentMasterCourseMap, CourseCordinatorMaster};
 use Yajra\DataTables\DataTables;
 use Carbon\Carbon;
 use App\DataTables\StudentAttendanceListDataTable;
@@ -69,31 +69,81 @@ class AttendanceController extends Controller
                 ->select('class_session')
                 ->get();
 
-            if(!empty($data_course_id)){
-                $courseMasterPK = CalendarEvent::active()->select('course_master_pk')
-                                ->whereIn('course_master_pk',$data_course_id)
-                                ->groupBy('course_master_pk')->get()->toArray();
-            }
-            else{
-                $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
-            }
-            $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
-                        ->select('course_master.course_name', 'course_master.pk');
-
-                    if (hasRole('Student-OT')) {
-
-                        $courseMasters = $courseMasters->join(
-                            'student_master_course__map',
-                            'student_master_course__map.course_master_pk',
-                            '=',
-                            'course_master.pk'
-                        )
-                        ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
+            // Get courses based on attendance records for the logged-in user
+            $userId = auth()->user()->user_id;
+            
+            // Filter courses for Internal Faculty based on CC/ACC assignment
+            if (hasRole('Internal Faculty')) {
+                // Get faculty PK from user_id
+                $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
+                
+                if ($facultyPk) {
+                    // Get course IDs where faculty is CC or ACC
+                    $coordinatorCourseIds = CourseCordinatorMaster::where(function($query) use ($facultyPk) {
+                        $query->where('Coordinator_name', $facultyPk)
+                              ->orWhere('Assistant_Coordinator_name', $facultyPk);
+                    })
+                    ->pluck('courses_master_pk')
+                    ->unique()
+                    ->toArray();
+                    
+                    if (!empty($coordinatorCourseIds)) {
+                        $courseMasters = CourseMaster::whereIn('course_master.pk', $coordinatorCourseIds)
+                            ->where('course_master.active_inactive', 1)
+                            ->select('course_master.course_name', 'course_master.pk')
+                            ->orderBy('course_master.course_name')
+                            ->get()
+                            ->toArray();
+                    } else {
+                        $courseMasters = [];
                     }
-                    $courseMasters->where('course_master.active_inactive', 1);
+                } else {
+                    $courseMasters = [];
+                }
+            } else {
+                // Get distinct course IDs from attendance records for this user
+                $attendanceCourseIds = CourseStudentAttendance::where('Student_master_pk', $userId)
+                    ->distinct()
+                    ->pluck('course_master_pk')
+                    ->toArray();
 
+                // If user has attendance records, filter courses by those attendance records
+                if (!empty($attendanceCourseIds)) {
+                    // Get active courses that have attendance records for this user
+                    $courseMasters = CourseMaster::whereIn('course_master.pk', $attendanceCourseIds)
+                        ->where('course_master.active_inactive', 1)
+                        ->select('course_master.course_name', 'course_master.pk')
+                        ->orderBy('course_master.course_name')
+                        ->get()
+                        ->toArray();
+                } else {
+                    // Fallback to original logic if no attendance records found
+                    // This handles Faculty/Admin users or users without attendance records
+                    if(!empty($data_course_id)){
+                        $courseMasterPK = CalendarEvent::active()->select('course_master_pk')
+                                        ->whereIn('course_master_pk',$data_course_id)
+                                        ->groupBy('course_master_pk')->get()->toArray();
+                    }
+                    else{
+                        $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
+                    }
+                    $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
+                                ->select('course_master.course_name', 'course_master.pk');
 
-                    $courseMasters = $courseMasters->get()->toArray();
+                            if (hasRole('Student-OT')) {
+                                $courseMasters = $courseMasters->join(
+                                    'student_master_course__map',
+                                    'student_master_course__map.course_master_pk',
+                                    '=',
+                                    'course_master.pk'
+                                )
+                                ->where('student_master_course__map.student_master_pk', $userId);
+                            }
+                            $courseMasters->where('course_master.active_inactive', 1);
+
+                            $courseMasters = $courseMasters->orderBy('course_master.course_name')->get()->toArray();
+                }
+            }
 
 
             return view('admin.attendance.index', compact('courseMasters', 'sessions', 'maunalSessions'));
@@ -143,6 +193,33 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
                     $q->where('full_day', 1);
                 }
             });
+
+            // Filter for Internal Faculty: Show only courses where faculty is CC or ACC
+            if (hasRole('Internal Faculty')) {
+                $userId = auth()->user()->user_id;
+                $facultyPk = FacultyMaster::where('employee_master_pk', $userId)->value('pk');
+                
+                if ($facultyPk) {
+                    // Get course IDs where faculty is CC or ACC
+                    $coordinatorCourseIds = CourseCordinatorMaster::where(function($q) use ($facultyPk) {
+                        $q->where('Coordinator_name', $facultyPk)
+                          ->orWhere('Assistant_Coordinator_name', $facultyPk);
+                    })
+                    ->pluck('courses_master_pk')
+                    ->unique()
+                    ->toArray();
+                    
+                    if (!empty($coordinatorCourseIds)) {
+                        $query->whereIn('Programme_pk', $coordinatorCourseIds);
+                    } else {
+                        // If no courses found, return empty result
+                        $query->whereRaw('1 = 0');
+                    }
+                } else {
+                    // If faculty PK not found, return empty result
+                    $query->whereRaw('1 = 0');
+                }
+            }
 
             if (!empty($request->programme)) {
                 $query->where('Programme_pk', $request->programme);
@@ -444,17 +521,9 @@ $currentPath = $segments[1] ?? null;
 
             // Get filter parameters
             $filterDate = $request->input('filter_date') ? date('Y-m-d', strtotime($request->input('filter_date'))) : date('Y-m-d');
-            $filterSessionTime = $request->input('filter_session_time');
             $filterCourse = $request->input('filter_course');
+            $filterStatus = $request->input('filter_status');
             $archiveMode = $request->input('archive_mode', 'active'); // Default to 'active'
-
-            // Get sessions for filter dropdown
-            $sessions = ClassSessionMaster::get();
-            $maunalSessions = Timetable::select('class_session')
-                ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
-                ->groupBy('class_session')
-                ->select('class_session')
-                ->get();
 
             // Get archived courses for the student (only when in archive mode)
             $archivedCourses = [];
@@ -514,18 +583,6 @@ $currentPath = $segments[1] ?? null;
             if ($filterDate) {
                 $query->whereHas('timetable', function ($q) use ($filterDate) {
                     $q->whereDate('START_DATE', '=', $filterDate);
-                });
-            }
-
-            // Apply session time filter
-            if ($filterSessionTime) {
-                $query->whereHas('timetable', function ($q) use ($filterSessionTime) {
-                    // Check if filterSessionTime is a class_session_master_pk (numeric) or a manual session string
-                    if (is_numeric($filterSessionTime)) {
-                        $q->where('class_session', $filterSessionTime);
-                    } else {
-                        $q->where('class_session', $filterSessionTime);
-                    }
                 });
             }
 
@@ -730,15 +787,21 @@ $currentPath = $segments[1] ?? null;
                 $attendanceRecords[] = $record;
             }
 
+            // Apply attendance status filter
+            if ($filterStatus) {
+                $attendanceRecords = array_filter($attendanceRecords, function($record) use ($filterStatus) {
+                    return $record['attendance_status'] === $filterStatus;
+                });
+                $attendanceRecords = array_values($attendanceRecords); // Re-index array
+            }
+
             return view('admin.attendance.ot-student-view', compact(
                 'course',
                 'student',
                 'attendanceRecords',
-                'sessions',
-                'maunalSessions',
                 'filterDate',
-                'filterSessionTime',
                 'filterCourse',
+                'filterStatus',
                 'archivedCourses',
                 'archiveMode',
                 'group_pk',

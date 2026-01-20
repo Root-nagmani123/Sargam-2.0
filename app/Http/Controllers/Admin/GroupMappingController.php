@@ -306,7 +306,7 @@ class GroupMappingController extends Controller
             // Filter students by:
             // 1. Group mapping (group_type_master_course_master_map_pk)
             // 2. Course enrollment (via StudentMasterCourseMap - students must be enrolled in the course)
-            $query = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,pk')
+            $query = StudentCourseGroupMap::with('studentsMaster:display_name,email,contact_no,generated_OT_code,pk')
                 ->where('group_type_master_course_master_map_pk', $groupMapping->pk);
             
             // Apply search filter if search query is provided
@@ -314,7 +314,8 @@ class GroupMappingController extends Controller
                 $query->whereHas('studentsMaster', function($q) use ($searchQuery) {
                     $q->where('display_name', 'like', '%' . $searchQuery . '%')
                       ->orWhere('email', 'like', '%' . $searchQuery . '%')
-                      ->orWhere('contact_no', 'like', '%' . $searchQuery . '%');
+                      ->orWhere('contact_no', 'like', '%' . $searchQuery . '%')
+                      ->orWhere('generated_OT_code', 'like', '%' . $searchQuery . '%');
                 });
             }
             
