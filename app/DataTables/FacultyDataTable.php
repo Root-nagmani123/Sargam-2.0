@@ -25,20 +25,11 @@ class FacultyDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('faculty_type', function($row) {
-
-                return match((int)$row->faculty_type) {
-                    1 => '<span class="badge bg-success-subtle text-success">Internal</span>',
-                    2 => '<span class="badge bg-warning-subtle text-warning">Guest</span>',
-                    3 => '<span class="badge bg-info-subtle text-info">Research</span>',
-                    default => null,
-                };
+            ->addColumn('faculty_code', function($row) {
+                return $row->faculty_code ?? '';
             })
             ->addColumn('full_name', function($row) {
                 return $row->full_name ?? '';
-            })
-            ->addColumn('faculty_code', function($row) {
-                return $row->faculty_code ?? '';
             })
             ->addColumn('faculty_email', function($row) {
                 return $row->email_id ?? '';
@@ -46,20 +37,26 @@ class FacultyDataTable extends DataTable
             ->addColumn('mobile_number', function($row) {
                 return $row->mobile_no ?? '';
             })
+            // ->addColumn('faculty_type', function($row) {
+            //     return match((int)$row->faculty_type) {
+            //         1 => '<span class="badge bg-success-subtle text-success">Internal</span>',
+            //         2 => '<span class="badge bg-warning-subtle text-warning">Guest</span>',
+            //         3 => '<span class="badge bg-info-subtle text-info">Research</span>',
+            //         default => null,
+            //     };
+            // })
             // ->addColumn('designation', function($row) {
             //     return $row->designation ?? '';
             // })
-            ->addColumn('current_sector', function($row) {
-                $sector = $row->faculty_sector ?? $row->current_sector;
-                $sector = empty($sector) ? 1 : (int)$sector;
-
-                return match($sector) {
-                    1 => '<span class="badge bg-success-subtle text-success">Government</span>',
-                    2 => '<span class="badge bg-danger-subtle text-danger">Private</span>',
-                    default => '<span class="badge bg-success-subtle text-success">Government</span>',
-                };
-
-            })
+            // ->addColumn('current_sector', function($row) {
+            //     $sector = $row->faculty_sector ?? $row->current_sector;
+            //     $sector = empty($sector) ? 1 : (int)$sector;
+            //     return match($sector) {
+            //         1 => '<span class="badge bg-success-subtle text-success">Government</span>',
+            //         2 => '<span class="badge bg-danger-subtle text-danger">Private</span>',
+            //         default => '<span class="badge bg-success-subtle text-success">Government</span>',
+            //     };
+            // })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
                 $csrf = csrf_token();
@@ -113,7 +110,7 @@ class FacultyDataTable extends DataTable
                     });
                 }
             }, true)
-            ->rawColumns(['faculty_type','action', 'status', 'current_sector']);
+            ->rawColumns(['action', 'status']);
     }
 
     /**
@@ -181,18 +178,13 @@ class FacultyDataTable extends DataTable
                 ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
-            Column::make('faculty_email')
-                ->title('Faculty Email')
+            Column::make('full_name')
+                ->title('Faculty Name')
                 ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
-            Column::make('faculty_type')
-                ->title('Faculty Type')
-                ->addClass('text-center')
-                ->searchable(false)
-                ->orderable(false),
-            Column::make('full_name')
-                ->title('Faculty Name')
+            Column::make('faculty_email')
+                ->title('Faculty Email')
                 ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
@@ -201,16 +193,21 @@ class FacultyDataTable extends DataTable
                 ->addClass('text-center')
                 ->searchable(true)
                 ->orderable(false),
+            // Column::make('faculty_type')
+            //     ->title('Faculty Type')
+            //     ->addClass('text-center')
+            //     ->searchable(false)
+            //     ->orderable(false),
             // Column::make('designation')
             //     ->title('Designation')
             //     ->addClass('text-center')
             //     ->searchable(false)
             //     ->orderable(false),
-            Column::make('current_sector')
-                ->title('Current Sector')
-                ->addClass('text-center')
-                ->searchable(false)
-                ->orderable(false),
+            // Column::make('current_sector')
+            //     ->title('Current Sector')
+            //     ->addClass('text-center')
+            //     ->searchable(false)
+            //     ->orderable(false),
            Column::computed('action')
                 ->addClass('text-center')
                 ->exportable(false)
