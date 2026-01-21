@@ -85,6 +85,16 @@ input.is-invalid {
                                         />
                                 </div>
                             </div>
+                            <div class="col-md-6 d-none" id="facultyPaContainer">
+                                <div class="mb-3">
+                                    <x-input
+                                        name="faculty_pa"
+                                        label="Faculty (PA) :"
+                                        placeholder="Faculty (PA)"
+                                        formLabelClass="form-label"
+                                        />
+                                </div>
+                            </div>
                             <!--<div class="col-md-6">
                                 <div class="mb-3">
                                     <x-input
@@ -809,7 +819,26 @@ input.is-invalid {
 
 @section('scripts')
 <script>
+// Show/Hide Faculty (PA) field based on Faculty Type
+$(document).ready(function() {
+    function toggleFacultyPaField() {
+        var facultyType = $('select[name="facultytype"]').val();
+        if (facultyType == '1') { // Internal
+            $('#facultyPaContainer').removeClass('d-none');
+        } else {
+            $('#facultyPaContainer').addClass('d-none');
+            $('input[name="faculty_pa"]').val(''); // Clear the field when hidden
+        }
+    }
 
+    // Initial check on page load
+    toggleFacultyPaField();
+
+    // On change of faculty type
+    $('select[name="facultytype"]').on('change', function() {
+        toggleFacultyPaField();
+    });
+});
 </script>
 <script>
 let isMobileDuplicate = false;
@@ -988,10 +1017,14 @@ $(document).ready(function () {
                     let html = "";
                     if (response.suggestions.length > 0) {
                         response.suggestions.forEach(function (item) {
+                            let displayText = item.full_name;
+                            if (item.faculty_code) {
+                                displayText += ` (${item.faculty_code})`;
+                            }
                             html += `<a href="#" class="list-group-item list-group-item-action suggestion-item"
                                       data-id="${item.id}"
                                       data-fullname="${item.full_name}">
-                                        ${item.full_name}
+                                        ${displayText}
                                      </a>`;
                         });
                     } else {
@@ -1036,7 +1069,8 @@ function fillFacultyForm(faculty) {
             );
 
             // Auto-fill remaining fields
-           $("select[name='facultytype']").val(faculty.faculty_type);
+           $("select[name='facultytype']").val(faculty.faculty_type).trigger('change');
+           $("input[name='faculty_pa']").val(faculty.faculty_pa ?? '');
            $("input[name='faculty_code']").val(faculty.faculty_code);
            $("input[name='landline']").val(faculty.landline_no);
            $("input[name='mobile']").val(faculty.mobile_no);
