@@ -116,6 +116,22 @@
 
 @section('scripts')
 <script>
+// Show/Hide Faculty (PA) field based on Faculty Type
+$(document).ready(function() {
+    function toggleFacultyPaField() {
+        var facultyType = $('select[name="facultytype"]').val();
+        if (facultyType == '1') { // Internal
+            $('#facultyPaContainer').removeClass('d-none');
+        } else {
+            $('#facultyPaContainer').addClass('d-none');
+            $('input[name="faculty_pa"]').val(''); // Clear the field when hidden
+        }
+    }
 
+    // On change of faculty type
+    $('select[name="facultytype"]').on('change', function() {
+        toggleFacultyPaField();
+    });
+});
 </script>
 @endsection

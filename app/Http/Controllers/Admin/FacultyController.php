@@ -79,6 +79,7 @@ class FacultyController extends Controller
                 'IFSC_Code' => $request->ifsccode,
                 'PAN_No' => $request->pannumber,
                 'faculty_sector' => $request->current_sector,
+                'faculty_pa' => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
                 'created_by' => Auth::id(),
                 'last_update' => now(),
                 'active_inactive' => 1,
@@ -568,6 +569,7 @@ class FacultyController extends Controller
                 'Account_No'            => $request->accountnumber,
                 'IFSC_Code'             => $request->ifsccode,
                 'PAN_No'                => $request->pannumber,
+                'faculty_pa'            => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
             ];
 
             if(!empty($request->other_city)) {
@@ -825,7 +827,7 @@ class FacultyController extends Controller
 					return response()->json(['suggestions' => [], 'exists' => false]);
 				}
 
-				$names = \App\Models\FacultyMaster::select('pk','first_name','middle_name','last_name')
+				$names = \App\Models\FacultyMaster::select('pk','first_name','middle_name','last_name','faculty_code')
 					->where(function($q) use ($query) {
 						$q->where('first_name', 'like', "%{$query}%")
 						  ->orWhere('middle_name', 'like', "%{$query}%")
@@ -837,7 +839,8 @@ class FacultyController extends Controller
 				$suggestions = $names->map(function ($item) {
 					return [
 						'id' => $item->pk,
-						'full_name' => trim($item->first_name.' '.$item->middle_name.' '.$item->last_name)
+						'full_name' => trim($item->first_name.' '.$item->middle_name.' '.$item->last_name),
+						'faculty_code' => $item->faculty_code
 					];
 				});
 
