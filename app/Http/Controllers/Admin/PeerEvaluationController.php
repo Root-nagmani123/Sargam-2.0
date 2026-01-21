@@ -821,6 +821,7 @@ class PeerEvaluationController extends Controller
 
     public function viewSubmissions($groupId)
     {
+      //  dd('ddd');
         $groups = DB::table('peer_groups')
             ->select('id', 'group_name', 'is_active', 'course_id', 'event_id')
             ->get();
@@ -829,13 +830,15 @@ class PeerEvaluationController extends Controller
             return redirect()->back()->with('error', 'Group not found.');
         }
 
+       
+
         // Get the specific group to access its course_id and event_id
         $currentGroup = DB::table('peer_groups')->where('id', $groupId)->first();
 
         if (!$currentGroup) {
             return redirect()->back()->with('error', 'Group not found.');
         }
-
+       
         $members = DB::table('peer_group_members')
             ->leftJoin('user_credentials', 'peer_group_members.user_id', '=', 'user_credentials.pk')
             ->where('peer_group_members.group_id', $groupId)
@@ -912,7 +915,7 @@ class PeerEvaluationController extends Controller
             });
 
         $selectedGroupId = $groupId;
-
+     
         return view('admin.forms.peer_evaluation.view_submissions', compact(
             'groups',
             'members',
