@@ -291,7 +291,7 @@
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
                                     id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="material-icons" style="color: #004a93;">account_circle</i>
-                                    <span class="ms-2">{{ Auth::user()->name }}</span>
+                                    <span class="ms-2">{{ Auth::user() ? Auth::user()->name : 'Guest' }}</span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
                                     <!-- <li><a class="dropdown-item" href="#">Profile</a></li> -->

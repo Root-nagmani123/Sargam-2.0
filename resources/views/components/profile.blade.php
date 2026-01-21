@@ -4,7 +4,7 @@
             class="img-fluid rounded-circle w-100 h-100">
     </div>
 
-    <h5 class="fw-bold mb-0 text-white">{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</h5>
+    <h5 class="fw-bold mb-0 text-white">{{ Auth::user() ? Auth::user()->first_name : 'Guest' }} {{ Auth::user() ? Auth::user()->last_name : '' }}</h5>
     <p class="text-secondary small mb-0 text-white">
     <p class="text-secondary small mb-0 text-white">
 
@@ -15,7 +15,7 @@
         $service_find = service_find();
         $roles = ['Student-OT ('.$service_find.')'];
         }
-        if(!in_array('Student-OT', $roles) && Auth::user()->user_category == 'E'){
+        if(!in_array('Student-OT', $roles) && Auth::user() && Auth::user()->user_category == 'E'){
 
 
         $roleString = implode(', ', $roles);
@@ -27,7 +27,7 @@
         {{ !empty($roles) ? implode(', ', $roles) : 'No role assigned' }}
 
     </p>
-      @if(! hasRole('Student-OT'))  
+      @if(! hasRole('Student-OT') && Auth::user())  
     <a href="{{ route('member.edit', Auth::user()->user_id) }}" class="text-white fw-bold">Edit Profile</a><span class="mx-2 text-white">|</span> <a href="{{ route('admin.password.change_password') }}" class="text-white fw-bold">Change
         Password</a>
         @endif
