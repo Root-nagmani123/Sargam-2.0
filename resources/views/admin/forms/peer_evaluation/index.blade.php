@@ -1,5 +1,6 @@
 @extends('admin.layouts.master')
 @section('setup_content')
+    <div class="container-fluid">
     <div class="card p-3">
         <h4 class="mb-4">Peer Evaluation Form</h4>
 
@@ -11,10 +12,7 @@
         @endif
 
         {{-- Group Selection --}}
-        <div class="card mb-4">
-            {{-- <div class="card-header bg-primary text-white">
-                <h5 class="mb-0"><i class="fas fa-users"></i> Select Group</h5>
-            </div> --}}
+
             <div class="card-body">
                 <form method="GET" action="{{ route('peer.index') }}" id="groupForm">
                     <div class="row">
@@ -50,7 +48,6 @@
                     </div>
                 </form>
             </div>
-        </div>
 
         @if ($selectedGroupId && count($members) > 0)
             <form method="POST" action="{{ route('peer.store') }}" id="evaluationForm">
@@ -66,17 +63,17 @@
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-striped align-middle text-center">
-                                <thead class="">
+                            <table class="table">
+                                <thead>
                                     <tr>
-                                        <th width="60">Sr.No</th>
+                                        <th>Sr.No</th>
                                         <th>User Name</th>
                                         <th>Group Name</th>
                                         @foreach ($columns as $column)
                                             <th>
                                                 {{ $column->column_name }}
                                                 <br>
-                                                <small class="text-muted">(1-{{ $selectedGroup->max_marks }})</small>
+                                                <small >(1-{{ $selectedGroup->max_marks }})</small>
                                             </th>
                                         @endforeach
                                     </tr>
@@ -89,7 +86,7 @@
                                                 <strong>{{ $member->first_name }}</strong>
                                                 @if ($member->user_id)
                                                     <br>
-                                                    <small class="text-muted"> - {{ $member->ot_code }}</small>
+                                                    <small > - {{ $member->ot_code }}</small>
                                                 @endif
                                             </td>
                                             <td>
@@ -105,7 +102,7 @@
                                                         value="0" 
                                                         required
                                                         onchange="validateScore(this)">
-                                                    <small class="text-muted">1-10</small>
+                                                    <small >1-10</small>
                                                 </td>
                                             @endforeach
                                         </tr>
@@ -118,7 +115,7 @@
                                                 <strong>{{ $member->first_name }}</strong>
                                                 @if ($member->user_id)
                                                     <br>
-                                                    <small class="text-muted"> - {{ $member->ot_code }}</small>
+                                                    <small > - {{ $member->ot_code }}</small>
                                                 @endif
                                             </td>
                                             <td>
@@ -172,6 +169,7 @@
                 Please select a group to start the evaluation.
             </div>
         @endif
+    </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>

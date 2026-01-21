@@ -1,7 +1,16 @@
 <!DOCTYPE html>
-<html lang="zxx">
+<html lang="zxx" data-bs-theme="light">
 
 <head>
+    <!-- Force light mode - prevent system theme detection -->
+    <script>
+        // Force light theme before any other scripts run
+        // Bootstrap 5.3+ only auto-detects dark mode if data-bs-theme is not set
+        // By setting it explicitly here, we prevent auto-detection
+        (function() {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+        })();
+    </script>
     @include('admin.layouts.pre_header')
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
     @section('css')

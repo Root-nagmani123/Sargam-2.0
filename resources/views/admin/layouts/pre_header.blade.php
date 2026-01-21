@@ -27,6 +27,24 @@
   'GRAD' 0,
   'opsz' 24
 }
+
+/* Force light mode - prevent dark mode styles */
+html[data-bs-theme="dark"],
+html:not([data-bs-theme])[data-bs-theme="dark"] {
+  color-scheme: light !important;
+}
+
+/* Ensure light mode is always applied */
+html {
+  color-scheme: light !important;
+}
+
+/* Override any dark mode media queries */
+@media (prefers-color-scheme: dark) {
+  html[data-bs-theme="light"] {
+    color-scheme: light !important;
+  }
+}
 </style>
 
 @yield('css')

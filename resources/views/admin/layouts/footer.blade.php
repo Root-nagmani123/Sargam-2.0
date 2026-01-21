@@ -3,9 +3,37 @@
   <!-- Import Js Files -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
   <script src="{{asset('admin_assets/libs/simplebar/dist/simplebar.min.js')}}"></script>
+  <!-- Force light mode before theme scripts load -->
+  <script>
+    // Ensure light mode is set before theme initialization
+    document.documentElement.setAttribute('data-bs-theme', 'light');
+    // Prevent Bootstrap 5.3+ from auto-detecting system dark mode
+    // Bootstrap checks prefers-color-scheme only if data-bs-theme is not set
+    // By setting it explicitly, we prevent auto-detection
+  </script>
   <script src="{{asset('admin_assets/js/theme/app.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/app.min.js')}}"></script>
+  <!-- Ensure light mode persists after theme scripts -->
+  <script>
+    // Force light mode after theme scripts initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+      // Override any theme changes
+      const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+          if (mutation.attributeName === 'data-bs-theme' && 
+              document.documentElement.getAttribute('data-bs-theme') !== 'light') {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+          }
+        });
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-bs-theme']
+      });
+    });
+  </script>
   <script src="{{asset('admin_assets/js/theme/sidebarmenu.js')}}"></script>
 
   <!-- solar icons -->
