@@ -5,7 +5,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Create New Category" />
-    <div class="datatables">
+    <div class="datatables"> 
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="row justify-content-center">

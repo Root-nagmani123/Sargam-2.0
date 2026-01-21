@@ -56,7 +56,7 @@ class CourseRepositoryDetail extends Model
      */
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by', 'id');
+        return $this->belongsTo(User::class, 'created_by', 'pk');
     }
 
     /**
@@ -84,11 +84,19 @@ class CourseRepositoryDetail extends Model
     }
 
     /**
-     * Relationship with CourseRepositorySubtopic (Topic Name)
+     * Relationship with Timetable (Topic Name)
      */
     public function topic()
     {
-        return $this->belongsTo(CourseRepositorySubtopic::class, 'topic_pk', 'pk');
+        return $this->belongsTo(Timetable::class, 'topic_pk', 'pk');
+    }
+
+    /**
+     * Relationship with FacultyMaster (Author Name - when it's a PK)
+     */
+    public function author()
+    {
+        return $this->belongsTo(FacultyMaster::class, 'author_name', 'pk');
     }
 
     /**
