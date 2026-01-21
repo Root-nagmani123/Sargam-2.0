@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Exception;
 
-
+ 
 class CourseRepositoryController extends Controller
 {
     /**
@@ -137,6 +137,7 @@ class CourseRepositoryController extends Controller
                 })
                 ->orderBy('pk', 'desc')
                 ->get();
+                // print_r($documents); exit;
 
             // Build ancestor chain for breadcrumb
             $ancestors = [];
@@ -343,36 +344,98 @@ class CourseRepositoryController extends Controller
     /**
      * Upload document
      * POST /course-repository/{pk}/upload-document
+     * 
+     * Handles form submission from upload modal:
+     * - Inserts metadata into course_repository_details
+     * - Uploads files and inserts into course_repository_documents
      */
     public function uploadDocument($pk, Request $request)
     {
         try {
             $validated = $request->validate([
-                'file' => 'required|file|max:102400',
-                'file_title' => 'nullable|string|max:5000',
-                'course_repository_details_pk' => 'nullable|integer',
+                'category' => 'required|string|in:Course,Other,Institutional',
+                'course_name' => 'nullable|string',
+                'subject_name' => 'nullable|string',
+                'timetable_name' => 'nullable|string',
+                'session_date' => 'nullable|string',
+                'author_name' => 'nullable|string',
+                'attachments' => 'nullable|array',
+                'attachments.*' => 'nullable|file|max:102400',
+                'attachment_titles' => 'nullable|array',
+                'attachment_titles.*' => 'nullable|string|max:5000',
+                'keywords' => 'nullable|string|max:4000',
+                'video_link' => 'nullable|string|max:2000',
             ]);
             
-            $file = $request->file('file');
-            $fileName = time() . '_' . $file->getClientOriginalName();
-            $filePath = $file->storeAs('course-repository', $fileName, 'public');
+            // Get the category
+            $category = $validated['category'];
             
-            $document = CourseRepositoryDocument::create([
-                'upload_document' => $fileName,
+            // Get parent course_repository_master to fetch its type
+            $parent = CourseRepositoryMaster::findOrFail($pk);
+            
+            // Build folder hierarchy path from ancestors
+            $folderPath = $this->buildFolderPath($parent);
+            
+            // Step 1: Insert data into course_repository_details table
+            $details = CourseRepositoryDetail::create([
                 'course_repository_master_pk' => $pk,
-                'course_repository_details_pk' => $validated['course_repository_details_pk'] ?? null,
-                'file_title' => $validated['file_title'] ?? $fileName,
-                'full_path' => $filePath,
-                'del_type' => 1,
+                'course_repository_type' =>$parent->parent_type,
+                'program_structure_pk' => $validated['course_name'] ?? null,
+                'subject_pk' => $validated['subject_name'] ?? null,
+                'topic_pk' => $validated['timetable_name'] ?? null,
+                'session_date' => $validated['session_date'] ?? null,
+                'author_name' => $validated['author_name'] ?? null,
+                'keyword' => $validated['keywords'] ?? null,
+                'videolink' => $validated['video_link'] ?? null,
+                'created_date' => now(),
+                'created_by' => auth()->id(),
+                'status' => 1,
+                'type' => $category === 'Course' ? 'CO' : ($category === 'Other' ? 'OT' : 'IN'),
             ]);
             
+            // Step 2: Upload and insert documents
+            if ($request->hasFile('attachments')) {
+                $files = $request->file('attachments');
+                $titles = $validated['attachment_titles'] ?? [];
+                
+                foreach ($files as $index => $file) {
+                    if ($file && $file->isValid()) {
+                        // Generate unique filename
+                        $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                        
+                        // Store file in hierarchical folder structure
+                        $filePath = $file->storeAs('course-repository/' . $folderPath, $fileName, 'public');
+                        
+                        // Insert into course_repository_documents
+                        CourseRepositoryDocument::create([
+                            'upload_document' => $fileName,
+                            'course_repository_master_pk' => $pk,
+                            'course_repository_details_pk' => $details->pk,
+                            'course_repository_type' => $parent->parent_type,
+                            'file_title' => $titles[$index] ?? $file->getClientOriginalName(),
+                            'full_path' => $filePath,
+                            'del_type' => 1, // 1 = active, 0 = deleted
+                        ]);
+                    }
+                }
+            }
+            
+            // Return success response
             return response()->json([
                 'success' => true,
-                'message' => 'Document uploaded successfully',
-                'document' => $document,
+                'message' => 'Documents uploaded and data saved successfully',
+                'detail_pk' => $details->pk,
             ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error in uploadDocument: ' . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (Exception $e) {
-            Log::error('Error uploading document: ' . $e->getMessage());
+            Log::error('Error uploading document: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
             return response()->json([
                 'success' => false,
                 'error' => 'Upload failed: ' . $e->getMessage(),
@@ -421,10 +484,19 @@ class CourseRepositoryController extends Controller
                 return redirect()->back()->with('error', 'File not found');
             }
             
-            return Storage::disk('public')->download($document->full_path, $document->upload_document);
+            // Check if file exists
+            if (!Storage::disk('public')->exists($document->full_path)) {
+                Log::error('File not found in storage: ' . $document->full_path);
+                return redirect()->back()->with('error', 'File not found in storage');
+            }
+            
+            // Get original filename without timestamp prefix
+            $originalName = preg_replace('/^\d+_[a-f0-9]+_/', '', $document->upload_document);
+            
+            return Storage::disk('public')->download($document->full_path, $originalName);
         } catch (Exception $e) {
             Log::error('Error downloading document: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Download failed');
+            return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
         }
     }
 
@@ -475,6 +547,7 @@ class CourseRepositoryController extends Controller
     {
         try {
             $coursePk = $request->query('course_pk');
+            print_r($coursePk); exit;
             
             if (!$coursePk) {
                 return response()->json(['success' => false, 'data' => []]);
@@ -596,16 +669,16 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'data' => []]);
             }
 
-            $groups = \DB::table('group_type_master_course_master_map as gtm')
-                ->join('course_group_type_master as cgtm', 'gtm.type_name', '=', 'cgtm.pk')
-                ->where('gtm.course_name', $coursePk)
-                ->where('gtm.active_inactive', 1)
+            $groups = \DB::table('timetable as t')
+                ->join('subject_master as sm', 't.subject_master_pk', '=', 'sm.pk')
+                ->where('t.course_master_pk', $coursePk)
+                ->where('t.active_inactive', 1)
                 ->select(
-                    'gtm.pk',
-                    'gtm.group_name',
-                    'cgtm.type_name as group_type'
+                    'sm.pk',
+                    'sm.subject_name'
                 )
-                ->orderBy('gtm.group_name')
+                ->groupBy('sm.pk', 'sm.subject_name')
+                ->orderBy('sm.subject_name')
                 ->get();
 
             return response()->json(['success' => true, 'data' => $groups]);
@@ -622,28 +695,32 @@ class CourseRepositoryController extends Controller
     public function getTimetablesByGroup(Request $request)
     {
         try {
-            $groupPk = $request->query('group_pk');
-            $course_master_pk = $request->query('course_master_pk');
+            $subjectPk = $request->query('group_pk'); // Actually subject_master_pk
+            $coursePk = $request->query('course_master_pk');
             
-            if (!$groupPk) {
+            if (!$subjectPk || !$coursePk) {
                 return response()->json(['success' => false, 'data' => []]);
             }
 
             $timetables = \DB::table('timetable as t')
-                ->where('t.course_group_type_master', $groupPk)
-                ->where('t.course_master_pk', $course_master_pk)
+                ->leftJoin('faculty_master as fm', 't.faculty_master', '=', 'fm.pk')
+                ->where('t.subject_master_pk', $subjectPk)
+                ->where('t.course_master_pk', $coursePk)
+                ->where('t.active_inactive', 1)
                 ->select(
                     't.pk',
                     't.subject_topic',
                     't.START_DATE',
                     't.END_DATE',
-                    't.class_session'
+                    't.class_session',
+                    'fm.full_name as faculty_name'
                 )
-                ->orderBy('t.START_DATE')
-                ->orderBy('t.START_DATE')
+                ->orderBy('t.START_DATE', 'desc')
                 ->get()
                 ->map(function($item) {
-                    $item->display = $item->subject_topic . ' (' . date('d-m-Y', strtotime($item->event_date)) . ' ' . date('h:i A', strtotime($item->start_time)) . ')';
+                    $dateStr = $item->START_DATE ? date('d-m-Y', strtotime($item->START_DATE)) : '';
+                    $facultyStr = $item->faculty_name ? ' - ' . $item->faculty_name : '';
+                    $item->display = $item->subject_topic . ' (' . $dateStr . ')' . $facultyStr;
                     return $item;
                 });
 
@@ -652,5 +729,33 @@ class CourseRepositoryController extends Controller
             Log::error('Error fetching timetables: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => 'Failed to load timetables'], 500);
         }
+    }
+
+    /**
+     * Build folder hierarchy path from parent repository
+     * Example: "Central Course Repository of LBSNAA/Foundation Course/FC-89/Class Materials"
+     */
+    private function buildFolderPath($repository)
+    {
+        $pathParts = [];
+        $current = $repository;
+        
+        // Traverse up the hierarchy to build path
+        while ($current) {
+            // Sanitize folder name (remove special characters that are problematic for file systems)
+            $folderName = preg_replace('/[^\w\s\-()]/', '', $current->course_repository_name);
+            $folderName = trim($folderName);
+            
+            array_unshift($pathParts, $folderName);
+            
+            // Get parent if exists
+            if ($current->parent_pk) {
+                $current = CourseRepositoryMaster::find($current->parent_pk);
+            } else {
+                break;
+            }
+        }
+        
+        return implode('/', $pathParts);
     }
 }
