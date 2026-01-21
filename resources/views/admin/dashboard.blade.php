@@ -786,15 +786,17 @@ table>thead {
         @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
         <!-- Total Sessions -->
         <div class="col-lg-3 col-md-6 col-sm-12">
-            <div class="stat-card clean-style">
-                <div class="stat-icon icon-blue">
-                    <img src="{{ asset('images/attendance.svg') }}" alt="">
+            <a href="{{ route('admin.dashboard.sessions') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-blue">
+                        <img src="{{ asset('images/attendance.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Session Details</div>
+                        <div class="stat-value">{{ $totalSessions }}</div>
+                    </div>
                 </div>
-                <div>
-                    <div class="stat-label">Total Sessions</div>
-                    <div class="stat-value">{{ $totalSessions }}</div>
-                </div>
-            </div>
+            </a>
         </div>
         @endif
 
