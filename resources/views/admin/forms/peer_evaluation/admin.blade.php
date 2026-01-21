@@ -13,6 +13,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Peer Evaluation - Admin Panel | Sargam Admin')
 @section('setup_content')
+
 <style>
     /* ✅ Improve focus visibility */
     .table a:focus, .btn:focus, .form-check-input:focus {
@@ -49,7 +50,7 @@
 <div class="container-fluid">
      <x-breadcrum title="Peer Evaluation - Admin Panel" />
     <div class="card p-3" style="border-left: 4px solid #004a93;">
-        <h4 class="mb-4">Peer Evaluation - Admin Panel 
+        <h4 class="mb-4">Peer Evaluation - Admin Panel  </h4>
 
         {{-- Manage Courses Section --}}
         <div class="mb-4">
@@ -381,109 +382,97 @@
         </div>
 
         {{-- Manage Reflection Fields --}}
-        <div class="mb-4">
-            <h5>Manage Reflection Fields</h5>
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label class="form-label">Course (Optional)</label>
-                    <select class="form-control" id="reflection_course_id">
+        <div class="mb-5 mt-5">
+            <h5 class="section-title d-flex align-items-center">
+                <i class="fas fa-lightbulb me-2"></i>Manage Reflection Fields
+            </h5>
+            <div class="row g-3 mt-4 mb-4">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-600"><i class="fas fa-book-open me-2" style="color: #004a93;"></i>Course (Optional)</label>
+                    <select class="form-select form-select-lg" id="reflection_course_id">
                         <option value="">Global Field</option>
                         @foreach ($courses as $course)
                             <option value="{{ $course->id }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Event (Optional)</label>
-                    <select class="form-control" id="reflection_event_id" disabled>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-600"><i class="fas fa-calendar-alt me-2" style="color: #004a93;"></i>Event (Optional)</label>
+                    <select class="form-select form-select-lg" id="reflection_event_id" disabled>
                         <option value="">Select Event</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Reflection Field Name</label>
-                    <input type="text" id="reflection_field" class="form-control"
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label fw-600"><i class="fas fa-pen me-2" style="color: #004a93;"></i>Reflection Field Name</label>
+                    <input type="text" id="reflection_field" class="form-control form-control-lg"
                         placeholder="Enter Reflection Field Name">
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-secondary" id="addReflectionBtn">Add Field</button>
+                <div class="col-lg-2 col-md-6 d-flex align-items-end">
+                    <button class="btn btn-secondary btn-modern w-100" id="addReflectionBtn"><i class="fas fa-plus me-2"></i>Add Field</button>
                 </div>
             </div>  
             {{-- Reflection Fields List --}}
-            <div class="mt-3">
-                <h6>Existing Reflection Fields:</h6>
-                <div class="row">
-                    @php
-                        $reflectionFields = DB::table('peer_reflection_fields as prf')
-                            ->leftJoin('peer_courses as pc', 'prf.course_id', '=', 'pc.id')
-                            ->leftJoin('peer_events as pe', 'prf.event_id', '=', 'pe.id')
-                            ->select('prf.*', 'pc.course_name', 'pe.event_name')
-                            ->get();
-                    @endphp
-
-                    <div class="mt-3">
-    <!-- <h6>Existing Reflection Fields:</h6> -->
-    <div class="table-responsive">
-    <table class="table table-bordered align-middle" id="datatable-columns">
-
-            <thead class="bg-primary text-white">
-                <tr>
-                    <th scope="col">Field Label</th>
-                    <th scope="col">Course</th>
-                    <th scope="col">Event</th>
-                    <th scope="col" class="text-center">Active</th>
-                    <th scope="col" class="text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($reflectionFields as $field)
-                    <tr>
-                        <td>
-                            <span class="badge {{ $field->is_active ? 'bg-success' : 'bg-secondary' }} me-1">
-                                {{ $field->field_label }}
-                            </span>
-                        </td>
-                        <td>
-                            @if ($field->course_name)
-                                <small class="text-muted">{{ $field->course_name }}</small>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
-                        </td>
-                        <td>
-                            @if ($field->event_name)
-                                <small class="text-muted">{{ $field->event_name }}</small>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
-                        </td>
-                        <td class="text-center">
-    <div class="form-check form-switch d-inline-block">
-        <input type="checkbox"
-            class="form-check-input toggle-reflection"
-            data-id="{{ $field->id }}"
-            id="toggleReflection{{ $field->id }}"
-            {{ $field->is_active ? 'checked' : '' }}
-            title="Toggle Active">
-    </div>
-</td>
-
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-danger delete-reflection"
-        data-id="{{ $field->id }}"
-        title="Delete"
-        {{ $field->is_active == 1 ? 'disabled' : '' }}>
-    <iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7"></iconify-icon>
-</button>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-</div>
-
+            <div class="mt-4">
+                <h6 class="mb-3"><i class="fas fa-list me-2" style="color: #004a93;"></i>Existing Reflection Fields:</h6>
+                <div class="table-responsive">
+                    <table class="table table-modern" id="datatable-reflection-fields">
+                        <thead>
+                            <tr>
+                                <th scope="col"><i class="fas fa-pen me-1"></i>Field Label</th>
+                                <th scope="col"><i class="fas fa-book-open me-1"></i>Course</th>
+                                <th scope="col"><i class="fas fa-calendar-alt me-1"></i>Event</th>
+                                <th scope="col" class="text-center"><i class="fas fa-toggle-on me-1"></i>Active</th>
+                                <th scope="col" class="text-center"><i class="fas fa-cog me-1"></i>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($reflectionFields as $field)
+                                <tr>
+                                    <td>
+                                        <span class="badge badge-modern {{ $field->is_active ? 'bg-success' : 'bg-secondary' }}">
+                                            {{ $field->field_label }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if ($field->course_name)
+                                            <small class="text-muted">{{ $field->course_name }}</small>
+                                        @else
+                                            <small class="text-muted">Global</small>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($field->event_name)
+                                            <small class="text-muted">{{ $field->event_name }}</small>
+                                        @else
+                                            <small class="text-muted">Global</small>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input type="checkbox"
+                                                class="form-check-input toggle-reflection"
+                                                data-id="{{ $field->id }}"
+                                                id="toggleReflection{{ $field->id }}"
+                                                {{ $field->is_active ? 'checked' : '' }}
+                                                title="Toggle Active">
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-danger delete-reflection"
+                                            data-id="{{ $field->id }}"
+                                            title="Delete"
+                                            {{ $field->is_active == 1 ? 'disabled' : '' }}>
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
             <div class="alert alert-info">
                 <strong>Note:</strong> This is the admin panel for managing courses, events, groups and columns.
@@ -1260,8 +1249,13 @@ $(document).ready(function() {
         lengthMenu: [5, 10, 25, 50],
         pageLength: 10
     });
-	
-}, 200);
+    var table4 = $('#datatable-reflection-fields').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthMenu: [5, 10, 25, 50],
+        pageLength: 10
+    });
 	
 });
 </script>
