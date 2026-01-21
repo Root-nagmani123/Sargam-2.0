@@ -138,8 +138,6 @@ input.is-invalid {
                                         label="Middle Name :"
                                         placeholder="Middle Name"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         formInputClass="only-letters"
                                         />
 
