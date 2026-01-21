@@ -39,42 +39,29 @@ class FacultyController extends Controller
         return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years'));
     }
 
-        public function store(FacultyRequest $request)
-       // public function store(Request $request)
-        { //FacultyRequest
-            try {
-
-          /*  $existingFaculty = FacultyMaster::where('mobile_no', $request->mobile)
-            ->when($request->faculty_id, function ($q) use ($request) {
-                $q->where('pk', '!=', $request->faculty_id);
-            })
-            ->first();
-
-            if ($existingFaculty) {
-            return response()->json([
-                'duplicate' => true,
-                'message' => 'Mobile number already exists',
-                'data' => $existingFaculty
-            ]);
-        }
-                */
-
+    /**
+     * Store a newly created faculty in the database.
+     * New implementation that properly handles all data storage.
+     *
+     * @param FacultyRequest $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function store(FacultyRequest $request)
+    {
+        try {
             DB::beginTransaction();
 
-            # Step : 1
-            // Store Faculty Details
-
+            // Step 1: Prepare Faculty Details
             $facultyDetails = [
                 'faculty_type' => $request->facultyType,
-                'first_name'  => $request->firstName,
-				'middle_name' => $request->middlename,
-				'last_name'   => $request->lastname,
-				'full_name'   => trim(
-					$request->firstName . ' ' .
-					($request->middlename ?? '') . ' ' .
-					$request->lastname
-				),
-
+                'first_name' => $request->firstName,
+                'middle_name' => $request->middlename,
+                'last_name' => $request->lastname,
+                'full_name' => trim(
+                    $request->firstName . ' ' .
+                    ($request->middlename ? $request->middlename . ' ' : '') .
+                    $request->lastname
+                ),
                 'gender' => $request->gender,
                 'landline_no' => $request->landline,
                 'mobile_no' => $request->mobile,
@@ -82,34 +69,23 @@ class FacultyController extends Controller
                 'state_master_pk' => $request->state,
                 'state_district_mapping_pk' => $request->district,
                 'current_designation' => $request->current_designation,
-                'current_department'  => $request->current_department,
+                'current_department' => $request->current_department,
                 'email_id' => $request->email,
                 'alternate_email_id' => $request->alternativeEmail,
                 'residence_address' => $request->residence_address,
                 'permanent_address' => $request->permanent_address,
-
-                // Store Bank Details
                 'bank_name' => $request->bankname,
                 'Account_No' => $request->accountnumber,
                 'IFSC_Code' => $request->ifsccode,
                 'PAN_No' => $request->pannumber,
+                'faculty_sector' => $request->current_sector,
+                'created_by' => Auth::id(),
+                'last_update' => now(),
+                'active_inactive' => 1,
             ];
 
-			/*if (!$request->faculty_id) {
-
-				$facultyDetails['first_name']  = $request->firstName;
-				$facultyDetails['middle_name'] = $request->middlename;
-				$facultyDetails['last_name']   = $request->lastname;
-
-				$facultyDetails['full_name'] = trim(
-					$request->firstName . ' ' .
-					($request->middlename ?? '') . ' ' .
-					$request->lastname
-				);
-			}
-            */
-
-            if(!empty($request->other_city)) {
+            // Handle City - create new city if "other_city" is provided
+            if (!empty($request->other_city)) {
                 $otherCity = City::create([
                     'country_master_pk' => $request->country,
                     'state_master_pk' => $request->state,
@@ -122,150 +98,381 @@ class FacultyController extends Controller
                 $facultyDetails['city_master_pk'] = $request->city;
             }
 
-
-            if (!empty($request->photo) && $request->hasFile('photo')) {
+            // Handle File Uploads
+            if ($request->hasFile('photo')) {
                 $facultyDetails['photo_uplode_path'] = $request->file('photo')->store('faculty/faculty_photos', 'public');
             }
 
-            if (!empty($request->document) && $request->hasFile('document')) {
+            if ($request->hasFile('document')) {
                 $facultyDetails['Doc_uplode_path'] = $request->file('document')->store('faculty/faculty_documents', 'public');
             }
 
-            if (!empty($request->researchpublications) && $request->hasFile('researchpublications')) {
+            if ($request->hasFile('researchpublications')) {
                 $facultyDetails['Rech_Publi_Upload_path'] = $request->file('researchpublications')->store('faculty/research_publications', 'public');
             }
 
-            if (!empty($request->professionalmemberships) && $request->hasFile('professionalmemberships')) {
+            if ($request->hasFile('professionalmemberships')) {
                 $facultyDetails['Professional_Memberships_doc_upload_path'] = $request->file('professionalmemberships')->store('faculty/professional_memberships', 'public');
             }
 
-            if (!empty($request->recommendationdetails) && $request->hasFile('recommendationdetails')) {
+            if ($request->hasFile('recommendationdetails')) {
                 $facultyDetails['Reference_Recommendation'] = $request->file('recommendationdetails')->store('faculty/recommendation_details', 'public');
             }
 
-            // Joining Date
-            $facultyDetails['joining_date'] = Carbon::parse($request->joiningdate);
-
-            $facultyDetails['created_by'] = Auth::id();
-            $facultyDetails['faculty_sector'] = $request->current_sector;
-
-            $facultyDetails['last_update'] = now();
-            $facultyDetails['active_inactive'] = 1;
-
-            if($request->faculty_id) {
-
-				/* unset(
-					$facultyDetails['first_name'],
-					$facultyDetails['middle_name'],
-					$facultyDetails['last_name'],
-					$facultyDetails['full_name']
-				); */
-
-                $faculty = FacultyMaster::find($request->faculty_id);
-                $faculty->update($facultyDetails);
+            // Handle Joining Date
+            if ($request->joiningdate) {
+                $facultyDetails['joining_date'] = Carbon::parse($request->joiningdate)->format('Y-m-d');
             }
-            else {
+
+            // Create or Update Faculty
+            $isUpdate = !empty($request->faculty_id);
+
+            if ($isUpdate) {
+                $faculty = FacultyMaster::find($request->faculty_id);
+                if (!$faculty) {
+                    DB::rollBack();
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Faculty not found'
+                    ], 404);
+                }
+                $faculty->fill($facultyDetails);
+                $faculty->save();
+            } else {
                 $faculty = FacultyMaster::create($facultyDetails);
                 $this->generateFacultyCode($faculty, $request->facultyType);
             }
 
+            // Step 2: Handle Qualification Details
+            if (!empty($request->degree) && is_array($request->degree)) {
+                // Delete existing qualifications for update
+                FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->delete();
 
-            if ($faculty) {
-
-                # Step : 2
-
-                $degreeDetails = [];
-
-                if (!empty($request->degree) && $request->degree[0] != null) {
-
-                    FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->delete();
-
-                    foreach ($request->degree as $key => $degree) {
-
-                        $degreeDetails[] = [
-                            'Degree_name' => $degree,
-                            'University_Institution_Name' => $request->university_institution_name[$key],
-                            'Year_of_passing' => $request->year_of_passing[$key],
-                            'Percentage_CGPA' => $request->percentage_CGPA[$key],
-                            'faculty_master_pk' => $faculty->pk,
-                        ];
-
-                        if ($request->hasFile('certificate')) {
-                            $degreeDetails[$key]['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
-                        }
+                foreach ($request->degree as $key => $degree) {
+                    // Skip empty degree entries
+                    if (empty($degree)) {
+                        continue;
                     }
 
-                    FacultyQualificationMap::insert(values: $degreeDetails);
-                }
+                    $qualificationData = [
+                        'Degree_name' => $degree,
+                        'University_Institution_Name' => $request->university_institution_name[$key] ?? null,
+                        'Year_of_passing' => $request->year_of_passing[$key] ?? null,
+                        'Percentage_CGPA' => $request->percentage_CGPA[$key] ?? null,
+                        'faculty_master_pk' => $faculty->pk,
+                    ];
 
-                # Step : 3
-                $experienceDetails = [];
-
-                if (!empty($request->experience) && $request->experience[0] != null) {
-
-                    FacultyExperienceMap::where('faculty_master_pk', $faculty->pk)->delete();
-
-                    foreach ($request->experience as $key => $experience) {
-
-                        $experienceDetails[] = [
-                            'Years_Of_Experience' => $experience,
-                            'Specialization' => $request->specialization[$key],
-                            'pre_Institutions' => $request->institution[$key],
-                            'Position_hold' => $request->position[$key],
-                            'duration' => $request->duration[$key], //
-                            'Nature_of_Work' => $request->work[$key],
-                            'faculty_master_pk' => $faculty->pk
-                        ];
+                    // Handle certificate file upload for this qualification
+                    if ($request->hasFile('certificate') && isset($request->file('certificate')[$key])) {
+                        $qualificationData['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
                     }
 
-                    FacultyExperienceMap::insert($experienceDetails);
-                }
-
-                # Step : 4
-                $expertiseDetails = [];
-
-                if (!empty($request->faculties) && $request->faculties[0] != null) {
-
-                    FacultyExpertiseMap::where('faculty_master_pk', $faculty->pk)->delete();
-
-                    foreach ($request->faculties as $key => $expertise) {
-
-                        $expertiseDetails[] = [
-                            'faculty_master_pk' => $faculty->pk,
-                            'faculty_expertise_pk' => $expertise,
-                            'created_by' => 1,
-                            'created_date' => now(),
-                            'updated_date' => now(),
-                        ];
-                    }
-
-                    FacultyExpertiseMap::insert($expertiseDetails);
+                    FacultyQualificationMap::create($qualificationData);
                 }
             }
-            DB::commit();
-            /*return response()->json([
-                'status' => true,
-                'message' => 'Faculty created successfully',
-                'data' => $faculty
-            ]);*/
 
-                return response()->json([
+            // Step 3: Handle Experience Details
+            if (!empty($request->experience) && is_array($request->experience)) {
+                // Delete existing experience for update
+                FacultyExperienceMap::where('faculty_master_pk', $faculty->pk)->delete();
+
+                foreach ($request->experience as $key => $experience) {
+                    // Skip empty experience entries
+                    if (empty($experience)) {
+                        continue;
+                    }
+
+                    $experienceData = [
+                        'Years_Of_Experience' => $experience,
+                        'Specialization' => $request->specialization[$key] ?? null,
+                        'pre_Institutions' => $request->institution[$key] ?? null,
+                        'Position_hold' => $request->position[$key] ?? null,
+                        'duration' => $request->duration[$key] ?? null,
+                        'Nature_of_Work' => $request->work[$key] ?? null,
+                        'faculty_master_pk' => $faculty->pk,
+                    ];
+
+                    FacultyExperienceMap::create($experienceData);
+                }
+            }
+
+            // Step 4: Handle Expertise/Area of Expertise Details
+            if (!empty($request->faculties) && is_array($request->faculties)) {
+                // Delete existing expertise mappings for update
+                FacultyExpertiseMap::where('faculty_master_pk', $faculty->pk)->delete();
+
+                foreach ($request->faculties as $expertisePk) {
+                    // Skip empty values
+                    if (empty($expertisePk)) {
+                        continue;
+                    }
+
+                    FacultyExpertiseMap::create([
+                        'faculty_master_pk' => $faculty->pk,
+                        'faculty_expertise_pk' => $expertisePk,
+                        'created_by' => Auth::id() ?? 1,
+                        'created_date' => now(),
+                        'updated_date' => now(),
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return response()->json([
                 'status' => true,
-                'message' => $request->faculty_id
-                    ? 'Faculty updated successfully'
-                    : 'Faculty created successfully',
-                //'redirect' => route('faculty.index'),
+                'message' => $isUpdate ? 'Faculty updated successfully' : 'Faculty created successfully',
                 'data' => $faculty
             ]);
 
-             //return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-           // dump($e->getLine());
-           // dd('' . $e->getMessage());
-            return redirect()->back()->with('error', ' Something went wrong: ' . $e->getMessage());
+            Log::error('Faculty Store Error: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage()
+            ], 500);
         }
     }
+
+    /*
+    * OLD STORE METHOD - COMMENTED OUT (DO NOT MODIFY)
+    * ================================================
+    *
+    *    public function store(FacultyRequest $request)
+    *   // public function store(Request $request)
+    *    { //FacultyRequest
+    *        try {
+    *
+    *      //  $existingFaculty = FacultyMaster::where('mobile_no', $request->mobile)
+    *        ->when($request->faculty_id, function ($q) use ($request) {
+    *            $q->where('pk', '!=', $request->faculty_id);
+    *        })
+    *        ->first();
+    *
+    *        if ($existingFaculty) {
+    *        return response()->json([
+    *            'duplicate' => true,
+    *            'message' => 'Mobile number already exists',
+    *            'data' => $existingFaculty
+    *        ]);
+    *    }
+    *            //
+    *
+    *        DB::beginTransaction();
+    *
+    *        # Step : 1
+    *        // Store Faculty Details
+    *
+    *        $facultyDetails = [
+    *            'faculty_type' => $request->facultyType,
+    *            'first_name'  => $request->firstName,
+    *            'middle_name' => $request->middlename,
+    *            'last_name'   => $request->lastname,
+    *            'full_name'   => trim(
+    *                $request->firstName . ' ' .
+    *                ($request->middlename ?? '') . ' ' .
+    *                $request->lastname
+    *            ),
+    *
+    *            'gender' => $request->gender,
+    *            'landline_no' => $request->landline,
+    *            'mobile_no' => $request->mobile,
+    *            'country_master_pk' => $request->country,
+    *            'state_master_pk' => $request->state,
+    *            'state_district_mapping_pk' => $request->district,
+    *            'current_designation' => $request->current_designation,
+    *            'current_department'  => $request->current_department,
+    *            'email_id' => $request->email,
+    *            'alternate_email_id' => $request->alternativeEmail,
+    *            'residence_address' => $request->residence_address,
+    *            'permanent_address' => $request->permanent_address,
+    *
+    *            // Store Bank Details
+    *            'bank_name' => $request->bankname,
+    *            'Account_No' => $request->accountnumber,
+    *            'IFSC_Code' => $request->ifsccode,
+    *            'PAN_No' => $request->pannumber,
+    *        ];
+    *
+    *        //if (!$request->faculty_id) {
+    *
+    *            $facultyDetails['first_name']  = $request->firstName;
+    *            $facultyDetails['middle_name'] = $request->middlename;
+    *            $facultyDetails['last_name']   = $request->lastname;
+    *
+    *            $facultyDetails['full_name'] = trim(
+    *                $request->firstName . ' ' .
+    *                ($request->middlename ?? '') . ' ' .
+    *                $request->lastname
+    *            );
+    *        }
+    *        //
+    *
+    *        if(!empty($request->other_city)) {
+    *            $otherCity = City::create([
+    *                'country_master_pk' => $request->country,
+    *                'state_master_pk' => $request->state,
+    *                'district_master_pk' => $request->district,
+    *                'city_name' => $request->other_city,
+    *                'active_inactive' => 1
+    *            ]);
+    *            $facultyDetails['city_master_pk'] = $otherCity->pk;
+    *        } else {
+    *            $facultyDetails['city_master_pk'] = $request->city;
+    *        }
+    *
+    *
+    *        if (!empty($request->photo) && $request->hasFile('photo')) {
+    *            $facultyDetails['photo_uplode_path'] = $request->file('photo')->store('faculty/faculty_photos', 'public');
+    *        }
+    *
+    *        if (!empty($request->document) && $request->hasFile('document')) {
+    *            $facultyDetails['Doc_uplode_path'] = $request->file('document')->store('faculty/faculty_documents', 'public');
+    *        }
+    *
+    *        if (!empty($request->researchpublications) && $request->hasFile('researchpublications')) {
+    *            $facultyDetails['Rech_Publi_Upload_path'] = $request->file('researchpublications')->store('faculty/research_publications', 'public');
+    *        }
+    *
+    *        if (!empty($request->professionalmemberships) && $request->hasFile('professionalmemberships')) {
+    *            $facultyDetails['Professional_Memberships_doc_upload_path'] = $request->file('professionalmemberships')->store('faculty/professional_memberships', 'public');
+    *        }
+    *
+    *        if (!empty($request->recommendationdetails) && $request->hasFile('recommendationdetails')) {
+    *            $facultyDetails['Reference_Recommendation'] = $request->file('recommendationdetails')->store('faculty/recommendation_details', 'public');
+    *        }
+    *
+    *        // Joining Date
+    *        $facultyDetails['joining_date'] = Carbon::parse($request->joiningdate);
+    *
+    *        $facultyDetails['created_by'] = Auth::id();
+    *        $facultyDetails['faculty_sector'] = $request->current_sector;
+    *
+    *        $facultyDetails['last_update'] = now();
+    *        $facultyDetails['active_inactive'] = 1;
+    *
+    *        if($request->faculty_id) {
+    *
+    *            // unset(
+    *                $facultyDetails['first_name'],
+    *                $facultyDetails['middle_name'],
+    *                $facultyDetails['last_name'],
+    *                $facultyDetails['full_name']
+    *            ); //
+    *
+    *            $faculty = FacultyMaster::find($request->faculty_id);
+    *            $faculty->update($facultyDetails);
+    *        }
+    *        else {
+    *            $faculty = FacultyMaster::create($facultyDetails);
+    *            $this->generateFacultyCode($faculty, $request->facultyType);
+    *        }
+    *
+    *
+    *        if ($faculty) {
+    *
+    *            # Step : 2
+    *
+    *            $degreeDetails = [];
+    *
+    *            if (!empty($request->degree) && $request->degree[0] != null) {
+    *
+    *                FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->delete();
+    *
+    *                foreach ($request->degree as $key => $degree) {
+    *
+    *                    $degreeDetails[] = [
+    *                        'Degree_name' => $degree,
+    *                        'University_Institution_Name' => $request->university_institution_name[$key],
+    *                        'Year_of_passing' => $request->year_of_passing[$key],
+    *                        'Percentage_CGPA' => $request->percentage_CGPA[$key],
+    *                        'faculty_master_pk' => $faculty->pk,
+    *                    ];
+    *
+    *                    if ($request->hasFile('certificate')) {
+    *                        $degreeDetails[$key]['Certifcates_upload_path'] = $request->file('certificate')[$key]->store('faculty/certificates', 'public');
+    *                    }
+    *                }
+    *
+    *                FacultyQualificationMap::insert(values: $degreeDetails);
+    *            }
+    *
+    *            # Step : 3
+    *            $experienceDetails = [];
+    *
+    *            if (!empty($request->experience) && $request->experience[0] != null) {
+    *
+    *                FacultyExperienceMap::where('faculty_master_pk', $faculty->pk)->delete();
+    *
+    *                foreach ($request->experience as $key => $experience) {
+    *
+    *                    $experienceDetails[] = [
+    *                        'Years_Of_Experience' => $experience,
+    *                        'Specialization' => $request->specialization[$key],
+    *                        'pre_Institutions' => $request->institution[$key],
+    *                        'Position_hold' => $request->position[$key],
+    *                        'duration' => $request->duration[$key], //
+    *                        'Nature_of_Work' => $request->work[$key],
+    *                        'faculty_master_pk' => $faculty->pk
+    *                    ];
+    *                }
+    *
+    *                FacultyExperienceMap::insert($experienceDetails);
+    *            }
+    *
+    *            # Step : 4
+    *            $expertiseDetails = [];
+    *
+    *            if (!empty($request->faculties) && $request->faculties[0] != null) {
+    *
+    *                FacultyExpertiseMap::where('faculty_master_pk', $faculty->pk)->delete();
+    *
+    *                foreach ($request->faculties as $key => $expertise) {
+    *
+    *                    $expertiseDetails[] = [
+    *                        'faculty_master_pk' => $faculty->pk,
+    *                        'faculty_expertise_pk' => $expertise,
+    *                        'created_by' => 1,
+    *                        'created_date' => now(),
+    *                        'updated_date' => now(),
+    *                    ];
+    *                }
+    *
+    *                FacultyExpertiseMap::insert($expertiseDetails);
+    *            }
+    *        }
+    *        DB::commit();
+    *        //return response()->json([
+    *            'status' => true,
+    *            'message' => 'Faculty created successfully',
+    *            'data' => $faculty
+    *        ]);//
+    *
+    *            return response()->json([
+    *            'status' => true,
+    *            'message' => $request->faculty_id
+    *                ? 'Faculty updated successfully'
+    *                : 'Faculty created successfully',
+    *            //'redirect' => route('faculty.index'),
+    *            'data' => $faculty
+    *        ]);
+    *
+    *         //return redirect()->route('faculty.index')->with('success', 'Faculty created successfully');
+    *    } catch (\Exception $e) {
+    *        DB::rollBack();
+    *       // dump($e->getLine());
+    *       // dd('' . $e->getMessage());
+    *        return redirect()->back()->with('error', ' Something went wrong: ' . $e->getMessage());
+    *    }
+    * }
+    * END OLD STORE METHOD
+    */
 
 
     public function edit(Request $request, $id)
@@ -662,4 +869,80 @@ class FacultyController extends Controller
 		   return response()->json($faculty);
 		}
 
+    /**
+     * Delete a faculty record from the database.
+     *
+     * @param string $id Encrypted faculty ID
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function destroy($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $faculty = FacultyMaster::find(decrypt($id));
+
+            if (!$faculty) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Faculty not found'
+                ], 404);
+            }
+
+            // Delete related records first
+            // Delete qualifications and their uploaded certificates
+            $qualifications = FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->get();
+            foreach ($qualifications as $qualification) {
+                if ($qualification->Certifcates_upload_path) {
+                    Storage::disk('public')->delete($qualification->Certifcates_upload_path);
+                }
+            }
+            FacultyQualificationMap::where('faculty_master_pk', $faculty->pk)->delete();
+
+            // Delete experience records
+            FacultyExperienceMap::where('faculty_master_pk', $faculty->pk)->delete();
+
+            // Delete expertise mappings
+            FacultyExpertiseMap::where('faculty_master_pk', $faculty->pk)->delete();
+
+            // Delete uploaded files for faculty
+            if ($faculty->photo_uplode_path) {
+                Storage::disk('public')->delete($faculty->photo_uplode_path);
+            }
+            if ($faculty->Doc_uplode_path) {
+                Storage::disk('public')->delete($faculty->Doc_uplode_path);
+            }
+            if ($faculty->Rech_Publi_Upload_path) {
+                Storage::disk('public')->delete($faculty->Rech_Publi_Upload_path);
+            }
+            if ($faculty->Professional_Memberships_doc_upload_path) {
+                Storage::disk('public')->delete($faculty->Professional_Memberships_doc_upload_path);
+            }
+            if ($faculty->Reference_Recommendation) {
+                Storage::disk('public')->delete($faculty->Reference_Recommendation);
+            }
+
+            // Delete the faculty record
+            $faculty->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Faculty deleted successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Faculty Delete Error: ' . $e->getMessage(), [
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
+            ]);
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Something went wrong: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 }
