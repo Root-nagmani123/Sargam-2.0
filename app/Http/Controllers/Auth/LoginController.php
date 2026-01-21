@@ -96,9 +96,11 @@ class LoginController extends Controller
 
                 if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
+                       Session::put('user_roles', $roles);
                     }else{
                     $roles = $user->roles()->pluck('user_role_name')->toArray();
                     }
+                    // print_r($roles); exit;
                     Session::put('user_role_master_pk', $coursedate->user_role_master_pk);
                     Session::put('user_roles', $roles);
 
