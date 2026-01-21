@@ -60,24 +60,30 @@ class FacultyDataTable extends DataTable
 
                 $editUrl = route('faculty.edit', ['id' => $id]);
                 $viewUrl = route('faculty.show', ['id' => $id]);
-                // $deleteUrl = route('faculty.delete', ['id' => $id]);
+                $deleteUrl = route('faculty.destroy', ['id' => $id]);
 
                 return '
-                    <a href="'.$editUrl.'" class="btn btn-primary btn-sm">Edit</a>
-                    <a href="'.$viewUrl.'" class="btn btn-info btn-sm">View</a>
+                    <a href="'.$editUrl.'" class="btn btn-primary btn-sm" title="Edit">
+                        <i class="material-icons" style="font-size:14px;">edit</i>
+                    </a>
+                    <a href="'.$viewUrl.'" class="btn btn-info btn-sm" title="View">
+                        <i class="material-icons" style="font-size:14px;">visibility</i>
+                    </a>
+                    <button type="button" class="btn btn-danger btn-sm delete-faculty-btn" 
+                        data-url="'.$deleteUrl.'" 
+                        data-name="'.htmlspecialchars($row->full_name, ENT_QUOTES).'" 
+                        data-token="'.$csrf.'" 
+                        title="Delete">
+                        <i class="material-icons" style="font-size:14px;">delete</i>
+                    </button>
                 ';
-                // <form action="'.$deleteUrl.'" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this record?\')">
-                //         <input type="hidden" name="_token" value="'.$csrf.'">
-                //         <input type="hidden" name="_method" value="DELETE">
-                //         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                //     </form>
             })
             ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
                 return "
                 <div class='form-check form-switch d-inline-block'>
                     <input class='form-check-input status-toggle' type='checkbox' role='switch'
-                        data-table='group_type_master_course_master_map'
+                        data-table='faculty_master'
                         data-column='active_inactive'
                         data-id='{$row->pk}' {$checked}>
                 </div>
