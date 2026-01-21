@@ -84,6 +84,11 @@ width: 170px;
 
                 <div class="label-sm mt-3">Faculty Type:</div>
                 <div class="data-line">{{ $faculty->facultyTypeMaster->faculty_type_name }}</div>
+
+                @if($faculty->faculty_type == '1' && $faculty->faculty_pa)
+                <div class="label-sm mt-3">Faculty (PA):</div>
+                <div class="data-line">{{ $faculty->faculty_pa }}</div>
+                @endif
             </div>
         </div>
 
