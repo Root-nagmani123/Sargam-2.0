@@ -2,19 +2,72 @@
 <html lang="en" dir="ltr" data-bs-theme="light">
 
 <head>
-    <!-- Force light mode -->
+    <!-- Force light mode - prevent system theme detection -->
     <script>
+        // CRITICAL: This must run BEFORE Bootstrap loads to prevent dark mode detection
         (function() {
+            'use strict';
+            
+            // Set light theme immediately
             document.documentElement.setAttribute('data-bs-theme', 'light');
+            
+            // Override matchMedia to prevent Bootstrap from detecting dark mode preference
             if (window.matchMedia) {
-                const orig = window.matchMedia.bind(window);
-                window.matchMedia = function(q) {
-                    if (q && q.includes('prefers-color-scheme') && q.includes('dark')) {
-                        return { matches: false, media: q, onchange: null, addListener: ()=>{}, removeListener: ()=>{}, addEventListener: ()=>{}, removeEventListener: ()=>{}, dispatchEvent: ()=>false };
+                const originalMatchMedia = window.matchMedia.bind(window);
+                window.matchMedia = function(query) {
+                    const result = originalMatchMedia(query);
+                    
+                    // Intercept prefers-color-scheme queries
+                    if (query && query.includes('prefers-color-scheme')) {
+                        // Create a fake MediaQueryList that always returns false for dark mode
+                        const fakeResult = {
+                            matches: false,
+                            media: query,
+                            onchange: null,
+                            addListener: function() {},
+                            removeListener: function() {},
+                            addEventListener: function() {},
+                            removeEventListener: function() {},
+                            dispatchEvent: function() { return false; }
+                        };
+                        
+                        // If query is for dark mode, return false
+                        if (query.includes('dark')) {
+                            return fakeResult;
+                        }
                     }
-                    return orig(q);
+                    
+                    return result;
                 };
             }
+            
+            // Monitor and prevent theme changes on html element
+            const htmlObserver = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && 
+                        mutation.attributeName === 'data-bs-theme') {
+                        const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                        if (currentTheme !== 'light') {
+                            document.documentElement.setAttribute('data-bs-theme', 'light');
+                            document.documentElement.style.colorScheme = 'light';
+                        }
+                    }
+                });
+            });
+            
+            // Start observing html element immediately
+            htmlObserver.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-bs-theme']
+            });
+            
+            // Periodic check as fallback
+            setInterval(function() {
+                if (document.documentElement.getAttribute('data-bs-theme') !== 'light') {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    document.documentElement.style.colorScheme = 'light';
+                }
+            }, 250);
         })();
     </script>
     
@@ -25,6 +78,7 @@
     <meta name="keywords" content="LBSNAA, Sargam, Login, Government of India">
     <meta name="author" content="LBSNAA">
     <meta name="theme-color" content="#003d7a">
+    <!-- Force light color scheme to prevent system dark mode -->
     <meta name="color-scheme" content="light">
     
     <meta property="og:title" content="Login - Sargam | LBSNAA">
@@ -35,12 +89,115 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
     <link rel="shortcut icon" type="image/x-icon" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
+    <!-- Force light mode CSS - must load before Bootstrap -->
+    <style id="force-light-mode-login">
+    /* CRITICAL: Force light mode before Bootstrap CSS loads */
+    html, html[data-bs-theme], html[data-bs-theme="dark"], html[data-bs-theme="light"] {
+      color-scheme: light !important;
+      --bs-body-bg: #fff !important;
+      --bs-body-color: #212529 !important;
+    }
     
-    <!-- Bootstrap 5.3.6 -->
+    /* Override Bootstrap's dark mode media query */
+    @media (prefers-color-scheme: dark) {
+      html, html[data-bs-theme], html[data-bs-theme="dark"], html[data-bs-theme="light"],
+      body, body[data-bs-theme], body[data-bs-theme="dark"], body[data-bs-theme="light"] {
+        color-scheme: light !important;
+        --bs-body-bg: #fff !important;
+        --bs-body-color: #212529 !important;
+        --bs-emphasis-color: #000 !important;
+        --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
+        --bs-secondary-bg: #e9ecef !important;
+        --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
+        --bs-tertiary-bg: #f8f9fa !important;
+        --bs-border-color: #dee2e6 !important;
+        background-color: #fff !important;
+        color: #212529 !important;
+      }
+    }
+    </style>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Icon library (Bootstrap Icons or Lucide) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     
-    <!-- Google Fonts -->
+    <!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
+    <style id="force-light-mode-override-login">
+    /* Override ALL Bootstrap dark mode styles - this MUST come after Bootstrap CSS */
+    :root,
+    [data-bs-theme="light"],
+    [data-bs-theme="dark"],
+    html,
+    html[data-bs-theme],
+    html[data-bs-theme="light"],
+    html[data-bs-theme="dark"],
+    body,
+    body[data-bs-theme],
+    body[data-bs-theme="light"],
+    body[data-bs-theme="dark"] {
+      color-scheme: light !important;
+      --bs-body-bg: #fff !important;
+      --bs-body-color: #212529 !important;
+      --bs-emphasis-color: #000 !important;
+      --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
+      --bs-secondary-bg: #e9ecef !important;
+      --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
+      --bs-tertiary-bg: #f8f9fa !important;
+      --bs-border-color: #dee2e6 !important;
+      --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
+      --bs-link-color: #0d6efd !important;
+      --bs-link-hover-color: #0a58ca !important;
+      --bs-heading-color: inherit !important;
+      --bs-body-color-rgb: 33, 37, 41 !important;
+      --bs-body-bg-rgb: 255, 255, 255 !important;
+      background-color: #fff !important;
+      color: #212529 !important;
+    }
+    
+    /* Force override Bootstrap's dark mode media query */
+    @media (prefers-color-scheme: dark) {
+      *,
+      :root,
+      html,
+      html[data-bs-theme],
+      html[data-bs-theme="light"],
+      html[data-bs-theme="dark"],
+      body,
+      body[data-bs-theme],
+      body[data-bs-theme="light"],
+      body[data-bs-theme="dark"],
+      .card,
+      .modal,
+      .dropdown-menu,
+      .popover,
+      .tooltip,
+      .offcanvas,
+      .navbar,
+      .nav,
+      .btn,
+      .form-control,
+      .form-select,
+      .table,
+      .alert,
+      .badge,
+      .list-group,
+      .pagination {
+        color-scheme: light !important;
+        --bs-body-bg: #fff !important;
+        --bs-body-color: #212529 !important;
+        --bs-emphasis-color: #000 !important;
+        --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
+        --bs-secondary-bg: #e9ecef !important;
+        --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
+        --bs-tertiary-bg: #f8f9fa !important;
+        --bs-border-color: #dee2e6 !important;
+        --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
+        background-color: #fff !important;
+        color: #212529 !important;
+      }
+    }
+    </style>
+    <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -488,420 +645,990 @@
     .form-check-input {
         width: 18px;
         height: 18px;
-        border: 2px solid var(--border-color);
-        border-radius: 4px;
-        cursor: pointer;
-        appearance: none;
-        background: white;
-        transition: all var(--transition-base);
-        flex-shrink: 0;
-    }
-
-    .form-check-input:checked {
-        background: var(--primary-blue);
-        border-color: var(--primary-blue);
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M6 10l3 3 6-6'/%3e%3c/svg%3e");
-        background-size: 12px;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-
-    .form-check-input:focus {
-        box-shadow: var(--shadow-focus);
     }
 
     .form-check-label {
-        font-size: 0.9375rem;
-        color: var(--text-secondary);
-        cursor: pointer;
+        font-size: 13px;
     }
 
-    /* ===== Submit Button ===== */
-    .btn-login {
+    /* Mobile - Skip link */
+    .skip-to-content {
+        font-size: 13px;
+        padding: 10px 14px;
+    }
+
+    /* Mobile - Logo image in card */
+    .login-card-enhanced img[src*="logo.svg"] {
         width: 100%;
-        padding: 1rem;
-        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
-        color: white;
-        border: none;
-        border-radius: var(--radius-lg);
-        font-size: 1rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        cursor: pointer;
-        transition: all var(--transition-base);
-        box-shadow: 0 4px 15px rgba(0, 61, 122, 0.35);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        position: relative;
-        overflow: hidden;
+        max-width: 280px;
+        margin-bottom: 16px;
     }
 
-    .btn-login::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: left 0.5s;
+    /* Mobile - Word of the day section */
+    .login-card-enhanced h5 {
+        font-size: 13px;
     }
 
-    .btn-login:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 61, 122, 0.4);
+    .login-card-enhanced hr + div p {
+        font-size: 13px;
     }
 
-    .btn-login:hover::before {
-        left: 100%;
+    /* ===== SMALL MOBILE (480px and up) ===== */
+    @media (min-width: 480px) {
+        .login-card-enhanced {
+            padding: 24px 20px;
+        }
+
+        .login-card-enhanced h2 {
+            font-size: 24px;
+        }
+
+        .login-card-enhanced p {
+            font-size: 14px;
+        }
+
+        .form-label {
+            font-size: 14px;
+        }
+
+        .form-control {
+            font-size: 14px;
+            padding: 12px 15px;
+        }
+
+        .login-button-enhanced {
+            padding: 14px;
+            font-size: 16px;
+        }
+
+        .main-header-nav .navbar-brand img {
+            max-width: 240px;
+        }
+
+        .brand-link img {
+            max-width: 110px;
+        }
+
+        .login-card-enhanced img[src*="logo.svg"] {
+            max-width: 320px;
+        }
     }
 
-    .btn-login:active {
+    /* ===== TABLET (768px and up) ===== */
+    @media (min-width: 768px) {
+        .login-card-enhanced {
+            padding: 28px 24px;
+            max-height: 90vh;
+        }
+
+        .login-card-enhanced h2 {
+            font-size: 26px;
+            margin-bottom: 10px;
+        }
+
+        .login-card-enhanced p {
+            font-size: 15px;
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            margin-bottom: 7px;
+        }
+
+        .form-control {
+            font-size: 15px;
+            padding: 13px 16px;
+        }
+
+        .login-button-enhanced {
+            padding: 15px;
+            font-size: 16px;
+        }
+
+        .main-header-nav {
+            padding: 16px 0;
+        }
+
+        .main-header-nav .container-fluid {
+            flex-direction: row;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 0;
+        }
+
+        .main-header-nav .navbar-brand {
+            justify-content: flex-start;
+            width: auto;
+        }
+
+        .main-header-nav .navbar-brand .lh-sm {
+            text-align: left;
+        }
+
+        .top-header {
+            display: block;
+        }
+
+        .gigw-header-top {
+            display: block !important;
+        }
+
+        .main-header-nav .navbar-brand img {
+            max-width: 280px;
+        }
+
+        .brand-link img {
+            max-width: 120px;
+        }
+
+        .login-page-wrapper {
+            padding: 14px;
+        }
+
+        .gigw-footer .d-flex {
+            flex-direction: row;
+            text-align: left;
+        }
+
+        .gigw-footer {
+            padding: 18px 0;
+        }
+
+        .top-header span,
+        .gigw-footer span {
+            font-size: 12px;
+        }
+
+        .password-toggle-btn,
+        .input-group-text {
+            padding: 0 14px;
+            font-size: 20px;
+        }
+
+        .form-check-input {
+            width: 20px;
+            height: 20px;
+        }
+
+        .form-check-label {
+            font-size: 14px;
+        }
+
+        .security-badge {
+            font-size: 13px;
+            padding: 11px 14px;
+        }
+
+        .login-card-enhanced img[src*="logo.svg"] {
+            max-width: 380px;
+        }
+
+        .main-header-nav .container-fluid > a:first-child,
+        .main-header-nav .container-fluid > div:last-child {
+            width: auto;
+        }
+    }
+
+    /* ===== DESKTOP (992px and up) ===== */
+    @media (min-width: 992px) {
+        .login-card-enhanced {
+            padding: 34px 28px;
+            border-radius: 16px;
+            max-height: 92vh;
+            max-width: 480px;
+        }
+
+        .login-page-wrapper {
+            padding: 16px;
+        }
+
+        .login-card-enhanced h2 {
+            font-size: 30px;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .login-card-enhanced p {
+            font-size: 15px;
+            text-align: center;
+            margin-bottom: 26px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            text-align: left;
+            margin-bottom: 8px;
+        }
+
+        .form-control {
+            font-size: 15px;
+            padding: 14px 18px;
+        }
+
+        .login-button-enhanced {
+            padding: 16px;
+            font-size: 17px;
+        }
+
+        .main-header-nav {
+            padding: 18px 0;
+        }
+
+        .main-header-nav .container-fluid {
+            flex-direction: row;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 0;
+        }
+
+        .main-header-nav .navbar-brand {
+            justify-content: flex-start;
+            width: auto;
+        }
+
+        .main-header-nav .navbar-brand .lh-sm {
+            text-align: left;
+        }
+
+        .main-header-nav .navbar-brand img {
+            max-width: 320px;
+        }
+
+        .brand-link img {
+            max-width: 140px;
+        }
+
+        .top-header span {
+            font-size: 13px;
+        }
+
+        .gigw-footer {
+            padding: 20px 0;
+        }
+
+        .gigw-footer span {
+            font-size: 13px;
+        }
+
+        /* Desktop: Show carousel on lg screens */
+        .col-lg-8 {
+            display: block !important;
+        }
+
+        .col-lg-4 {
+            width: auto !important;
+        }
+
+        .password-toggle-btn,
+        .input-group-text {
+            padding: 0 16px;
+            font-size: 20px;
+        }
+
+        .form-check-input {
+            width: 22px;
+            height: 22px;
+        }
+
+        .form-check-label {
+            font-size: 14px;
+        }
+
+        .security-badge {
+            font-size: 13px;
+            padding: 12px 16px;
+        }
+
+        .login-card-enhanced img[src*="logo.svg"] {
+            max-width: 420px;
+        }
+
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 48px;
+            height: 48px;
+        }
+    }
+
+    /* ===== LARGE DESKTOP (1200px and up) ===== */
+    @media (min-width: 1200px) {
+        .login-card-enhanced {
+            max-width: 520px;
+            width: 100%;
+            padding: 36px 32px;
+        }
+
+        .main-header-nav .navbar-brand img {
+            max-width: 340px;
+        }
+
+        .brand-link img {
+            max-width: 150px;
+        }
+
+        .login-card-enhanced h2 {
+            font-size: 32px;
+        }
+
+        .login-card-enhanced p {
+            font-size: 16px;
+        }
+
+        .form-label {
+            font-size: 15px;
+        }
+
+        .form-control {
+            font-size: 16px;
+            padding: 15px 18px;
+        }
+
+        .login-button-enhanced {
+            padding: 17px;
+            font-size: 17px;
+        }
+
+        .top-header span {
+            font-size: 14px;
+        }
+
+        .gigw-footer span {
+            font-size: 14px;
+        }
+
+        .login-card-enhanced img[src*="logo.svg"] {
+            max-width: 480px;
+        }
+    }
+
+    /* ===== EXTRA LARGE (1400px and up) ===== */
+    @media (min-width: 1400px) {
+        .login-card-enhanced {
+            max-width: 560px;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1320px;
+        }
+
+        .main-header-nav .navbar-brand img {
+            max-width: 360px;
+        }
+
+        .brand-link img {
+            max-width: 160px;
+        }
+
+        .login-card-enhanced h2 {
+            font-size: 34px;
+        }
+
+        .login-card-enhanced img[src*="logo.svg"] {
+            max-width: 520px;
+        }
+    }
+
+    /* ===== Tablet Header Navigation Collapse ===== */
+    @media (max-width: 991.98px) {
+        .main-header-nav .navbar-collapse {
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            margin-top: 12px;
+            padding-top: 12px;
+        }
+    }
+
+    /* ===== Ultra-Wide Monitors (1920px and up) ===== */
+    @media (min-width: 1920px) {
+        .login-card-enhanced {
+            max-width: 600px;
+            padding: 44px;
+        }
+
+        .login-card-enhanced h2 {
+            font-size: 36px;
+        }
+
+        .login-card-enhanced img[src*="logo.svg"] {
+            max-width: 550px;
+        }
+    }
+
+    /* ===== Landscape Orientation for Mobile/Tablet ===== */
+    @media (max-height: 600px) and (orientation: landscape) {
+        .login-card-enhanced {
+            padding: 16px 20px;
+            max-height: 90vh;
+        }
+
+        .login-card-enhanced h2 {
+            font-size: 20px;
+            margin-bottom: 6px;
+        }
+
+        .login-card-enhanced p {
+            font-size: 12px;
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .form-control {
+            padding: 10px 12px;
+            font-size: 13px;
+        }
+
+        .login-button-enhanced {
+            padding: 11px;
+            font-size: 14px;
+        }
+
+        .login-card-enhanced img[src*="logo.svg"] {
+            max-width: 200px;
+            margin-bottom: 8px;
+        }
+
+        .security-badge {
+            padding: 8px 10px;
+            font-size: 11px;
+            margin-top: 12px;
+        }
+
+        .mb-3 {
+            margin-bottom: 0.75rem !important;
+        }
+
+        .mb-4 {
+            margin-bottom: 1rem !important;
+        }
+
+        .main-header-nav {
+            padding: 10px 0;
+        }
+
+        .gigw-footer {
+            padding: 12px 0;
+        }
+
+        hr {
+            margin: 0.75rem 0;
+        }
+
+        .login-card-enhanced h5 {
+            font-size: 12px;
+            margin-top: 0.5rem !important;
+        }
+    }
+
+    /* ===== Print Styles ===== */
+    @media print {
+        .main-header-nav,
+        .gigw-footer,
+        .top-header,
+        .carousel,
+        .skip-to-content {
+            display: none !important;
+        }
+
+        .login-card-enhanced {
+            box-shadow: none;
+            border: 2px solid #000;
+            page-break-inside: avoid;
+        }
+
+        body {
+            background: white;
+        }
+    }
+
+    /* Additional Modern Enhancements */
+    
+    /* Smooth Page Load Animation */
+    @keyframes fadeInPage {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    body {
+        animation: fadeInPage 0.4s ease-out;
+    }
+
+    /* Input Placeholder Animation */
+    .form-control::placeholder {
+        transition: var(--transition-smooth);
+    }
+
+    .form-control:focus::placeholder {
+        opacity: 0.6;
+        transform: translateX(4px);
+    }
+
+    /* Label Highlight on Focus */
+    .form-control:focus ~ .form-label,
+    .form-control:not(:placeholder-shown) ~ .form-label {
+        color: var(--primary-blue);
+    }
+
+    /* Enhanced Card Shadow on Scroll */
+    .login-card-enhanced {
         transform: translateY(0);
     }
 
-    .btn-login:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-        transform: none;
+    /* Improved Link Underline Effect */
+    .gigw-footer a {
+        position: relative;
+        padding-bottom: 2px;
     }
 
-    .btn-login.loading {
-        color: transparent;
-        pointer-events: none;
-    }
-
-    .btn-login.loading::after {
+    .gigw-footer a::after {
         content: '';
         position: absolute;
-        width: 20px;
-        height: 20px;
-        border: 2px solid white;
-        border-top-color: transparent;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 1px;
+        background: var(--accent-orange);
+        transition: width 0.3s ease;
+    }
+
+    .gigw-footer a:hover::after {
+        width: 100%;
+    }
+
+    /* Loading Spinner for Button */
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    .spinner-border {
+        display: inline-block;
+        width: 1rem;
+        height: 1rem;
+        vertical-align: text-bottom;
+        border: 0.2em solid currentColor;
+        border-right-color: transparent;
         border-radius: 50%;
-        animation: spin 0.6s linear infinite;
+        animation: spin 0.75s linear infinite;
     }
 
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Micro-interaction: Scale on Click */
+    .btn:active,
+    .form-check-input:active {
+        transform: scale(0.97);
+    }
 
-    /* Forgot Password */
-    .forgot-link {
-        color: var(--primary-blue);
-        text-decoration: none;
-        font-size: 0.875rem;
+    /* Enhanced Skip Link Accessibility */
+    .skip-to-content:focus {
+        top: 0;
+        outline: 4px solid var(--accent-orange);
+        outline-offset: 3px;
+        z-index: 10000;
         font-weight: 600;
-        transition: all var(--transition-base);
     }
 
-    .forgot-link:hover {
-        color: var(--primary-blue-dark);
-        text-decoration: underline;
+    /* Logo Hover Effect */
+    .navbar-brand img,
+    .brand-link img {
+        transition: var(--transition-smooth);
     }
 
-    /* Security Badge */
-    .security-badge {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        margin-top: 1rem;
-        padding: 0.625rem 1rem;
-        background: rgba(5, 150, 105, 0.1);
-        border-radius: var(--radius-lg);
-        color: var(--success-color);
-        font-size: 0.8125rem;
-        font-weight: 500;
+    .navbar-brand:hover img,
+    .brand-link:hover img {
+        transform: scale(1.02);
+        filter: brightness(1.05);
+    }
+
+    /* Enhanced Form Validation Visual Feedback */
+    .form-control.is-valid {
+        border-color: var(--success-color);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.15);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.5rem) center;
+        background-size: calc(0.75em + 1rem) calc(0.75em + 1rem);
+        padding-right: calc(1.5em + 1.5rem);
+    }
+
+    .form-control.is-invalid {
+        border-color: var(--error-color);
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.15);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right calc(0.375em + 0.5rem) center;
+        background-size: calc(0.75em + 1rem) calc(0.75em + 1rem);
+        padding-right: calc(1.5em + 1.5rem);
+    }
+
+    /* Pulse Animation for Security Badge */
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.7;
+        }
     }
 
     .security-badge i {
         animation: pulse 2s ease-in-out infinite;
     }
 
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+    /* Enhanced Dropdown Styling */
+    .language-dropdown .dropdown-menu {
+        border-radius: 8px;
+        border: 1px solid var(--border-light);
+        box-shadow: var(--shadow-lg);
+        padding: 8px 0;
+        margin-top: 8px;
     }
 
-    /* Alert */
-    .alert-error {
-        background: rgba(220, 38, 38, 0.1);
-        border-left: 4px solid var(--error-color);
-        border-radius: var(--radius-lg);
-        padding: 0.875rem 1rem;
-        margin-bottom: 1.25rem;
-        color: var(--error-color);
-        display: flex;
-        align-items: flex-start;
-        gap: 0.625rem;
-        font-size: 0.875rem;
-        animation: shake 0.4s ease-out;
+    .language-dropdown .dropdown-item {
+        padding: 10px 20px;
+        transition: var(--transition-smooth);
+        border-radius: 4px;
+        margin: 0 8px;
     }
 
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
-    }
-
-    .alert-error i {
-        font-size: 1.125rem;
-        flex-shrink: 0;
-    }
-
-    /* Validation */
-    .form-control.is-invalid {
-        border-color: var(--error-color);
-    }
-
-    .form-control.is-valid {
-        border-color: var(--success-color);
-    }
-
-    /* Word of Day */
-    .word-of-day {
-        margin-top: 1.5rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border-light);
-        text-align: center;
-    }
-
-    .word-of-day h6 {
-        color: var(--text-muted);
-        font-size: 0.8125rem;
-        font-weight: 500;
-        margin-bottom: 0.375rem;
-    }
-
-    .word-of-day p {
+    .language-dropdown .dropdown-item:hover {
+        background: var(--primary-blue-light);
         color: var(--primary-blue);
-        font-weight: 600;
-        font-size: 0.9375rem;
-        margin: 0;
     }
 
-    /* ===== Footer - Redesigned ===== */
-    .login-footer {
-        position: relative;
-        z-index: 100;
+    /* Modern Scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
     }
 
-    /* Footer Tricolor */
-    .footer-tricolor {
-        height: 4px;
-        background: linear-gradient(90deg, var(--accent-saffron) 33.33%, white 33.33%, white 66.66%, var(--accent-green) 66.66%);
+    ::-webkit-scrollbar-track {
+        background: #f1f3f5;
     }
 
-    /* Main Footer */
-    .footer-main {
+    ::-webkit-scrollbar-thumb {
         background: var(--primary-blue);
-        color: white;
-        padding: 1rem 0;
+        border-radius: 5px;
     }
 
-    .footer-main .container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 1rem;
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--primary-blue-dark);
     }
 
-    .footer-info {
-        font-size: 0.8125rem;
-        color: rgba(255,255,255,0.95);
+    /* Enhanced Focus Indicator - WCAG 2.1 AAA Compliant */
+    *:focus-visible {
+        outline: 3px solid var(--accent-orange);
+        outline-offset: 3px;
     }
 
-    .footer-info a {
-        color: white;
-        text-decoration: none;
+    /* Reduce Motion for Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
     }
 
-    .footer-info a:hover {
-        text-decoration: underline;
+    /* High Contrast Mode Support */
+    @media (prefers-contrast: high) {
+        .login-card-enhanced {
+            border: 3px solid var(--primary-blue);
+        }
+
+        .form-control {
+            border-width: 3px;
+        }
+
+        .login-button-enhanced {
+            border: 3px solid white;
+        }
+
+        a,
+        .btn {
+            text-decoration: underline;
+        }
     }
 
-    .footer-badge {
-        background: rgba(255,255,255,0.15);
-        padding: 0.375rem 0.875rem;
-        border-radius: var(--radius-md);
-        font-size: 0.8125rem;
+    /* Dark Mode Preparation (DISABLED - Force light mode only) */
+    @media (prefers-color-scheme: dark) {
+        /* All dark mode styles disabled - force light mode */
+        html, body, :root {
+            color-scheme: light !important;
+            --bs-body-bg: #fff !important;
+            --bs-body-color: #212529 !important;
+            background-color: #fff !important;
+            color: #212529 !important;
+        }
+        :root {
+            --text-primary: #1f1f1f !important;
+            --text-secondary: #4a5568 !important;
+            --border-color: #cbd5e0 !important;
+            --bg-light: #f7fafc !important;
+            --bg-white: #ffffff !important;
+        }
+
+        body {
+            background: linear-gradient(135deg, #ffffff 0%, #f7fafc 50%, #ffffff 100%) !important;
+        }
+
+        .login-card-enhanced {
+            background: #ffffff !important;
+            border-color: #cbd5e0 !important;
+        }
+
+        .form-control {
+            background: #ffffff !important;
+            color: #212529 !important;
+            border-color: #cbd5e0 !important;
+        }
     }
 
-    /* NeGD Credit Bar */
-    .footer-negd {
-        background: rgba(0, 26, 61, 0.9);
-        padding: 0.625rem 0;
+    /* ===== Touch-Friendly Enhancements ===== */
+    @media (pointer: coarse) {
+        /* Larger touch targets for mobile */
+        .btn,
+        .form-control,
+        a,
+        .form-check-input {
+            min-height: 44px;
+        }
+
+        .password-toggle-btn,
+        .input-group-text {
+            min-width: 44px;
+        }
+
+        .form-check-input {
+            min-width: 24px;
+            min-height: 24px;
+        }
+
+        .carousel-control-prev,
+        .carousel-control-next {
+            width: 56px;
+            height: 56px;
+        }
     }
 
-    .footer-negd .container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
+    /* ===== Enhanced Hover Effects (Desktop Only) ===== */
+    @media (hover: hover) {
+        .form-control:hover:not(:focus) {
+            border-color: var(--text-secondary);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .form-check-input:hover:not(:checked) {
+            border-color: var(--primary-blue);
+        }
+
+        .login-card-enhanced:hover {
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.16);
+        }
     }
 
-    .footer-negd a {
-        display: flex;
-        align-items: center;
-        gap: 0.625rem;
-        color: rgba(255,255,255,0.9);
-        text-decoration: none;
-        font-size: 0.8125rem;
-        transition: opacity var(--transition-base);
+    /* ===== No-Hover Devices (Remove Hover States) ===== */
+    @media (hover: none) {
+        .header-nav-link::after,
+        .forgot-password-link::after,
+        .gigw-footer a::after {
+            display: none;
+        }
+
+        .login-card-enhanced:hover {
+            transform: none;
+        }
     }
 
-    .footer-negd a:hover {
-        opacity: 0.9;
-        color: white;
+    /* ===== Custom Utility Classes ===== */
+    .text-truncate-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    .footer-negd img {
-        height: 24px;
-        width: auto;
+    .visually-hidden-focusable:not(:focus):not(:focus-within) {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        padding: 0 !important;
+        margin: -1px !important;
+        overflow: hidden !important;
+        clip: rect(0, 0, 0, 0) !important;
+        white-space: nowrap !important;
+        border: 0 !important;
     }
 
-    /* ===== Carousel Controls (Hidden but accessible) ===== */
-    .bg-carousel-container .carousel-control-prev,
-    .bg-carousel-container .carousel-control-next {
-        display: none;
-    }
-
-    .bg-carousel-container .carousel-indicators {
-        display: none;
-    }
-
-    /* ===== Decorative Elements ===== */
-    .floating-shapes {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+    /* ===== Loading State ===== */
+    .btn-loading {
+        position: relative;
+        color: transparent !important;
         pointer-events: none;
-        z-index: 3;
+    }
+
+    .btn-loading::after {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        top: 50%;
+        left: 50%;
+        margin-left: -8px;
+        margin-top: -8px;
+        border: 2px solid #ffffff;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 0.6s linear infinite;
+    }
+
+    /* ===== Tooltip Enhancement ===== */
+    [data-tooltip] {
+        position: relative;
+        cursor: help;
+    }
+
+    [data-tooltip]::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+        padding: 6px 12px;
+        background: var(--primary-blue-darker);
+        color: white;
+        font-size: 12px;
+        border-radius: 6px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s, transform 0.3s;
+        z-index: 1000;
+    }
+
+    [data-tooltip]:hover::after,
+    [data-tooltip]:focus::after {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-4px);
+    }
+
+    /* ===== Improved Focus Ring ===== */
+    .focus-ring-primary:focus-visible {
+        outline: 3px solid var(--primary-blue);
+        outline-offset: 2px;
+    }
+
+    .focus-ring-orange:focus-visible {
+        outline: 3px solid var(--accent-orange);
+        outline-offset: 2px;
+    }
+
+    /* ===== Error/Success Messages ===== */
+    .alert-modern {
+        border-radius: 8px;
+        border: none;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        animation: slideInDown 0.4s ease-out;
+    }
+
+    .alert-modern.alert-error {
+        background: rgba(196, 30, 58, 0.1);
+        color: var(--error-color);
+        border-left: 4px solid var(--error-color);
+    }
+
+    .alert-modern.alert-success {
+        background: rgba(19, 136, 8, 0.1);
+        color: var(--success-color);
+        border-left: 4px solid var(--success-color);
+    }
+
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* ===== Skeleton Loading (Future Use) ===== */
+    .skeleton {
+        background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+        background-size: 200% 100%;
+        animation: loading 1.5s ease-in-out infinite;
+        border-radius: 4px;
+    }
+
+    @keyframes loading {
+        0% {
+            background-position: 200% 0;
+        }
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    /* ===== Ripple Effect ===== */
+    .ripple {
+        position: relative;
         overflow: hidden;
     }
 
-    .shape {
+    .ripple::after {
+        content: '';
         position: absolute;
-        background: rgba(255,255,255,0.03);
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
         border-radius: 50%;
-        animation: float 20s infinite ease-in-out;
+        background: rgba(255, 255, 255, 0.5);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
     }
 
-    .shape-1 { width: 400px; height: 400px; top: -100px; left: -100px; animation-delay: 0s; }
-    .shape-2 { width: 300px; height: 300px; bottom: -50px; right: -50px; animation-delay: -5s; }
-    .shape-3 { width: 200px; height: 200px; top: 50%; left: 10%; animation-delay: -10s; }
-    .shape-4 { width: 150px; height: 150px; top: 20%; right: 15%; animation-delay: -15s; }
-
-    @keyframes float {
-        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-        25% { transform: translate(20px, -20px) rotate(5deg); }
-        50% { transform: translate(0, 20px) rotate(0deg); }
-        75% { transform: translate(-20px, -10px) rotate(-5deg); }
+    .ripple:active::after {
+        width: 300px;
+        height: 300px;
     }
 
-    /* ===== Responsive ===== */
-    @media (max-width: 576px) {
-        .header-main .container {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-        .header-left {
-            flex-direction: column;
-            border-right: none;
-        }
-        .header-govt {
-            border-right: none;
-            padding-right: 0;
-        }
-        .header-govt span { font-size: 0.75rem; }
-        .header-lbsnaa img { height: 36px; max-width: 160px; }
-        .header-right {
-            flex-direction: column;
-            width: 100%;
-        }
-        .header-digital-india { justify-content: center; }
-        .header-digital-india img { height: 30px; }
-        .header-utils { justify-content: center; }
-        .footer-main .container { flex-direction: column; text-align: center; }
-        .footer-negd .container { flex-direction: column; }
-        
-        .login-card {
-            padding: 1.5rem;
-            margin: 0.5rem;
-            border-radius: var(--radius-xl);
-        }
-        
-        .login-logo img { max-width: 160px; }
-        .login-logo h1 { font-size: 1.25rem; }
-        
+    /* ===== Improved Input States ===== */
+    .form-control:disabled,
+    .form-control[readonly] {
+        background-color: #e9ecef;
+        opacity: 0.7;
+        cursor: not-allowed;
     }
 
-    @media (min-width: 576px) and (max-width: 768px) {
-        .header-left { gap: 1rem; }
-        .header-govt span { font-size: 0.75rem; }
-        .header-lbsnaa img { height: 38px; max-width: 180px; }
-        .login-card {
-            max-width: 400px;
-            padding: 2rem;
-        }
+    .form-control:user-invalid {
+        border-color: var(--error-color);
     }
 
-    @media (min-width: 768px) {
-        .login-card {
-            padding: 2.5rem;
-        }
-        .login-logo img { max-width: 220px; }
-    }
-
-    @media (min-width: 992px) {
-        .login-card {
-            max-width: 460px;
-        }
-    }
-
-    @media (max-height: 700px) {
-        .login-card {
-            padding: 1.25rem 1.5rem;
-        }
-        .login-logo { margin-bottom: 1rem; }
-        .login-logo img { max-width: 150px; }
-        .login-logo h1 { font-size: 1.25rem; margin-top: 0.5rem; }
-        .form-group { margin-bottom: 0.875rem; }
-        .form-control { padding: 0.75rem; }
-        .btn-login { padding: 0.875rem; }
-        .word-of-day { margin-top: 1rem; padding-top: 0.75rem; }
-    }
-
-    /* Accessibility */
-    @media (prefers-reduced-motion: reduce) {
-        *, *::before, *::after {
-            animation-duration: 0.01ms !important;
-            transition-duration: 0.01ms !important;
-        }
-        .bg-carousel-container .carousel-item img {
-            transition: none !important;
-            transform: none !important;
-        }
-    }
-
-    @media (prefers-contrast: high) {
-        .login-card {
-            background: white;
-            border: 3px solid var(--primary-blue);
-        }
-        .form-control { border-width: 3px; }
-    }
-
-    @media print {
-        .bg-carousel-container, .bg-overlay, .bg-pattern, .floating-shapes, .login-header, .login-footer { display: none !important; }
-        .login-card { box-shadow: none; border: 2px solid #000; }
+    .form-control:user-valid {
+        border-color: var(--success-color);
     }
     </style>
 </head>
@@ -1056,136 +1783,586 @@
                     </div>
                 </form>
 
-                <!-- Word of Day -->
-                <div class="word-of-day">
-                    <h6>
-                        <i class="bi bi-translate" aria-hidden="true"></i>
-                        आज का शब्द / Word of the Day
-                    </h6>
-                    <p>अर्हक अंक - Qualifying marks</p>
-                </div>
-            </div>
-        </main>
+                            <hr class="my-3">
 
-        <!-- Footer -->
-        <footer class="login-footer" role="contentinfo">
-            <div class="footer-tricolor"></div>
-            <div class="footer-main">
-                <div class="container">
-                    <div class="footer-info">
-                        <span>&copy; {{ date('Y') }} LBSNAA Mussoorie, Government of India. All Rights Reserved</span>
-                        <span class="d-none d-md-inline mx-2">|</span>
-                        <span class="d-none d-sm-inline">Support: <a href="mailto:support.lbsnaa@nic.in">support.lbsnaa@nic.in</a></span>
-                    </div>
-                    <div class="footer-badge">
-                        <i class="bi bi-people-fill me-1" aria-hidden="true"></i>
-                        Active Users: <strong id="activeCount">--</strong>
+                            <div class="text-center">
+                                <h5 class="text-muted mt-3 mb-2" style="font-size: 14px;">
+                                    आज का शब्द / Word of the Day
+                                </h5>
+                                <p class="mb-0" style="font-size: 14px; font-weight: 500;">
+                                    अधिग्रहण-मोचन - De-requisition
+                                </p>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+                <div class="col-lg-8 d-none d-lg-block" role="complementary" aria-label="Campus images carousel">
+                    <div id="carouselExampleFade" 
+                        class="carousel slide carousel-fade" 
+                        data-bs-ride="carousel" 
+                        data-bs-interval="5000" 
+                        data-bs-pause="hover" 
+                        data-bs-touch="true"
+                        data-bs-keyboard="true" 
+                        data-bs-wrap="true" 
+                        aria-label="LBSNAA Campus Carousel"
+                        aria-roledescription="carousel">
+                        
+                        <div class="carousel-indicators">
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="2" aria-label="Slide 3"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="3" aria-label="Slide 4"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="4" aria-label="Slide 5"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="5" aria-label="Slide 6"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="6" aria-label="Slide 7"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="7" aria-label="Slide 8"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="8" aria-label="Slide 9"></button>
+                            <button type="button" data-bs-target="#carouselExampleFade" data-bs-slide-to="9" aria-label="Slide 10"></button>
+                        </div>
+
+                        <div class="carousel-inner">
+                            <div class="carousel-item active">
+                                <img src="{{ asset('images/carasoul/1.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 1"
+                                    loading="eager">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/2.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 2"
+                                    loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/3.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 3"
+                                    loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/4.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 4"
+                                    loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/5.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 5"
+                                    loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/6.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 6"
+                                    loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/7.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 7"
+                                    loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/8.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 8"
+                                    loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/9.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 9"
+                                    loading="lazy">
+                            </div>
+                            <div class="carousel-item">
+                                <img src="{{ asset('images/carasoul/10.webp') }}"
+                                    class="d-block w-100 img-fluid carasoul-image" 
+                                    alt="LBSNAA Campus view 10"
+                                    loading="lazy">
+                            </div>
+                        </div>
+
+                        <button class="carousel-control-prev" 
+                            type="button" 
+                            data-bs-target="#carouselExampleFade"
+                            data-bs-slide="prev"
+                            aria-label="Previous slide">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Previous</span>
+                        </button>
+                        <button class="carousel-control-next" 
+                            type="button" 
+                            data-bs-target="#carouselExampleFade"
+                            data-bs-slide="next"
+                            aria-label="Next slide">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="visually-hidden">Next</span>
+                        </button>
                     </div>
                 </div>
             </div>
-            <div class="footer-negd">
-                <div class="container">
-                    <a href="https://negd.gov.in/" target="_blank" rel="noopener noreferrer" aria-label="Powered by National e-Governance Division">
-                        <img src="{{ asset('images/negd.png') }}" alt="NeGD Logo" loading="lazy" onerror="this.style.display='none'">
-                        <span>Powered by <strong>National e-Governance Division</strong>, MeitY</span>
-                    </a>
+        </div>
+
+
+
+        <script>
+        // ===== Modern Enhanced UX Scripts =====
+        
+        // Password Visibility Toggle with Smooth Interaction
+        (function() {
+            const toggleButton = document.getElementById('togglePassword');
+            const passwordInput = document.getElementById('passwordInput');
+
+            if (toggleButton && passwordInput) {
+                toggleButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const isPassword = passwordInput.type === 'password';
+                    passwordInput.type = isPassword ? 'text' : 'password';
+                    const icon = this.querySelector('i');
+                    
+                    // Smooth icon animation
+                    icon.style.transform = 'scale(1.2)';
+                    setTimeout(() => {
+                        icon.textContent = isPassword ? 'visibility_off' : 'visibility';
+                        icon.style.transform = 'scale(1)';
+                    }, 150);
+                    
+                    const newLabel = isPassword ? 'Hide password' : 'Show password';
+                    this.setAttribute('aria-label', newLabel);
+                    this.setAttribute('aria-pressed', isPassword ? 'true' : 'false');
+                    passwordInput.focus();
+                });
+
+                // Keyboard support
+                toggleButton.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.click();
+                    }
+                });
+            }
+        })();
+
+        // Form Validation Enhancement
+        (function() {
+            const form = document.querySelector('form[action*="post_login"]');
+            if (!form) return;
+
+            const username = document.getElementById('usernameInput');
+            const password = document.getElementById('passwordInput');
+
+            // Real-time validation feedback
+            function validateField(field) {
+                const isValid = field.value.trim().length > 0;
+                
+                if (field.value.length > 0) {
+                    if (isValid) {
+                        field.classList.add('is-valid');
+                        field.classList.remove('is-invalid');
+                        field.setAttribute('aria-invalid', 'false');
+                    } else {
+                        field.classList.add('is-invalid');
+                        field.classList.remove('is-valid');
+                        field.setAttribute('aria-invalid', 'true');
+                    }
+                } else {
+                    field.classList.remove('is-valid', 'is-invalid');
+                }
+                
+                return isValid;
+            }
+
+            [username, password].forEach(field => {
+                if (!field) return;
+                
+                field.addEventListener('input', function() {
+                    validateField(this);
+                });
+
+                field.addEventListener('blur', function() {
+                    if (!this.value.trim() && this.hasAttribute('required')) {
+                        this.classList.add('is-invalid');
+                        this.setAttribute('aria-invalid', 'true');
+                    }
+                });
+
+                field.addEventListener('focus', function() {
+                    // Announce to screen readers
+                    const label = this.labels[0];
+                    if (label) {
+                        this.setAttribute('aria-describedby', label.id || label.textContent);
+                    }
+                });
+            });
+
+            // Form submission
+            form.addEventListener('submit', function(e) {
+                let isValid = true;
+
+                // Clear previous errors
+                [username, password].forEach(field => {
+                    if (field) {
+                        field.classList.remove('is-invalid', 'is-valid');
+                    }
+                });
+
+                // Validation
+                if (!username || !username.value.trim()) {
+                    if (username) {
+                        username.classList.add('is-invalid');
+                        username.setAttribute('aria-invalid', 'true');
+                        username.focus();
+                    }
+                    isValid = false;
+                } else if (username) {
+                    username.classList.add('is-valid');
+                    username.setAttribute('aria-invalid', 'false');
+                }
+
+                if (!password || !password.value) {
+                    if (password) {
+                        password.classList.add('is-invalid');
+                        password.setAttribute('aria-invalid', 'true');
+                        if (isValid) password.focus();
+                    }
+                    isValid = false;
+                } else if (password) {
+                    password.classList.add('is-valid');
+                    password.setAttribute('aria-invalid', 'false');
+                }
+
+                if (!isValid) {
+                    e.preventDefault();
+                    
+                    // Announce error to screen readers
+                    const errorMsg = document.createElement('div');
+                    errorMsg.setAttribute('role', 'alert');
+                    errorMsg.setAttribute('aria-live', 'assertive');
+                    errorMsg.className = 'visually-hidden';
+                    errorMsg.textContent = 'Please fill in all required fields';
+                    document.body.appendChild(errorMsg);
+                    setTimeout(() => errorMsg.remove(), 3000);
+                    
+                    return false;
+                }
+
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.classList.add('btn-loading');
+                    const originalText = submitBtn.innerHTML;
+                    submitBtn.setAttribute('data-original-text', originalText);
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Signing in...';
+                }
+
+                // Set fresh login flag
+                sessionStorage.setItem('fresh_login', 'true');
+            });
+        })();
+
+        // Keyboard Navigation Enhancement
+        (function() {
+            const form = document.querySelector('form[action*="post_login"]');
+            if (!form) return;
+
+            form.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                    const submitBtn = this.querySelector('button[type="submit"]');
+                    if (submitBtn && !submitBtn.disabled) {
+                        e.preventDefault();
+                        submitBtn.click();
+                    }
+                }
+            });
+        })();
+
+        // Accessibility: Focus Management
+        (function() {
+            const inputs = document.querySelectorAll('.form-control, .form-check-input, .btn');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.classList.add('focused');
+                });
+                input.addEventListener('blur', function() {
+                    this.classList.remove('focused');
+                });
+            });
+
+            // Trap focus in login card on mobile
+            const loginCard = document.querySelector('.login-card-enhanced');
+            if (loginCard && window.innerWidth < 768) {
+                const focusableElements = loginCard.querySelectorAll(
+                    'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                const firstFocusable = focusableElements[0];
+                const lastFocusable = focusableElements[focusableElements.length - 1];
+
+                loginCard.addEventListener('keydown', function(e) {
+                    if (e.key === 'Tab') {
+                        if (e.shiftKey) {
+                            if (document.activeElement === firstFocusable) {
+                                e.preventDefault();
+                                lastFocusable.focus();
+                            }
+                        } else {
+                            if (document.activeElement === lastFocusable) {
+                                e.preventDefault();
+                                firstFocusable.focus();
+                            }
+                        }
+                    }
+                });
+            }
+        })();
+
+        // Ripple Effect for Buttons
+        (function() {
+            const rippleButtons = document.querySelectorAll('.ripple');
+            rippleButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = x + 'px';
+                    ripple.style.top = y + 'px';
+                    ripple.classList.add('ripple-effect');
+
+                    this.appendChild(ripple);
+
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+
+            // Add ripple effect styles
+            const style = document.createElement('style');
+            style.textContent = `
+                .ripple-effect {
+                    position: absolute;
+                    border-radius: 50%;
+                    background: rgba(255, 255, 255, 0.6);
+                    transform: scale(0);
+                    animation: ripple-animation 0.6s ease-out;
+                    pointer-events: none;
+                }
+                @keyframes ripple-animation {
+                    to {
+                        transform: scale(4);
+                        opacity: 0;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        })();
+
+        // Accessibility Widget Trigger
+        (function() {
+            const accessibilityTrigger = document.getElementById('uw-widget-custom-trigger');
+            if (accessibilityTrigger) {
+                accessibilityTrigger.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        this.click();
+                    }
+                });
+            }
+        })();
+
+        // Auto-save form state (for better UX)
+        (function() {
+            const username = document.getElementById('usernameInput');
+            const rememberMe = document.getElementById('keepLoggedIn');
+
+            // Load saved username if remember me was checked
+            if (username && localStorage.getItem('rememberUsername') === 'true') {
+                const savedUsername = localStorage.getItem('savedUsername');
+                if (savedUsername) {
+                    username.value = savedUsername;
+                }
+            }
+
+            // Save username on change
+            if (username && rememberMe) {
+                rememberMe.addEventListener('change', function() {
+                    if (this.checked && username.value) {
+                        localStorage.setItem('savedUsername', username.value);
+                        localStorage.setItem('rememberUsername', 'true');
+                    } else {
+                        localStorage.removeItem('savedUsername');
+                        localStorage.removeItem('rememberUsername');
+                    }
+                });
+
+                username.addEventListener('input', function() {
+                    if (rememberMe.checked) {
+                        localStorage.setItem('savedUsername', this.value);
+                    }
+                });
+            }
+        })();
+
+        // Performance: Lazy load carousel images
+        (function() {
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            if (img.dataset.src) {
+                                img.src = img.dataset.src;
+                                img.removeAttribute('data-src');
+                            }
+                            observer.unobserve(img);
+                        }
+                    });
+                });
+
+                const lazyImages = document.querySelectorAll('img[loading="lazy"]');
+                lazyImages.forEach(img => imageObserver.observe(img));
+            }
+        })();
+
+        // Announce page load to screen readers
+        (function() {
+            window.addEventListener('load', function() {
+                const announcement = document.createElement('div');
+                announcement.setAttribute('role', 'status');
+                announcement.setAttribute('aria-live', 'polite');
+                announcement.className = 'visually-hidden';
+                announcement.textContent = 'Login page loaded successfully. Please enter your credentials.';
+                document.body.appendChild(announcement);
+                setTimeout(() => announcement.remove(), 3000);
+            });
+        })();
+        
+        // Final safeguard: Force light mode on page load
+        window.addEventListener('load', function() {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+            document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
+            document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
+            
+            // Remove any dark mode classes
+            document.documentElement.classList.remove('dark');
+            if (document.body) {
+                document.body.classList.remove('dark');
+                document.body.style.colorScheme = 'light';
+            }
+        });
+        </script>
+
+        <footer class="gigw-footer mt-auto" role="contentinfo">
+            <div class="container">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+                    <span class="text-center text-md-start">
+                        &copy; <?php echo date('Y'); ?> LBSNAA Mussoorie, Govt of India. All Rights Reserved
+                        <span class="d-none d-md-inline">|</span>
+                        <span class="d-block d-md-inline mt-1 mt-md-0">
+                            Support: <a href="mailto:support.lbsnaa@nic.in" class="text-white text-decoration-none">support.lbsnaa@nic.in</a> 
+                            <span class="d-none d-sm-inline">| Ph: 1014 (EPABX)</span>
+                        </span>
+                    </span>
+                    <div class="text-center text-md-end">
+                        <span class="badge bg-light text-dark px-3 py-2">
+                            <i class="bi bi-people-fill me-1" aria-hidden="true"></i>
+                            Active Users: <strong>135</strong>
+                        </span>
+                    </div>
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous">
+    </script>
     
+    <!-- Immediately intercept Bootstrap's theme detection on login page -->
     <script>
+        (function() {
+            'use strict';
+            // Force light mode immediately after Bootstrap loads
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+            
+            // Override Bootstrap's getTheme function if it exists
+            if (window.bootstrap) {
+                window.bootstrap.getTheme = function() {
+                    return 'light';
+                };
+            }
+            
+            // Force light mode on window load
+            window.addEventListener('load', function() {
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+                document.documentElement.style.colorScheme = 'light';
+                document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
+                document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
+                
+                // Remove any dark mode classes
+                document.documentElement.classList.remove('dark');
+                if (document.body) {
+                    document.body.classList.remove('dark');
+                    document.body.style.colorScheme = 'light';
+                }
+            });
+            
+            // Periodic check as fallback
+            setInterval(function() {
+                if (document.documentElement.getAttribute('data-bs-theme') !== 'light') {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    document.documentElement.style.colorScheme = 'light';
+                }
+            }, 500);
+        })();
+    </script>
+
+    <script>
+    // Ensure Bootstrap is present; if CDN fails, load local fallback and then init carousel
     (function() {
-        'use strict';
-
-        // Password Toggle
-        const toggleBtn = document.getElementById('togglePassword');
-        const passwordInput = document.getElementById('password');
-        
-        if (toggleBtn && passwordInput) {
-            toggleBtn.addEventListener('click', function() {
-                const isPassword = passwordInput.type === 'password';
-                passwordInput.type = isPassword ? 'text' : 'password';
-                const icon = this.querySelector('i');
-                icon.classList.toggle('bi-eye');
-                icon.classList.toggle('bi-eye-slash');
-                this.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
-            });
-        }
-
-        // Form Validation & Submit
-        const form = document.getElementById('loginForm');
-        const loginBtn = document.getElementById('loginBtn');
-        
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                const username = document.getElementById('username');
-                const password = document.getElementById('password');
-                let isValid = true;
-
-                [username, password].forEach(input => {
-                    if (input) {
-                        input.classList.remove('is-valid', 'is-invalid');
-                        if (!input.value.trim()) {
-                            input.classList.add('is-invalid');
-                            isValid = false;
-                        } else {
-                            input.classList.add('is-valid');
-                        }
-                    }
+        function initCarousel() {
+            var el = document.getElementById('carouselExampleFade');
+            if (!el || !(window.bootstrap && bootstrap.Carousel)) return;
+            try {
+                var carousel = bootstrap.Carousel.getOrCreateInstance(el, {
+                    interval: 5000,
+                    ride: 'carousel',
+                    pause: 'hover',
+                    touch: true,
+                    keyboard: true,
+                    wrap: true
                 });
-
-                if (!isValid) {
-                    e.preventDefault();
-                    const firstInvalid = form.querySelector('.is-invalid');
-                    if (firstInvalid) firstInvalid.focus();
-                    return;
-                }
-
-                if (loginBtn) {
-                    loginBtn.classList.add('loading');
-                    loginBtn.disabled = true;
-                }
-            });
-
-            // Real-time validation
-            form.querySelectorAll('input[required]').forEach(input => {
-                input.addEventListener('input', function() {
-                    if (this.classList.contains('is-invalid') && this.value.trim()) {
-                        this.classList.remove('is-invalid');
-                    }
+                // Lazy-load images except first
+                var imgs = el.querySelectorAll('.carousel-item img');
+                imgs.forEach(function(img, idx) {
+                    if (idx > 0) img.setAttribute('loading', 'lazy');
+                    img.setAttribute('decoding', 'async');
                 });
-            });
+            } catch (e) {
+                /* swallow */
+            }
         }
 
-        // Active Users
-        const activeCount = document.getElementById('activeCount');
-        if (activeCount) {
-            activeCount.textContent = Math.floor(Math.random() * 80) + 40;
+        function ensureBootstrap(cb) {
+            if (window.bootstrap && bootstrap.Carousel) {
+                cb();
+                return;
+            }
+            var s = document.createElement('script');
+            s.src = "{{ asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js') }}";
+            s.async = true;
+            s.onload = cb;
+            document.head.appendChild(s);
         }
 
-        // Initialize Carousel with Ken Burns effect
-        const carousel = document.getElementById('bgCarousel');
-        if (carousel && window.bootstrap) {
-            new bootstrap.Carousel(carousel, {
-                interval: 6000,
-                ride: 'carousel',
-                pause: false
-            });
-        }
-
-        // Accessibility announcement
-        window.addEventListener('load', function() {
-            const sr = document.createElement('div');
-            sr.setAttribute('role', 'status');
-            sr.setAttribute('aria-live', 'polite');
-            sr.className = 'visually-hidden';
-            sr.textContent = 'LBSNAA Login page loaded. Please enter your credentials.';
-            document.body.appendChild(sr);
-            setTimeout(() => sr.remove(), 3000);
+        document.addEventListener('DOMContentLoaded', function() {
+            ensureBootstrap(initCarousel);
         });
     })();
     </script>
