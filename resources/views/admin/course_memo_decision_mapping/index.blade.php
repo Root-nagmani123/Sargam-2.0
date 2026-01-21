@@ -15,8 +15,8 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
-                                    Mapping</a>
+                                <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
+                                    Mapping</a> -->
                                 <button type="button" id="showConclusionAlert" class="btn btn-primary">
                                     +Add New Mapping
                                 </button>

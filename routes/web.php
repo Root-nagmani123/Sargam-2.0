@@ -139,7 +139,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Programme Routes
     Route::prefix('programme')->name('programme.')->controller(CourseController::class)->group(function () {
-
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
@@ -173,7 +172,6 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::resource('stream', StreamController::class);
-
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
@@ -620,26 +618,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });
 
-   Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
- Route::get(
-    '/admin/feedback/pending',
-    [FeedbackController::class, 'pendingFeedbackIndex']
-)->name('admin.feedback.pending');
-
-
-Route::get('/memo/view/{file}', function ($file) {
-
-    $path = 'memo_documents/' . $file;
-
-    if (!Storage::disk('public')->exists($path)) {
-        abort(404);
-    }
-
-    return response()->file(
-        storage_path('app/public/' . $path)
-    );
-});
-
+Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+// Change export routes to POST
+Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+    ->name('admin.feedback.export.pdf');
 
 Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');

@@ -271,7 +271,8 @@
                                 <i class="fas fa-eye"></i>
                             </a>
                             <button class="btn btn-outline-danger delete-group"
-                                data-id="{{ $group->id }}" title="Delete Group" aria-label="Delete Group">
+                                data-id="{{ $group->id }}"
+                                 title="Delete Group" aria-label="Delete Group">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
@@ -363,7 +364,9 @@
 
                         <td class="text-center">
                             <button class="btn btn-sm btn-danger delete-column"
-                                data-id="{{ $column->id }}" title="Delete">
+                                data-id="{{ $column->id }}" title="Delete"
+                                {{ $column->is_visible == 1 ? 'disabled' : '' }}
+                                >
                                 <iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7">
                                                      </iconify-icon>
                             </button>
@@ -418,7 +421,7 @@
                     @endphp
 
                     <div class="mt-3">
-    <h6>Existing Reflection Fields:</h6>
+    <!-- <h6>Existing Reflection Fields:</h6> -->
     <div class="table-responsive">
     <table class="table table-bordered align-middle" id="datatable-columns">
 
@@ -466,8 +469,11 @@
 
                         <td class="text-center">
                             <button class="btn btn-sm btn-danger delete-reflection"
-                                data-id="{{ $field->id }}" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7">
-                                                     </iconify-icon></button>
+        data-id="{{ $field->id }}"
+        title="Delete"
+        {{ $field->is_active == 1 ? 'disabled' : '' }}>
+    <iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7"></iconify-icon>
+</button>
                         </td>
                     </tr>
                 @endforeach
@@ -689,90 +695,146 @@ $('#coursesAccordion').prepend(html);
           // Add Event to Course
                 //$('.add-event-btn').click(function() {
 			$(document).on('click', '.add-event-btn', function () {
-                    const courseId = $(this).data('course-id');
-                    const eventInput = $(`.event-input[data-course-id="${courseId}"]`);
-                    const eventName = eventInput.val();
+    const courseId = $(this).data('course-id');
+    const eventInput = $(`.event-input[data-course-id="${courseId}"]`);
+    const eventName = eventInput.val();
 
-                    if (!eventName) {
-                        alert('Please enter event name');
-                        return;
-                    }
+    if (!eventName) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Validation Error',
+            text: 'Please enter event name'
+        });
+        return;
+    }
 
-                    $.post('{{ route('admin.peer.event.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        event_name: eventName,
-                        course_id: courseId
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    }).fail(function() {
-                        alert('Error adding event');
-                    });
-                });
+    $.post('{{ route('admin.peer.event.add') }}', {
+        _token: '{{ csrf_token() }}',
+        event_name: eventName,
+        course_id: courseId
+    }, function (response) {
+        if (response.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: 'Event added successfully',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: response.message
+            });
+        }
+    }).fail(function () {
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops!',
+            text: 'Error adding event'
+        });
+    });
+});
+
 
                 // Add Group with Course and Event
-                $('#addGroupBtn').click(function() {
-                    const courseId = $('#group_course_id').val();
-                    const eventId = $('#group_event_id').val();
-                    const groupName = $('#group_name').val();
-                    const maxMarks = $('#max_marks').val();
+                $('#addGroupBtn').click(function () {
+                     
+                        const courseId = $('#group_course_id').val();
+                        const eventId = $('#group_event_id').val();
+                        const groupName = $('#group_name').val();
+                        const maxMarks = $('#max_marks').val();
 
-                    if (!courseId || !eventId || !groupName) {
-                        alert('Please select course, event and enter group name');
-                        return;
-                    }
-
-                    if (!maxMarks || maxMarks <= 0) {
-                        alert('Please enter valid max marks');
-                        return;
-                    }
-
-                    $.post('{{ route('admin.peer.group.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        course_id: courseId,
-                        event_id: eventId,
-                        group_name: groupName,
-                        max_marks: maxMarks
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
+                        if (!courseId || !eventId || !groupName) {
+                            Swal.fire('Warning', 'Please select course, event and enter group name', 'warning');
+                            return;
                         }
-                    }).fail(function() {
-                        alert('Error adding group');
+
+                        if (!maxMarks || maxMarks <= 0) {
+                            Swal.fire('Warning', 'Please enter valid max marks', 'warning');
+                            return;
+                        }
+
+                        $.post('{{ route('admin.peer.group.add') }}', {
+                            _token: '{{ csrf_token() }}',
+                            course_id: courseId,
+                            event_id: eventId,
+                            group_name: groupName,
+                            max_marks: maxMarks
+                        }, function (response) {
+
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Saved',
+                                    text: 'Group added successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                            }
+
+                        }).fail(function () {
+                            Swal.fire('Error', 'Error adding group', 'error');
+                        });
                     });
-                });
 
                 // Add Column with Course and Event
-                $('#addColumnBtn').click(function() {
-                    const courseId = $('#column_course_id').val();
-                    const eventId = $('#column_event_id').val();
-                    const columnName = $('#column_name').val();
+               $('#addColumnBtn').click(function () {
 
-                    if (!columnName) {
-                        alert('Please enter column name');
-                        return;
-                    }
+    const courseId   = $('#column_course_id').val();
+    const eventId    = $('#column_event_id').val();
+    const columnName = $('#column_name').val();
 
-                    $.post('{{ route('admin.peer.column.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        course_id: courseId || null,
-                        event_id: eventId || null,
-                        column_name: columnName
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    }).fail(function() {
-                        alert('Error adding column');
-                    });
-                });
+    if (!columnName) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Validation Error',
+            text: 'Please enter column name'
+        });
+        return;
+    }
+
+    $.post('{{ route('admin.peer.column.add') }}', {
+        _token: '{{ csrf_token() }}',
+        course_id: courseId || null,
+        event_id: eventId || null,
+        column_name: columnName
+    }, function (response) {
+
+        if (response.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Saved!',
+                text: 'Column added successfully',
+                confirmButtonText: 'OK'
+            }).then(() => {
+            location.reload();
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: response.message || 'Something went wrong'
+            });
+        }
+
+    }).fail(function () {
+        Swal.fire({
+            icon: 'error',
+            title: 'Server Error',
+            text: 'Error adding column'
+        });
+    });
+
+});
+
 
                 // Update Max Marks
                 $('.update-marks').click(function() {
@@ -912,31 +974,57 @@ $('#coursesAccordion').prepend(html);
                 });
 
                 // Add Reflection Field with Course and Event
-                $('#addReflectionBtn').click(function() {
-                    const courseId = $('#reflection_course_id').val();
-                    const eventId = $('#reflection_event_id').val();
-                    const fieldLabel = $('#reflection_field').val();
+               $('#addReflectionBtn').click(function () {
 
-                    if (!fieldLabel) {
-                        alert('Please enter reflection field label');
-                        return;
-                    }
+                        const courseId = $('#reflection_course_id').val();
+                        const eventId = $('#reflection_event_id').val();
+                        const fieldLabel = $('#reflection_field').val();
 
-                    $.post('{{ route('admin.peer.reflection.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        field_label: fieldLabel,
-                        course_id: courseId || null,
-                        event_id: eventId || null
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
+                        if (!fieldLabel) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Validation Error',
+                                text: 'Please enter reflection field label'
+                            });
+                            return;
                         }
-                    }).fail(function() {
-                        alert('Error adding reflection field');
+
+                        $.post('{{ route('admin.peer.reflection.add') }}', {
+                            _token: '{{ csrf_token() }}',
+                            field_label: fieldLabel,
+                            course_id: courseId || null,
+                            event_id: eventId || null
+                        }, function (response) {
+
+                            if (response.success) {
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Saved!',
+                                    text: 'Reflection field added successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+
+                                location.reload(); // optional clear input
+
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: response.message
+                                });
+                            }
+
+                        }).fail(function () {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Server Error',
+                                text: 'Error adding reflection field'
+                            });
+                        });
                     });
-                });
+
 
                 // Toggle Reflection Field
                 $('.toggle-reflection').change(function() {
@@ -973,7 +1061,8 @@ $('#coursesAccordion').prepend(html);
                             _token: '{{ csrf_token() }}'
                         }, function(response) {
                             if (response.success) {
-                                location.reload();
+                               // location.reload();
+                                $('#datatable-columns').DataTable().ajax.reload(null, false);
                             } else {
                                 alert('Error: ' + response.message);
                             }
@@ -1144,7 +1233,7 @@ $(document).on('click', '.delete-course-btn', function (e) {
 <script>
 $(document).ready(function() {
 	 setTimeout(() => {
-    $('#datatable-courses').DataTable({
+  var table = $('#datatable-courses').DataTable({
         paging: true,
         searching: true,
         ordering: true,
@@ -1157,14 +1246,14 @@ $(document).ready(function() {
             paginate: { previous: "Prev", next: "Next" }
         }
     });
-    $('#datatable-groups').DataTable({
+   var table2 = $('#datatable-groups').DataTable({
         paging: true,
         searching: true,
         ordering: true,
         lengthMenu: [5, 10, 25, 50],
         pageLength: 10
     });
-    $('#datatable-columns').DataTable({
+    var table3 = $('#datatable-columns').DataTable({
         paging: true,
         searching: true,
         ordering: true,
