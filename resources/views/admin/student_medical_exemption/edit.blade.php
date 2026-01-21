@@ -40,7 +40,9 @@
                     <div class="col-md-6">
                         <label class="form-label">Doctor Name *</label>
                         <select name="employee_master_pk" class="form-control col-form-label" readonly required>
+                            @if(Auth::user())
                             <option value="{{ Auth::user()->user_id }}" selected>{{ Auth::user()->first_name }} {{ Auth::user()->last_name }}</option>
+                            @endif
                         </select>
                          @error('employee_master_pk')
                             <small class="text-danger">{{ $message }}</small>

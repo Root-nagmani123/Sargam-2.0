@@ -58,7 +58,7 @@
                                     <option value="">Select Format</option>
                                     <option value="xlsx">Excel</option>
                                     <option value="csv">CSV</option>
-                                    <option value="pdf">PDF</option>
+                                    <!-- <option value="pdf">PDF</option> -->
                                 </select>
                                 <button type="submit" class="btn btn-success">Export</button>
                             </form>
@@ -109,7 +109,8 @@
                             @php
                                 // Get all unique evaluators for this member
                                 $evaluators = $scores->where('member_id', $member->id)->pluck('evaluator_id')->unique();
-                            @endphp
+                          
+                                @endphp
                             
                             @foreach ($evaluators as $evaluatorId)
                                 @php

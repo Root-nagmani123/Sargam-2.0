@@ -1,7 +1,7 @@
 
   <script src="{{asset('admin_assets/js/vendor.min.js')}}"></script>
   <!-- Import Js Files -->
-  <script src="{{asset('admin_assets/libs/bootstrap/dist/js/bootstrap.bundle.min.js')}}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
   <script src="{{asset('admin_assets/libs/simplebar/dist/simplebar.min.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/app.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>

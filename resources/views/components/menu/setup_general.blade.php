@@ -35,15 +35,15 @@
                             <!-- ---------------------------------- -->
                             
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
-                                    <span class="hide-menu">Calendar Creation</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Calendar Creation</span>
                                 </a></li>
                             <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.index') }}">
-                                    <span class="hide-menu">Attendance</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Attendance</span>
                                 </a></li>
                             @if(hasRole('Training-MCTP'))
                              <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('mdo-escrot-exemption.index') }}">
-                                        <span class="hide-menu">Escort/Moderator Duty</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Escort/Moderator Duty</span>
                                     </a></li>
                             @endif
                             
@@ -51,20 +51,20 @@
                                 @if(! hasRole('Training-MCTP'))
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('send.notice.management.index') }}">
-                                    <span class="hide-menu">Send Direct Notice</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Send Direct Notice</span>
                                 </a></li>
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('memo.notice.management.index') }}">
-                                    <span class="hide-menu">Send Memo / Notice</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Send Memo / Notice</span>
                                 </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('memo.discipline.index') }}">
-                                    <span class="hide-menu">Send Discipline Memo</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Send Discipline Memo</span>
                                 </a></li>
                                
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('admin.memo-notice.index') }}">
-                                    <span class="hide-menu">Memo / Notice Template</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Memo / Notice Template</span>
                                 </a></li>
                                 @endif
                             {{-- USER Feedback --}}
@@ -77,19 +77,19 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#userFeedbackCollapse" role="button"
                                     aria-expanded="false" aria-controls="userFeedbackCollapse">
-                                    <span class="hide-menu fw-bold">Session Feedback</span>
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Session Feedback</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="userFeedbackCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('feedback.get.feedbackList') }}">
-                                        <span class="hide-menu">Feedback History</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Feedback History</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('feedback.get.studentFeedback') }}">
-                                        <span class="hide-menu">Session Feedback</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Session Feedback</span>
                                     </a></li>
 
                             </ul>
@@ -102,18 +102,18 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#subjectCollapse" role="button"
                                     aria-expanded="false" aria-controls="subjectCollapse">
-                                    <span class="hide-menu fw-bold">Subject & Module Master</span>
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Subject & Module Master</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="subjectCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link" href="{{ route('subject.index') }}">
-                                        <span class="hide-menu">Subject Master</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Subject Master</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('subject-module.index') }}">
-                                        <span class="hide-menu">Subject Module Master</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Subject Module Master</span>
                                     </a></li>
                             </ul>
                              @endif

@@ -6,8 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Registration - Foundation Course | Lal Bahadur Shastri National Academy of Administration</title>
     <link rel="shortcut icon" type="image/x-icon" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
     <!-- Icon library (Bootstrap Icons or Lucide) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
@@ -292,7 +291,7 @@
                                 <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button"
                                     id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="material-icons" style="color: #004a93;">account_circle</i>
-                                    <span class="ms-2">{{ Auth::user()->name }}</span>
+                                    <span class="ms-2">{{ Auth::user() ? Auth::user()->name : 'Guest' }}</span>
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
                                     <!-- <li><a class="dropdown-item" href="#">Profile</a></li> -->
@@ -1298,7 +1297,7 @@
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"
         integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous">
     </script>
     <script src="{{ asset('admin_assets/js/google-translate.js') }}"></script>

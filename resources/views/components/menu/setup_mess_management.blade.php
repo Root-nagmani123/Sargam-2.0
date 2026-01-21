@@ -20,19 +20,19 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#messmanagementCollapse" role="button"
                                     aria-expanded="false" aria-controls="messmanagementCollapse">
-                                    <span class="hide-menu fw-bold">Session Feedback</span>
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Session Feedback</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">keyboard_arrow_down</i>
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="messmanagementCollapse">
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="#">
-                                        <span class="hide-menu">Feedback History</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Feedback History</span>
                                     </a></li>
                                 <li class="sidebar-item"><a class="sidebar-link"
                                         href="#">
-                                        <span class="hide-menu">Session Feedback</span>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Session Feedback</span>
                                     </a></li>
 
                             </ul>
