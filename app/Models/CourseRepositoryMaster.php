@@ -145,7 +145,7 @@ class CourseRepositoryMaster extends Model
      */
     public function topic()
     {
-        return $this->belongsTo(CourseRepositorySubtopic::class, 'topic_pk', 'pk');
+        return $this->belongsTo(Timetable::class, 'topic_pk', 'pk');
     }
 
     /**

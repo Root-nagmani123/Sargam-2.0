@@ -143,8 +143,14 @@
                                 <td class="text-center">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
                                 <td class="text-center">
                                     <small>
-                                        @if($doc->detail && $doc->detail->course)
-                                            {{ $doc->detail->course->course_name }}
+                                        @if($doc->detail)
+                                            @if($doc->detail->course)
+                                                {{ $doc->detail->course->course_name }}
+                                            @elseif($doc->detail->program_structure_pk)
+                                                {{ $doc->detail->program_structure_pk }}
+                                            @else
+                                                N/A
+                                            @endif
                                         @else
                                             N/A
                                         @endif
@@ -152,8 +158,14 @@
                                 </td>
                                 <td class="text-center">
                                     <small>
-                                        @if($doc->detail && $doc->detail->subject)
-                                            {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                        @if($doc->detail)
+                                            @if($doc->detail->subject)
+                                                {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                            @elseif($doc->detail->subject_pk)
+                                                {{ Str::limit($doc->detail->subject_pk, 20) }}
+                                            @else
+                                                N/A
+                                            @endif
                                         @else
                                             N/A
                                         @endif
@@ -161,8 +173,14 @@
                                 </td>
                                 <td class="text-center">
                                     <small>
-                                        @if($doc->detail && $doc->detail->topic)
-                                            {{ Str::limit($doc->detail->topic->course_repo_topic, 15) }}
+                                        @if($doc->detail)
+                                            @if($doc->detail->topic)
+                                                {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
+                                            @elseif($doc->detail->topic_pk)
+                                                {{ Str::limit($doc->detail->topic_pk, 15) }}
+                                            @else
+                                                N/A
+                                            @endif
                                         @else
                                             N/A
                                         @endif
@@ -172,6 +190,8 @@
                                     <small>
                                         @if($doc->detail && $doc->detail->session_date)
                                             {{ $doc->detail->session_date->format('d-m-Y') }}
+                                        @elseif($doc->detail && $doc->detail->session_date)
+                                            {{ $doc->detail->session_date }}
                                         @else
                                             N/A
                                         @endif
@@ -179,8 +199,14 @@
                                 </td>
                                 <td class="text-center">
                                     <small>
-                                        @if($doc->detail && $doc->detail->creator)
-                                            {{ Str::limit($doc->detail->creator->name, 15) }}
+                                        @if($doc->detail)
+                                            @if($doc->detail->author)
+                                                {{ Str::limit($doc->detail->author->full_name, 15) }}
+                                            @elseif($doc->detail->author_name)
+                                                {{ Str::limit($doc->detail->author_name, 15) }}
+                                            @else
+                                                N/A
+                                            @endif
                                         @else
                                             N/A
                                         @endif
@@ -338,46 +364,25 @@
 
                         <!-- Group Name -->
                         <div class="mb-3">
-                            <label for="group_name" class="form-label"><strong>Group Name</strong></label>
-                            <select class="form-select" id="group_name" name="group_name">
+                            <label for="subject_name" class="form-label"><strong>Subject Name</strong></label>
+                            <select class="form-select" id="subject_name" name="subject_name">
                                 <option value="">-- Select --</option>
                             </select>
-                            <small class="text-muted d-block mt-1">Select Group Name</small>
+                            <small class="text-muted d-block mt-1">Select Subject Name</small>
                         </div>
 
                         <!-- Timetable -->
                         <div class="mb-3">
-                            <label for="timetable_name" class="form-label"><strong>Timetable</strong></label>
+                            <label for="timetable_name" class="form-label"><strong>Topic Name</strong></label>
                             <select class="form-select" id="timetable_name" name="timetable_name">
                                 <option value="">-- Select --</option>
                             </select>
                             <small class="text-muted d-block mt-1">Select Timetable</small>
                         </div>
 
-                        <!-- Major Subject Name -->
-                        <div class="mb-3">
-                            <label for="major_subject" class="form-label"><strong>Major Subject Name</strong></label>
-                            <select class="form-select" id="major_subject" name="major_subject">
-                                <option value="">-- Select --</option>
-                                @foreach(($subjects ?? []) as $subject)
-                                    <option value="{{ $subject->pk }}">{{ $subject->subject_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Major Subject Name</small>
-                        </div>
+                       
 
-                        <!-- Topic Name -->
-                        <div class="mb-3">
-                            <label for="topic_name" class="form-label"><strong>Topic Name</strong></label>
-                            <select class="form-select" id="topic_name" name="topic_name">
-                                <option value="">-- Select --</option>
-                                @foreach(($topics ?? []) as $topic)
-                                    <option value="{{ $topic->pk }}">{{ $topic->course_repo_topic }} - {{ $topic->course_repo_sub_topic }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Topic Name</small>
-                        </div>
-
+                     
                         <!-- Session Date -->
                         <div class="mb-3">
                             <label for="session_date" class="form-label"><strong>Session Date</strong></label>
@@ -399,8 +404,8 @@
                             <small class="text-muted d-block mt-1">Select Author Name</small>
                         </div>
                          <div class="mb-3">
-                            <label for="keywords_other" class="form-label"><strong>Keywords *</strong></label>
-                            <textarea class="form-control" id="keywords_other" name="keywords_other" rows="2" placeholder="Enter KeyWord" required></textarea>
+                            <label for="keywords_course" class="form-label"><strong>Keywords *</strong></label>
+                            <textarea class="form-control" id="keywords_course" name="keywords_course" rows="2" placeholder="Enter KeyWord" required></textarea>
                         </div>
 
                     </div>
@@ -410,7 +415,7 @@
                         <!-- Course Name -->
                         <div class="mb-3">
                             <label for="course_name_other" class="form-label"><strong>Course Name *</strong></label>
-                            <select class="form-select" id="course_name_other" name="course_name_other" required>
+                            <select class="form-select" id="course_name_other" name="course_name_other">
                                 <option value="">-- Select --</option>
                                 @foreach(($courses ?? []) as $course)
                                     <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
@@ -422,52 +427,36 @@
                         <!-- Major Subject Name -->
                         <div class="mb-3">
                             <label for="major_subject_other" class="form-label"><strong>Major Subject Name</strong></label>
-                            <select class="form-select" id="major_subject_other" name="major_subject_other">
-                                <option value="">-- Select --</option>
-                                @foreach(($subjects ?? []) as $subject)
-                                    <option value="{{ $subject->pk }}">{{ $subject->subject_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Major Subject Name</small>
+                            <input type="text" class="form-control" id="major_subject_other" name="major_subject_other" placeholder="Enter Major Subject Name">
+                            <small class="text-muted d-block mt-1">Enter Major Subject Name</small>
                         </div>
 
                         <!-- Topic Name -->
                         <div class="mb-3">
                             <label for="topic_name_other" class="form-label"><strong>Topic Name</strong></label>
-                            <select class="form-select" id="topic_name_other" name="topic_name_other">
-                                <option value="">-- Select --</option>
-                                @foreach(($topics ?? []) as $topic)
-                                    <option value="{{ $topic->pk }}">{{ $topic->course_repo_topic }} - {{ $topic->course_repo_sub_topic }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Topic Name</small>
+                            <input type="text" class="form-control" id="topic_name_other" name="topic_name_other" placeholder="Enter Topic Name">
+                            <small class="text-muted d-block mt-1">Enter Topic Name</small>
                         </div>
 
                         <!-- Session Date -->
                         <div class="mb-3">
                             <label for="session_date_other" class="form-label"><strong>Session Date *</strong></label>
-                            <select class="form-select" id="session_date_other" name="session_date_other" required>
-                                <option value="">-- Select --</option>
-                            </select>
-                            <small class="text-muted d-block mt-1">Pick Date</small>
+                            <input type="text" class="form-control" id="session_date_other" name="session_date_other" placeholder="Enter Session Date (e.g., 21-01-2026)">
+                            <small class="text-muted d-block mt-1">Enter Session Date</small>
                         </div>
 
                         <!-- Author Name -->
                         <div class="mb-3">
                             <label for="author_name_other" class="form-label"><strong>Author Name</strong></label>
-                            <select class="form-select" id="author_name_other" name="author_name_other">
-                                <option value="">-- Select --</option>
-                                @foreach(($authors ?? []) as $author)
-                                    <option value="{{ $author->pk }}">{{ $author->full_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Author Name</small>
+                            <input type="text" class="form-control" id="author_name_other" name="author_name_other" placeholder="Enter Author Name">
+                            <small class="text-muted d-block mt-1">Enter Author Name</small>
                         </div>
 
                         <!-- Keywords -->
                         <div class="mb-3">
                             <label for="keywords_other" class="form-label"><strong>Keywords *</strong></label>
-                            <textarea class="form-control" id="keywords_other" name="keywords_other" rows="2" placeholder="Enter KeyWord" required></textarea>
+                            <textarea class="form-control" id="keywords_other" name="keywords_other" rows="2" placeholder="Keywords will be auto-generated" readonly></textarea>
+                            <small class="text-muted d-block mt-1">Keywords are auto-generated from the fields above</small>
                         </div>
 
 
@@ -513,79 +502,17 @@
 
                     <!-- Institutional Category Fields -->
                     <div id="institutionalFields" class="category-fields" style="display: none;">
-                        <!-- Course Name -->
-                        <div class="mb-3">
-                            <label for="course_name_institutional" class="form-label"><strong>Course Name *</strong></label>
-                            <select class="form-select" id="course_name_institutional" name="course_name_institutional" required>
-                                <option value="">-- Select --</option>
-                                @foreach(($courses ?? []) as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Course Name</small>
-                        </div>
-
-                        <!-- Major Subject Name -->
-                        <div class="mb-3">
-                            <label for="major_subject_institutional" class="form-label"><strong>Major Subject Name</strong></label>
-                            <select class="form-select" id="major_subject_institutional" name="major_subject_institutional">
-                                <option value="">-- Select --</option>
-                                @foreach(($subjects ?? []) as $subject)
-                                    <option value="{{ $subject->pk }}">{{ $subject->subject_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Major Subject Name</small>
-                        </div>
-
-                        <!-- Topic Name -->
-                        <div class="mb-3">
-                            <label for="topic_name_institutional" class="form-label"><strong>Topic Name</strong></label>
-                            <select class="form-select" id="topic_name_institutional" name="topic_name_institutional">
-                                <option value="">-- Select --</option>
-                                @foreach(($topics ?? []) as $topic)
-                                    <option value="{{ $topic->pk }}">{{ $topic->course_repo_topic }} - {{ $topic->course_repo_sub_topic }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Topic Name</small>
-                        </div>
-
-                        <!-- Session Date -->
-                        <div class="mb-3">
-                            <label for="session_date_institutional" class="form-label"><strong>Session Date *</strong></label>
-                            <select class="form-select" id="session_date_institutional" name="session_date_institutional" required>
-                                <option value="">-- Select --</option>
-                            </select>
-                            <small class="text-muted d-block mt-1">Pick Date</small>
-                        </div>
-
-                        <!-- Author Name -->
-                        <div class="mb-3">
-                            <label for="author_name_institutional" class="form-label"><strong>Author Name</strong></label>
-                            <select class="form-select" id="author_name_institutional" name="author_name_institutional">
-                                <option value="">-- Select --</option>
-                                @foreach(($authors ?? []) as $author)
-                                    <option value="{{ $author->pk }}">{{ $author->full_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-1">Select Author Name</small>
-                        </div>
-
-                        <!-- Add Keywords Section -->
-                        <div class="mb-3">
-                            <label class="form-label"><strong>Add Key words</strong></label>
-                            <small class="text-muted d-block mb-2">add keyword</small>
-                        </div>
-
+                       
                         <!-- Keywords -->
                         <div class="mb-3">
-                            <label for="keywords_institutional" class="form-label"><strong>Keywords *</strong></label>
-                            <textarea class="form-control" id="keywords_institutional" name="keywords_institutional" rows="2" placeholder="Enter Keywords" required></textarea>
+                            <label for="Key_words_institutional" class="form-label"><strong>Add Key words *</strong></label>
+                            <textarea class="form-control" id="Key_words_institutional" name="Key_words_institutional" rows="2" placeholder="Enter Keywords"></textarea>
                         </div>
 
                         <!-- Video Link -->
                         <div class="mb-3">
-                            <label for="video_link_institutional" class="form-label"><strong>Add Video Link</strong></label>
-                            <textarea class="form-control" id="video_link_institutional" name="video_link_institutional" rows="2" placeholder="Enter Video Link"></textarea>
+                            <label for="keyword_institutional" class="form-label"><strong>keyword</strong></label>
+                            <textarea class="form-control" id="keyword_institutional" name="keyword_institutional" rows="2" placeholder="Enter Video Link"></textarea>
                         </div>
 
                         <!-- Attachments Table for Institutional -->
@@ -691,6 +618,23 @@
 @endsection
 
 @section('scripts')
+<style>
+    /* Make modal scrollable with better styling */
+    .modal-dialog-scrollable .modal-body {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+    
+    .modal-dialog-scrollable {
+        max-height: calc(100vh - 60px);
+    }
+    
+    #uploadModal .modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const repositoryPk = {{ $repository->pk }};
@@ -735,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 $.each(response.data, function (i, group) {
                     $group.append(
                         `<option value="${group.pk}">
-                            ${group.group_name} (${group.group_type})
+                            ${group.subject_name}
                         </option>`
                     );
                 });
@@ -762,7 +706,8 @@ document.addEventListener('DOMContentLoaded', function() {
         populateDropdown(timetableSelectId, [], 'pk', function(t) { return ''; });
         
         if (!groupPk) return;
-        
+        console.log('Selected Group PK:', groupPk);
+         
         // AJAX call to get timetables
         $.ajax({
             url: '/course-repository/timetables',
@@ -775,7 +720,7 @@ document.addEventListener('DOMContentLoaded', function() {
             success: function(response) {
                 if (response.success) {
                     populateDropdown(timetableSelectId, response.data, 'pk', function(t) {
-                        return t.display;
+                        return t.subject_topic;
                     });
                 }
             },
@@ -801,21 +746,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('courseVideoLink').style.display = 'block';
                 document.getElementById('courseAttachments').style.display = 'block';
                 // Make course-specific keywords required
-                document.getElementById('keywords').removeAttribute('required');
+                document.getElementById('keywords_course').setAttribute('required' , 'required');
                 document.getElementById('keywords_other').removeAttribute('required');
-                document.getElementById('keywords_institutional').removeAttribute('required');
+                document.getElementById('Key_words_institutional').removeAttribute('required');
             } else if (category === 'Other') {
                 document.getElementById('otherFields').style.display = 'block';
                 // Make other-specific keywords required
-                document.getElementById('keywords').removeAttribute('required');
+                document.getElementById('keywords_course').removeAttribute('required');
                 document.getElementById('keywords_other').setAttribute('required', 'required');
-                document.getElementById('keywords_institutional').removeAttribute('required');
+                document.getElementById('Key_words_institutional').removeAttribute('required');
             } else if (category === 'Institutional') {
                 document.getElementById('institutionalFields').style.display = 'block';
                 // Make institutional-specific keywords required
-                document.getElementById('keywords').removeAttribute('required');
+                document.getElementById('keywords_course').removeAttribute('required');
                 document.getElementById('keywords_other').removeAttribute('required');
-                document.getElementById('keywords_institutional').setAttribute('required', 'required');
+                document.getElementById('Key_words_institutional').setAttribute('required', 'required');
             }
         });
     });
@@ -827,12 +772,133 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Bind cascading change events for Course -> Group -> Timetable
     $('#course_name').on('change', function() {
-        onCourseChange('course_name', 'group_name');
+        onCourseChange('course_name', 'subject_name');
     });
     
-    $('#group_name').on('change', function() {
-        onGroupChange('group_name', 'timetable_name');
+    $('#subject_name').on('change', function() {
+        onGroupChange('subject_name', 'timetable_name');
     });
+
+    // Function to update keywords based on selected values
+    function updateKeywords() {
+        const courseName = $('#course_name option:selected').text().trim();
+        const subjectName = $('#subject_name option:selected').text().trim();
+        const topicName = $('#timetable_name option:selected').text().trim();
+        const sessionDate = $('#session_date option:selected').text().trim();
+        const authorName = $('#author_name option:selected').text().trim();
+        
+        // Build keywords string from selected values (comma-separated)
+        const keywordsParts = [];
+        if (courseName && courseName !== '-- Select --') keywordsParts.push(courseName);
+        if (subjectName && subjectName !== '-- Select --') keywordsParts.push(subjectName);
+        if (topicName && topicName !== '-- Select --') keywordsParts.push(topicName);
+        if (sessionDate && sessionDate !== '-- Select --') keywordsParts.push(sessionDate);
+        if (authorName && authorName !== '-- Select --') keywordsParts.push(authorName);
+        
+        const keywords = keywordsParts.join(', ');
+        $('#keywords_course').val(keywords);
+    }
+
+    // Update keywords for Other category
+    function updateKeywordsOther() {
+        const courseName = $('#course_name_other option:selected').text().trim();
+        const subjectName = $('#major_subject_other').val().trim();
+        const topicName = $('#topic_name_other').val().trim();
+        const sessionDate = $('#session_date_other').val().trim();
+        const authorName = $('#author_name_other').val().trim();
+        
+        // Build keywords string from all values (comma-separated)
+        const keywordsParts = [];
+        if (courseName && courseName !== '-- Select --') keywordsParts.push(courseName);
+        if (subjectName) keywordsParts.push(subjectName);
+        if (topicName) keywordsParts.push(topicName);
+        if (sessionDate) keywordsParts.push(sessionDate);
+        if (authorName) keywordsParts.push(authorName);
+        
+        const keywords = keywordsParts.join(', ');
+        $('#keywords_other').val(keywords);
+    }
+
+    // Handle timetable selection to populate session date and author
+    $('#timetable_name').on('change', function() {
+        const timetablePk = $(this).val();
+        const $sessionDate = $('#session_date');
+        const $authorName = $('#author_name');
+        
+        // Clear the dropdowns
+        $sessionDate.html('<option value="">-- Select --</option>');
+        $authorName.html('<option value="">-- Select --</option>');
+        
+        if (!timetablePk) return;
+        
+        // Get the full timetable data to extract date and faculty
+        $.ajax({
+            url: "{{ route('course-repository.timetables') }}",
+            type: "GET",
+            data: { 
+                group_pk: $('#subject_name').val(),
+                course_master_pk: $('#course_name').val()
+            },
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Find the selected timetable in the response
+                    const selectedTimetable = response.data.find(t => t.pk == timetablePk);
+                    if (selectedTimetable) {
+                        // Format date as dd-mm-yyyy for display
+                        const dateFormatted = selectedTimetable.START_DATE 
+                            ? new Date(selectedTimetable.START_DATE).toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            }).replace(/\//g, '-')
+                            : '';
+                        
+                        // Populate session date using jQuery for better compatibility
+                        $sessionDate.empty().append(
+                            $('<option></option>').val(dateFormatted).text(dateFormatted)
+                        ).val(dateFormatted);
+                        
+                        // Populate author/faculty name if exists
+                        if (selectedTimetable.faculty_name && selectedTimetable.faculty_name.trim()) {
+                            $authorName.empty().append(
+                                $('<option></option>').val(selectedTimetable.pk).text(selectedTimetable.faculty_name)
+                            ).val(selectedTimetable.pk);
+                        } else {
+                            // If no faculty name, show empty option
+                            $authorName.html('<option value="">-- Select --</option>');
+                        }
+                        
+                        // Auto-update keywords after loading date and author
+                        setTimeout(function() {
+                            updateKeywords();
+                        }, 100);
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('Error loading timetable details:', error);
+            }
+        });
+    });
+
+    // Bind keyword update to dropdown changes for Course category
+    $('#course_name').on('change', updateKeywords);
+    $('#subject_name').on('change', updateKeywords);
+    $('#timetable_name').on('change', updateKeywords);
+    $('#session_date').on('change', updateKeywords);
+    $('#author_name').on('change', updateKeywords);
+
+    // Bind keyword update to fields for Other category (on keyup and change)
+    $('#course_name_other').on('change', updateKeywordsOther);
+    $('#major_subject_other').on('keyup change', updateKeywordsOther);
+    $('#topic_name_other').on('keyup change', updateKeywordsOther);
+    $('#session_date_other').on('keyup change', updateKeywordsOther);
+    $('#author_name_other').on('keyup change', updateKeywordsOther);
 
     // Edit button functionality
     document.querySelectorAll('.edit-repo').forEach(btn => {
@@ -1014,6 +1080,39 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add category
         uploadData.append('category', selectedCategory);
         
+        // Add course, subject, timetable based on selected category
+        if (selectedCategory === 'Course') {
+            const course_name = formData.get('course_name') || '';
+            const subject_name = formData.get('subject_name') || '';
+            const timetable_name = formData.get('timetable_name') || '';
+            const session_date = formData.get('session_date') || '';
+            const author_name = formData.get('author_name') || '';
+            uploadData.append('course_name', course_name);
+            uploadData.append('subject_name', subject_name);
+            uploadData.append('timetable_name', timetable_name);
+            uploadData.append('session_date', session_date);
+            uploadData.append('author_name', author_name);
+        } else if (selectedCategory === 'Other') {
+            const course_name_other = formData.get('course_name_other') || '';
+            const major_subject_other = formData.get('major_subject_other') || '';
+            const topic_name_other = formData.get('topic_name_other') || '';
+            const session_date_other = formData.get('session_date_other') || '';
+            const author_name_other = formData.get('author_name_other') || '';
+            uploadData.append('course_name', course_name_other);
+            uploadData.append('subject_name', major_subject_other);
+            uploadData.append('timetable_name', topic_name_other);
+            uploadData.append('session_date', session_date_other);
+            uploadData.append('author_name', author_name_other);
+        } else if (selectedCategory === 'Institutional') {
+            // Institutional category doesn't have these fields, send empty
+            uploadData.append('course_name', '');
+            uploadData.append('subject_name', '');
+            uploadData.append('timetable_name', '');
+            uploadData.append('session_date', '');
+            uploadData.append('author_name', '');
+        }
+
+        
         // Add files and titles
         attachmentFiles.forEach((fileInput, index) => {
             if (fileInput.files.length > 0) {
@@ -1024,17 +1123,23 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Add keywords based on selected category
         if (selectedCategory === 'Course') {
-            const keywordsValue = document.getElementById('keywords').value;
+            const keywordsValue = document.getElementById('keywords_course').value;
             uploadData.append('keywords', keywordsValue);
-            uploadData.append('video_link', document.getElementById('video_link').value);
+            const videoLink = document.getElementById('video_link');
+            if (videoLink) {
+                uploadData.append('video_link', videoLink.value);
+            }
         } else if (selectedCategory === 'Other') {
             const keywordsValue = document.getElementById('keywords_other').value;
             uploadData.append('keywords', keywordsValue);
-            uploadData.append('video_link', document.getElementById('video_link_other').value);
+            uploadData.append('video_link', ''); // No video link for Other category
         } else if (selectedCategory === 'Institutional') {
-            const keywordsValue = document.getElementById('keywords_institutional').value;
+            const keywordsValue = document.getElementById('Key_words_institutional').value;
             uploadData.append('keywords', keywordsValue);
-            uploadData.append('video_link', document.getElementById('video_link_institutional').value);
+            const videoLink = document.getElementById('keyword_institutional');
+            if (videoLink) {
+                uploadData.append('video_link', videoLink.value);
+            }
         }
         
         fetch(`/course-repository/${repositoryPk}/upload-document`, {
