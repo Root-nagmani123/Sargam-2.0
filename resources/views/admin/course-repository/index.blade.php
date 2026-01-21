@@ -182,7 +182,7 @@
             </div>
             <form id="uploadForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-body">
+                <div class="modal-body"> 
                     <div class="mb-3">
                         <label for="file" class="form-label"><strong>Select File *</strong></label>
                         <input type="file" class="form-control" id="file" name="file" required accept="*/*">
