@@ -28,19 +28,10 @@
   <!-- Force light mode before theme scripts load -->
   <script>
     // Ensure light mode is set before theme initialization
-    // This runs after Bootstrap loads to reinforce light mode
-    (function() {
-      'use strict';
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-      
-      // Override Bootstrap's theme detection if it hasn't been overridden yet
-      if (window.bootstrap && window.bootstrap.getTheme) {
-        const originalGetTheme = window.bootstrap.getTheme;
-        window.bootstrap.getTheme = function() {
-          return 'light';
-        };
-      }
-    })();
+    document.documentElement.setAttribute('data-bs-theme', 'light');
+    // Prevent Bootstrap 5.3+ from auto-detecting system dark mode
+    // Bootstrap checks prefers-color-scheme only if data-bs-theme is not set
+    // By setting it explicitly, we prevent auto-detection
   </script>
   <script src="{{asset('admin_assets/js/theme/app.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
@@ -48,69 +39,22 @@
   <!-- Ensure light mode persists after theme scripts -->
   <script>
     // Force light mode after theme scripts initialize
-    (function() {
-      'use strict';
-      
-      function forceLightMode() {
-        document.documentElement.setAttribute('data-bs-theme', 'light');
-        document.documentElement.style.colorScheme = 'light';
-        if (document.body) {
-          document.body.style.colorScheme = 'light';
-          if (document.body.getAttribute('data-bs-theme') && 
-              document.body.getAttribute('data-bs-theme') !== 'light') {
-            document.body.setAttribute('data-bs-theme', 'light');
-          }
-        }
-        
-        // Force all Bootstrap CSS variables to light mode
-        const root = document.documentElement;
-        root.style.setProperty('--bs-body-bg', '#fff', 'important');
-        root.style.setProperty('--bs-body-color', '#212529', 'important');
-        root.style.setProperty('color-scheme', 'light', 'important');
-      }
-      
-      // Run immediately
-      forceLightMode();
-      
-      // Run on DOMContentLoaded
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', forceLightMode);
-      } else {
-        forceLightMode();
-      }
-      
-      // Override any theme changes with aggressive observer
+    document.addEventListener('DOMContentLoaded', function() {
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+      // Override any theme changes
       const observer = new MutationObserver(function(mutations) {
-        let needsFix = false;
         mutations.forEach(function(mutation) {
-          if (mutation.attributeName === 'data-bs-theme') {
-            const htmlTheme = document.documentElement.getAttribute('data-bs-theme');
-            const bodyTheme = document.body ? document.body.getAttribute('data-bs-theme') : null;
-            if (htmlTheme !== 'light' || (bodyTheme && bodyTheme !== 'light')) {
-              needsFix = true;
-            }
+          if (mutation.attributeName === 'data-bs-theme' && 
+              document.documentElement.getAttribute('data-bs-theme') !== 'light') {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
           }
         });
-        if (needsFix) {
-          forceLightMode();
-        }
       });
-      
       observer.observe(document.documentElement, {
         attributes: true,
         attributeFilter: ['data-bs-theme']
       });
-      
-      if (document.body) {
-        observer.observe(document.body, {
-          attributes: true,
-          attributeFilter: ['data-bs-theme']
-        });
-      }
-      
-      // Periodic check as ultimate fallback
-      setInterval(forceLightMode, 500);
-    })();
+    });
   </script>
   <script src="{{asset('admin_assets/js/theme/sidebarmenu.js')}}"></script>
 

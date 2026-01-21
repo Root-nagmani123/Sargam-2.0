@@ -1,98 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="zxx" data-bs-theme="light">
 
 <head>
-    <!-- Set initial theme from localStorage before paint (avoids flash) -->
+    <!-- Force light mode - prevent system theme detection -->
     <script>
-        // CRITICAL: This must run BEFORE Bootstrap loads to prevent dark mode detection
+        // Force light theme before any other scripts run
+        // Bootstrap 5.3+ only auto-detects dark mode if data-bs-theme is not set
+        // By setting it explicitly here, we prevent auto-detection
         (function() {
-            'use strict';
-            
-            // Set light theme immediately
             document.documentElement.setAttribute('data-bs-theme', 'light');
-            
-            // Override matchMedia to prevent Bootstrap from detecting dark mode preference
-            if (window.matchMedia) {
-                const originalMatchMedia = window.matchMedia.bind(window);
-                window.matchMedia = function(query) {
-                    const result = originalMatchMedia(query);
-                    
-                    // Intercept prefers-color-scheme queries
-                    if (query && query.includes('prefers-color-scheme')) {
-                        // Create a fake MediaQueryList that always returns false for dark mode
-                        const fakeResult = {
-                            matches: false,
-                            media: query,
-                            onchange: null,
-                            addListener: function() {},
-                            removeListener: function() {},
-                            addEventListener: function() {},
-                            removeEventListener: function() {},
-                            dispatchEvent: function() { return false; }
-                        };
-                        
-                        // If query is for dark mode, return false
-                        if (query.includes('dark')) {
-                            return fakeResult;
-                        }
-                    }
-                    
-                    return result;
-                };
-            }
-            
-            // Monitor and prevent theme changes on html element
-            const htmlObserver = new MutationObserver(function(mutations) {
-                mutations.forEach(function(mutation) {
-                    if (mutation.type === 'attributes' && 
-                        mutation.attributeName === 'data-bs-theme') {
-                        const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                        if (currentTheme !== 'light') {
-                            document.documentElement.setAttribute('data-bs-theme', 'light');
-                            // Force reapply light mode styles
-                            document.documentElement.style.colorScheme = 'light';
-                        }
-                    }
-                });
-            });
-            
-            // Start observing html element immediately
-            htmlObserver.observe(document.documentElement, {
-                attributes: true,
-                attributeFilter: ['data-bs-theme']
-            });
-            
-            // Also monitor body element
-            if (document.body) {
-                const bodyObserver = new MutationObserver(function(mutations) {
-                    mutations.forEach(function(mutation) {
-                        if (mutation.type === 'attributes' && 
-                            mutation.attributeName === 'data-bs-theme') {
-                            const currentTheme = document.body.getAttribute('data-bs-theme');
-                            if (currentTheme && currentTheme !== 'light') {
-                                document.body.setAttribute('data-bs-theme', 'light');
-                            }
-                        }
-                    });
-                });
-                
-                bodyObserver.observe(document.body, {
-                    attributes: true,
-                    attributeFilter: ['data-bs-theme']
-                });
-            }
-            
-            // Periodic check as fallback
-            setInterval(function() {
-                if (document.documentElement.getAttribute('data-bs-theme') !== 'light') {
-                    document.documentElement.setAttribute('data-bs-theme', 'light');
-                    document.documentElement.style.colorScheme = 'light';
-                }
-                if (document.body && document.body.getAttribute('data-bs-theme') && 
-                    document.body.getAttribute('data-bs-theme') !== 'light') {
-                    document.body.setAttribute('data-bs-theme', 'light');
-                }
-            }, 250);
         })();
     </script>
     @include('admin.layouts.pre_header')
