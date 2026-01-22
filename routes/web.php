@@ -532,6 +532,36 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/export', 'export')->name('export');
         Route::post('/update-comment', 'updateComment')->name('update.comment');
     });
+
+    // Mess Management
+    Route::prefix('mess')->name('mess.')->group(function () {
+        // Master Data
+        Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
+        Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
+        Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->only(['index', 'create', 'store']);
+        Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
+        Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->only(['index', 'create', 'store']);
+        Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->only(['index', 'create', 'store']);
+        Route::resource('mealmappings', \App\Http\Controllers\Mess\MealMappingController::class)->only(['index', 'create', 'store']);
+        Route::resource('permissionsettings', \App\Http\Controllers\Mess\PermissionSettingController::class)->only(['index', 'create', 'store']);
+        Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'create', 'store']);
+        
+        // Store Management
+        Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['destroy', 'show']);
+        
+        // Material Request Workflow
+        Route::resource('materialrequests', \App\Http\Controllers\Mess\MaterialRequestController::class)->except(['edit', 'update', 'destroy']);
+        Route::get('materialrequests/{id}/approve', [\App\Http\Controllers\Mess\MaterialRequestController::class, 'approve'])->name('materialrequests.approve');
+        Route::post('materialrequests/{id}/process-approval', [\App\Http\Controllers\Mess\MaterialRequestController::class, 'processApproval'])->name('materialrequests.processApproval');
+        
+        // Purchase Order Management
+        Route::resource('purchaseorders', \App\Http\Controllers\Mess\PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
+        Route::post('purchaseorders/{id}/approve', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
+        Route::post('purchaseorders/{id}/reject', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
+        
+        // Inbound Transactions (Goods Receipt)
+        Route::resource('inboundtransactions', \App\Http\Controllers\Mess\InboundTransactionController::class)->except(['edit', 'update', 'destroy']);
+    });
 });
 
 
