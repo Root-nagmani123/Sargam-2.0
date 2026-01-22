@@ -113,6 +113,19 @@
                                                     </div>
                                                 </a>
                                             </li>
+                                            <li class="mini-nav-item {{ request()->is('estate*') ? 'selected' : '' }}"
+                                                id="mini-10">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Estate Management">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">location_city</i>
+                                                    </div>
+                                                </a>
+                                            </li>
                                             @endif
 
                                             @endif
@@ -164,6 +177,10 @@
                     <!-- Mess Management -->
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mess_management />
+
+                    <!-- Estate Management -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_estate_management />
 
                 </div>
             </div>

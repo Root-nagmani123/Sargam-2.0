@@ -59,6 +59,9 @@ Route::post('/login', [LoginController::class, 'authenticate'])->name('post_logi
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
 
+    // Estate Management Routes
+    require __DIR__.'/estate.php';
+
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
             ->name('users.getRoles');

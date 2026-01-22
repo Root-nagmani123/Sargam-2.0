@@ -25,10 +25,16 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
-        'email',
+        'user_name',
+        'first_name',
+        'last_name',
+        'email_id',
+        'mobile_no',
+        'jbp_password',
         'password',
         'last_login',
+        'Active_inactive',
+        'user_category',
     ];
 
     /**
@@ -49,6 +55,48 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
     ];
+
+    /**
+     * Accessor for name to combine first_name and last_name
+     */
+    public function getNameAttribute()
+    {
+        $firstName = $this->attributes['first_name'] ?? '';
+        $lastName = $this->attributes['last_name'] ?? '';
+        return trim($firstName . ' ' . $lastName) ?: ($this->attributes['user_name'] ?? 'N/A');
+    }
+
+    /**
+     * Accessor for email to map to email_id column
+     */
+    public function getEmailAttribute()
+    {
+        return $this->attributes['email_id'] ?? '';
+    }
+
+    /**
+     * Mutator for email to map to email_id column
+     */
+    public function setEmailAttribute($value)
+    {
+        $this->attributes['email_id'] = $value;
+    }
+
+    /**
+     * Accessor for is_active to map to Active_inactive column
+     */
+    public function getIsActiveAttribute()
+    {
+        return $this->attributes['Active_inactive'] ?? 0;
+    }
+
+    /**
+     * Scope for active users
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('Active_inactive', 1);
+    }
 
     public function getAuthIdentifierName()
     {
