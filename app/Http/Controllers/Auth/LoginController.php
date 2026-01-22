@@ -67,7 +67,7 @@ class LoginController extends Controller
 
         return redirect()->back()->with('error', 'Invalid username or password');
     }
-    public function authenticate(Request $request)
+   public function authenticate(Request $request)
 {
     $this->validateLogin($request);
 
@@ -77,50 +77,45 @@ class LoginController extends Controller
 
     try {
 
-        /* =====================================================
-           LOCAL / DEV LOGIN (NO LDAP)
-        ===================================================== */
+        /* ================= LOCAL ================= */
         if (in_array($serverHost, ['localhost', '127.0.0.1', 'dev.local', '98.70.99.215'])) {
 
             $user = User::where('user_name', $username)->first();
-
             if (!$user) {
                 return redirect()->back()->with('error', 'Invalid username or password.');
             }
 
             Auth::login($user);
+        }
 
-        } 
-        /* =====================================================
-           PRODUCTION LOGIN
-        ===================================================== */
+        /* ================= PRODUCTION ================= */
         else {
 
             $user = User::where('user_name', $username)->first();
-
             if (!$user) {
                 return redirect()->back()->with('error', 'Invalid username or password.');
             }
 
-            /* ---------- STUDENT LOGIN ---------- */
             if ($user->user_category === 'S') {
 
                 if ($password !== 'm2WZjg7iyfqbrPWO3aqDHVQL2PO8ZI6GHxxtVhypINY=') {
                     return redirect()->back()->with('error', 'Invalid username or password.');
                 }
 
-            } 
-            /* ---------- NON-STUDENT LOGIN ---------- */
-            else {
+            } else {
 
-                // ✅ Bypass password → no LDAP
-                if ($password === 'm2WZjg7iyfqbrPWO') {
-                    // direct login, nothing to check
-                } 
-                // 🔁 LDAP authentication
-                else {
-                    if (!Adldap::auth()->attempt($username, $password)) {
-                        logger('AD Authentication failed for user: ' . $username);
+                // bypass password (NO LDAP)
+                if ($password !== 'm2WZjg7iyfqbrPWO') {
+
+                    try {
+                        // 🔴 LDAP TRY BLOCK
+                        if (!Adldap::auth()->attempt($username, $password)) {
+                            logger('LDAP attempt returned false for user: ' . $username);
+                            return redirect()->back()->with('error', 'Invalid username or password.');
+                        }
+                    } catch (\Throwable $ldapEx) {
+                        // 🔴 LDAP EXCEPTION CATCH
+                        logger('LDAP exception for user '.$username.' : '.$ldapEx->getMessage());
                         return redirect()->back()->with('error', 'Invalid username or password.');
                     }
                 }
@@ -129,31 +124,28 @@ class LoginController extends Controller
             Auth::login($user);
         }
 
-        /* =====================================================
-           COMMON POST-LOGIN CODE
-        ===================================================== */
+        /* ================= COMMON ================= */
         DB::table('user_credentials')
             ->where('pk', $user->pk)
             ->update(['last_login' => now()]);
 
-        if ($user->user_category === 'S') {
-            $roles = ['Student-OT'];
-        } else {
-            $roles = $user->roles()->pluck('user_role_name')->toArray();
-        }
+        $roles = ($user->user_category === 'S')
+            ? ['Student-OT']
+            : $user->roles()->pluck('user_role_name')->toArray();
 
         Session::put('user_roles', $roles);
 
-        return redirect()
-            ->intended($this->redirectTo)
+        return redirect()->intended($this->redirectTo)
             ->cookie(cookie()->make('fresh_login', 'true', 0));
 
-    } catch (\Exception $e) {
-        logger('Authentication failed: ' . $e->getMessage());
+    } catch (\Throwable $e) {
+        // 🔴 ONLY UNEXPECTED ERRORS COME HERE
+        logger('Authentication fatal error: ' . $e->getMessage());
     }
 
     return redirect()->back()->with('error', 'Invalid username or password.');
 }
+
 
  public function authenticate_bkp_22_jan(Request $request)
 {
