@@ -113,6 +113,20 @@
                                                     </div>
                                                 </a>
                                             </li>
+                                            
+                                            <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}"
+                                                id="mini-9">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Issue Management (CENTCOM)">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">report_problem</i>
+                                                    </div>
+                                                </a>
+                                            </li>
                                             @endif
 
                                             @endif
@@ -164,6 +178,10 @@
                     <!-- Mess Management -->
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mess_management />
+
+                    <!-- Issue Management (CENTCOM) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_issue_management />
 
                 </div>
             </div>
