@@ -9,9 +9,7 @@
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
                         <ul class="sidebar-menu" id="sidebarnav">
-                            <!-- ---------------------------------- -->
-                            <!-- Academic -->
-                            <!-- ---------------------------------- -->
+                            <!-- Mess Management -->
                             <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -20,21 +18,66 @@
                                 <a class="sidebar-link d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#messmanagementCollapse" role="button"
                                     aria-expanded="false" aria-controls="messmanagementCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Session Feedback</span>
+                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Mess Management</span>
                                     <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="messmanagementCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="#">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Feedback History</span>
+                                <!-- Master Data -->
+                                <li class="sidebar-item"><a class="sidebar-link" href="#" data-bs-toggle="collapse" data-bs-target="#masterDataCollapse">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">📋 Master Data</span>
+                                </a></li>
+                                <ul class="collapse list-unstyled ps-4" id="masterDataCollapse">
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.events.index') }}">
+                                        <span class="hide-menu small text-nowrap">Events</span>
                                     </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="#">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Session Feedback</span>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.inventories.index') }}">
+                                        <span class="hide-menu small text-nowrap">Inventory Items</span>
                                     </a></li>
-
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.vendors.index') }}">
+                                        <span class="hide-menu small text-nowrap">Vendors</span>
+                                    </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.itemcategories.index') }}">
+                                        <span class="hide-menu small text-nowrap">Item Categories</span>
+                                    </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.itemsubcategories.index') }}">
+                                        <span class="hide-menu small text-nowrap">Item Subcategories</span>
+                                    </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.stores.index') }}">
+                                        <span class="hide-menu small text-nowrap">Stores</span>
+                                    </a></li>
+                                </ul>
+                                
+                                <!-- Material Management -->
+                                <li class="sidebar-item"><a class="sidebar-link" href="#" data-bs-toggle="collapse" data-bs-target="#materialMgmtCollapse">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">📦 Material Management</span>
+                                </a></li>
+                                <ul class="collapse list-unstyled ps-4" id="materialMgmtCollapse">
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.materialrequests.index') }}">
+                                        <span class="hide-menu small text-nowrap">Material Requests</span>
+                                    </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.purchaseorders.index') }}">
+                                        <span class="hide-menu small text-nowrap">Purchase Orders</span>
+                                    </a></li>
+                                    <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.inboundtransactions.index') }}">
+                                        <span class="hide-menu small text-nowrap">Goods Receipt</span>
+                                    </a></li>
+                                </ul>
+                                
+                                <!-- Other Modules -->
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.mealmappings.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">🍽️ Meal Mappings</span>
+                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.invoices.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">💰 Invoices</span>
+                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.storeallocations.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">🏪 Store Allocations</span>
+                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('mess.permissionsettings.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">🔒 Permissions</span>
+                                </a></li>
                             </ul>
 
                         </ul>
