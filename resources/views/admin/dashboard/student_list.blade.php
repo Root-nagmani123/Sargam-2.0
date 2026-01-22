@@ -68,13 +68,16 @@
                                     $course = $studentMap->course;
                                     $counsellorTypePk = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '';
                                     $groupPk = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->pk ?? '';
+                                    // Get group_name from groupMapping, fallback to cadre_name if not available
+                                    $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
+                                    $displayName = $groupName ?: ($student->cadre->cadre_name ?? 'N/A');
                                 @endphp
                                 <tr data-course-id="{{ $course->pk ?? '' }}" data-counsellor-type-id="{{ $counsellorTypePk }}" data-group-pk="{{ $groupPk }}">
                                     <td>{{ $loop->iteration }}</td>
                                     <td>{{ $student->display_name ?? ($student->first_name ?? '') . ' ' . ($student->last_name ?? '') }}</td>
                                     <td>{{ $student->generated_OT_code ?? 'N/A' }}</td>
                                     <td>{{ $student->email ?? 'N/A' }}</td>
-                                    <td>{{ $student->cadre->cadre_name ?? 'N/A' }}</td>
+                                    <td>{{ $displayName }}</td>
                                     <td>{{ $studentMap->total_duty_count ?? 0 }}</td>
                                     <td>{{ $studentMap->total_medical_exception_count ?? 0 }}</td>
                                     <td>{{ $studentMap->total_memo_count ?? 0 }}</td>
@@ -91,7 +94,7 @@
                                     <td colspan="10" class="text-center">
                                         <div class="alert alert-info mb-0">
                                             <i class="fas fa-info-circle me-2"></i>
-                                            No students found. You are not assigned as Course Coordinator or Assistant Course Coordinator for any active courses.
+                                            Data not found.
                                         </div>
                                     </td>
                                 </tr>

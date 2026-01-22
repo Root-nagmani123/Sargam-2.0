@@ -128,6 +128,8 @@ class UserController extends Controller
                            ->orWhere('Assistant_Coordinator_name', $facultyPk);
                  })->pluck('courses_master_pk')->unique();
                  
+                 // ========== SOURCE 1: CC/ACC Courses Students ==========
+                 $source1StudentPks = collect([]);
                  if ($coordinatorCourses->isNotEmpty()) {
                      $isCCorACC = true;
                      // Get active courses where faculty is CC/ACC
@@ -136,15 +138,55 @@ class UserController extends Controller
                         ->where('end_date', '>=', now())
                         ->pluck('pk');
                      
-                     // Count total students enrolled in these courses
+                     // Count total students enrolled in these courses (Source 1)
                      if ($activeCourseIds->isNotEmpty()) {
-                         $totalStudents = StudentMasterCourseMap::whereIn('course_master_pk', $activeCourseIds)
+                         $source1StudentPks = StudentMasterCourseMap::whereIn('course_master_pk', $activeCourseIds)
                              ->where('active_inactive', 1)
                              ->pluck('student_master_pk')
-                             ->unique()
-                             ->count();
+                             ->unique();
                      }
                  }
+                 
+                 // ========== SOURCE 2: Group Mappings Students ==========
+                 $source2StudentPks = collect([]);
+                 
+                 // Step 1: Find group mappings where faculty is assigned
+                 $groupMappings = DB::table('group_type_master_course_master_map')
+                     ->where('facility_id', $facultyPk)
+                     ->where('active_inactive', 1)
+                     ->get();
+                 
+                 if ($groupMappings->isNotEmpty()) {
+                     // Step 2: Get course_name (course_pk) from group mappings
+                     $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
+                     
+                     // Step 3: Check in course_master if these courses are active
+                     $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
+                         ->where('active_inactive', 1)
+                         ->where('end_date', '>=', now())
+                         ->pluck('pk');
+                     
+                     if ($activeCourseIds->isNotEmpty()) {
+                         // Step 4: Get group_type_master_course_master_map.pk for active courses
+                         $activeGroupMappingPks = $groupMappings
+                             ->whereIn('course_name', $activeCourseIds)
+                             ->pluck('pk')
+                             ->unique();
+                         
+                         // Step 5: Get students from student_course_group_map (Source 2)
+                         if ($activeGroupMappingPks->isNotEmpty()) {
+                             $source2StudentPks = StudentCourseGroupMap::whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
+                                 ->where('active_inactive', 1)
+                                 ->pluck('student_master_pk')
+                                 ->unique();
+                         }
+                     }
+                 }
+                 
+                 // ========== MERGE BOTH SOURCES ==========
+                 // Combine Source 1 and Source 2 student PKs and get unique count
+                 $allStudentPks = $source1StudentPks->merge($source2StudentPks)->unique();
+                 $totalStudents = $allStudentPks->count();
              } else {
                  $totalSessions = 0;
              }
@@ -166,7 +208,7 @@ class UserController extends Controller
         $userId = Auth::user()->user_id;
         $students = collect([]);
         $availableCourses = collect([]);
-        $allCourseIds = collect([]);
+        $facultyPk = null;
         
         // Check if user is Internal Faculty or Guest Faculty
         if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
@@ -176,95 +218,194 @@ class UserController extends Controller
             if ($faculty) {
                 $facultyPk = $faculty->pk;
                 
-                // Step 1: Check if faculty is CC or ACC in course_cordinator_master
+                // ========== SOURCE 1: CC/ACC Courses ==========
+                $source1Students = collect([]);
                 $coordinatorCourses = CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
                     $query->where('Coordinator_name', $facultyPk)
                           ->orWhere('Assistant_Coordinator_name', $facultyPk);
                 })->pluck('courses_master_pk')->unique();
                 
-                // Step 2: Get courses from group_type_master_course_master_map where faculty is assigned
-                // This fetches course_name (pk) from group_type_master_course_master_map based on facility_id
-                $groupMapCourseIds = DB::table('group_type_master_course_master_map')
-                    ->where('facility_id', $facultyPk)
-                    ->where('active_inactive', 1)
-                    ->pluck('course_name')
-                    ->unique();
-                
-                // Step 3: Merge both course sources (CC/ACC courses + group_type_master courses)
-                $allCourseIds = $coordinatorCourses->merge($groupMapCourseIds)->unique();
-                
-                if ($allCourseIds->isNotEmpty()) {
-                    // Step 4: Get active courses from merged course IDs
-                    $activeCourseIds = CourseMaster::whereIn('pk', $allCourseIds)
+                if ($coordinatorCourses->isNotEmpty()) {
+                    // Filter for active courses only
+                    $activeCoordinatorCourses = CourseMaster::whereIn('pk', $coordinatorCourses)
                         ->where('active_inactive', 1)
                         ->where('end_date', '>=', now())
                         ->pluck('pk');
                     
-                    // Step 5: Get students enrolled in these courses
-                    if ($activeCourseIds->isNotEmpty()) {
-                        $students = StudentMasterCourseMap::with([
+                    if ($activeCoordinatorCourses->isNotEmpty()) {
+                        // Get students from student_master_course_map for Source 1
+                        $source1StudentMaps = StudentMasterCourseMap::with([
                             'studentMaster.cadre', 
                             'course'
                         ])
-                            ->whereIn('course_master_pk', $activeCourseIds)
+                            ->whereIn('course_master_pk', $activeCoordinatorCourses)
                             ->where('active_inactive', 1)
-                            ->get()
-                            ->unique('student_master_pk')
-                            ->values();
+                            ->get();
                         
-                        // Load group information and counts for each student
-                        $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+                        // Convert Source 1 to stdClass format for consistency
+                        $source1Students = collect([]);
+                        foreach ($source1StudentMaps as $studentMap) {
+                            $stdObj = new \stdClass();
+                            $stdObj->student_master_pk = $studentMap->student_master_pk;
+                            $stdObj->course_master_pk = $studentMap->course_master_pk;
+                            $stdObj->studentMaster = $studentMap->studentMaster;
+                            $stdObj->course = $studentMap->course;
+                            $stdObj->source = 'cc_acc'; // Track source
+                            $source1Students->push($stdObj);
+                        }
+                    }
+                }
+                
+                // ========== SOURCE 2: Group Mappings ==========
+                $source2Students = collect([]);
+                
+                // Step 1: Find group mappings where faculty is assigned
+                $groupMappings = DB::table('group_type_master_course_master_map')
+                    ->where('facility_id', $facultyPk)
+                    ->where('active_inactive', 1)
+                    ->get();
+                
+                if ($groupMappings->isNotEmpty()) {
+                    // Step 2: Get course_name (course_pk) from group mappings
+                    $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
+                    
+                    // Step 3: Check in course_master if these courses are active
+                    $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
+                        ->where('active_inactive', 1)
+                        ->where('end_date', '>=', now())
+                        ->pluck('pk');
+                    
+                    if ($activeCourseIds->isNotEmpty()) {
+                        // Step 4: Get group_type_master_course_master_map.pk for active courses
+                        $activeGroupMappingPks = $groupMappings
+                            ->whereIn('course_name', $activeCourseIds)
+                            ->pluck('pk')
+                            ->unique();
                         
-                        foreach ($students as $studentMap) {
-                            $studentPk = $studentMap->student_master_pk;
-                            $coursePk = $studentMap->course_master_pk;
-                            
-                            // Get the active group mapping for this student-course combination
-                            $groupMap = StudentCourseGroupMap::with([
+                        // Step 5: Get students from student_course_group_map using group mapping pk
+                        if ($activeGroupMappingPks->isNotEmpty()) {
+                            $source2GroupMaps = StudentCourseGroupMap::with([
+                                'student.cadre',
+                                'groupTypeMasterCourseMasterMap.courseGroup',
                                 'groupTypeMasterCourseMasterMap.courseGroupType',
                                 'groupTypeMasterCourseMasterMap.Faculty'
                             ])
-                                ->where('student_master_pk', $studentPk)
+                                ->whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
                                 ->where('active_inactive', 1)
-                                ->whereHas('groupTypeMasterCourseMasterMap', function($query) use ($coursePk) {
-                                    $query->where('course_name', $coursePk);
-                                })
-                                ->first();
+                                ->get();
                             
-                            // Attach group info to the student map
-                            $studentMap->groupMapping = $groupMap;
-                            
-                            // Get counts for each student
-                            // Total Duty count
-                            $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)->count();
-                            
-                            // Total Medical Exception count
-                            $studentMap->total_medical_exception_count = StudentMedicalExemption::where('student_master_pk', $studentPk)
-                                ->where('active_inactive', 1)
-                                ->count();
-                            
-                            // Get notices and memos using OTNoticeMemoService
-                            $notices = $noticeMemoService->getNotices($studentPk);
-                            $memos = $noticeMemoService->getMemos($studentPk);
-                            
-                            $studentMap->total_notice_count = $notices->count();
-                            $studentMap->total_memo_count = $memos->count();
+                            // Step 6: Convert to unified format (similar to Source 1 structure)
+                            foreach ($source2GroupMaps as $groupMap) {
+                                $studentPk = $groupMap->student_master_pk;
+                                $coursePk = $groupMap->groupTypeMasterCourseMasterMap->course_name ?? null;
+                                
+                                if ($coursePk && $groupMap->student) {
+                                    // Get course from relationship (already loaded via with())
+                                    $course = $groupMap->groupTypeMasterCourseMasterMap->courseGroup ?? null;
+                                    
+                                    if ($course) {
+                                        // Create a stdClass object to mimic StudentMasterCourseMap structure
+                                        $studentMap = new \stdClass();
+                                        $studentMap->student_master_pk = $studentPk;
+                                        $studentMap->course_master_pk = $coursePk;
+                                        $studentMap->studentMaster = $groupMap->student; // Use 'student' relationship
+                                        $studentMap->course = $course;
+                                        $studentMap->groupMapping = $groupMap;
+                                        $studentMap->source = 'group_mapping'; // Track source
+                                        
+                                        $source2Students->push($studentMap);
+                                    }
+                                }
+                            }
                         }
-                        
-                        // Get unique courses from the student list
-                        $availableCourses = $students->pluck('course')
-                            ->filter()
-                            ->unique('pk')
-                            ->map(function($course) {
-                                return [
-                                    'pk' => $course->pk,
-                                    'course_name' => $course->course_name
-                                ];
-                            })
-                            ->values()
-                            ->sortBy('course_name');
                     }
                 }
+                
+                // ========== MERGE BOTH SOURCES ==========
+                // Combine Source 1 and Source 2 students manually to avoid getKey() issues
+                // Priority: Source 2 students (they have groupMapping) over Source 1 students
+                $seenStudentPks = [];
+                $uniqueStudents = collect([]);
+                
+                // Process Source 2 students FIRST (they have groupMapping, so prioritize them)
+                foreach ($source2Students as $studentMap) {
+                    $studentPk = $studentMap->student_master_pk;
+                    if (!in_array($studentPk, $seenStudentPks)) {
+                        $seenStudentPks[] = $studentPk;
+                        $uniqueStudents->push($studentMap);
+                    }
+                }
+                
+                // Process Source 1 students (only if not already added from Source 2)
+                foreach ($source1Students as $studentMap) {
+                    $studentPk = $studentMap->student_master_pk;
+                    if (!in_array($studentPk, $seenStudentPks)) {
+                        $seenStudentPks[] = $studentPk;
+                        $uniqueStudents->push($studentMap);
+                    }
+                }
+                
+                // Load additional data for each student
+                $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+                
+                foreach ($uniqueStudents as $studentMap) {
+                    $studentPk = $studentMap->student_master_pk;
+                    $coursePk = $studentMap->course_master_pk ?? null;
+                    
+                    // For Source 1 students, get group mapping if not already set
+                    // Load full relationship including group_name
+                    if (!isset($studentMap->groupMapping) && $coursePk) {
+                        $groupMap = StudentCourseGroupMap::with([
+                            'groupTypeMasterCourseMasterMap.courseGroupType',
+                            'groupTypeMasterCourseMasterMap.Faculty',
+                            'groupTypeMasterCourseMasterMap.courseGroup'
+                        ])
+                            ->where('student_master_pk', $studentPk)
+                            ->where('active_inactive', 1)
+                            ->whereHas('groupTypeMasterCourseMasterMap', function($query) use ($coursePk) {
+                                $query->where('course_name', $coursePk);
+                            })
+                            ->first();
+                        
+                        $studentMap->groupMapping = $groupMap;
+                    }
+                    
+                    // Get counts for each student
+                    $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)->count();
+                    
+                    $studentMap->total_medical_exception_count = StudentMedicalExemption::where('student_master_pk', $studentPk)
+                        ->where('active_inactive', 1)
+                        ->count();
+                    
+                    // Get notices and memos using OTNoticeMemoService
+                    $notices = $noticeMemoService->getNotices($studentPk);
+                    $memos = $noticeMemoService->getMemos($studentPk);
+                    
+                    $studentMap->total_notice_count = $notices->count();
+                    $studentMap->total_memo_count = $memos->count();
+                }
+                
+                $students = $uniqueStudents;
+                
+                // Get unique courses from the student list - only active courses
+                $availableCourses = $students->pluck('course')
+                    ->filter(function($course) {
+                        // Filter only active courses
+                        return $course && 
+                               isset($course->active_inactive) && 
+                               $course->active_inactive == 1 &&
+                               isset($course->end_date) &&
+                               \Carbon\Carbon::parse($course->end_date)->gte(now());
+                    })
+                    ->unique('pk')
+                    ->map(function($course) {
+                        return [
+                            'pk' => $course->pk,
+                            'course_name' => $course->course_name
+                        ];
+                    })
+                    ->values()
+                    ->sortBy('course_name');
             }
         }
         
@@ -272,12 +413,24 @@ class UserController extends Controller
         // From group_type_master_course_master_map, get faculty_id, type_name and course_name
         // Then match type_name (pk) with course_group_type_master to get the type_name
         // And match course_name (pk) with course_master to get the course name
-        $counsellorTypes = DB::table('group_type_master_course_master_map as gmap')
+        // Only include counsellor types for active courses (active_inactive = 1 and end_date >= now())
+        // Filter by logged-in faculty if available
+        $counsellorTypesQuery = DB::table('group_type_master_course_master_map as gmap')
             ->join('course_group_type_master as cgroup', 'gmap.type_name', '=', 'cgroup.pk')
+            ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
             ->where('cgroup.active_inactive', 1)
-            ->where('fm.active_inactive', 1)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', now())
+            ->where('fm.active_inactive', 1);
+        
+        // Filter by logged-in faculty if available
+        if ($facultyPk) {
+            $counsellorTypesQuery->where('gmap.facility_id', $facultyPk);
+        }
+        
+        $counsellorTypes = $counsellorTypesQuery
             ->select(
                 'cgroup.pk as type_pk',
                 'cgroup.type_name as counsellor_type_name'
@@ -287,12 +440,22 @@ class UserController extends Controller
             ->get();
         
         // Get courses from group_type_master_course_master_map and merge with available courses
-        $groupMapCourses = DB::table('group_type_master_course_master_map as gmap')
+        // Only include active courses (active_inactive = 1 and end_date >= now())
+        // Filter by logged-in faculty if available
+        $groupMapCoursesQuery = DB::table('group_type_master_course_master_map as gmap')
             ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
             ->where('cm.active_inactive', 1)
-            ->where('fm.active_inactive', 1)
+            ->where('cm.end_date', '>=', now())
+            ->where('fm.active_inactive', 1);
+        
+        // Filter by logged-in faculty if available
+        if ($facultyPk) {
+            $groupMapCoursesQuery->where('gmap.facility_id', $facultyPk);
+        }
+        
+        $groupMapCourses = $groupMapCoursesQuery
             ->select(
                 'cm.pk',
                 'cm.course_name'
@@ -313,12 +476,24 @@ class UserController extends Controller
             ->values();
         
         // Get group names from group_type_master_course_master_map with their type_name (counsellor type)
-        $groupNames = DB::table('group_type_master_course_master_map as gmap')
+        // Only include groups for active courses (active_inactive = 1 and end_date >= now())
+        // Filter by logged-in faculty if available
+        $groupNamesQuery = DB::table('group_type_master_course_master_map as gmap')
+            ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
             ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
             ->where('gmap.active_inactive', 1)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', now())
             ->where('fm.active_inactive', 1)
             ->whereNotNull('gmap.group_name')
-            ->where('gmap.group_name', '!=', '')
+            ->where('gmap.group_name', '!=', '');
+        
+        // Filter by logged-in faculty if available
+        if ($facultyPk) {
+            $groupNamesQuery->where('gmap.facility_id', $facultyPk);
+        }
+        
+        $groupNames = $groupNamesQuery
             ->select(
                 'gmap.pk as group_pk',
                 'gmap.group_name',
