@@ -39,6 +39,7 @@
                                     <thead>
                                         <tr>
                                             <th class="text-center">S.No.</th>
+                                            <th class="text-center">Image</th>
                                             <th class="text-center">Category Name</th>
                                             <th class="text-center">Details</th>
                                             <th class="text-center">Sub-Categories</th>
@@ -50,6 +51,15 @@
                                         @foreach($repositories as $key => $repo)
                                         <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
                                             <td class="text-center">{{ $repositories->firstItem() + $key }}</td>
+                                            <td class="text-center">
+                                                @if($repo->category_image && \Storage::disk('public')->exists($repo->category_image))
+                                                    <img src="{{ asset('storage/' . $repo->category_image) }}" alt="Category Image" 
+                                                         style="max-width: 60px; max-height: 60px; border-radius: 4px;" 
+                                                         class="img-thumbnail">
+                                                @else
+                                                    <span class="badge bg-secondary">No Image</span>
+                                                @endif
+                                            </td>
                                             <td class="text-center">
                                                 <a href="{{ route('course-repository.show', $repo->pk) }}" class="text-decoration-none">
                                                     {{ $repo->course_repository_name }}
@@ -72,6 +82,7 @@
                                                        data-pk="{{ $repo->pk }}"
                                                        data-name="{{ $repo->course_repository_name }}"
                                                        data-details="{{ $repo->course_repository_details }}"
+                                                       data-image="{{ $repo->category_image }}"
                                                        aria-label="Edit category">
                                                         <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">edit</i>
                                                         <span class="d-none d-md-inline">Edit</span>
@@ -113,7 +124,7 @@
                 <h5 class="modal-title" id="createModalLabel"><i class="fas fa-plus"></i> <strong>Create New Category</strong></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="createForm" method="POST" action="{{ route('course-repository.store') }}">
+            <form id="createForm" method="POST" action="{{ route('course-repository.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -125,6 +136,13 @@
                         <label for="modal_course_repository_details" class="form-label"><strong>Details</strong></label>
                         <textarea class="form-control" id="modal_course_repository_details" name="course_repository_details" 
                                   rows="3" placeholder="Enter description (optional)"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="modal_category_image" class="form-label"><strong>Category Image</strong></label>
+                        <input type="file" class="form-control" id="modal_category_image" name="category_image" 
+                               accept="image/jpeg,image/png,image/jpg,image/gif">
+                        <small class="text-muted d-block mt-1">Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)</small>
+                        <img id="preview_create" src="" alt="Preview" style="max-width: 100px; margin-top: 10px; display: none;">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -146,7 +164,7 @@
                 <h5 class="modal-title" id="editModalLabel"><i class="fas fa-edit"></i> <strong>Edit Category</strong></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="editForm" method="POST">
+            <form id="editForm" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
@@ -159,6 +177,17 @@
                         <label for="edit_course_repository_details" class="form-label"><strong>Details</strong></label>
                         <textarea class="form-control" id="edit_course_repository_details" name="course_repository_details" 
                                   rows="3" placeholder="Enter description (optional)"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_category_image" class="form-label"><strong>Category Image</strong></label>
+                        <div id="current_image_container" style="margin-bottom: 10px; display: none;">
+                            <p class="text-muted"><small>Current Image:</small></p>
+                            <img id="current_image" src="" alt="Current" style="max-width: 100px; border-radius: 4px;">
+                        </div>
+                        <input type="file" class="form-control" id="edit_category_image" name="category_image" 
+                               accept="image/jpeg,image/png,image/jpg,image/gif">
+                        <small class="text-muted d-block mt-1">Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)</small>
+                        <img id="preview_edit" src="" alt="Preview" style="max-width: 100px; margin-top: 10px; display: none;">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -187,7 +216,7 @@
                         <label for="file" class="form-label"><strong>Select File *</strong></label>
                         <input type="file" class="form-control" id="file" name="file" required accept="*/*">
                         <small class="text-muted d-block mt-1">Max size: 100MB</small>
-                    </div>
+                    </div> 
                     <div class="mb-3">
                         <label for="file_title" class="form-label"><strong>File Title</strong></label>
                         <input type="text" class="form-control" id="file_title" name="file_title" 
@@ -212,16 +241,64 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     
+    // Image preview for create modal
+    document.getElementById('modal_category_image')?.addEventListener('change', function(e) {
+        const preview = document.getElementById('preview_create');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                preview.src = event.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    });
+    
+    // Image preview for edit modal
+    document.getElementById('edit_category_image')?.addEventListener('change', function(e) {
+        const preview = document.getElementById('preview_edit');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                preview.src = event.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    });
+    
     // Edit button functionality
     document.querySelectorAll('.edit-repo').forEach(btn => {
         btn.addEventListener('click', function() {
             const pk = this.getAttribute('data-pk');
             const name = this.getAttribute('data-name');
             const details = this.getAttribute('data-details');
+            const image = this.getAttribute('data-image');
+            
+            // Clear any previous image
+            document.getElementById('preview_edit').style.display = 'none';
+            document.getElementById('edit_category_image').value = '';
             
             // Populate edit form
             document.getElementById('edit_course_repository_name').value = name;
             document.getElementById('edit_course_repository_details').value = details || '';
+            
+            // Show current image if exists
+            const currentImageContainer = document.getElementById('current_image_container');
+            if (image && image.trim() !== '') {
+                document.getElementById('current_image').src = '/storage/' + image;
+                currentImageContainer.style.display = 'block';
+            } else {
+                currentImageContainer.style.display = 'none';
+            }
             
             // Update form action
             const editForm = document.getElementById('editForm');
