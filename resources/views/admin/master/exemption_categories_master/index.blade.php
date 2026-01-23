@@ -56,6 +56,7 @@
             processing: true,
             serverSide: true,
             searching: true,
+			order: [[0, 'desc']], 
             ajax: {
                 url: "{{ route('master.exemption.category.master.getcategory') }}",
                 data: function(d) {
