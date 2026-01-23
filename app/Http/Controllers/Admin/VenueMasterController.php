@@ -11,12 +11,13 @@ use Illuminate\Support\Facades\Crypt;
 class VenueMasterController extends Controller
 {
     public function index() {
-        $venues = VenueMaster::paginate(10);
+
+        $venues = VenueMaster::orderBy('venue_id', 'desc')->paginate(10);
         return view('admin.venueMaster.index', compact('venues'));
     }
 
     public function create() {
-        return view('admin.venueMaster.create'); 
+        return view('admin.venueMaster.create');
     }
 
     public function store(Request $request) {
