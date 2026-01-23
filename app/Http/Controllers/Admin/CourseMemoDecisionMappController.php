@@ -34,7 +34,10 @@ class CourseMemoDecisionMappController extends Controller
 
             $data_course_id = get_Role_by_course();
 
-            $query = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])->get();
+            //$query = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])->get();
+
+            $query = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])
+    ->orderBy('course_memo_decision_mapp.created_date', 'desc');
 
             if (!empty($data_course_id)) {
                 $query->whereIn('course_master_pk', $data_course_id);
@@ -74,7 +77,7 @@ class CourseMemoDecisionMappController extends Controller
 
                     $editBtn = '
                 <a href="javascript:void(0)"
-                    class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1 editConclusion" 
+                    class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1 editConclusion"
                     data-id="' . $row->pk . '"
                     data-course="' . $row->course_master_pk . '"
                     data-memo="' . $row->memo_type_master_pk . '"
