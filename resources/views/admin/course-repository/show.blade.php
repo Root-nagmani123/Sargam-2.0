@@ -128,153 +128,155 @@
 
                     <!-- Documents Section -->
                     @if($documents->count() > 0)
-                <div class="table-responsive mt-4">
-                    <table class="table text-nowrap mb-0" id="documents">
-                        <thead>
-                            <tr>
-                                <th class="col text-center">S.No.</th>
-                                <th class="col text-center">Document Name</th>
-                                <th class="col text-center">File Title</th>
-                                <th class="col text-center">Course Name</th>
-                                <th class="col text-center">Subject</th>
-                                <th class="col text-center">Topic</th>
-                                <th class="col text-center">Session Date</th>
-                                <th class="col text-center">Sector</th>
-                                <th class="col text-center">Ministry</th>
-                                <th class="col text-center">Author</th>
-                                <th class="col text-center">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($documents as $index => $doc)
-                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                <td class="text-center">{{ $loop->iteration }}</td>
-                                <td class="text-center">
-                                    <i class="fas fa-file-alt text-primary me-2"></i>
-                                    <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
-                                </td>
-                                <td class="text-center">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail)
-                                            @if($doc->detail->course)
-                                                {{ $doc->detail->course->course_name }}
-                                            @elseif($doc->detail->program_structure_pk)
-                                                {{ $doc->detail->program_structure_pk }}
+                    <div class="table-responsive mt-4">
+                        <table class="table text-nowrap mb-0" id="documents">
+                            <thead>
+                                <tr>
+                                    <th class="col text-center">S.No.</th>
+                                    <th class="col text-center">Document Name</th>
+                                    <th class="col text-center">File Title</th>
+                                    <th class="col text-center">Course Name</th>
+                                    <th class="col text-center">Subject</th>
+                                    <th class="col text-center">Topic</th>
+                                    <th class="col text-center">Session Date</th>
+                                    <th class="col text-center">Sector</th>
+                                    <th class="col text-center">Ministry</th>
+                                    <th class="col text-center">Author</th>
+                                    <th class="col text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($documents as $index => $doc)
+                                <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+                                    <td class="text-center">{{ $loop->iteration }}</td>
+                                    <td class="text-center">
+                                        <i class="fas fa-file-alt text-primary me-2"></i>
+                                        <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                    </td>
+                                    <td class="text-center">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                    <td class="text-center">
+                                        <small>
+                                            @if($doc->detail)
+                                                @if($doc->detail->course)
+                                                    {{ $doc->detail->course->course_name }}
+                                                @elseif($doc->detail->program_structure_pk)
+                                                    {{ $doc->detail->program_structure_pk }}
+                                                @else
+                                                    N/A
+                                                @endif
                                             @else
                                                 N/A
                                             @endif
-                                        @else
-                                            N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail)
-                                            @if($doc->detail->subject)
-                                                {{ Str::limit($doc->detail->subject->subject_name, 20) }}
-                                            @elseif($doc->detail->subject_pk)
-                                                {{ Str::limit($doc->detail->subject_pk, 20) }}
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <small>
+                                            @if($doc->detail)
+                                                @if($doc->detail->subject)
+                                                    {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                                @elseif($doc->detail->subject_pk)
+                                                    {{ Str::limit($doc->detail->subject_pk, 20) }}
+                                                @else
+                                                    N/A
+                                                @endif
                                             @else
                                                 N/A
                                             @endif
-                                        @else
-                                            N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail)
-                                            @if($doc->detail->topic)
-                                                {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
-                                            @elseif($doc->detail->topic_pk)
-                                                {{ Str::limit($doc->detail->topic_pk, 15) }}
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <small>
+                                            @if($doc->detail)
+                                                @if($doc->detail->topic)
+                                                    {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
+                                                @elseif($doc->detail->topic_pk)
+                                                    {{ Str::limit($doc->detail->topic_pk, 15) }}
+                                                @else
+                                                    N/A
+                                                @endif
                                             @else
                                                 N/A
                                             @endif
-                                        @else
-                                            N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail && $doc->detail->session_date)
-                                            {{ $doc->detail->session_date->format('d-m-Y') }}
-                                        @elseif($doc->detail && $doc->detail->session_date)
-                                            {{ $doc->detail->session_date }}
-                                        @else
-                                            N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail)
-                                            @if($doc->detail->sector)
-                                                {{ Str::limit($doc->detail->sector->sector_name, 15) }}
-                                            @elseif($doc->detail->sector_master_pk)
-                                                {{ Str::limit($doc->detail->sector_master_pk, 15) }}
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <small>
+                                            @if($doc->detail && $doc->detail->session_date)
+                                                {{ $doc->detail->session_date->format('d-m-Y') }}
+                                            @elseif($doc->detail && $doc->detail->session_date)
+                                                {{ $doc->detail->session_date }}
                                             @else
                                                 N/A
                                             @endif
-                                        @else
-                                            N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail)
-                                            @if($doc->detail->ministry)
-                                                {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
-                                            @elseif($doc->detail->ministry_master_pk)
-                                                {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <small>
+                                            @if($doc->detail)
+                                                @if($doc->detail->sector)
+                                                    {{ Str::limit($doc->detail->sector->sector_name, 15) }}
+                                                @elseif($doc->detail->sector_master_pk)
+                                                    {{ Str::limit($doc->detail->sector_master_pk, 15) }}
+                                                @else
+                                                    N/A
+                                                @endif
                                             @else
                                                 N/A
                                             @endif
-                                        @else
-                                            N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail) 
-                                            @if($doc->detail->author)
-                                                {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                            @elseif($doc->detail->author_name)
-                                                {{ Str::limit($doc->detail->author_name, 15) }}
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <small>
+                                            @if($doc->detail)
+                                                @if($doc->detail->ministry)
+                                                    {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
+                                                @elseif($doc->detail->ministry_master_pk)
+                                                    {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
+                                                @else
+                                                    N/A
+                                                @endif
                                             @else
                                                 N/A
                                             @endif
-                                        @else
-                                            N/A
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <div class="d-inline-flex align-items-center gap-2" role="group">
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}" 
-                                           class="btn btn-sm btn-outline-info d-flex align-items-center gap-1">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">download</i>
-                                            <span class="d-none d-md-inline">Download</span>
-                                        </a>
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 delete-doc" 
-                                                data-pk="{{ $doc->pk }}">
-                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
-                                            <span class="d-none d-md-inline">Delete</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <small>
+                                            @if($doc->detail) 
+                                                @if($doc->detail->author)
+                                                    {{ Str::limit($doc->detail->author->full_name, 15) }}
+                                                @elseif($doc->detail->author_name)
+                                                    {{ Str::limit($doc->detail->author_name, 15) }}
+                                                @else
+                                                    N/A
+                                                @endif
+                                            @else
+                                                N/A
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-inline-flex align-items-center gap-2" role="group">
+                                            <a href="{{ route('course-repository.document.download', $doc->pk) }}" 
+                                               class="btn btn-sm btn-outline-info d-flex align-items-center gap-1">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">download</i>
+                                                <span class="d-none d-md-inline">Download</span>
+                                            </a>
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 delete-doc" 
+                                                    data-pk="{{ $doc->pk }}">
+                                                <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                                <span class="d-none d-md-inline">Delete</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    @endif
+                @endif
             </div>
         </div>
     </div>
