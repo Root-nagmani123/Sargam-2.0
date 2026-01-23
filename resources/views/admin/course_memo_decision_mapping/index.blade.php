@@ -189,6 +189,7 @@
             processing: true,
             serverSide: true,
             ajax: "{{ route('course.memo.decision.index') }}",
+            order: [[0, 'desc']],
             columns: [{
                     data: 'DT_RowIndex',
                     name: 'DT_RowIndex',
@@ -347,7 +348,7 @@
         active_inactive: $('#edit_active_inactive').val()
     };
     alert(data.course_master_pk);
-    
+
 
     fetch("{{ route('course.memo.decision.update') }}", {
         method: 'POST',
