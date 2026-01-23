@@ -10,7 +10,9 @@ use App\Models\CourseRepositorySubtopic;
 use App\Models\CourseMaster;
 use App\Models\SubjectMaster;
 use App\Models\FacultyMaster;
-use Illuminate\Http\Request;
+use App\Models\SectorMaster;
+use App\Models\MinistryMaster;
+use Illuminate\Http\Request; 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Exception;
@@ -153,10 +155,13 @@ class CourseRepositoryController extends Controller
                 'ancestors' => $ancestors,
                 'documents_count_array' => $documents_count_array,
                 // Data for dynamic dropdowns
-                'courses' => CourseMaster::where('active_inactive', 1)->get(),
+                'activeCourses' => CourseMaster::where('active_inactive', 1)->get(),
+                'archivedCourses' => CourseMaster::where('active_inactive', 0)->get(),
                 'subjects' => SubjectMaster::where('active_inactive', 1)->get(),
                 'topics' => CourseRepositorySubtopic::all(),
                 'authors' => FacultyMaster::select('pk','full_name')->get(),
+                'sectors' => SectorMaster::active()->get(),
+                'ministries' => MinistryMaster::active()->get(),
             ]);
         } catch (Exception $e) {
             Log::error('Error in course repository show: ' . $e->getMessage());
@@ -205,6 +210,7 @@ class CourseRepositoryController extends Controller
                 'file_type' => 'nullable|integer',
                 'full_path' => 'nullable|string|max:255',
                 'course_repository_details' => 'nullable|string|max:1000',
+                'category_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
             
             $validated['created_date'] = now();
@@ -215,6 +221,14 @@ class CourseRepositoryController extends Controller
             // If parent_type not provided or empty, set to null (root repository)
             if (!isset($validated['parent_type']) || empty($validated['parent_type'])) {
                 $validated['parent_type'] = null;
+            }
+            
+            // Handle image upload
+            if ($request->hasFile('category_image')) {
+                $image = $request->file('category_image');
+                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('course-repository/categories', $imageName, 'public');
+                $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
             
             $repository = CourseRepositoryMaster::create($validated);
@@ -283,10 +297,25 @@ class CourseRepositoryController extends Controller
                 'file_type' => 'nullable|integer',
                 'full_path' => 'nullable|string|max:255',
                 'course_repository_details' => 'nullable|string|max:1000',
+                'category_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
             
             $validated['modify_date'] = now();
             $validated['modify_by'] = auth()->id();
+            
+            // Handle image upload
+            if ($request->hasFile('category_image')) {
+                // Delete old image if exists
+                if ($repository->category_image && \Storage::disk('public')->exists($repository->category_image)) {
+                    \Storage::disk('public')->delete($repository->category_image);
+                }
+                
+                // Store new image
+                $image = $request->file('category_image');
+                $imageName = time() . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                $image->storeAs('course-repository/categories', $imageName, 'public');
+                $validated['category_image'] = 'course-repository/categories/' . $imageName;
+            }
             
             $repository->update($validated);
             
@@ -327,6 +356,11 @@ class CourseRepositoryController extends Controller
         try {
             $repository = CourseRepositoryMaster::findOrFail($pk);
             
+            // Delete image if exists
+            if ($repository->category_image && \Storage::disk('public')->exists($repository->category_image)) {
+                \Storage::disk('public')->delete($repository->category_image);
+            }
+            
             $repository->update([
                 'del_folder_status' => 0,
                 'del_folder_date' => now(),
@@ -359,6 +393,8 @@ class CourseRepositoryController extends Controller
                 'timetable_name' => 'nullable|string',
                 'session_date' => 'nullable|string',
                 'author_name' => 'nullable|string',
+                'sector_master' => 'nullable|numeric',
+                'ministry_master' => 'nullable|numeric',
                 'attachments' => 'nullable|array',
                 'attachments.*' => 'nullable|file|max:102400',
                 'attachment_titles' => 'nullable|array',
@@ -385,6 +421,8 @@ class CourseRepositoryController extends Controller
                 'topic_pk' => $validated['timetable_name'] ?? null,
                 'session_date' => $validated['session_date'] ?? null,
                 'author_name' => $validated['author_name'] ?? null,
+                'sector_master_pk' => $validated['sector_master'] ?? null,
+                'ministry_master_pk' => $validated['ministry_master'] ?? null,
                 'keyword' => $validated['keywords'] ?? null,
                 'videolink' => $validated['video_link'] ?? null,
                 'created_date' => now(),
@@ -728,6 +766,31 @@ class CourseRepositoryController extends Controller
         } catch (Exception $e) {
             Log::error('Error fetching timetables: ' . $e->getMessage());
             return response()->json(['success' => false, 'error' => 'Failed to load timetables'], 500);
+        }
+    }
+
+    /**
+     * Get ministries by sector (AJAX endpoint)
+     * GET /course-repository/ministries?sector_pk=X
+     */
+    public function getMynostriesBySector(Request $request)
+    {
+        try {
+            $sectorPk = $request->query('sector_pk');
+            
+            if (!$sectorPk) {
+                return response()->json(['success' => false, 'message' => 'Sector PK is required'], 400);
+            }
+
+            $ministries = MinistryMaster::where('sector_master_pk', $sectorPk)
+                ->where('status', 1)
+                ->orderBy('ministry_name')
+                ->get(['pk', 'ministry_name']);
+
+            return response()->json(['success' => true, 'data' => $ministries]);
+        } catch (Exception $e) {
+            Log::error('Error fetching ministries: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error fetching ministries'], 500);
         }
     }
 

@@ -8,7 +8,7 @@ class CourseRepositorySubtopic extends Model
 {
     protected $table = 'course_repository_subtopic';
     protected $primaryKey = 'pk';
-    public $timestamps = false;
+    public $timestamps = false; 
 
     protected $fillable = [
         'course_repo_topic',

@@ -621,6 +621,9 @@ Route::middleware(['auth'])->group(function () {
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
     
+    // AJAX endpoints for course repository
+    Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
+    
     //course repository resource routes (MUST be after AJAX routes)
     Route::resource('course-repository', CourseRepositoryController::class, [
     'parameters' => ['course-repository' => 'pk']
