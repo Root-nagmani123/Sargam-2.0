@@ -8,7 +8,7 @@ class CourseRepositoryMaster extends Model
 {
     protected $table = 'course_repository_master';
     protected $primaryKey = 'pk';
-    public $timestamps = false;
+    public $timestamps = false; 
 
     protected $fillable = [
         'course_repository_name',
@@ -17,6 +17,7 @@ class CourseRepositoryMaster extends Model
         'file_type',
         'full_path',
         'course_repository_details',
+        'category_image',
         'created_date',
         'modify_date',
         'created_by',

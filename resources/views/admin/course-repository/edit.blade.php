@@ -9,8 +9,8 @@
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="row justify-content-center">
-                    <div class="col-md-8">
-                        <form action="{{ route('course-repository.update', $repository->pk) }}" method="POST">
+                    <div class="col-md-8"> 
+                        <form action="{{ route('course-repository.update', $repository->pk) }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
 
@@ -34,6 +34,27 @@
                                 @enderror
                             </div>
 
+                            <div class="mb-3">
+                                <label for="category_image" class="form-label"><strong>Category Image</strong></label>
+                                
+                                @if($repository->category_image && \Storage::disk('public')->exists($repository->category_image))
+                                    <div class="mb-2">
+                                        <p class="text-muted mb-1"><small>Current Image:</small></p>
+                                        <img src="{{ asset('storage/' . $repository->category_image) }}" alt="Current Image" 
+                                             style="max-width: 150px; border-radius: 4px;" class="img-thumbnail">
+                                    </div>
+                                @endif
+                                
+                                <input type="file" class="form-control @error('category_image') is-invalid @enderror" 
+                                       id="category_image" name="category_image" 
+                                       accept="image/jpeg,image/png,image/jpg,image/gif">
+                                <small class="text-muted d-block mt-1">Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)</small>
+                                @error('category_image')
+                                    <small class="text-danger d-block mt-1">{{ $message }}</small>
+                                @enderror
+                                <img id="preview_image" src="" alt="Preview" style="max-width: 150px; margin-top: 10px; display: none; border-radius: 4px;" class="img-thumbnail">
+                            </div>
+
                             <div class="d-flex gap-2 mt-4">
                                 <button type="submit" class="btn btn-success">
                                     <i class="fas fa-save"></i> Save
@@ -49,4 +70,27 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Image preview for edit form
+    document.getElementById('category_image')?.addEventListener('change', function(e) {
+        const preview = document.getElementById('preview_image');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    });
+});
+</script>
 @endsection

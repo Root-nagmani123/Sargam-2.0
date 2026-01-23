@@ -8,7 +8,7 @@ class CourseRepositoryDocument extends Model
 {
     protected $table = 'course_repository_documents';
     protected $primaryKey = 'pk';
-    public $timestamps = false;
+    public $timestamps = false; 
 
     protected $fillable = [
         'upload_document',
