@@ -93,7 +93,7 @@ class FacultyRequest extends FormRequest
             // 'joiningdate'=> 'required|date',
             
             // Radio button
-            // 'current_sector' => 'required|string|in:1,2',
+            'current_sector' => 'required|string|in:1,2',
 
             // 'other_city' => [
             //     Rule::requiredIf(in_array($this->input('city'), $otherCityPks)),
@@ -163,6 +163,10 @@ class FacultyRequest extends FormRequest
             // 'professionalmemberships.required' => 'Professional memberships are required',
             // 'recommendationdetails.required' => 'Recommendation details are required',
             // 'joiningdate.required' => 'Joining date is required',
+            
+            // Radio button
+            'current_sector.required' => 'Current Sector is required',
+            'current_sector.in' => 'Current Sector must be either Government Sector or Private Sector',
         ]; 
     }
 }

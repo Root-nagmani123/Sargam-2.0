@@ -546,8 +546,17 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             error: function (error) {
                 console.log('Error:', error);
+                // Clear previous validation errors
+                $('.validation-error-message').remove();
+                $('.is-invalid').removeClass('is-invalid');
+                $('label.text-danger').removeClass('text-danger');
+                
                 if (error.status == 422) {
                     let errors = error.responseJSON.errors;
+                    let firstErrorField = null;
+
+                    // Show toastr notification
+                    toastr.error('Please fix the validation errors in the form.');
 
                     for (let key in errors) {
                         // Handle array fields (e.g., degree.0, university_institution_name.1)
@@ -558,20 +567,63 @@ document.addEventListener('DOMContentLoaded', function () {
 
                             if (inputField.length > 0) {
                                 label.addClass('text-danger').append(` <span class="text-danger">*</span>`);
-                                const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
+                                const errorDiv = $('<span class="text-danger mt-1 validation-error-message"></span><br/>').text(errors[key][0]);
                                 inputField.addClass('is-invalid').after(errorDiv);
+                                // Store first error field for scrolling
+                                if (!firstErrorField) {
+                                    firstErrorField = inputField;
+                                }
                             }
                         }
                         // Handle regular fields
                         else {
-                            const inputField = $(`[name="${key}"], select[name="${key}"]`);
-                            const label = $(`label[for="${inputField.attr('id')}"]`);
-                            if (inputField.length > 0) {
-                                label.addClass('text-danger').append(` <span class="text-danger">*</span>`);
-                                const errorDiv = $('<span class="text-danger mt-1"></span><br/>').text(errors[key][0]);
-                                inputField.addClass('is-invalid').after(errorDiv);
+                            // Check if it's a radio button group
+                            const radioButtons = $(`input[type="radio"][name="${key}"]`);
+                            if (radioButtons.length > 0) {
+                                // Handle radio buttons
+                                const firstRadio = radioButtons.first();
+                                // Find the parent container that holds the radio buttons
+                                const radioContainer = firstRadio.closest('.mb-3');
+                                // Find the label - look for label that contains the field name or is in the same parent
+                                const parentCol = firstRadio.closest('.col-12');
+                                const label = parentCol.find('label.form-label').first();
+                                
+                                if (label.length > 0) {
+                                    label.addClass('text-danger');
+                                    // Remove existing error message if any
+                                    radioContainer.next('.validation-error-message').remove();
+                                    // Add error message after the radio button container
+                                    const errorDiv = $('<div class="text-danger mt-1 validation-error-message"></div>').text(errors[key][0]);
+                                    radioContainer.after(errorDiv);
+                                    // Store first error field for scrolling
+                                    if (!firstErrorField) {
+                                        firstErrorField = label;
+                                    }
+                                }
+                            } else {
+                                // Handle regular input/select fields
+                                const inputField = $(`[name="${key}"], select[name="${key}"]`);
+                                const label = $(`label[for="${inputField.attr('id')}"]`);
+                                if (inputField.length > 0) {
+                                    label.addClass('text-danger').append(` <span class="text-danger">*</span>`);
+                                    // Remove existing error message if any
+                                    inputField.next('.validation-error-message').remove();
+                                    const errorDiv = $('<span class="text-danger mt-1 validation-error-message"></span><br/>').text(errors[key][0]);
+                                    inputField.addClass('is-invalid').after(errorDiv);
+                                    // Store first error field for scrolling
+                                    if (!firstErrorField) {
+                                        firstErrorField = inputField;
+                                    }
+                                }
                             }
                         }
+                    }
+                    
+                    // Scroll to first error field
+                    if (firstErrorField && firstErrorField.length > 0) {
+                        $('html, body').animate({
+                            scrollTop: firstErrorField.offset().top - 100
+                        }, 500);
                     }
                 } else {
                     toastr.error('Something went wrong. Please try again.');

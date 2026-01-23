@@ -740,7 +740,7 @@ input.is-invalid {
      <div class="card-body">
           <div class="row">
                <div class="col-12">
-                    <label for="sector" class="form-label">Current Sector :</label>
+                    <label for="sector" class="form-label">Current Sector : <span class="text-danger">*</span></label>
                     <div class="mb-3">
                          <div class="form-check form-check-inline">
 						 <input class="form-check-input success"
