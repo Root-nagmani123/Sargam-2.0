@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CourseRepositoryDetail extends Model
 {
-    protected $table = 'course_repository_details';
+    protected $table = 'course_repository_details'; 
     protected $primaryKey = 'pk';
     public $timestamps = false;
 
@@ -19,6 +19,8 @@ class CourseRepositoryDetail extends Model
         'topic_pk',
         'session_date',
         'author_name',
+        'sector_master_pk',
+        'ministry_master_pk',
         'keyword',
         'created_date',
         'created_by',
@@ -97,6 +99,22 @@ class CourseRepositoryDetail extends Model
     public function author()
     {
         return $this->belongsTo(FacultyMaster::class, 'author_name', 'pk');
+    }
+
+    /**
+     * Relationship with SectorMaster
+     */
+    public function sector()
+    {
+        return $this->belongsTo(SectorMaster::class, 'sector_master_pk', 'pk');
+    }
+
+    /**
+     * Relationship with MinistryMaster
+     */
+    public function ministry()
+    {
+        return $this->belongsTo(MinistryMaster::class, 'ministry_master_pk', 'pk');
     }
 
     /**
