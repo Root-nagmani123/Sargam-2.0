@@ -133,6 +133,8 @@ body[data-bs-theme="dark"] {
 <link rel="stylesheet" href="{{asset('admin_assets/css/plugins/datatable.min.css')}}">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded" />
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css">
+<!-- Breadcrumb Component CSS -->
+<link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:
