@@ -4,86 +4,109 @@
 
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Course Repository" />
+    <!-- Breadcrumb Navigation -->
+    <div class="mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Academics</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">MCTP</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Course Repository Admin</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Course Repository</li>
+                </ol>
+            </nav>
+            <button class="btn btn-link p-0" aria-label="Search">
+                <i class="bi bi-search fs-5"></i>
+            </button>
+        </div>
+    </div>
+
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card shadow-sm" style="border-left: 4px solid #004a93;">
             <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Course Repository</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="javascript:void(0)" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
-                                    + Add New Category
-                                </a>
-                            </div>
-                        </div>
+                <!-- Page Title and Actions -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <button type="button" onclick="window.history.back()" class="btn btn-link p-0 text-decoration-none">
+                            <i class="bi bi-arrow-left fs-4 text-dark"></i>
+                        </button>
+                        <h4 class="mb-0 fw-bold">Course Repository</h4>
                     </div>
-                    <hr>
-                    <hr>
-                    
-                    @if ($repositories->isEmpty())
-                        <div class="text-center py-5">
-                            <i class="fas fa-inbox" style="font-size: 48px; color: #ccc;"></i>
-                            <p class="text-muted mt-3">
-                                No repositories found. <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal">Create your first repository</a>
-                            </p>
-                        </div>
-                    @else
-                        <div id="zero_config_table">
-                            <div class="table-responsive" style="overflow-x: auto">
-                                <table class="table text-nowrap mb-0 align-middle" id="zero_config">
-                                    <thead>
+                    <div class="d-flex gap-2">
+                        <a href="javascript:void(0)" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <i class="bi bi-upload me-1"></i> Upload Documents
+                        </a>
+                        <a href="javascript:void(0)" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createModal">
+                            <i class="bi bi-plus-lg me-1"></i> Add Category
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs mb-3" id="repositoryTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">
+                            Active
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive" type="button" role="tab" aria-controls="archive" aria-selected="false">
+                            Archive
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="repositoryTabContent">
+                    <!-- Active Tab -->
+                    <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
+                        @if ($repositories->isEmpty())
+                            <div class="text-center py-5">
+                                <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
+                                <p class="text-muted mt-3">
+                                    No repositories found. <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal">Create your first repository</a>
+                                </p>
+                            </div>
+                        @else
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0 align-middle">
+                                    <thead style="background-color: #dc3545; color: white;">
                                         <tr>
-                                            <th class="text-center">S.No.</th>
-                                            <th class="text-center">Category Name</th>
-                                            <th class="text-center">Details</th>
-                                            <th class="text-center">Sub-Categories</th>
-                                            <th class="text-center">Documents</th>
-                                            <th class="text-center">Action</th>
+                                            <th class="text-center fw-bold">S.No.</th>
+                                            <th class="text-center fw-bold">Category Name</th>
+                                            <th class="text-center fw-bold">Details</th>
+                                            <th class="text-center fw-bold">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach($repositories as $key => $repo)
-                                        <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+                                        <tr class="{{ $loop->odd ? 'table-light' : '' }}">
                                             <td class="text-center">{{ $repositories->firstItem() + $key }}</td>
                                             <td class="text-center">
-                                                <a href="{{ route('course-repository.show', $repo->pk) }}" class="text-decoration-none">
+                                                <a href="{{ route('course-repository.show', $repo->pk) }}" class="text-decoration-none fw-semibold">
                                                     {{ $repo->course_repository_name }}
                                                 </a>
                                             </td>
                                             <td class="text-center">
-                                                {{ Str::limit($repo->course_repository_details ?? 'N/A', 50) }}
+                                                <a href="{{ route('course-repository.show', $repo->pk) }}" class="text-decoration-none text-primary">
+                                                    {{ $repo->children->count() }} sub-categories
+                                                </a>
                                             </td>
                                             <td class="text-center">
-                                                <span class="badge bg-primary rounded-pill">{{ $repo->children->count() }}</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <span class="badge bg-success rounded-pill">{{ $repo->getDocumentCount() }}</span>
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Category actions">
-                                                    <!-- Edit -->
-                                                    <a href="javascript:void(0)" 
-                                                       class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1 edit-repo"
-                                                       data-pk="{{ $repo->pk }}"
-                                                       data-name="{{ $repo->course_repository_name }}"
-                                                       data-details="{{ $repo->course_repository_details }}"
-                                                       aria-label="Edit category">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">edit</i>
-                                                        <span class="d-none d-md-inline">Edit</span>
-                                                    </a>
-
-                                                    <!-- Delete -->
+                                                <div class="d-inline-flex align-items-center gap-2">
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-link p-1 edit-repo"
+                                                            data-pk="{{ $repo->pk }}"
+                                                            data-name="{{ $repo->course_repository_name }}"
+                                                            data-details="{{ $repo->course_repository_details }}"
+                                                            aria-label="Edit category">
+                                                        <i class="bi bi-pencil-fill" style="font-size: 18px;"></i>
+                                                    </button>
                                                     <button type="button"
-                                                        class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 delete-repo"
-                                                        data-pk="{{ $repo->pk }}"
-                                                        aria-label="Delete category">
-                                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">delete</i>
-                                                        <span class="d-none d-md-inline">Delete</span>
+                                                            class="btn btn-sm btn-link p-1 delete-repo"
+                                                            data-pk="{{ $repo->pk }}"
+                                                            aria-label="Delete category">
+                                                        <i class="bi bi-trash-fill" style="font-size: 18px;"></i>
                                                     </button>
                                                 </div>
                                             </td>
@@ -92,17 +115,31 @@
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
 
-                        <div class="mt-3">
-                            {{ $repositories->links('pagination::bootstrap-5') }}
+                            <!-- Pagination -->
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <div></div>
+                                <nav aria-label="Page navigation">
+                                    {{ $repositories->links('pagination::bootstrap-5') }}
+                                </nav>
+                                <div class="text-muted small">
+                                    Showing {{ $repositories->firstItem() }} to {{ $repositories->lastItem() }} of {{ $repositories->total() }} items
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Archive Tab -->
+                    <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
+                        <div class="text-center py-5">
+                            <i class="bi bi-archive" style="font-size: 48px; color: #ccc;"></i>
+                            <p class="text-muted mt-3">No archived repositories found.</p>
                         </div>
-                    @endif
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- end Zero Configuration -->
 </div>
 
 <!-- Create/Edit Category Modal -->
@@ -110,7 +147,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                <h5 class="modal-title" id="createModalLabel"><i class="fas fa-plus"></i> <strong>Create New Category</strong></h5>
+                <h5 class="modal-title" id="createModalLabel"><i class="bi bi-plus-lg"></i> <strong>Create New Category *</strong></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="createForm" method="POST" action="{{ route('course-repository.store') }}">
@@ -119,18 +156,13 @@
                     <div class="mb-3">
                         <label for="modal_course_repository_name" class="form-label"><strong>Category Name *</strong></label>
                         <input type="text" class="form-control" id="modal_course_repository_name" name="course_repository_name" 
-                               required placeholder="Enter category name">
-                    </div>
-                    <div class="mb-3">
-                        <label for="modal_course_repository_details" class="form-label"><strong>Details</strong></label>
-                        <textarea class="form-control" id="modal_course_repository_details" name="course_repository_details" 
-                                  rows="3" placeholder="Enter description (optional)"></textarea>
+                               required placeholder="Enter Name">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
                     <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save"></i> Save
+                        <i class="bi bi-check-lg"></i> Save
                     </button>
                 </div>
             </form>
@@ -143,7 +175,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;">
-                <h5 class="modal-title" id="editModalLabel"><i class="fas fa-edit"></i> <strong>Edit Category</strong></h5>
+                <h5 class="modal-title" id="editModalLabel"><i class="bi bi-pencil-fill"></i> <strong>Edit Category</strong></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editForm" method="POST">
@@ -164,7 +196,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
                     <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save"></i> Save
+                        <i class="bi bi-check-lg"></i> Save
                     </button>
                 </div>
             </form>
@@ -177,7 +209,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background-color: #dc3545; color: white;">
-                <h5 class="modal-title" id="uploadModalLabel"><i class="fas fa-upload"></i> Upload Document</h5>
+                <h5 class="modal-title" id="uploadModalLabel"><i class="bi bi-upload"></i> Upload Document</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="uploadForm" enctype="multipart/form-data">
@@ -198,7 +230,7 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Back</button>
                     <button type="submit" class="btn btn-success">
-                        <i class="fas fa-save"></i> Save
+                        <i class="bi bi-check-lg"></i> Save
                     </button>
                 </div>
             </form>
@@ -240,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         const submitBtn = this.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
         
         fetch(this.action, {
             method: 'POST',
@@ -269,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: data.message || 'Failed to create category'
                 });
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+                submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
             }
         })
         .catch(error => {
@@ -280,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Failed to create category'
             });
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+            submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
         });
     });
     
@@ -291,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = new FormData(this);
         const submitBtn = this.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Updating...';
         
         fetch(this.action, {
             method: 'POST',
@@ -320,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: data.message || 'Failed to update category'
                 });
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-save"></i> Update';
+                submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
             }
         })
         .catch(error => {
@@ -331,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Failed to update category'
             });
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-save"></i> Update';
+            submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
         });
     });
     
@@ -377,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const parentPk = '{{ $parentRepository->pk ?? 0 }}';
         const submitBtn = this.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading...';
+        submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Uploading...';
         
         const url = parentPk && parentPk != '0' 
             ? `/course-repository/${parentPk}/upload-document`
@@ -409,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     text: data.error || 'Upload failed'
                 });
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+                submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
             }
         })
         .catch(error => {
@@ -420,10 +452,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 text: 'Upload failed'
             });
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+            submitBtn.innerHTML = '<i class="bi bi-check-lg"></i> Save';
         });
     });
 });
 </script>
 @endsection
-
