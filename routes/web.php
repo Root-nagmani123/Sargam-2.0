@@ -626,7 +626,17 @@ Route::middleware(['auth'])->group(function () {
     'parameters' => ['course-repository' => 'pk']
 ]);
 
-
+// User view routes
+Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
+Route::get('/course-repository-user/foundation-course', [CourseRepositoryController::class, 'foundationCourse'])->name('admin.course-repository.user.foundation-course');
+Route::get('/course-repository-user/foundation-course/{courseCode}', [CourseRepositoryController::class, 'foundationCourseDetail'])->name('admin.course-repository.user.foundation-course.detail');
+Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-subject-wise', [CourseRepositoryController::class, 'classMaterialSubjectWise'])->name('admin.course-repository.user.class-material-subject-wise');
+Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-week-wise', [CourseRepositoryController::class, 'classMaterialWeekWise'])->name('admin.course-repository.user.class-material-week-wise');
+Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNumber}', [CourseRepositoryController::class, 'weekDetail'])->name('admin.course-repository.user.week-detail');
+Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
+Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
+Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
+Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
 
     // Feedback Database Routes
     Route::prefix('faculty')->group(function () {

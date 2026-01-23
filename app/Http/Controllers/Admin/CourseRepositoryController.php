@@ -758,4 +758,402 @@ class CourseRepositoryController extends Controller
         
         return implode('/', $pathParts);
     }
+
+    /**
+     * User-facing course repository index page
+     * GET /course-repository-user
+     */
+    public function userIndex(Request $request)
+    {
+        try {
+            // Get filter parameters
+            $date = $request->query('date');
+            $coursePk = $request->query('course');
+            $subjectPk = $request->query('subject');
+            $week = $request->query('week');
+            $facultyPk = $request->query('faculty');
+
+            // Get root repositories (main course categories)
+            $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
+                ->whereNull('parent_type')
+                ->with(['children', 'documents'])
+                ->orderBy('created_date', 'desc')
+                ->get();
+
+            // Apply filters if provided
+            if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
+                // Filter logic can be added here based on requirements
+            }
+
+            // Get dropdown data
+            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+            $faculties = FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get();
+
+            return view('admin.course-repository.user.index', [
+                'repositories' => $repositories,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => [
+                    'date' => $date,
+                    'course' => $coursePk,
+                    'subject' => $subjectPk,
+                    'week' => $week,
+                    'faculty' => $facultyPk,
+                ],
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in course repository user index: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load course repository');
+        }
+    }
+
+    /**
+     * Foundation Course listing page
+     */
+    public function foundationCourse(Request $request)
+    {
+        try {
+            $filters = $this->getFilters($request);
+            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+            $faculties = FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get();
+
+            // Get Foundation Course repositories
+            $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
+                ->where('course_repository_name', 'like', 'Foundation Course%')
+                ->whereNull('parent_type')
+                ->with(['children', 'documents'])
+                ->orderBy('created_date', 'desc')
+                ->get();
+
+            return view('admin.course-repository.user.foundation-course', [
+                'repositories' => $repositories,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => $filters,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in foundation course: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load foundation course');
+        }
+    }
+
+    /**
+     * Foundation Course detail page (e.g., FC-89)
+     */
+    public function foundationCourseDetail(Request $request, $courseCode)
+    {
+        try {
+            $filters = $this->getFilters($request);
+            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+            $faculties = FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get();
+
+            // Get course repositories for this course code
+            $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
+                ->where('course_repository_name', 'like', '%' . $courseCode . '%')
+                ->with(['children', 'documents'])
+                ->orderBy('created_date', 'desc')
+                ->get();
+
+            return view('admin.course-repository.user.foundation-course-detail', [
+                'courseCode' => $courseCode,
+                'repositories' => $repositories,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => $filters,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in foundation course detail: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load course detail');
+        }
+    }
+
+    /**
+     * Class Material (Subject Wise) page
+     */
+    public function classMaterialSubjectWise(Request $request, $courseCode)
+    {
+        try {
+            $filters = $this->getFilters($request);
+            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+            $faculties = FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get();
+
+            // Get material cards
+            $materialCards = CourseRepositoryMaster::where('del_folder_status', 1)
+                ->where('course_repository_name', 'like', '%' . $courseCode . '%')
+                ->with(['children', 'documents'])
+                ->get();
+
+            // Get subjects list
+            $subjectsList = SubjectMaster::where('active_inactive', 1)
+                ->orderBy('subject_name')
+                ->get();
+
+            return view('admin.course-repository.user.class-material-subject-wise', [
+                'courseCode' => $courseCode,
+                'materialCards' => $materialCards,
+                'subjectsList' => $subjectsList,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => $filters,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in class material subject wise: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load class materials');
+        }
+    }
+
+    /**
+     * Class Material (Week Wise) page
+     */
+    public function classMaterialWeekWise(Request $request, $courseCode)
+    {
+        try {
+            $filters = $this->getFilters($request);
+            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+            $faculties = FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get();
+
+            // Get material cards
+            $materialCards = CourseRepositoryMaster::where('del_folder_status', 1)
+                ->where('course_repository_name', 'like', '%' . $courseCode . '%')
+                ->with(['children', 'documents'])
+                ->get();
+
+            // Generate weeks list (1-52)
+            $weeks = [];
+            for ($i = 1; $i <= 52; $i++) {
+                $weeks[] = [
+                    'number' => $i,
+                    'label' => 'Week-' . str_pad($i, 2, '0', STR_PAD_LEFT),
+                ];
+            }
+
+            return view('admin.course-repository.user.class-material-week-wise', [
+                'courseCode' => $courseCode,
+                'materialCards' => $materialCards,
+                'weeks' => $weeks,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => $filters,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in class material week wise: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load class materials');
+        }
+    }
+
+    /**
+     * Week detail page
+     */
+    public function weekDetail(Request $request, $courseCode, $weekNumber)
+    {
+        try {
+            $filters = $this->getFilters($request);
+            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+            $faculties = FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get();
+
+            // Get documents for this week
+            $documents = CourseRepositoryDetail::whereHas('master', function($query) use ($courseCode) {
+                    $query->where('course_repository_name', 'like', '%' . $courseCode . '%');
+                })
+                ->with(['master', 'documents', 'author', 'subject', 'course'])
+                ->get();
+
+            return view('admin.course-repository.user.week-detail', [
+                'courseCode' => $courseCode,
+                'weekNumber' => $weekNumber,
+                'documents' => $documents,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => $filters,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in week detail: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load week details');
+        }
+    }
+
+    /**
+     * Document details (for modal)
+     */
+    public function documentDetails($documentId)
+    {
+        try {
+            $document = CourseRepositoryDetail::with(['author', 'subject', 'course', 'topic'])
+                ->findOrFail($documentId);
+
+            return response()->json([
+                'success' => true,
+                'document' => [
+                    'author' => $document->author ? $document->author->full_name : 'N/A',
+                    'subject' => $document->subject ? $document->subject->subject_name : 'N/A',
+                    'topic' => $document->topic ? $document->topic->subject_topic : 'N/A',
+                    'keyword' => $document->keyword ?? 'N/A',
+                ],
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error fetching document details: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to load document details'], 500);
+        }
+    }
+
+    /**
+     * Document view (PDF viewer)
+     */
+    public function documentView($documentId)
+    {
+        try {
+            $document = CourseRepositoryDetail::with(['documents', 'author', 'subject'])
+                ->findOrFail($documentId);
+
+            $pdfDocument = $document->documents->first();
+            if (!$pdfDocument) {
+                return redirect()->back()->with('error', 'Document not found');
+            }
+
+            return view('admin.course-repository.user.document-view', [
+                'document' => $document,
+                'pdfDocument' => $pdfDocument,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error viewing document: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load document');
+        }
+    }
+
+    /**
+     * Document video
+     */
+    public function documentVideo($documentId)
+    {
+        try {
+            $document = CourseRepositoryDetail::with(['documents', 'author'])
+                ->findOrFail($documentId);
+
+            return view('admin.course-repository.user.document-video', [
+                'document' => $document,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error loading video: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to load video');
+        }
+    }
+
+    /**
+     * User-facing repository view page
+     * GET /course-repository-user/{pk}
+     */
+    public function userShow($pk)
+    {
+        try {
+            $repository = CourseRepositoryMaster::with([
+                'details' => function($query) {
+                    $query->with(['documents', 'course', 'subject', 'topic', 'creator']);
+                }, 
+                'parent',
+                'children' => function($query) {
+                    $query->with(['documents', 'children' => function($q) {
+                        $q->with(['documents', 'children' => function($q2) {
+                            $q2->with('documents');
+                        }]);
+                    }]);
+                },
+                'documents'
+            ])->findOrFail($pk);
+            
+            $documents_count_array = [];
+            
+            foreach ($repository->children as $child) {
+                $documents_count = CourseRepositoryDetail::where(
+                    'course_repository_master_pk',
+                    $child->pk
+                )->count();
+                $documents_count_array[$child->pk] = $documents_count;
+            }
+          
+            // Get all documents linked through details with course_repository_details_pk
+            // Also include documents directly linked to master via course_repository_master_pk
+            $documents = CourseRepositoryDocument::where('del_type', 1)
+                ->where(function($query) use ($pk) {
+                    $query->where('course_repository_master_pk', $pk)
+                        ->orWhereIn('course_repository_details_pk', 
+                            CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
+                        );
+                })
+                ->orderBy('pk', 'desc')
+                ->get();
+
+            // Build ancestor chain for breadcrumb
+            $ancestors = [];
+            $current = $repository;
+            while ($current && $current->parent) {
+                array_unshift($ancestors, $current->parent);
+                $current = $current->parent;
+            }
+
+            // Get dropdown data for filters
+            $courses = CourseMaster::where('active_inactive', 1)->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->get();
+            $faculties = FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get();
+           
+            return view('admin.course-repository.user.show', [
+                'repository' => $repository,
+                'documents' => $documents,
+                'ancestors' => $ancestors,
+                'documents_count_array' => $documents_count_array,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error in course repository user show: ' . $e->getMessage());
+            return redirect()->route('admin.course-repository.user.index')->with('error', 'Repository not found');
+        }
+    }
+
+    /**
+     * Helper method to get filters from request
+     */
+    private function getFilters(Request $request)
+    {
+        return [
+            'date' => $request->query('date'),
+            'course' => $request->query('course'),
+            'subject' => $request->query('subject'),
+            'week' => $request->query('week'),
+            'faculty' => $request->query('faculty'),
+        ];
+    }
 }

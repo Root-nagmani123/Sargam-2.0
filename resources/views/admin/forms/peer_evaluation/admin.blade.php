@@ -14,38 +14,6 @@
 @section('title', 'Peer Evaluation - Admin Panel | Sargam Admin')
 @section('setup_content')
 
-<style>
-    /* ✅ Improve focus visibility */
-    .table a:focus, .btn:focus, .form-check-input:focus {
-        outline: 2px solid #0d6efd;
-        outline-offset: 2px;
-        box-shadow: none !important;
-    }
-
-    /* ✅ Custom toggle color for clarity */
-    .form-switch .form-check-input:checked {
-        background-color: #198754 !important; /* Bootstrap success green */
-        border-color: #198754 !important;
-    }
-
-    /* ✅ Hover feedback for rows */
-    .table-hover tbody tr:hover {
-        background-color: #f8f9fa !important;
-    }
-
-    /* ✅ High contrast for badges */
-    .badge.bg-info { color: #000; }
-	
-	#courseMessage {
-    font-size: 0.8rem;
-    font-weight: 500;
-	}
-	#coursesAccordion .badge {
-    font-size: 0.75rem;
-    font-weight: 500;
-	}
-</style>
-
 
 <div class="container-fluid">
      <x-breadcrum title="Peer Evaluation - Admin Panel" />
