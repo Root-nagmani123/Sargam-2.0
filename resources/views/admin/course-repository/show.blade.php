@@ -62,6 +62,7 @@
                             <thead>
                                 <tr>
                                     <th class="col text-center">S.No.</th>
+                                    <th class="col text-center">Image</th>
                                     <th class="col text-center">Sub Category Name</th>
                                     <th class="col text-center">Details</th>
                                     <th class="col text-center">Sub-Categories</th>
@@ -73,6 +74,15 @@
                                 @foreach ($repository->children as $index => $child)
                                 <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
                                     <td class="text-center">{{ $loop->iteration }}</td>
+                                    <td class="text-center">
+                                        @if($child->category_image && \Storage::disk('public')->exists($child->category_image))
+                                            <img src="{{ asset('storage/' . $child->category_image) }}" alt="Category Image" 
+                                                 style="max-width: 60px; max-height: 60px; border-radius: 4px;" 
+                                                 class="img-thumbnail">
+                                        @else
+                                            <span class="badge bg-secondary">No Image</span>
+                                        @endif
+                                    </td>
                                     <td class="text-center">
                                         <a href="{{ route('course-repository.show', $child->pk) }}" class="text-decoration-none">
                                             <strong>{{ $child->course_repository_name }}</strong>
@@ -96,7 +106,8 @@
                                                     class="btn btn-sm btn-outline-primary edit-repo"
                                                     data-pk="{{ $child->pk }}"
                                                     data-name="{{ $child->course_repository_name }}"
-                                                    data-details="{{ $child->course_repository_details }}">
+                                                    data-details="{{ $child->course_repository_details }}"
+                                                    data-image="{{ $child->category_image }}">
                                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
                                                 <span class="d-none d-md-inline ms-1">Edit</span>
                                             </button>
@@ -128,6 +139,8 @@
                                 <th class="col text-center">Subject</th>
                                 <th class="col text-center">Topic</th>
                                 <th class="col text-center">Session Date</th>
+                                <th class="col text-center">Sector</th>
+                                <th class="col text-center">Ministry</th>
                                 <th class="col text-center">Author</th>
                                 <th class="col text-center">Action</th>
                             </tr>
@@ -200,6 +213,36 @@
                                 <td class="text-center">
                                     <small>
                                         @if($doc->detail)
+                                            @if($doc->detail->sector)
+                                                {{ Str::limit($doc->detail->sector->sector_name, 15) }}
+                                            @elseif($doc->detail->sector_master_pk)
+                                                {{ Str::limit($doc->detail->sector_master_pk, 15) }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        @else
+                                            N/A
+                                        @endif
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <small>
+                                        @if($doc->detail)
+                                            @if($doc->detail->ministry)
+                                                {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
+                                            @elseif($doc->detail->ministry_master_pk)
+                                                {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        @else
+                                            N/A
+                                        @endif
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <small>
+                                        @if($doc->detail) 
                                             @if($doc->detail->author)
                                                 {{ Str::limit($doc->detail->author->full_name, 15) }}
                                             @elseif($doc->detail->author_name)
@@ -247,7 +290,7 @@
                 <h5 class="modal-title" id="createModalLabel"><i class="fas fa-plus"></i> <strong>Create New Category</strong></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="createForm" method="POST" action="{{ route('course-repository.store') }}">
+            <form id="createForm" method="POST" action="{{ route('course-repository.store') }}" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="parent_type" value="{{ $repository->pk }}">
                 <div class="modal-body">
@@ -258,6 +301,12 @@
                     <div class="mb-3">
                         <label for="course_repository_details" class="form-label"><strong>Details</strong></label>
                         <textarea class="form-control" id="course_repository_details" name="course_repository_details" rows="3" placeholder="Enter description (optional)"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category_image_create" class="form-label"><strong>Category Image</strong></label>
+                        <input type="file" class="form-control" id="category_image_create" name="category_image" accept="image/jpeg,image/png,image/jpg,image/gif">
+                        <small class="text-muted d-block mt-1">Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)</small>
+                        <img id="preview_create_show" src="" alt="Preview" style="max-width: 100px; margin-top: 10px; display: none; border-radius: 4px;" class="img-thumbnail">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -279,7 +328,7 @@
                 <h5 class="modal-title" id="editModalLabel"><i class="fas fa-edit"></i> <strong>Edit Category</strong></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="editForm" method="POST">
+            <form id="editForm" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="modal-body">
@@ -290,6 +339,16 @@
                     <div class="mb-3">
                         <label for="edit_course_repository_details" class="form-label"><strong>Details</strong></label>
                         <textarea class="form-control" id="edit_course_repository_details" name="course_repository_details" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="category_image_edit" class="form-label"><strong>Category Image</strong></label>
+                        <div id="current_image_container_show" style="margin-bottom: 10px; display: none;">
+                            <p class="text-muted mb-1"><small>Current Image:</small></p>
+                            <img id="current_image_show" src="" alt="Current" style="max-width: 100px; border-radius: 4px;" class="img-thumbnail">
+                        </div>
+                        <input type="file" class="form-control" id="category_image_edit" name="category_image" accept="image/jpeg,image/png,image/jpg,image/gif">
+                        <small class="text-muted d-block mt-1">Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)</small>
+                        <img id="preview_edit_show" src="" alt="Preview" style="max-width: 100px; margin-top: 10px; display: none; border-radius: 4px;" class="img-thumbnail">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -353,10 +412,24 @@
                         <!-- Course Name -->
                         <div class="mb-3">
                             <label for="course_name" class="form-label"><strong>Course Name *</strong></label>
+                            
+                            <!-- Active/Archive Toggle -->
+                            <div class="btn-group d-flex mb-2" role="group" aria-label="Course Status Filter">
+                                <button type="button" class="btn btn-sm btn-outline-success active" id="btnActiveCourses" data-status="active">
+                                    <i class="fas fa-check-circle"></i> Active Courses
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnArchivedCourses" data-status="archived">
+                                    <i class="fas fa-archive"></i> Archived Courses
+                                </button>
+                            </div>
+                            
                             <select class="form-select" id="course_name" name="course_name">
                                 <option value="">-- Select --</option>
-                                @foreach(($courses ?? []) as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                @foreach(($activeCourses ?? []) as $course)
+                                    <option value="{{ $course->pk }}" data-status="active">{{ $course->course_name }}</option>
+                                @endforeach
+                                @foreach(($archivedCourses ?? []) as $course)
+                                    <option value="{{ $course->pk }}" data-status="archived" style="display:none;">{{ $course->course_name }}</option>
                                 @endforeach
                             </select>
                             <small class="text-muted d-block mt-1">Select Course Name</small>
@@ -403,6 +476,31 @@
                             </select>
                             <small class="text-muted d-block mt-1">Select Author Name</small>
                         </div>
+
+                        <!-- Sector -->
+                        <div class="mb-3">
+                            <label for="sector_master" class="form-label"><strong>Sector</strong></label>
+                            <select class="form-select" id="sector_master" name="sector_master">
+                                <option value="">-- Select --</option>
+                                @foreach(($sectors ?? []) as $sector)
+                                    <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Select Sector</small>
+                        </div>
+
+                        <!-- Ministry -->
+                        <div class="mb-3">
+                            <label for="ministry_master" class="form-label"><strong>Ministry</strong></label>
+                            <select class="form-select" id="ministry_master" name="ministry_master">
+                                <option value="">-- Select --</option>
+                                @foreach(($ministries ?? []) as $ministry)
+                                    <option value="{{ $ministry->pk }}" data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">{{ $ministry->ministry_name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Select Ministry</small>
+                        </div>
+
                          <div class="mb-3">
                             <label for="keywords_course" class="form-label"><strong>Keywords *</strong></label>
                             <textarea class="form-control" id="keywords_course" name="keywords_course" rows="2" placeholder="Enter KeyWord" required></textarea>
@@ -415,10 +513,24 @@
                         <!-- Course Name -->
                         <div class="mb-3">
                             <label for="course_name_other" class="form-label"><strong>Course Name *</strong></label>
+                            
+                            <!-- Active/Archive Toggle for Other Category -->
+                            <div class="btn-group d-flex mb-2" role="group" aria-label="Other Course Status Filter">
+                                <button type="button" class="btn btn-sm btn-outline-success active" id="btnActiveCoursesOther" data-status="active">
+                                    <i class="fas fa-check-circle"></i> Active Courses
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnArchivedCoursesOther" data-status="archived">
+                                    <i class="fas fa-archive"></i> Archived Courses
+                                </button>
+                            </div>
+                            
                             <select class="form-select" id="course_name_other" name="course_name_other">
                                 <option value="">-- Select --</option>
-                                @foreach(($courses ?? []) as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                @foreach(($activeCourses ?? []) as $course)
+                                    <option value="{{ $course->pk }}" data-status="active">{{ $course->course_name }}</option>
+                                @endforeach
+                                @foreach(($archivedCourses ?? []) as $course)
+                                    <option value="{{ $course->pk }}" data-status="archived" style="display:none;">{{ $course->course_name }}</option>
                                 @endforeach
                             </select>
                             <small class="text-muted d-block mt-1">Select Course Name</small>
@@ -450,6 +562,30 @@
                             <label for="author_name_other" class="form-label"><strong>Author Name</strong></label>
                             <input type="text" class="form-control" id="author_name_other" name="author_name_other" placeholder="Enter Author Name">
                             <small class="text-muted d-block mt-1">Enter Author Name</small>
+                        </div>
+
+                        <!-- Sector for Other Category -->
+                        <div class="mb-3">
+                            <label for="sector_master_other" class="form-label"><strong>Sector</strong></label>
+                            <select class="form-select" id="sector_master_other" name="sector_master_other">
+                                <option value="">-- Select --</option>
+                                @foreach(($sectors ?? []) as $sector)
+                                    <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Select Sector</small>
+                        </div>
+
+                        <!-- Ministry for Other Category -->
+                        <div class="mb-3">
+                            <label for="ministry_master_other" class="form-label"><strong>Ministry</strong></label>
+                            <select class="form-select" id="ministry_master_other" name="ministry_master_other">
+                                <option value="">-- Select --</option>
+                                @foreach(($ministries ?? []) as $ministry)
+                                    <option value="{{ $ministry->pk }}" data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">{{ $ministry->ministry_name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-1">Select Ministry</small>
                         </div>
 
                         <!-- Keywords -->
@@ -633,11 +769,59 @@
         max-height: 70vh;
         overflow-y: auto;
     }
+
+    /* Course Status Toggle Buttons Styling */
+    .btn-group button {
+        transition: all 0.3s ease;
+    }
+    
+    .btn-group button i {
+        margin-right: 5px;
+    }
+    
+    .btn-group button.active {
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const repositoryPk = {{ $repository->pk }};
+
+    // Image preview for create modal
+    document.getElementById('category_image_create')?.addEventListener('change', function(e) {
+        const preview = document.getElementById('preview_create_show');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    });
+    
+    // Image preview for edit modal
+    document.getElementById('category_image_edit')?.addEventListener('change', function(e) {
+        const preview = document.getElementById('preview_edit_show');
+        const file = e.target.files[0];
+        
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            preview.style.display = 'none';
+        }
+    });
 
     // Basic function to clear and populate dropdown
     function populateDropdown(selectId, data, valueKey, textKey) {
@@ -770,6 +954,75 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('courseVideoLink').style.display = 'block';
     document.getElementById('courseAttachments').style.display = 'block';
 
+    // Active/Archive Course Toggle
+    $('#btnActiveCourses, #btnArchivedCourses').on('click', function() {
+        const status = $(this).data('status');
+        
+        // Update button states
+        $('#btnActiveCourses, #btnArchivedCourses').removeClass('active btn-success btn-secondary')
+            .addClass('btn-outline-secondary');
+        
+        if (status === 'active') {
+            $(this).removeClass('btn-outline-secondary').addClass('btn-success active');
+        } else {
+            $(this).removeClass('btn-outline-secondary').addClass('btn-secondary active');
+        }
+        
+        // Filter course options
+        const $courseSelect = $('#course_name');
+        $courseSelect.val(''); // Reset selection
+        
+        // Hide all options except the first one (-- Select --)
+        $courseSelect.find('option').each(function() {
+            if ($(this).val() === '') {
+                $(this).show(); // Show "-- Select --" option
+            } else if ($(this).data('status') === status) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+        
+        // Clear dependent dropdowns
+        $('#subject_name').html('<option value="">-- Select --</option>');
+        $('#timetable_name').html('<option value="">-- Select --</option>');
+        $('#session_date').html('<option value="">-- Select --</option>');
+        $('#author_name').html('<option value="">-- Select --</option>');
+        updateKeywords();
+    });
+
+    // Active/Archive Course Toggle for Other Category
+    $('#btnActiveCoursesOther, #btnArchivedCoursesOther').on('click', function() {
+        const status = $(this).data('status');
+        
+        // Update button states
+        $('#btnActiveCoursesOther, #btnArchivedCoursesOther').removeClass('active btn-success btn-secondary')
+            .addClass('btn-outline-secondary');
+        
+        if (status === 'active') {
+            $(this).removeClass('btn-outline-secondary').addClass('btn-success active');
+        } else {
+            $(this).removeClass('btn-outline-secondary').addClass('btn-secondary active');
+        }
+        
+        // Filter course options for Other category
+        const $courseSelect = $('#course_name_other');
+        $courseSelect.val(''); // Reset selection
+        
+        // Hide all options except the first one (-- Select --)
+        $courseSelect.find('option').each(function() {
+            if ($(this).val() === '') {
+                $(this).show(); // Show "-- Select --" option
+            } else if ($(this).data('status') === status) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+        
+        updateKeywordsOther();
+    });
+
     // Bind cascading change events for Course -> Group -> Timetable
     $('#course_name').on('change', function() {
         onCourseChange('course_name', 'subject_name');
@@ -786,6 +1039,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const topicName = $('#timetable_name option:selected').text().trim();
         const sessionDate = $('#session_date option:selected').text().trim();
         const authorName = $('#author_name option:selected').text().trim();
+        const sectorName = $('#sector_master option:selected').text().trim();
+        const ministryName = $('#ministry_master option:selected').text().trim();
         
         // Build keywords string from selected values (comma-separated)
         const keywordsParts = [];
@@ -794,6 +1049,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (topicName && topicName !== '-- Select --') keywordsParts.push(topicName);
         if (sessionDate && sessionDate !== '-- Select --') keywordsParts.push(sessionDate);
         if (authorName && authorName !== '-- Select --') keywordsParts.push(authorName);
+        if (sectorName && sectorName !== '-- Select --') keywordsParts.push(sectorName);
+        if (ministryName && ministryName !== '-- Select --') keywordsParts.push(ministryName);
         
         const keywords = keywordsParts.join(', ');
         $('#keywords_course').val(keywords);
@@ -806,6 +1063,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const topicName = $('#topic_name_other').val().trim();
         const sessionDate = $('#session_date_other').val().trim();
         const authorName = $('#author_name_other').val().trim();
+        const sectorName = $('#sector_master_other option:selected').text().trim();
+        const ministryName = $('#ministry_master_other option:selected').text().trim();
         
         // Build keywords string from all values (comma-separated)
         const keywordsParts = [];
@@ -814,6 +1073,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (topicName) keywordsParts.push(topicName);
         if (sessionDate) keywordsParts.push(sessionDate);
         if (authorName) keywordsParts.push(authorName);
+        if (sectorName && sectorName !== '-- Select --') keywordsParts.push(sectorName);
+        if (ministryName && ministryName !== '-- Select --') keywordsParts.push(ministryName);
         
         const keywords = keywordsParts.join(', ');
         $('#keywords_other').val(keywords);
@@ -892,6 +1153,49 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#timetable_name').on('change', updateKeywords);
     $('#session_date').on('change', updateKeywords);
     $('#author_name').on('change', updateKeywords);
+    $('#sector_master').on('change', updateKeywords);
+    $('#ministry_master').on('change', updateKeywords);
+
+    // Sector change handler -> Load Ministries
+    $('#sector_master').on('change', function() {
+        const sectorPk = $(this).val();
+        const $ministrySelect = $('#ministry_master');
+        
+        if (!sectorPk) {
+            // Reset ministry dropdown
+            $ministrySelect.html('<option value="">-- Select --</option>').val('');
+            return;
+        }
+        
+        // Fetch ministries for selected sector
+        $.ajax({
+            url: '{{ route("course-repository.ministries-by-sector") }}',
+            type: 'GET',
+            data: { sector_pk: sectorPk },
+            success: function(response) {
+                if (response.success) {
+                    $ministrySelect.html('<option value="">-- Select --</option>');
+                    
+                    response.data.forEach(function(ministry) {
+                        $ministrySelect.append(
+                            $('<option></option>')
+                                .val(ministry.pk)
+                                .text(ministry.ministry_name)
+                        );
+                    });
+                    
+                    // Clear ministry selection and update keywords
+                    $ministrySelect.val('');
+                    updateKeywords();
+                } else {
+                    console.log('Error:', response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('Error loading ministries:', error);
+            }
+        });
+    });
 
     // Bind keyword update to fields for Other category (on keyup and change)
     $('#course_name_other').on('change', updateKeywordsOther);
@@ -899,6 +1203,49 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#topic_name_other').on('keyup change', updateKeywordsOther);
     $('#session_date_other').on('keyup change', updateKeywordsOther);
     $('#author_name_other').on('keyup change', updateKeywordsOther);
+    $('#sector_master_other').on('change', updateKeywordsOther);
+    $('#ministry_master_other').on('change', updateKeywordsOther);
+
+    // Sector change handler for Other category -> Load Ministries
+    $('#sector_master_other').on('change', function() {
+        const sectorPk = $(this).val();
+        const $ministrySelect = $('#ministry_master_other');
+        
+        if (!sectorPk) {
+            // Reset ministry dropdown
+            $ministrySelect.html('<option value="">-- Select --</option>').val('');
+            return;
+        }
+        
+        // Fetch ministries for selected sector
+        $.ajax({
+            url: '{{ route("course-repository.ministries-by-sector") }}',
+            type: 'GET',
+            data: { sector_pk: sectorPk },
+            success: function(response) {
+                if (response.success) {
+                    $ministrySelect.html('<option value="">-- Select --</option>');
+                    
+                    response.data.forEach(function(ministry) {
+                        $ministrySelect.append(
+                            $('<option></option>')
+                                .val(ministry.pk)
+                                .text(ministry.ministry_name)
+                        );
+                    });
+                    
+                    // Clear ministry selection and update keywords
+                    $ministrySelect.val('');
+                    updateKeywordsOther();
+                } else {
+                    console.log('Error:', response.message);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.log('Error loading ministries:', error);
+            }
+        });
+    });
 
     // Edit button functionality
     document.querySelectorAll('.edit-repo').forEach(btn => {
@@ -908,10 +1255,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const pk = this.getAttribute('data-pk');
             const name = this.getAttribute('data-name');
             const details = this.getAttribute('data-details');
+            const image = this.getAttribute('data-image');
             
             // Populate edit form
             document.getElementById('edit_course_repository_name').value = name;
             document.getElementById('edit_course_repository_details').value = details || '';
+            
+            // Show current image if exists
+            const currentImageContainer = document.getElementById('current_image_container_show');
+            const currentImage = document.getElementById('current_image_show');
+            if (image && image !== 'null' && image !== '') {
+                currentImage.src = '/storage/' + image;
+                currentImageContainer.style.display = 'block';
+            } else {
+                currentImageContainer.style.display = 'none';
+            }
+            
+            // Clear preview
+            document.getElementById('preview_edit_show').style.display = 'none';
             
             // Update form action
             const editForm = document.getElementById('editForm');
