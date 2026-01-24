@@ -159,8 +159,8 @@
                                         @if($doc->detail)
                                             @if($doc->detail->course)
                                                 {{ $doc->detail->course->course_name }}
-                                            @elseif($doc->detail->program_structure_pk)
-                                                {{ $doc->detail->program_structure_pk }}
+                                            @elseif($doc->detail->course_master_pk)
+                                                {{ $doc->detail->course_master_pk }}
                                             @else
                                                 N/A
                                             @endif
