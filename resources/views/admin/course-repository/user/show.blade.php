@@ -6,7 +6,7 @@
 <!-- Main Content -->
 <div class="container-fluid px-4 py-4" id="main-content">
     <!-- Title Section with Back Button -->
-    <div class="title-section mb-4">
+    <div class="title-section sticky-top bg-white shadow-sm mb-4" style="z-index: 1020; padding: 1rem 0;">
         <div class="d-flex align-items-center gap-3">
             <button type="button" 
                     onclick="window.history.back()" 
@@ -75,16 +75,22 @@
                 <div class="row g-3">
                     @foreach ($repository->children as $child)
                     <div class="col-md-4 col-lg-3">
-                        <div class="card h-100 border">
+                        <div class="card h-100 border hover-shadow" style="cursor: pointer;" onclick="window.location='{{ route('admin.course-repository.user.show', $child->pk) }}'">
+                            @if($child->category_image && \Storage::disk('public')->exists($child->category_image))
+                                <img src="{{ asset('storage/' . $child->category_image) }}" 
+                                     alt="{{ $child->course_repository_name }}"
+                                     class="card-img-top" 
+                                     style="height: 150px; object-fit: cover;"
+                                     onerror="this.style.display='none'">
+                            @endif
                             <div class="card-body">
                                 <div class="d-flex align-items-start gap-2">
                                     <i class="bi bi-folder-fill text-primary fs-4"></i>
                                     <div class="flex-grow-1">
                                         <h6 class="card-title mb-1">
-                                            <a href="{{ route('admin.course-repository.user.show', $child->pk) }}" 
-                                               class="text-decoration-none text-dark fw-bold">
+                                            <span class="text-dark fw-bold">
                                                 {{ Str::limit($child->course_repository_name, 40) }}
-                                            </a>
+                                            </span>
                                         </h6>
                                         <small class="text-muted">
                                             <span class="badge bg-primary">{{ $child->children->count() }} Sub-categories</span>
@@ -125,7 +131,7 @@
                         </thead>
                         <tbody>
                             @foreach ($documents as $index => $doc)
-                            <tr>
+                            <tr style="cursor: pointer;" onclick="window.location='{{ route('admin.course-repository.user.document-details', $doc->pk) }}'">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>
                                     <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>
@@ -181,7 +187,8 @@
                                 </td>
                                 <td>
                                     <a href="{{ route('course-repository.document.download', $doc->pk) }}" 
-                                       class="btn btn-sm btn-outline-primary">
+                                       class="btn btn-sm btn-outline-primary"
+                                       onclick="event.stopPropagation();">
                                         <i class="bi bi-download"></i> Download
                                     </a>
                                 </td>
@@ -196,6 +203,23 @@
     @endif
 </div>
 
-<!-- Link to CSS -->
-<link rel="stylesheet" href="{{ asset('css/course-repository-user.css') }}">
+<!-- Custom Styles -->
+<style>
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+.hover-shadow:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+.card-img-top {
+    border-bottom: 1px solid #e0e0e0;
+}
+.table tbody tr[style*="cursor: pointer"]:hover {
+    background-color: #f8f9fa;
+    transition: background-color 0.2s ease;
+}
+</style>
+
 @endsection
+
