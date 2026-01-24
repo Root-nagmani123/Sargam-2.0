@@ -128,42 +128,39 @@
 
                     <!-- Documents Section -->
                     @if($documents->count() > 0)
-                    <div class="table-responsive mt-4">
-                        <table class="table text-nowrap mb-0" id="documents">
-                            <thead>
-                                <tr>
-                                    <th class="col text-center">S.No.</th>
-                                    <th class="col text-center">Document Name</th>
-                                    <th class="col text-center">File Title</th>
-                                    <th class="col text-center">Course Name</th>
-                                    <th class="col text-center">Subject</th>
-                                    <th class="col text-center">Topic</th>
-                                    <th class="col text-center">Session Date</th>
-                                    <th class="col text-center">Sector</th>
-                                    <th class="col text-center">Ministry</th>
-                                    <th class="col text-center">Author</th>
-                                    <th class="col text-center">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($documents as $index => $doc)
-                                <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                    <td class="text-center">{{ $loop->iteration }}</td>
-                                    <td class="text-center">
-                                        <i class="fas fa-file-alt text-primary me-2"></i>
-                                        <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
-                                    </td>
-                                    <td class="text-center">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                    <td class="text-center">
-                                        <small>
-                                            @if($doc->detail)
-                                                @if($doc->detail->course)
-                                                    {{ $doc->detail->course->course_name }}
-                                                @elseif($doc->detail->program_structure_pk)
-                                                    {{ $doc->detail->program_structure_pk }}
-                                                @else
-                                                    N/A
-                                                @endif
+                <div class="table-responsive mt-4">
+                    <table class="table text-nowrap mb-0" id="documents">
+                        <thead>
+                            <tr>
+                                <th class="col text-center">S.No.</th>
+                                <th class="col text-center">Document Name</th>
+                                <th class="col text-center">File Title</th>
+                                <th class="col text-center">Course Name</th>
+                                <th class="col text-center">Subject</th>
+                                <th class="col text-center">Topic</th>
+                                <th class="col text-center">Session Date</th>
+                                <th class="col text-center">Sector</th>
+                                <th class="col text-center">Ministry</th>
+                                <th class="col text-center">Author</th>
+                                <th class="col text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($documents as $index => $doc)
+                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td class="text-center">
+                                    <i class="fas fa-file-alt text-primary me-2"></i>
+                                    <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                </td>
+                                <td class="text-center">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                <td class="text-center">
+                                    <small>
+                                        @if($doc->detail)
+                                            @if($doc->detail->course)
+                                                {{ $doc->detail->course->course_name }}
+                                            @elseif($doc->detail->course_master_pk)
+                                                {{ $doc->detail->course_master_pk }}
                                             @else
                                                 N/A
                                             @endif

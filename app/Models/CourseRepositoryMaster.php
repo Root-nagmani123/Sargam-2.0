@@ -128,9 +128,12 @@ class CourseRepositoryMaster extends Model
         
         return $count;
     }
+    /**
+     * Relationship with CourseMaster
+     */
     public function course()
     {
-        return $this->belongsTo(CourseMaster::class, 'program_structure_pk', 'pk');
+        return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
     }
 
     /**
