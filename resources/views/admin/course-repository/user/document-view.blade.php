@@ -10,18 +10,18 @@
             <div class="d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-3">
                     <button class="btn btn-sm btn-link" aria-label="Menu">
-                        <i class="bi bi-list"></i>
+                        <span class="material-icons material-symbols-rounded">menu</span>
                     </button>
                     <span class="fw-semibold">{{ $pdfDocument->document_path ?? 'Document' }}</span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <div class="d-flex align-items-center gap-2">
                         <button class="btn btn-sm btn-outline-secondary" aria-label="Previous page">
-                            <i class="bi bi-chevron-left"></i>
+                            <span class="material-icons material-symbols-rounded">chevron_left</span>
                         </button>
                         <span class="small">1 / 2</span>
                         <button class="btn btn-sm btn-outline-secondary" aria-label="Next page">
-                            <i class="bi bi-chevron-right"></i>
+                            <span class="material-icons material-symbols-rounded">chevron_right</span>
                         </button>
                     </div>
                     <div class="d-flex align-items-center gap-1">
@@ -30,19 +30,19 @@
                         <button class="btn btn-sm btn-outline-secondary" aria-label="Zoom in">+</button>
                     </div>
                     <button class="btn btn-sm btn-outline-secondary" aria-label="Rotate">
-                        <i class="bi bi-arrow-clockwise"></i>
+                        <span class="material-icons material-symbols-rounded">refresh</span>
                     </button>
                     <button class="btn btn-sm btn-outline-secondary" aria-label="Fit to page">
-                        <i class="bi bi-arrows-fullscreen"></i>
+                        <span class="material-icons material-symbols-rounded">fullscreen</span>
                     </button>
                     <button class="btn btn-sm btn-outline-secondary" aria-label="Download">
-                        <i class="bi bi-download"></i>
+                        <span class="material-icons material-symbols-rounded">download</span>
                     </button>
                     <button class="btn btn-sm btn-outline-secondary" aria-label="Print">
-                        <i class="bi bi-printer"></i>
+                        <span class="material-icons material-symbols-rounded">print</span>
                     </button>
                     <button class="btn btn-sm btn-outline-secondary" aria-label="Close" onclick="window.history.back()">
-                        <i class="bi bi-x-lg"></i>
+                        <span class="material-icons material-symbols-rounded">close</span>
                     </button>
                 </div>
             </div>
@@ -63,7 +63,7 @@
                             </iframe>
                         @else
                             <div class="text-center py-5">
-                                <i class="bi bi-file-earmark-pdf text-danger" style="font-size: 4rem;"></i>
+                                <span class="material-icons material-symbols-rounded text-danger" style="font-size: 4rem;">picture_as_pdf</span>
                                 <p class="mt-3 text-muted">PDF document not available</p>
                             </div>
                         @endif

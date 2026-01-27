@@ -6,42 +6,55 @@
 .fallback-styles {
     /* This ensures basic styling even if external CSS fails to load */
 }
+
 </style>
+
 @endpush
 
 @section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Lal Bahadur')
 
 @section('setup_content')
 <style>
-/* Ensure modal and offcanvas backdrops are solid black */
-.modal-backdrop { background-color: #000 !important; }
-.modal-backdrop.show { opacity: 0.8 !important; }
-.offcanvas-backdrop { background-color: #000 !important; }
-.offcanvas-backdrop.show { opacity: 0.8 !important; }
-
-/* Console Error Prevention Styles */
-.error-fallback {
-    color: #dc3545;
-    padding: 10px;
-    border: 1px solid #f5c6cb;
-    border-radius: 4px;
-    background-color: #f8d7da;
+    
+.upload-zone {
+    display: block;
+    border: 2px dashed #cfe2ff;
+    border-radius: 12px;
+    padding: 2rem;
+    background-color: #f8fbff;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
 }
 
-/* Image placeholder for missing images */
-.image-placeholder {
-    width: 60px;
-    height: 60px;
-    background-color: #f8f9fa;
-    border: 2px dashed #dee2e6;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    color: #6c757d;
-    font-size: 12px;
+.upload-zone:hover,
+.upload-zone:focus-within {
+    border-color: #0d6efd;
+    background-color: #eef5ff;
+}
+
+.upload-icon {
+    font-size: 42px;
+    color: #0d6efd;
+    margin-bottom: 0.5rem;
 }
 </style>
+<script>
+document.getElementById('category_image_create')
+    .addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        const preview = document.getElementById('preview_create_show');
+
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            preview.src = reader.result;
+            preview.classList.remove('d-none');
+        };
+        reader.readAsDataURL(file);
+    });
+</script>
+
 <div class="container-fluid">
     <!-- Breadcrumb Navigation -->
     <div class="mb-4">
@@ -49,35 +62,33 @@
             <nav aria-label="breadcrumb" class="flex-grow-1">
                 <ol class="breadcrumb mb-0">
                     <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted d-flex align-items-center">
-                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">home</span> Academics
+                        <a href="{{ route('course-repository.index') }}"
+                            class="text-decoration-none text-muted d-flex align-items-center">
+                            <span class="material-icons material-symbols-rounded me-1"
+                                style="font-size: 18px;">home</span> Academics
                         </a>
                     </li>
                     <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">MCTP</a>
+                        <a href="{{ route('course-repository.index') }}"
+                            class="text-decoration-none text-muted">MCTP</a>
                     </li>
                     <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Course Repository Admin</a>
+                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Course
+                            Repository Admin</a>
                     </li>
                     @if (!empty($ancestors))
-                        @foreach ($ancestors as $ancestor)
-                            <li class="breadcrumb-item">
-                                <a href="{{ route('course-repository.show', $ancestor->pk) }}" class="text-decoration-none text-muted">{{ $ancestor->course_repository_name }}</a>
-                            </li>
-                        @endforeach
+                    @foreach ($ancestors as $ancestor)
+                    <li class="breadcrumb-item">
+                        <a href="{{ route('course-repository.show', $ancestor->pk) }}"
+                            class="text-decoration-none text-muted">{{ $ancestor->course_repository_name }}</a>
+                    </li>
+                    @endforeach
                     @endif
                     <li class="breadcrumb-item active" aria-current="page">
                         <span class="fw-semibold text-primary">{{ $repository->course_repository_name }}</span>
                     </li>
                 </ol>
             </nav>
-            <!-- Advanced Search with Offcanvas -->
-            <button class="btn btn-outline-secondary btn-sm rounded-pill position-relative" aria-label="Search" type="button" data-bs-toggle="offcanvas" data-bs-target="#searchOffcanvas">
-                <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">search</span> Advanced Search
-                <span class="position-absolute top-0 start-100 translate-middle p-1 bg-primary border border-light rounded-circle">
-                    <span class="visually-hidden">New alerts</span>
-                </span>
-            </button>
         </div>
     </div>
 
@@ -87,138 +98,127 @@
                 <!-- Page Title and Actions -->
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
                     <div class="d-flex align-items-center gap-3">
-                        <button type="button" onclick="window.history.back()" class="btn btn-outline-secondary btn-sm rounded-circle p-2 back-btn" style="width: 40px; height: 40px;">
-                            <span class="material-icons material-symbols-rounded">arrow_back</span>
-                        </button>
+                        <a href="javascript:void(0)" type="button" onclick="window.history.back()"
+                            class="text-primary p-2 back-btn">
+                            <span class="material-icons material-symbols-rounded">arrow_back_ios</span>
+                        </a>
                         <div>
-                            <h4 class="mb-0 fw-bold text-dark">{{ $repository->course_repository_name }}</h4>
-                            <small class="text-muted">Manage categories and documents</small>
+                            <h3 class="mb-0 fw-bold text-primary">{{ $repository->course_repository_name }}</h3>
                         </div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
-                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm px-3 rounded-pill" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">cloud_upload</span> Upload Documents
+                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm px-3 rounded-pill"
+                            data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            Upload Documents
                         </a>
-                        <a href="javascript:void(0)" class="btn btn-primary btn-sm px-3 rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#createModal">
-                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">add_circle</span> Add Category
+                        <a href="javascript:void(0)" class="btn btn-primary btn-sm px-3 rounded-pill shadow-sm"
+                            data-bs-toggle="modal" data-bs-target="#createModal">
+                            Add Category
                         </a>
                     </div>
                 </div>
-                
-                @if($repository->children->count() == 0 && $documents->count() == 0)
-                    <!-- Empty State -->
-                    <div class="text-center py-5 my-5">
-                        <div class="empty-state-icon mb-3">
-                            <span class="material-icons material-symbols-rounded" style="font-size: 64px; color: #dee2e6;">folder_off</span>
-                        </div>
-                        <h5 class="text-muted mb-2">No Content Found</h5>
-                        <p class="text-muted mb-4">Start by adding a category or uploading a document to get started.</p>
-                        <div class="d-flex gap-2 justify-content-center">
-                            <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#createModal">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">add_circle</span> Add Category
-                            </a>
-                            <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#uploadModal">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">cloud_upload</span> Upload Document
-                            </a>
-                        </div>
-                    </div>
-                @else
-                    <!-- Child Repositories Section -->
-                    @if($repository->children->count() > 0)
-                    <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 fw-semibold">
-                                <span class="material-icons material-symbols-rounded text-primary me-2" style="font-size: 20px;">folder</span>Sub-Categories
-                                <span class="badge bg-primary-subtle text-primary ms-2">{{ $repository->children->count() }}</span>
-                            </h5>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table" id="child_repositories">
-                                <thead >
-                                    <tr>
-                                        <th class="text-center">#</th>
-                                        <th class="text-center">Image</th>
-                                        <th>Sub Category Name</th>
-                                        <th>Details</th>
-                                        <th class="text-center">Sub-Categories</th>
-                                        <th class="text-center">Documents</th>
-                                        <th class="text-center">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($repository->children as $index => $child)
-                                    <tr>
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-dark fw-normal">{{ $loop->iteration }}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            @if($child->category_image && \Storage::disk('public')->exists($child->category_image))
-                                                <img src="{{ asset('storage/' . $child->category_image) }}" alt="Category Image" 
-                                                     class="rounded-2 shadow-sm" style="width: 60px; height: 60px; object-fit: cover;">
-                                            @else
-                                                <div class="bg-light rounded-2 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                                                    <i class="material-icons material-symbols-rounded text-muted" style="font-size: 24px;">image</i>
-                                                </div>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <a href="{{ route('course-repository.show', $child->pk) }}" class="text-decoration-none fw-semibold text-dark hover-primary">
-                                                {{ $child->course_repository_name }}
-                                            </a>
-                                        </td>
-                                        <td>
-                                            <span class="text-muted small">{{ Str::limit($child->course_repository_details ?? 'N/A', 50) }}</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-primary-subtle rounded-pill px-3 py-2 text-white">
-                                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">folder</span>{{ $child->children->count() }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 text-white">
-                                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">description</span>{{ $child->getDocumentCount() }}
-</span>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group" role="group">
-                                                <a href="{{ route('course-repository.show', $child->pk) }}" 
-                                                   class="btn btn-sm btn-outline-success rounded-start" 
-                                                   data-bs-toggle="tooltip" 
-                                                   title="View">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">visibility</span>
-                                                    <span class="d-none d-lg-inline ms-1">View</span>
-                                                </a>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-primary edit-repo"
-                                                        data-pk="{{ $child->pk }}"
-                                                        data-name="{{ $child->course_repository_name }}"
-                                                        data-details="{{ $child->course_repository_details }}"
-                                                        data-image="{{ $child->category_image }}"
-                                                        data-bs-toggle="tooltip" 
-                                                        title="Edit">
-                                                    <span class=" material-icons material-symbols-rounded" style="font-size: 16px;">edit</span>
-                                                    <span class="d-none d-lg-inline ms-1">Edit</span>
-                                                </button>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-danger rounded-end delete-repo"
-                                                        data-pk="{{ $child->pk }}"
-                                                        data-bs-toggle="tooltip" 
-                                                        title="Delete">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                                                    <span class="d-none d-lg-inline ms-1">Delete</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    @endif
 
-                    <!-- Documents Section -->
-                    @if($documents->count() > 0)
+                @if($repository->children->count() == 0 && $documents->count() == 0)
+                <!-- Empty State -->
+                <div class="text-center py-5 my-5">
+                    <div class="empty-state-icon mb-3">
+                        <span class="material-icons material-symbols-rounded"
+                            style="font-size: 64px; color: #dee2e6;">folder_off</span>
+                    </div>
+                    <h5 class="text-muted mb-2">No Content Found</h5>
+                    <p class="text-muted mb-4">Start by adding a category or uploading a document to get started.</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal"
+                            data-bs-target="#createModal">
+                            Add Category
+                        </a>
+                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm rounded-pill"
+                            data-bs-toggle="modal" data-bs-target="#uploadModal">Upload Document
+                        </a>
+                    </div>
+                </div>
+                @else
+                <!-- Child Repositories Section -->
+                @if($repository->children->count() > 0)
+                <div class="mb-4">
+                    <div class="table-responsive">
+                        <table class="table" id="child_repositories">
+                            <thead>
+                                <tr>
+                                    <th class="col">#</th>
+                                    <th class="col">Image</th>
+                                    <th class="col">Sub Category Name</th>
+                                    <th class="col">Details</th>
+                                    <th class="col">Sub-Categories</th>
+                                    <th class="col">Documents</th>
+                                    <th class="col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($repository->children as $index => $child)
+                                <tr>
+                                    <td>
+                                        {{ $loop->iteration }}
+                                    </td>
+                                    <td>
+                                        @if($child->category_image &&
+                                        \Storage::disk('public')->exists($child->category_image))
+                                        <img src="{{ asset('storage/' . $child->category_image) }}" alt="Category Image"
+                                            class="rounded-2 shadow-sm"
+                                            style="width: 60px; height: 60px; object-fit: cover;">
+                                        @else
+                                        <div class="bg-light rounded-2 d-flex align-items-center justify-content-center"
+                                            style="width: 60px; height: 60px;">
+                                            <i class="material-icons material-symbols-rounded text-muted"
+                                                style="font-size: 24px;">image</i>
+                                        </div>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                            class="text-decoration-none fw-semibold text-dark hover-primary">
+                                            {{ $child->course_repository_name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span
+                                            class="text-muted small">{{ Str::limit($child->course_repository_details ?? 'N/A', 50) }}</span>
+                                    </td>
+                                    <td>{{ $child->children->count() }} - sub-categories
+                                    </td>
+                                    <td>{{ $child->getDocumentCount() }} - documents
+                                    </td>
+                                    <td>
+                                        <div class="btn-group d-flex gap-2 text-primary" role="group">
+                                            <a href="{{ route('course-repository.show', $child->pk) }}"
+                                                class="text-primary"
+                                                data-bs-toggle="tooltip" title="View">
+                                                <span class="material-icons material-symbols-rounded">visibility</span>
+                                            </a>
+                                            <a href="javascript:void(0)" class="text-primary edit-repo" 
+                                                data-pk="{{ $child->pk }}"
+                                                data-name="{{ $child->course_repository_name }}"
+                                                data-details="{{ $child->course_repository_details }}"
+                                                data-image="{{ $child->category_image }}" data-bs-toggle="tooltip"
+                                                title="Edit">
+                                                <span class=" material-icons material-symbols-rounded">edit</span>
+                                            </a>
+                                            <a href="javascript:void(0)" class="text-primary delete-repo"
+                                                data-pk="{{ $child->pk }}" data-bs-toggle="tooltip" title="Delete">
+                                                <span class="material-icons material-symbols-rounded">delete_forever</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                @endif
+
+                <!-- Documents Section -->
+                @if($documents->count() > 0)
                 <div class="table-responsive mt-4">
                     <table class="table text-nowrap mb-0" id="documents">
                         <thead>
@@ -248,142 +248,214 @@
                                 <td class="text-center">
                                     <small>
                                         @if($doc->detail)
-                                            @if($doc->detail->course)
-                                                {{ $doc->detail->course->course_name }}
-                                            @elseif($doc->detail->course_master_pk)
-                                                {{ $doc->detail->course_master_pk }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </small>
-                                    </td>
-                                    <td class="text-center">
-                                        <small>
-                                            @if($doc->detail)
-                                                @if($doc->detail->subject)
-                                                    {{ Str::limit($doc->detail->subject->subject_name, 20) }}
-                                                @elseif($doc->detail->subject_pk)
-                                                    {{ Str::limit($doc->detail->subject_pk, 20) }}
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->ministry)
-                                                        {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
-                                                    @elseif($doc->detail->ministry_master_pk)
-                                                        {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail) 
-                                                    @if($doc->detail->author)
-                                                        {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                                    @elseif($doc->detail->author_name)
-                                                        {{ Str::limit($doc->detail->author_name, 15) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td class="text-center">
-                                            <div class="btn-group" role="group">
-                                                <a href="{{ route('course-repository.document.download', $doc->pk) }}" 
-                                                   class="btn btn-sm btn-outline-info rounded-start"
-                                                   data-bs-toggle="tooltip" 
-                                                   title="Download">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">download</span>
-                                                    <span class="d-none d-lg-inline ms-1">Download</span>
-                                                </a>
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-outline-danger rounded-end delete-doc" 
-                                                        data-pk="{{ $doc->pk }}"
-                                                        data-bs-toggle="tooltip" 
-                                                        title="Delete">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                                                    <span class="d-none d-lg-inline ms-1">Delete</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                                        @if($doc->detail->course)
+                                        {{ $doc->detail->course->course_name }}
+                                        @elseif($doc->detail->course_master_pk)
+                                        {{ $doc->detail->course_master_pk }}
+                                        @else
+                                        N/A
+                                        @endif
+                                        @endif
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <small>
+                                        @if($doc->detail)
+                                        @if($doc->detail->subject)
+                                        {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                        @elseif($doc->detail->subject_pk)
+                                        {{ Str::limit($doc->detail->subject_pk, 20) }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                        @endif
+                                    </small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        @if($doc->detail)
+                                        @if($doc->detail->ministry)
+                                        {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
+                                        @elseif($doc->detail->ministry_master_pk)
+                                        {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                    </small>
+                                </td>
+                                <td>
+                                    <small class="text-muted">
+                                        @if($doc->detail)
+                                        @if($doc->detail->author)
+                                        {{ Str::limit($doc->detail->author->full_name, 15) }}
+                                        @elseif($doc->detail->author_name)
+                                        {{ Str::limit($doc->detail->author_name, 15) }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}"
+                                            class="btn btn-sm btn-outline-info rounded-start" data-bs-toggle="tooltip"
+                                            title="Download">
+                                            <span class="material-icons material-symbols-rounded"
+                                                style="font-size: 16px;">download</span>
+                                            <span class="d-none d-lg-inline ms-1">Download</span>
+                                        </a>
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-danger rounded-end delete-doc"
+                                            data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Delete">
+                                            <span class="material-icons material-symbols-rounded"
+                                                style="font-size: 16px;">delete</span>
+                                            <span class="d-none d-lg-inline ms-1">Delete</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+            @endif
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- Create Category Modal -->
+<div class="modal fade" id="createModal" tabindex="-1"
+     aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+
+            <!-- Header -->
+            <div class="modal-header bg-primary bg-gradient text-white border-0 rounded-top-4">
+                <h5 class="modal-title fw-semibold d-flex align-items-center"
+                    id="createModalLabel">
+                    <span class="material-icons material-symbols-rounded me-2 fs-5">
+                        add_circle
+                    </span>
+                    Create New Category
+                </h5>
+                <button type="button"
+                        class="btn-close btn-close-white"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+            </div>
+
+            <!-- Form -->
+            <form id="createForm"
+                  method="POST"
+                  action="{{ route('course-repository.store') }}"
+                  enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" name="parent_type" value="{{ $repository->pk }}">
+
+                <div class="modal-body p-4">
+
+                    <!-- Category Name -->
+                    <div class="mb-4">
+                        <div class="form-floating">
+                            <input type="text"
+                                   class="form-control form-control-lg"
+                                   id="course_repository_name"
+                                   name="course_repository_name"
+                                   placeholder="Category Name"
+                                   required>
+                            <label for="course_repository_name">
+                                <span class="material-icons material-symbols-rounded me-1 fs-6">
+                                    folder
+                                </span>
+                                Category Name <span class="text-danger">*</span>
+                            </label>
                         </div>
                     </div>
-                    @endif
-                @endif
-            </div>
+
+                    <!-- Details -->
+                    <div class="mb-4">
+                        <div class="form-floating">
+                            <textarea class="form-control"
+                                      id="course_repository_details"
+                                      name="course_repository_details"
+                                      placeholder="Details"
+                                      style="height: 110px"></textarea>
+                            <label for="course_repository_details">
+                                <span class="material-icons material-symbols-rounded me-1 fs-6">
+                                    subject
+                                </span>
+                                Details (Optional)
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Upload Section -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Category Image
+                        </label>
+
+                        <label for="category_image_create"
+                               class="upload-zone">
+
+                            <div class="text-center">
+                                <span class="material-icons material-symbols-rounded upload-icon">
+                                    cloud_upload
+                                </span>
+                                <p class="mb-1 fw-medium">
+                                    <span class="text-primary">Click to upload</span>
+                                    or drag and drop
+                                </p>
+                                <small class="text-muted">
+                                    JPEG, PNG, JPG, GIF (Max 2MB)
+                                </small>
+                            </div>
+
+                            <input type="file"
+                                   id="category_image_create"
+                                   name="category_image"
+                                   accept="image/jpeg,image/png,image/jpg,image/gif"
+                                   hidden>
+                        </label>
+
+                        <!-- Preview -->
+                        <div class="mt-3">
+                            <img id="preview_create_show"
+                                 class="img-thumbnail shadow-sm d-none"
+                                 alt="Category image preview"
+                                 style="max-width: 150px;">
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer bg-light border-0 px-4 py-3">
+                    <button type="button"
+                            class="btn btn-outline-secondary rounded-pill px-4"
+                            data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="btn btn-primary rounded-pill px-4 shadow-sm">
+                        Save Category
+                    </button>
+                </div>
+            </form>
+
         </div>
     </div>
 </div>
 
-<!-- Create Category Modal -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white border-0">
-                <h5 class="modal-title fw-semibold" id="createModalLabel">
-                    <span class="material-ico material-symbols-rounded me-2" style="font-size: 20px;">add_circle</span>Create New Category
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="createForm" method="POST" action="{{ route('course-repository.store') }}" enctype="multipart/form-data">
-                @csrf
-                <input type="hidden" name="parent_type" value="{{ $repository->pk }}">
-                <div class="modal-body p-4">
-                    <div class="mb-3">
-                        <div class="form-floating">
-                            <input type="text" class="form-control form-control-lg" id="course_repository_name" name="course_repository_name" required placeholder="Enter category name">
-                            <label for="course_repository_name">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">folder</span>Category Name <span class="text-danger">*</span>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-floating">
-                            <textarea class="form-control" id="course_repository_details" name="course_repository_details" style="height: 100px" placeholder="Enter description (optional)"></textarea>
-                            <label for="course_repository_details">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">subject</span>Details (Optional)
-                            </label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="category_image_create" class="form-label fw-semibold">Category Image</label>
-                        <input type="file" class="form-control" id="category_image_create" name="category_image" accept="image/jpeg,image/png,image/jpg,image/gif">
-                        <small class="text-muted d-block mt-2">
-                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)
-                        </small>
-                        <div class="mt-3">
-                            <img id="preview_create_show" src="" alt="Preview" style="max-width: 150px; display: none; border-radius: 8px;" class="img-thumbnail shadow-sm">
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer border-0 bg-light px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                        <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">cancel</span>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                        <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">check_circle</span>Save Category
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- Edit Category Modal -->
 <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
@@ -391,9 +463,11 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-primary text-white border-0">
                 <h5 class="modal-title fw-semibold" id="editModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2" style="font-size: 20px;">edit</span>Edit Category
+                    <span class="material-icons material-symbols-rounded me-2" style="font-size: 20px;">edit</span>Edit
+                    Category
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
             <form id="editForm" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -403,33 +477,42 @@
                         <label for="edit_course_repository_name" class="form-label fw-semibold">
                             Category Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control form-control-lg" id="edit_course_repository_name" name="course_repository_name" required>
+                        <input type="text" class="form-control form-control-lg" id="edit_course_repository_name"
+                            name="course_repository_name" required>
                     </div>
                     <div class="mb-3">
                         <label for="edit_course_repository_details" class="form-label fw-semibold">Details</label>
-                        <textarea class="form-control" id="edit_course_repository_details" name="course_repository_details" rows="3"></textarea>
+                        <textarea class="form-control" id="edit_course_repository_details"
+                            name="course_repository_details" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="category_image_edit" class="form-label fw-semibold">Category Image</label>
                         <div id="current_image_container_show" class="mb-3" style="display: none;">
                             <p class="text-muted mb-2 small"><strong>Current Image:</strong></p>
-                            <img id="current_image_show" src="" alt="Current" style="max-width: 150px; border-radius: 8px;" class="img-thumbnail shadow-sm">
+                            <img id="current_image_show" src="" alt="Current"
+                                style="max-width: 150px; border-radius: 8px;" class="img-thumbnail shadow-sm">
                         </div>
-                        <input type="file" class="form-control" id="category_image_edit" name="category_image" accept="image/jpeg,image/png,image/jpg,image/gif">
+                        <input type="file" class="form-control" id="category_image_edit" name="category_image"
+                            accept="image/jpeg,image/png,image/jpg,image/gif">
                         <small class="text-muted d-block mt-2">
-                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)
+                            <span class="material-icons material-symbols-rounded me-1"
+                                style="font-size: 14px;">info</span>Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)
                         </small>
                         <div class="mt-3">
-                            <img id="preview_edit_show" src="" alt="Preview" style="max-width: 150px; display: none; border-radius: 8px;" class="img-thumbnail shadow-sm">
+                            <img id="preview_edit_show" src="" alt="Preview"
+                                style="max-width: 150px; display: none; border-radius: 8px;"
+                                class="img-thumbnail shadow-sm">
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 bg-light px-4 py-3">
                     <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                        <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">cancel</span>Cancel
+                        <span class="material-icons material-symbols-rounded me-1"
+                            style="font-size: 16px;">cancel</span>Cancel
                     </button>
                     <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                        <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">check_circle</span>Update Category
+                        <span class="material-icons material-symbols-rounded me-1"
+                            style="font-size: 16px;">check_circle</span>Update Category
                     </button>
                 </div>
             </form>
@@ -440,454 +523,437 @@
 <!-- Upload Modal -->
 <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-danger text-white border-0">
-                <h5 class="modal-title fw-semibold" id="uploadModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2" style="font-size: 20px;">cloud_upload</span>Upload Document
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header bg-white border-bottom px-4 py-3">
+                <h5 class="modal-title fw-semibold text-dark" id="uploadModalLabel">
+                    <span class="material-icons material-symbols-rounded me-2 text-primary"
+                        style="font-size: 22px;">cloud_upload</span>Upload Document
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="uploadForm" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-body p-4">
-                    <!-- Category Selection -->
-                    <div class="mb-4">
-                        <label class="form-label fw-semibold mb-3">Category Type</label>
-                        <div class="btn-group w-100" role="group" aria-label="Category selection">
-                            <input type="radio" class="btn-check category-radio" name="category" id="category_course" value="Course" checked>
-                            <label class="btn btn-outline-primary" for="category_course">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">menu_book</span>Course
-                            </label>
-                            
-                            <input type="radio" class="btn-check category-radio" name="category" id="category_other" value="Other">
-                            <label class="btn btn-outline-primary" for="category_other">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">description</span>Other
-                            </label>
-                            
-                            <input type="radio" class="btn-check category-radio" name="category" id="category_institutional" value="Institutional">
-                            <label class="btn btn-outline-primary" for="category_institutional">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">business</span>Institutional
-                            </label>
+                <div class="modal-body p-4 bg-light">
+                    <!-- Category Type Selection - Radio Buttons -->
+                    <div class="mb-3">
+                        <div class="d-flex gap-4 align-items-center">
+                            <div class="form-check">
+                                <input class="form-check-input category-radio" type="radio" name="category"
+                                    id="category_course" value="Course" checked>
+                                <label class="form-check-label fw-medium" for="category_course">
+                                    Course
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input category-radio" type="radio" name="category"
+                                    id="category_other" value="Other">
+                                <label class="form-check-label fw-medium" for="category_other">
+                                    Other
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input category-radio" type="radio" name="category"
+                                    id="category_institutional" value="Institutional">
+                                <label class="form-check-label fw-medium" for="category_institutional">
+                                    Institutional
+                                </label>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Category Name Display -->
-                    <div class="mb-4 p-3 bg-primary-subtle border-start border-primary border-4 rounded">
-                        <label class="form-label fw-semibold mb-2">Category Name</label>
-                        <div class="text-dark">
-                            @if (!empty($ancestors))
-                                <span class="text-muted">
-                                    @foreach ($ancestors as $ancestor)
-                                        {{ $ancestor->course_repository_name }} <span class="material-icons material-symbols-rounded mx-1" style="font-size: 14px;">arrow_forward</span>
-                                    @endforeach
-                                </span>
-                            @endif
-                            <span class="fw-semibold text-primary">{{ $repository->course_repository_name }}</span>
+                    <!-- Course Repository Form Card -->
+                    <div class="card border-0 shadow-sm rounded-3 mb-3">
+                        <div class="card-header bg-white border-0 py-3">
+                            <h6 class="mb-0 fw-semibold text-dark">Course Repository of LBSNAA</h6>
+                        </div>
+                        <div class="card-body p-4 bg-white">
+
+                            <!-- Course Category Fields -->
+                            <div id="courseFields" class="category-fields">
+                                <!-- Row 1: Course Name & Major Subject Name -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="course_name" class="form-label">
+                                            Course Name <span class="text-danger">*</span>
+                                        </label>
+                                        <!-- Active/Archive Toggle -->
+                                        <!-- Active/Archive Toggle -->
+                                        <div class="btn-group w-100 mb-3" role="group"
+                                            aria-label="Course Status Filter">
+                                            <input type="radio" class="btn-check" name="course_status"
+                                                id="btnActiveCourses" value="active" checked>
+                                            <label class="btn btn-outline-success" for="btnActiveCourses">
+                                                <span class="material-icons material-symbols-rounded me-1"
+                                                    style="font-size: 16px;">check_circle</span>Active Courses
+                                            </label>
+
+                                            <input type="radio" class="btn-check" name="course_status"
+                                                id="btnArchivedCourses" value="archived">
+                                            <label class="btn btn-outline-secondary" for="btnArchivedCourses">
+                                                <span class="material-icons material-symbols-rounded me-1"
+                                                    style="font-size: 16px;">archive</span>Archived Courses
+                                            </label>
+                                        </div>
+                                        <select class="form-select" id="course_name" name="course_name" required>
+                                            <option value="" selected>Select</option>
+                                            @foreach(($activeCourses ?? []) as $course)
+                                            <option value="{{ $course->pk }}" data-status="active">
+                                                {{ $course->course_name }}</option>
+                                            @endforeach
+                                            @foreach(($archivedCourses ?? []) as $course)
+                                            <option value="{{ $course->pk }}" data-status="archived"
+                                                style="display:none;">{{ $course->course_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Course Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="subject_name" class="form-label">
+                                            Major Subject Name <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="subject_name" name="subject_name" required>
+                                            <option value="" selected>Select</option>
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Major Subject Name
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: Topic Name & Session Date -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="timetable_name" class="form-label">
+                                            Topic Name <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="timetable_name" name="timetable_name" required>
+                                            <option value="" selected>Select</option>
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Topic Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="session_date" class="form-label">
+                                            Session Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-select" id="session_date" name="session_date"
+                                            placeholder="ABCD12345" required>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Session Date
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Author Name & Keywords -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="author_name" class="form-label">
+                                            Author Name <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="author_name" name="author_name" required>
+                                            <option value="" selected>Select</option>
+                                            @foreach(($authors ?? []) as $author)
+                                            <option value="{{ $author->pk }}">{{ $author->full_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Author Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="keywords_course" class="form-label">
+                                            Keywords <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="keywords_course"
+                                            name="keywords_course" placeholder="ABCD12345" required>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Enter Keyword
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 4: Sector & Ministry -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="sector_master" class="form-label">
+                                            Sector <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="sector_master" name="sector_master" required>
+                                            <option value="" selected>Select</option>
+                                            @foreach(($sectors ?? []) as $sector)
+                                            <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="ministry_master" class="form-label">
+                                            Ministry <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="ministry_master" name="ministry_master"
+                                            required>
+                                            <option value="" selected>Select</option>
+                                            @foreach(($ministries ?? []) as $ministry)
+                                            <option value="{{ $ministry->pk }}"
+                                                data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">
+                                                {{ $ministry->ministry_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Upload Video Link Attachment -->
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Upload Video Link Attachment <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
+                                        style="border-style: dashed !important; cursor: pointer;">
+                                        <input type="file"
+                                            class="file-input-course position-absolute w-100 h-100 opacity-0"
+                                            name="attachments[]" accept="*/*" multiple
+                                            style="top: 0; left: 0; cursor: pointer;">
+                                        <div class="upload-icon mb-2">
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 15V3M12 3L8 7M12 3L16 7" stroke="#0d6efd" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round" />
+                                                <path
+                                                    d="M2 17L2.62 19.86C2.71 20.37 3.14 20.75 3.66 20.75H20.34C20.86 20.75 21.29 20.37 21.38 19.86L22 17"
+                                                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round" />
+                                            </svg>
+                                        </div>
+                                        <p class="mb-1 text-primary fw-medium file-upload-text">Click to upload <span
+                                                class="text-muted">or drag and drop</span></p>
+                                        <div class="selected-files mt-2 text-start" style="display:none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Other Category Fields -->
+                            <div id="otherFields" class="category-fields" style="display: none;">
+                                <!-- Row 1: Course Name & Major Subject Name -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="course_name_other" class="form-label">
+                                            Course Name <span class="text-danger">*</span>
+                                        </label>
+                                        <!-- Active/Archive Toggle for Other Category -->
+                                        <div class="btn-group w-100 mb-2" role="group"
+                                            aria-label="Other Course Status Filter">
+                                            <input type="radio" class="btn-check" name="course_status_other"
+                                                id="btnActiveCoursesOther" value="active" checked>
+                                            <label class="btn btn-outline-success btn-sm" for="btnActiveCoursesOther">
+                                                <i class="bi bi-check-circle me-1"></i>Active Courses
+                                            </label>
+
+                                            <input type="radio" class="btn-check" name="course_status_other"
+                                                id="btnArchivedCoursesOther" value="archived">
+                                            <label class="btn btn-outline-secondary btn-sm"
+                                                for="btnArchivedCoursesOther">
+                                                <i class="bi bi-archive me-1"></i>Archived Courses
+                                            </label>
+                                        </div>
+                                        <select class="form-select" id="course_name_other" name="course_name_other">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($activeCourses ?? []) as $course)
+                                            <option value="{{ $course->pk }}" data-status="active">
+                                                {{ $course->course_name }}</option>
+                                            @endforeach
+                                            @foreach(($archivedCourses ?? []) as $course)
+                                            <option value="{{ $course->pk }}" data-status="archived"
+                                                style="display:none;">{{ $course->course_name }}</option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Course Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="major_subject_other" class="form-label">
+                                            Major Subject Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="major_subject_other"
+                                            name="major_subject_other" placeholder="Select">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Major Subject Name
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: Topic Name & Session Date -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="topic_name_other" class="form-label">
+                                            Topic Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="topic_name_other"
+                                            name="topic_name_other" placeholder="Select">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Topic Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="session_date_other" class="form-label">
+                                            Session Date <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="date" class="form-control" id="session_date_other"
+                                            name="session_date_other" placeholder="ABCD12345">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Session Date
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 3: Author Name & Keywords -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="author_name_other" class="form-label">
+                                            Author Name <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="author_name_other"
+                                            name="author_name_other" placeholder="Select">
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Select Author Name
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="keywords_other" class="form-label">
+                                            Keywords <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" id="keywords_other"
+                                            name="keywords_other" placeholder="ABCD12345" readonly>
+                                        <small class="text-muted d-flex align-items-center mt-1">
+                                            <i class="bi bi-info-circle me-1"></i> Enter Keyword
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Row 4: Sector & Ministry -->
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="sector_master_other" class="form-label">
+                                            Sector <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="sector_master_other" name="sector_master_other">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($sectors ?? []) as $sector)
+                                            <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="ministry_master_other" class="form-label">
+                                            Ministry <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="ministry_master_other"
+                                            name="ministry_master_other">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($ministries ?? []) as $ministry)
+                                            <option value="{{ $ministry->pk }}"
+                                                data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">
+                                                {{ $ministry->ministry_name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- Upload Attachment -->
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Upload Video Link Attachment <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
+                                        style="border-style: dashed !important; cursor: pointer;">
+                                        <input type="file"
+                                            class="file-input-other position-absolute w-100 h-100 opacity-0"
+                                            name="attachments_other[]" accept="*/*" multiple
+                                            style="top: 0; left: 0; cursor: pointer;">
+                                        <div class="upload-icon mb-2">
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 15V3M12 3L8 7M12 3L16 7" stroke="#0d6efd" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round" />
+                                                <path
+                                                    d="M2 17L2.62 19.86C2.71 20.37 3.14 20.75 3.66 20.75H20.34C20.86 20.75 21.29 20.37 21.38 19.86L22 17"
+                                                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round" />
+                                            </svg>
+                                        </div>
+                                        <p class="mb-1 text-primary fw-medium">Click to upload <span
+                                                class="text-muted">or drag and drop</span></p>
+                                        <div class="selected-files-other mt-2 text-start" style="display:none;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Institutional Category Fields -->
+                            <div id="institutionalFields" class="category-fields" style="display: none;">
+                                <!-- Keywords -->
+                                <div class="mb-3">
+                                    <label for="Key_words_institutional" class="form-label">
+                                        Add Key words <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="Key_words_institutional"
+                                        name="Key_words_institutional" placeholder="Enter Keywords">
+                                </div>
+
+                                <!-- Video Link -->
+                                <div class="mb-3">
+                                    <label for="keyword_institutional" class="form-label">Video Link</label>
+                                    <input type="text" class="form-control" id="keyword_institutional"
+                                        name="keyword_institutional" placeholder="Enter Video Link">
+                                </div>
+
+                                <!-- Upload Attachment -->
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Upload Attachment <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
+                                        style="border-style: dashed !important; cursor: pointer;">
+                                        <input type="file"
+                                            class="file-input-institutional position-absolute w-100 h-100 opacity-0"
+                                            name="attachments_institutional[]" accept="*/*" multiple
+                                            style="top: 0; left: 0; cursor: pointer;">
+                                        <div class="upload-icon mb-2">
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M12 15V3M12 3L8 7M12 3L16 7" stroke="#0d6efd" stroke-width="2"
+                                                    stroke-linecap="round" stroke-linejoin="round" />
+                                                <path
+                                                    d="M2 17L2.62 19.86C2.71 20.37 3.14 20.75 3.66 20.75H20.34C20.86 20.75 21.29 20.37 21.38 19.86L22 17"
+                                                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round"
+                                                    stroke-linejoin="round" />
+                                            </svg>
+                                        </div>
+                                        <p class="mb-1 text-primary fw-medium">Click to upload <span
+                                                class="text-muted">or drag and drop</span></p>
+                                        <div class="selected-files-institutional mt-2 text-start" style="display:none;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
 
-                    <!-- Course Category Fields -->
-                    <div id="courseFields" class="category-fields">
-                        <!-- Course Name -->
-                        <div class="mb-4">
-                            <label for="course_name" class="form-label fw-semibold">
-                                Course Name <span class="text-danger">*</span>
-                            </label>
-                            
-                            <!-- Active/Archive Toggle -->
-                            <div class="btn-group w-100 mb-3" role="group" aria-label="Course Status Filter">
-                                <input type="radio" class="btn-check" name="course_status" id="btnActiveCourses" value="active" checked>
-                                <label class="btn btn-outline-success" for="btnActiveCourses">
-                                    <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">check_circle</span>Active Courses
-                                </label>
-                                
-                                <input type="radio" class="btn-check" name="course_status" id="btnArchivedCourses" value="archived">
-                                <label class="btn btn-outline-secondary" for="btnArchivedCourses">
-                                    <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">archive</span>Archived Courses
-                                </label>
-                            </div>
-                            
-                            <select class="form-select form-select-lg" id="course_name" name="course_name">
-                                <option value="">-- Select Course --</option>
-                                @foreach(($activeCourses ?? []) as $course)
-                                    <option value="{{ $course->pk }}" data-status="active">{{ $course->course_name }}</option>
-                                @endforeach
-                                @foreach(($archivedCourses ?? []) as $course)
-                                    <option value="{{ $course->pk }}" data-status="archived" style="display:none;">{{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Course Name
-                            </small>
-                        </div>
-
-                        <!-- Group Name -->
-                        <div class="mb-4">
-                            <label for="subject_name" class="form-label fw-semibold">Subject Name</label>
-                            <select class="form-select form-select-lg" id="subject_name" name="subject_name">
-                                <option value="">-- Select Subject --</option>
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Subject Name
-                            </small>
-                        </div>
-
-                        <!-- Timetable -->
-                        <div class="mb-4">
-                            <label for="timetable_name" class="form-label fw-semibold">Topic Name</label>
-                            <select class="form-select form-select-lg" id="timetable_name" name="timetable_name">
-                                <option value="">-- Select Topic --</option>
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Topic
-                            </small>
-                        </div>
-
-                        <!-- Session Date -->
-                        <div class="mb-4">
-                            <label for="session_date" class="form-label fw-semibold">Session Date</label>
-                            <select class="form-select form-select-lg" id="session_date" name="session_date">
-                                <option value="">-- Select Session Date --</option>
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Session Date
-                            </small>
-                        </div>
-
-                        <!-- Author Name -->
-                        <div class="mb-4">
-                            <label for="author_name" class="form-label fw-semibold">Author Name</label>
-                            <select class="form-select form-select-lg" id="author_name" name="author_name">
-                                <option value="">-- Select Author --</option>
-                                @foreach(($authors ?? []) as $author)
-                                    <option value="{{ $author->pk }}">{{ $author->full_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Author Name
-                            </small>
-                        </div>
-
-                        <!-- Sector -->
-                        <div class="mb-4">
-                            <label for="sector_master" class="form-label fw-semibold">Sector</label>
-                            <select class="form-select form-select-lg" id="sector_master" name="sector_master">
-                                <option value="">-- Select Sector --</option>
-                                @foreach(($sectors ?? []) as $sector)
-                                    <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Sector
-                            </small>
-                        </div>
-
-                        <!-- Ministry -->
-                        <div class="mb-4">
-                            <label for="ministry_master" class="form-label fw-semibold">Ministry</label>
-                            <select class="form-select form-select-lg" id="ministry_master" name="ministry_master">
-                                <option value="">-- Select Ministry --</option>
-                                @foreach(($ministries ?? []) as $ministry)
-                                    <option value="{{ $ministry->pk }}" data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">{{ $ministry->ministry_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Ministry
-                            </small>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="keywords_course" class="form-label fw-semibold">
-                                Keywords <span class="text-danger">*</span>
-                            </label>
-                            <textarea class="form-control" id="keywords_course" name="keywords_course" rows="2" placeholder="Enter Keywords" required></textarea>
-                        </div>
-
-                    </div>
-
-                    <!-- Other Category Fields -->
-                    <div id="otherFields" class="category-fields" style="display: none;">
-                        <!-- Course Name -->
-                        <div class="mb-4">
-                            <label for="course_name_other" class="form-label fw-semibold">
-                                Course Name <span class="text-danger">*</span>
-                            </label>
-                            
-                            <!-- Active/Archive Toggle for Other Category -->
-                            <div class="btn-group w-100 mb-3" role="group" aria-label="Other Course Status Filter">
-                                <input type="radio" class="btn-check" name="course_status_other" id="btnActiveCoursesOther" value="active" checked>
-                                <label class="btn btn-outline-success" for="btnActiveCoursesOther">
-                                    <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">check_circle</span>Active Courses
-                                </label>
-                                
-                                <input type="radio" class="btn-check" name="course_status_other" id="btnArchivedCoursesOther" value="archived">
-                                <label class="btn btn-outline-secondary" for="btnArchivedCoursesOther">
-                                    <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">archive</span>Archived Courses
-                                </label>
-                            </div>
-                            
-                            <select class="form-select form-select-lg" id="course_name_other" name="course_name_other">
-                                <option value="">-- Select Course --</option>
-                                @foreach(($activeCourses ?? []) as $course)
-                                    <option value="{{ $course->pk }}" data-status="active">{{ $course->course_name }}</option>
-                                @endforeach
-                                @foreach(($archivedCourses ?? []) as $course)
-                                    <option value="{{ $course->pk }}" data-status="archived" style="display:none;">{{ $course->course_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Course Name
-                            </small>
-                        </div>
-
-                        <!-- Major Subject Name -->
-                        <div class="mb-4">
-                            <label for="major_subject_other" class="form-label fw-semibold">Major Subject Name</label>
-                            <input type="text" class="form-control form-control-lg" id="major_subject_other" name="major_subject_other" placeholder="Enter Major Subject Name">
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Enter Major Subject Name
-                            </small>
-                        </div>
-
-                        <!-- Topic Name -->
-                        <div class="mb-4">
-                            <label for="topic_name_other" class="form-label fw-semibold">Topic Name</label>
-                            <input type="text" class="form-control form-control-lg" id="topic_name_other" name="topic_name_other" placeholder="Enter Topic Name">
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Enter Topic Name
-                            </small>
-                        </div>
-
-                        <!-- Session Date -->
-                        <div class="mb-4">
-                            <label for="session_date_other" class="form-label fw-semibold">
-                                Session Date <span class="text-danger">*</span>
-                            </label>
-                            <input type="text" class="form-control form-control-lg" id="session_date_other" name="session_date_other" placeholder="Enter Session Date (e.g., 21-01-2026)">
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Enter Session Date
-                            </small>
-                        </div>
-
-                        <!-- Author Name -->
-                        <div class="mb-4">
-                            <label for="author_name_other" class="form-label fw-semibold">Author Name</label>
-                            <input type="text" class="form-control form-control-lg" id="author_name_other" name="author_name_other" placeholder="Enter Author Name">
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Enter Author Name
-                            </small>
-                        </div>
-
-                        <!-- Sector for Other Category -->
-                        <div class="mb-4">
-                            <label for="sector_master_other" class="form-label fw-semibold">Sector</label>
-                            <select class="form-select form-select-lg" id="sector_master_other" name="sector_master_other">
-                                <option value="">-- Select Sector --</option>
-                                @foreach(($sectors ?? []) as $sector)
-                                    <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Sector
-                            </small>
-                        </div>
-
-                        <!-- Ministry for Other Category -->
-                        <div class="mb-4">
-                            <label for="ministry_master_other" class="form-label fw-semibold">Ministry</label>
-                            <select class="form-select form-select-lg" id="ministry_master_other" name="ministry_master_other">
-                                <option value="">-- Select Ministry --</option>
-                                @foreach(($ministries ?? []) as $ministry)
-                                    <option value="{{ $ministry->pk }}" data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">{{ $ministry->ministry_name }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Select Ministry
-                            </small>
-                        </div>
-
-                        <!-- Keywords -->
-                        <div class="mb-4">
-                            <label for="keywords_other" class="form-label fw-semibold">
-                                Keywords <span class="text-danger">*</span>
-                            </label>
-                            <textarea class="form-control" id="keywords_other" name="keywords_other" rows="2" placeholder="Keywords will be auto-generated" readonly></textarea>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>Keywords are auto-generated from the fields above
-                            </small>
-                        </div>
-
-                        <!-- Attachments Table for Other -->
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <label class="form-label mb-0 fw-semibold">
-                                    <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">attach_file</span>Documents
-                                </label>
-                                <button type="button" class="btn btn-sm btn-primary rounded-pill addAttachmentRowBtn" data-category="other">
-                                    <span class="material-symbols-outlined me-1" style="font-size: 16px;">add_circle</span>Add Row
-                                </button>
-                            </div>
-                            <div class="table-responsive border rounded">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-primary">
-                                        <tr>
-                                            <th class="text-center" style="width: 80px;">#</th>
-                                            <th>Attachment Title</th>
-                                            <th style="width: 35%;">Upload Attachment</th>
-                                            <th class="text-center" style="width: 100px;">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="attachmentTableBody" data-category="other">
-                                        <tr class="attachment-row">
-                                            <td class="text-center row-number">
-                                                <span class="badge bg-light text-dark">1</span>
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control" name="attachment_titles_other[]" placeholder="Document title">
-                                            </td>
-                                            <td>
-                                                <input type="file" class="form-control" name="attachments_other[]" accept="*/*">
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-danger remove-row" style="display: none;">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>You can add multiple documents. Max file size: 100MB
-                            </small>
-                        </div>
-                    </div>
-
-                    <!-- Institutional Category Fields -->
-                    <div id="institutionalFields" class="category-fields" style="display: none;">
-                        <!-- Keywords -->
-                        <div class="mb-4">
-                            <label for="Key_words_institutional" class="form-label fw-semibold">
-                                Add Key words <span class="text-danger">*</span>
-                            </label>
-                            <textarea class="form-control" id="Key_words_institutional" name="Key_words_institutional" rows="2" placeholder="Enter Keywords"></textarea>
-                        </div>
-
-                        <!-- Video Link -->
-                        <div class="mb-4">
-                            <label for="keyword_institutional" class="form-label fw-semibold">Video Link</label>
-                            <textarea class="form-control" id="keyword_institutional" name="keyword_institutional" rows="2" placeholder="Enter Video Link"></textarea>
-                        </div>
-
-                        <!-- Attachments Table for Institutional -->
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <label class="form-label mb-0 fw-semibold">
-                                    <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">attach_file</span>Documents
-                                </label>
-                                <button type="button" class="btn btn-sm btn-primary rounded-pill addAttachmentRowBtn" data-category="institutional">
-                                    <span class="material-symbols-outlined me-1" style="font-size: 16px;">add_circle</span>Add Row
-                                </button>
-                            </div>
-                            <div class="table-responsive border rounded">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-primary">
-                                        <tr>
-                                            <th class="text-center" style="width: 80px;">#</th>
-                                            <th>Attachment Title</th>
-                                            <th style="width: 35%;">Upload Attachment</th>
-                                            <th class="text-center" style="width: 100px;">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="attachmentTableBody" data-category="institutional">
-                                        <tr class="attachment-row">
-                                            <td class="text-center row-number">
-                                                <span class="badge bg-light text-dark">1</span>
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control" name="attachment_titles_institutional[]" placeholder="Document title">
-                                            </td>
-                                            <td>
-                                                <input type="file" class="form-control" name="attachments_institutional[]" accept="*/*">
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-danger remove-row" style="display: none;">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>You can add multiple documents. Max file size: 100MB
-                            </small>
-                        </div>
-                    </div>
-
-                    <!-- Course Category Video Link -->
-                    <div id="courseVideoLink" class="category-fields" style="display: block;">
-                        <div class="mb-4">
-                            <label for="video_link" class="form-label fw-semibold">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">play_circle</span>Add Video Link
-                            </label>
-                            <textarea class="form-control" id="video_link" name="video_link" rows="2" placeholder="Enter Video Link"></textarea>
-                        </div>
-                    </div>
-
-                    <!-- Course Category Attachments Table -->
-                    <div id="courseAttachments" class="category-fields" style="display: block;">
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <label class="form-label mb-0 fw-semibold">
-                                    <span class="material-icons material-symbols-rounded me-1" style="font-size: 18px;">attach_file</span>Documents
-                                </label>
-                                <button type="button" class="btn btn-sm btn-primary rounded-pill addAttachmentRowBtn" data-category="course">
-                                    <span class="material-symbols-outlined me-1" style="font-size: 16px;">add_circle</span>Add Row
-                                </button>
-                            </div>
-                            <div class="table-responsive border rounded">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-primary">
-                                        <tr>
-                                            <th class="text-center" style="width: 80px;">#</th>
-                                            <th>Attachment Title</th>
-                                            <th style="width: 35%;">Upload Attachment</th>
-                                            <th class="text-center" style="width: 100px;">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="attachmentTableBody" data-category="course">
-                                        <tr class="attachment-row">
-                                            <td class="text-center row-number">
-                                                <span class="badge bg-light text-dark">1</span>
-                                            </td>
-                                            <td>
-                                                <input type="text" class="form-control" name="attachment_titles[]" placeholder="Document title">
-                                            </td>
-                                            <td>
-                                                <input type="file" class="form-control" name="attachments[]" accept="*/*">
-                                            </td>
-                                            <td class="text-center">
-                                                <button type="button" class="btn btn-sm btn-outline-danger remove-row" style="display: none;">
-                                                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <small class="text-muted d-block mt-2">
-                                <span class="material-icons material-symbols-rounded me-1" style="font-size: 14px;">info</span>You can add multiple documents. Max file size: 100MB
-                            </small>
-                        </div>
-                    </div>
+                    <!-- Required Fields Note -->
+                    <p class="text-muted small mb-0">
+                        <span class="text-danger">*</span>Required Fields. All marked fields are mandatory for
+                        registration
+                    </p>
                 </div>
-                <div class="modal-footer border-0 bg-light px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                        <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">cancel</span>Cancel
+
+                <div class="modal-footer border-0 bg-white px-4 py-3">
+                    <button type="submit" class="btn btn-primary px-5 rounded-pill" id="uploadBtn">
+                        Save
                     </button>
-                    <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm" id="uploadBtn">
-                        <span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents
+                    <button type="button" class="btn btn-outline-secondary px-5 rounded-pill" data-bs-dismiss="modal">
+                        Cancel
                     </button>
                 </div>
             </form>
@@ -914,26 +980,30 @@
                     </label>
                 </div>
             </div>
-            
+
             <!-- Category Filter -->
             <div class="mb-4">
                 <label class="form-label fw-semibold">
-                    <span class="material-symbols-outlined me-1" style="font-size: 18px;">filter_list</span>Filter by Category
+                    <span class="material-symbols-outlined me-1" style="font-size: 18px;">filter_list</span>Filter by
+                    Category
                 </label>
                 <div class="list-group">
                     <label class="list-group-item">
                         <input class="form-check-input me-1" type="checkbox" value="documents" checked>
-                        <span class="material-symbols-outlined me-1" style="font-size: 16px;">description</span>Documents
+                        <span class="material-symbols-outlined me-1"
+                            style="font-size: 16px;">description</span>Documents
                         <span class="badge bg-primary rounded-pill ms-auto">{{ $documents->count() ?? 0 }}</span>
                     </label>
                     <label class="list-group-item">
                         <input class="form-check-input me-1" type="checkbox" value="categories" checked>
-                        <span class="material-symbols-outlined me-1" style="font-size: 16px;">folder</span>Sub-Categories
-                        <span class="badge bg-success rounded-pill ms-auto">{{ $repository->children->count() ?? 0 }}</span>
+                        <span class="material-symbols-outlined me-1"
+                            style="font-size: 16px;">folder</span>Sub-Categories
+                        <span
+                            class="badge bg-success rounded-pill ms-auto">{{ $repository->children->count() ?? 0 }}</span>
                     </label>
                 </div>
             </div>
-            
+
             <!-- Date Range -->
             <div class="mb-4">
                 <label class="form-label fw-semibold">
@@ -954,7 +1024,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- File Type Filter -->
             <div class="mb-4">
                 <label class="form-label fw-semibold">
@@ -969,7 +1039,7 @@
                     <option value="img">Images</option>
                 </select>
             </div>
-            
+
             <!-- Quick Actions -->
             <div class="d-grid gap-2">
                 <button type="submit" class="btn btn-primary">
@@ -986,7 +1056,8 @@
 <!-- Toast Container -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <!-- Success Toast -->
-    <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="successToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive"
+        aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
                 <span class="material-symbols-outlined me-2" style="font-size: 16px;">check_circle</span>
@@ -995,9 +1066,10 @@
             <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
-    
+
     <!-- Error Toast -->
-    <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="errorToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive"
+        aria-atomic="true">
         <div class="d-flex">
             <div class="toast-body">
                 <span class="material-symbols-outlined me-2" style="font-size: 16px;">warning</span>
@@ -1014,7 +1086,8 @@
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header bg-info text-white border-0">
                 <h5 class="modal-title">
-                    <span class="material-symbols-outlined me-2" style="font-size: 20px;">cloud_upload</span>Uploading Files...
+                    <span class="material-symbols-outlined me-2" style="font-size: 20px;">cloud_upload</span>Uploading
+                    Files...
                 </h5>
             </div>
             <div class="modal-body text-center py-4">
@@ -1025,7 +1098,8 @@
                 </div>
                 <h6 class="mb-3">Please wait while we upload your files</h6>
                 <div class="progress mb-3" style="height: 8px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" role="progressbar" style="width: 0%" id="uploadProgress"></div>
+                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" role="progressbar"
+                        style="width: 0%" id="uploadProgress"></div>
                 </div>
                 <small class="text-muted">
                     <span id="uploadStatus">Preparing upload...</span>
@@ -1036,467 +1110,6 @@
 </div>
 
 @endsection
-
-<style>
-    /* Modern Card Styling */
-    .modern-card {
-        border-radius: 16px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .modern-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
-    }
-
-    /* Modern Table Styling */
-    .modern-table {
-        border-collapse: separate;
-        border-spacing: 0;
-    }
-    
-    .modern-table thead th {
-        background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
-        border-bottom: 2px solid #dee2e6;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-        padding: 1rem;
-        color: #495057;
-    }
-    
-    .modern-table tbody tr {
-        transition: all 0.2s ease;
-        border-bottom: 1px solid #f0f0f0;
-    }
-    
-    .table-row-hover:hover {
-        background-color: #f8f9fa;
-        transform: scale(1.01);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    }
-    
-    .modern-table tbody td {
-        padding: 1rem;
-        vertical-align: middle;
-    }
-
-    /* Hover Effects */
-    .hover-primary:hover {
-        color: #0d6efd !important;
-        transition: color 0.2s ease;
-    }
-    
-    .back-btn:hover {
-        background-color: #0d6efd !important;
-        color: white !important;
-        transform: scale(1.1);
-    }
-
-    /* Modal Enhancements */
-    .modal-dialog-scrollable .modal-body {
-        max-height: calc(100vh - 200px);
-        overflow-y: auto;
-    }
-    
-    .modal-dialog-scrollable {
-        max-height: calc(100vh - 60px);
-    }
-    
-    #uploadModal .modal-body {
-        max-height: 70vh;
-        overflow-y: auto;
-    }
-
-    /* Form Controls */
-    .form-control:focus,
-    .form-select:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
-    }
-    
-    .form-select-lg,
-    .form-control-lg {
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-    }
-
-    /* Button Enhancements */
-    .btn {
-        transition: all 0.2s ease;
-        font-weight: 500;
-    }
-    
-    .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    }
-    
-    .btn:active {
-        transform: translateY(0);
-    }
-    
-    .btn-group .btn-check:checked + .btn {
-        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
-    }
-
-    /* Badge Enhancements */
-    .badge {
-        padding: 0.5em 0.75em;
-        font-weight: 500;
-    }
-
-    /* Empty State */
-    .empty-state-icon {
-        animation: float 3s ease-in-out infinite;
-    }
-    
-    @keyframes float {
-        0%, 100% {
-            transform: translateY(0px);
-        }
-        50% {
-            transform: translateY(-10px);
-        }
-    }
-
-    /* Category Radio Buttons */
-    .btn-check:checked + .btn-outline-primary {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-        color: white;
-    }
-
-    /* Table Responsive */
-    @media (max-width: 768px) {
-        .modern-table {
-            font-size: 0.875rem;
-        }
-        
-        .modern-table thead th,
-        .modern-table tbody td {
-            padding: 0.75rem 0.5rem;
-        }
-        
-        .btn-group {
-            flex-direction: column;
-        }
-        
-        .btn-group .btn {
-            border-radius: 8px !important;
-            margin-bottom: 0.25rem;
-        }
-    }
-
-    /* Scrollbar Styling */
-    .modal-body::-webkit-scrollbar {
-        width: 8px;
-    }
-    
-    .modal-body::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    
-    .modal-body::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 10px;
-    }
-    
-    .modal-body::-webkit-scrollbar-thumb:hover {
-        background: #555;
-    }
-
-    /* Image Preview */
-    .img-thumbnail {
-        transition: transform 0.2s ease;
-    }
-    
-    .img-thumbnail:hover {
-        transform: scale(1.05);
-    }
-
-    /* Loading States */
-    .btn:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-    }
-
-    /* Tooltip Enhancement */
-    [data-bs-toggle="tooltip"] {
-        cursor: pointer;
-    }
-
-    /* Advanced Modern Enhancements */
-    
-    /* Glassmorphism Effects */
-    .glassmorphism {
-        background: rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    /* Floating Labels Enhancement */
-    .form-floating > label {
-        transition: all 0.3s ease;
-    }
-    
-    .form-floating > .form-control:focus ~ label,
-    .form-floating > .form-control:not(:placeholder-shown) ~ label {
-        opacity: 0.65;
-        transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
-    }
-    
-    /* Advanced Button States */
-    .btn {
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .btn::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: left 0.5s;
-    }
-    
-    .btn:hover::before {
-        left: 100%;
-    }
-    
-    /* Micro-interactions for Material Icons */
-    .material-symbols-outlined,
-    .material-icons {
-        transition: transform 0.2s ease;
-        vertical-align: middle;
-    }
-    
-    .btn:hover .material-symbols-outlined,
-    .btn:hover .material-icons {
-        transform: scale(1.1);
-    }
-    
-    /* Material Icons Filled Variant for Active States */
-    .active .material-symbols-outlined,
-    .btn.active .material-symbols-outlined {
-        font-variation-settings: 'FILL' 1;
-    }
-    
-    /* Advanced Card Hover Effects */
-    .modern-card {
-        position: relative;
-        overflow: hidden;
-    }
-    
-    .modern-card::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        left: -50%;
-        width: 200%;
-        height: 200%;
-        background: linear-gradient(45deg, transparent, rgba(13, 110, 253, 0.05), transparent);
-        transform: rotate(45deg);
-        transition: opacity 0.3s ease;
-        opacity: 0;
-        pointer-events: none;
-    }
-    
-    .modern-card:hover::before {
-        opacity: 1;
-    }
-    
-    /* Progress Bar Enhancements */
-    .progress {
-        background-color: rgba(13, 110, 253, 0.1);
-        backdrop-filter: blur(5px);
-    }
-    
-    .progress-bar {
-        background: linear-gradient(45deg, #0d6efd, #6610f2, #0d6efd);
-        background-size: 200% 200%;
-        animation: gradientShift 2s ease infinite;
-    }
-    
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    
-    /* Toast Enhancements */
-    .toast {
-        backdrop-filter: blur(10px);
-        border-radius: 12px;
-    }
-    
-    /* Offcanvas Enhancements */
-    .offcanvas {
-        backdrop-filter: blur(10px);
-        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
-    }
-    
-    .list-group-item {
-        transition: all 0.2s ease;
-        border: none;
-        background: transparent;
-        border-radius: 8px !important;
-        margin-bottom: 4px;
-    }
-    
-    .list-group-item:hover {
-        background-color: rgba(13, 110, 253, 0.1);
-        transform: translateX(4px);
-    }
-    
-    /* Form Control Focus Glow */
-    .form-control:focus,
-    .form-select:focus {
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15), 
-                    0 0 20px rgba(13, 110, 253, 0.1);
-        border-color: #0d6efd;
-    }
-    
-    /* Advanced Badge Styling */
-    .badge {
-        position: relative;
-        background: linear-gradient(135deg, var(--bs-primary), var(--bs-primary-dark, #0a58ca));
-        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.2);
-    }
-    
-    .badge::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-        border-radius: inherit;
-        pointer-events: none;
-    }
-    
-    /* Loading Skeleton Animation */
-    .skeleton {
-        background: linear-gradient(90deg, #f0f0f0 25%, transparent 37%, #f0f0f0 63%);
-        background-size: 400% 100%;
-        animation: skeleton-loading 1.4s ease infinite;
-    }
-    
-    @keyframes skeleton-loading {
-        0% { background-position: 100% 50%; }
-        100% { background-position: -100% 50%; }
-    }
-    
-    /* Notification Pulse */
-    .notification-pulse {
-        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    
-    /* Advanced Responsive Grid */
-    .responsive-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-    }
-    
-    /* Dark Mode Optimizations */
-    @media (prefers-color-scheme: dark) {
-        .modern-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .glassmorphism {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-    }
-    
-    /* Reduced Motion Support */
-    @media (prefers-reduced-motion: reduce) {
-        *,
-        *::before,
-        *::after {
-            animation-duration: 0.01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: 0.01ms !important;
-        }
-        
-        .empty-state-icon {
-            animation: none;
-        }
-    }
-    
-    /* High Contrast Support */
-    @media (prefers-contrast: high) {
-        .btn {
-            border-width: 2px;
-        }
-        
-        .modern-card {
-            border-width: 2px;
-        }
-    }
-    
-    /* Search Highlight Animation */
-    .table-search-highlight {
-        background-color: rgba(255, 193, 7, 0.2) !important;
-        animation: searchHighlight 2s ease-out;
-    }
-    
-    @keyframes searchHighlight {
-        0% { background-color: rgba(255, 193, 7, 0.4); }
-        100% { background-color: transparent; }
-    }
-    
-    /* Advanced Loading Spinner */
-    .spinner-border-sm {
-        width: 1rem;
-        height: 1rem;
-    }
-    
-    /* Enhanced Modal Animations */
-    .modal.fade .modal-dialog {
-        transform: translate(0, -100px);
-        transition: transform 0.3s ease-out;
-    }
-    
-    .modal.show .modal-dialog {
-        transform: none;
-    }
-    
-    /* Offcanvas Slide Animation Enhancement */
-    .offcanvas.offcanvas-end {
-        transform: translateX(100%);
-    }
-    
-    .offcanvas.show {
-        transform: none;
-    }
-    
-    /* Form Validation States */
-    .was-validated .form-control:valid,
-    .form-control.is-valid {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%23198754' d='m2.3 6.73.94-.94-.94-.94L1.36 5.8z'/%3e%3c/svg%3e");
-    }
-    
-    .was-validated .form-control:invalid,
-    .form-control.is-invalid {
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath d='m5.8 4.6 4.4 4.4M5.8 9l4.4-4.4'/%3e%3c/svg%3e");
-    }
-</style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -3052,4 +2665,3 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
-

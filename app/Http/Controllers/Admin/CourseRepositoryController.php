@@ -31,15 +31,18 @@ class CourseRepositoryController extends Controller
             $parentPk = $request->query('parent_pk');
             $parentRepository = null;
             $ancestors = [];
-             $documents_count_array = [];
+            $documents_count_array = [];
+            $perPage = (int) $request->input('per_page', 15);
+            $perPage = in_array($perPage, [10, 15, 25, 50, 100]) ? $perPage : 15;
+
             if ($parentPk) {
-                
                 // Show children of specific parent
                 $parentRepository = CourseRepositoryMaster::findOrFail($parentPk);
                 $repositories = $parentRepository->children()
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
-                    ->paginate(15);
+                    ->paginate($perPage)
+                    ->withQueryString();
                    
             
                                 $documents_count_array = [];
@@ -71,7 +74,8 @@ class CourseRepositoryController extends Controller
                     })
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
-                    ->paginate(15);
+                    ->paginate($perPage)
+                    ->withQueryString();
                     $documents_count_array = [];
 
                     foreach ($repositories as $child) {
@@ -92,6 +96,7 @@ class CourseRepositoryController extends Controller
                 'parentPk' => $parentPk,
                 'ancestors' => $ancestors,
                 'documents_count_array' => $documents_count_array,
+                'perPage' => $perPage,
             ]);
         } catch (Exception $e) {
             Log::error('Error in course repository index: ' . $e->getMessage());
@@ -1153,7 +1158,7 @@ class CourseRepositoryController extends Controller
      * User-facing repository view page
      * GET /course-repository-user/{pk}
      */
-    public function userShow($pk)
+    public function userShow(Request $request, $pk)
     {
         try {
             $repository = CourseRepositoryMaster::with([
@@ -1183,15 +1188,38 @@ class CourseRepositoryController extends Controller
           
             // Get all documents linked through details with course_repository_details_pk
             // Also include documents directly linked to master via course_repository_master_pk
-            $documents = CourseRepositoryDocument::where('del_type', 1)
+            $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
                 ->where(function($query) use ($pk) {
                     $query->where('course_repository_master_pk', $pk)
                         ->orWhereIn('course_repository_details_pk', 
                             CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
                         );
-                })
-                ->orderBy('pk', 'desc')
-                ->get();
+                });
+
+            // Apply filters if provided
+            $date = $request->query('date');
+            $coursePk = $request->query('course');
+            $subjectPk = $request->query('subject');
+            $facultyPk = $request->query('faculty');
+
+            if ($date || $coursePk || $subjectPk || $facultyPk) {
+                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
+                    if ($coursePk) {
+                        $detailQuery->where('course_master_pk', $coursePk);
+                    }
+                    if ($subjectPk) {
+                        $detailQuery->where('subject_pk', $subjectPk);
+                    }
+                    if ($date) {
+                        $detailQuery->whereDate('session_date', $date);
+                    }
+                    if ($facultyPk) {
+                        $detailQuery->where('author_name', $facultyPk);
+                    }
+                });
+            }
+
+            $documents = $documentsQuery->orderBy('pk', 'desc')->get();
 
             // Build ancestor chain for breadcrumb
             $ancestors = [];
@@ -1202,8 +1230,8 @@ class CourseRepositoryController extends Controller
             }
 
             // Get dropdown data for filters
-            $courses = CourseMaster::where('active_inactive', 1)->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->get();
+            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
             $faculties = FacultyMaster::select('pk', 'full_name')
                 ->whereNotNull('full_name')
                 ->orderBy('full_name')
@@ -1217,6 +1245,13 @@ class CourseRepositoryController extends Controller
                 'courses' => $courses,
                 'subjects' => $subjects,
                 'faculties' => $faculties,
+                'filters' => [
+                    'date' => $date,
+                    'course' => $coursePk,
+                    'subject' => $subjectPk,
+                    'week' => $request->query('week'),
+                    'faculty' => $facultyPk,
+                ],
             ]);
         } catch (Exception $e) {
             Log::error('Error in course repository user show: ' . $e->getMessage());

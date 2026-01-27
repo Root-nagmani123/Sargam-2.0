@@ -19,7 +19,7 @@
                             onclick="window.history.back()" 
                             class="btn-back btn btn-link p-0 text-decoration-none"
                             aria-label="Go back">
-                        <i class="bi bi-arrow-left fs-4 text-dark"></i>
+                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
                     </button>
                     <h1 class="h2 mb-0 fw-bold text-dark">Week-{{ str_pad($weekNumber, 2, '0', STR_PAD_LEFT) }}</h1>
                 </div>
@@ -54,7 +54,7 @@
                 <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
                     @if($documents->isEmpty())
                         <div class="alert alert-info text-center">
-                            <i class="bi bi-info-circle me-2"></i>
+                            <span class="material-icons material-symbols-rounded me-2">info</span>
                             No documents found for this week.
                         </div>
                     @else
@@ -104,7 +104,7 @@
                 <!-- Archive Tab -->
                 <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
                     <div class="alert alert-info text-center">
-                        <i class="bi bi-archive me-2"></i>
+                        <span class="material-icons material-symbols-rounded me-2">archive</span>
                         No archived documents found.
                     </div>
                 </div>

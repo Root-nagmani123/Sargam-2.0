@@ -13,7 +13,7 @@
                         <button type="button" 
                                 onclick="window.history.back()" 
                                 class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-arrow-left me-1"></i> Back
+                            <span class="material-icons material-symbols-rounded me-1">arrow_back</span> Back
                         </button>
                     </div>
                     @if($document->videolink)
@@ -25,7 +25,7 @@
                         </div>
                     @else
                         <div class="alert alert-info text-center">
-                            <i class="bi bi-info-circle me-2"></i>
+                            <span class="material-icons material-symbols-rounded me-2">info</span>
                             No video link available for this document.
                         </div>
                     @endif
