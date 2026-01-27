@@ -1493,22 +1493,25 @@ $('#editStudentModal').on('hidden.bs.modal', function () {
 //     }
 // });
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize DualListbox on page load
-    dualListbox = new DualListbox("#select_memo_student", {
-        addEvent: function (value) {
+    // Initialize DualListbox on page load only if element exists
+    var selectElement = document.getElementById("select_memo_student");
+    if (selectElement) {
+        dualListbox = new DualListbox("#select_memo_student", {
+            addEvent: function (value) {
 
-        },
-        removeEvent: function (value) {
+            },
+            removeEvent: function (value) {
 
-        },
-        availableTitle: "Defaulter Students",
-        selectedTitle: "Selected Students",
-        addButtonText: "Move Right",
-        removeButtonText: "Move Left",
-        addAllButtonText: "Move All Right",
-        removeAllButtonText: "Move All Left",
-        draggable: true
-    });
+            },
+            availableTitle: "Defaulter Students",
+            selectedTitle: "Selected Students",
+            addButtonText: "Move Right",
+            removeButtonText: "Move Left",
+            addAllButtonText: "Move All Right",
+            removeAllButtonText: "Move All Left",
+            draggable: true
+        });
+    }
 
     $('#topic_id').on('change', function () {
 

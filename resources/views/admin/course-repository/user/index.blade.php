@@ -13,7 +13,7 @@
                     onclick="window.history.back()" 
                     class="btn-back btn btn-link p-0 text-decoration-none"
                     aria-label="Go back">
-                <i class="bi bi-arrow-left fs-4 text-dark"></i>
+                <i class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back_ios</i>
             </button>
             <h1 class="h2 mb-0 fw-bold text-dark">Central Course Repository of LBSNAA</h1>
         </div>
@@ -21,7 +21,7 @@
 
     <!-- Filter Card -->
     <div class="card filter-card shadow-sm mb-4">
-        <div class="card-body p-4">
+        <div class="card-body p-4" style="background-color: #FBF8F8;">
             <form method="GET" action="{{ route('admin.course-repository.user.index') }}" id="filterForm">
                 <div class="row g-3 align-items-end">
                     <!-- Date Filter -->
@@ -129,7 +129,7 @@
                                  class="card-img-top"
                                  loading="lazy">
                         </div>
-                        <div class="card-body d-flex flex-column">
+                        <div class="card-body d-flex flex-column" style="background-color: #F2F2F2;">
                             <h5 class="card-title text-center fw-bold mb-3">{{ $repository->course_repository_name }}</h5>
                             <div class="mt-auto">
                                 @php

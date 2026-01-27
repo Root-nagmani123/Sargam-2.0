@@ -30,7 +30,7 @@
 </head>
 <x-session_message />
 
-<body style="min-height: 100vh; display: flex; flex-direction: column;background-color: #dcdcdc;">
+<body style="min-height: 100vh; display: flex; flex-direction: column;background-color: #ffffff;">
     <!-- Top Blue Bar (Govt of India) -->
 <!-- Government Header Strips -->
 <div class="govt-header">
