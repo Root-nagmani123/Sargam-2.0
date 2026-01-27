@@ -113,6 +113,19 @@
                                                     </div>
                                                 </a>
                                             </li>
+                                            <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}"
+                                                id="mini-9">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Security Management">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">shield</i>
+                                                    </div>
+                                                </a>
+                                            </li>
                                             @endif
 
                                             @endif
@@ -164,6 +177,10 @@
                     <!-- Mess Management -->
                     <!-- ---------------------------------- -->
                     <x-menu.setup_mess_management />
+
+                    <!-- Security Management (Vehicle & Visitor Pass) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_security_management />
 
                 </div>
             </div>

@@ -299,6 +299,68 @@ Route::middleware(['auth'])->group(function () {
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
 
+    // ============================================
+    // Security Management Routes (Vehicle & Visitor Pass)
+    // ============================================
+    
+    // Vehicle Type Master Routes
+    Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(\App\Http\Controllers\Admin\Security\VehicleTypeController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
+    });
+
+    // Vehicle Pass Configuration Routes
+    Route::prefix('security/vehicle-pass-config')->name('admin.security.vehicle_pass_config.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassConfigController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
+    });
+
+    // Vehicle Pass Application Routes
+    Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Vehicle Pass Approval Routes
+    Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/all', 'allApplications')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::post('/approve/{id}', 'approve')->name('approve');
+        Route::post('/reject/{id}', 'reject')->name('reject');
+    });
+
+    // Visitor/Gate Pass Routes
+    Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/checkout/{id}', 'checkOut')->name('checkout');
+    });
+
+    // ============================================
+    // End Security Management Routes
+    // ============================================
+
     // Attendance Routes
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
         Route::get('/', 'index')->name('index');
