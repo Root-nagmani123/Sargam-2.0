@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Create Purchase Order</h4>
-    <form method="POST" action="{{ route('mess.purchaseorders.store') }}">
+    <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}">
         @csrf
         <div class="row">
             <div class="col-md-3 mb-3">
@@ -100,7 +100,7 @@
         
         <div>
             <button type="submit" class="btn btn-success">Create PO</button>
-            <a href="{{ route('mess.purchaseorders.index') }}" class="btn btn-secondary">Cancel</a>
+            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

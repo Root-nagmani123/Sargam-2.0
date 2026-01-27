@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Mess Invoices</h4>
-    <a href="{{ route('mess.invoices.create') }}" class="btn btn-primary mb-3">Add Invoice</a>
+    <a href="{{ route('admin.mess.invoices.create') }}" class="btn btn-primary mb-3">Add Invoice</a>
     <table class="table table-bordered">
         <thead><tr><th>Invoice No</th><th>Vendor</th><th>Date</th><th>Amount</th></tr></thead>
         <tbody>

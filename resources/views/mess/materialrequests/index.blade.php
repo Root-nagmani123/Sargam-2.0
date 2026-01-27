@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Material Requests</h4>
-        <a href="{{ route('mess.materialrequests.create') }}" class="btn btn-primary">Create Request</a>
+        <a href="{{ route('admin.mess.materialrequests.create') }}" class="btn btn-primary">Create Request</a>
     </div>
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -35,9 +35,9 @@
                 </td>
                 <td>{{ $request->items->count() }} items</td>
                 <td>
-                    <a href="{{ route('mess.materialrequests.show', $request->id) }}" class="btn btn-sm btn-info">View</a>
+                    <a href="{{ route('admin.mess.materialrequests.show', $request->id) }}" class="btn btn-sm btn-info">View</a>
                     @if($request->status == 'pending')
-                        <a href="{{ route('mess.materialrequests.approve', $request->id) }}" class="btn btn-sm btn-success">Approve</a>
+                        <a href="{{ route('admin.mess.materialrequests.approve', $request->id) }}" class="btn btn-sm btn-success">Approve</a>
                     @endif
                 </td>
             </tr>

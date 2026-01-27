@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Add Mess Store Allocation</h4>
-    <form method="POST" action="{{ route('mess.storeallocations.store') }}">
+    <form method="POST" action="{{ route('admin.mess.storeallocations.store') }}">
         @csrf
         <div class="mb-3">
             <label>Store Name</label>

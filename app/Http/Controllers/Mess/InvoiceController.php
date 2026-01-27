@@ -29,6 +29,6 @@ class InvoiceController extends Controller
             'amount' => 'required|numeric',
         ]);
         Invoice::create($request->all());
-        return redirect()->route('mess.invoices.index')->with('success', 'Invoice added successfully');
+        return redirect()->route('admin.mess.invoices.index')->with('success', 'Invoice added successfully');
     }
 }

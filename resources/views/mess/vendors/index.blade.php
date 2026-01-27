@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Mess Vendors</h4>
-    <a href="{{ route('mess.vendors.create') }}" class="btn btn-primary mb-3">Add Vendor</a>
+    <a href="{{ route('admin.mess.vendors.create') }}" class="btn btn-primary mb-3">Add Vendor</a>
     <table class="table table-bordered">
         <thead><tr><th>Name</th><th>Contact Person</th><th>Phone</th><th>Email</th><th>Address</th></tr></thead>
         <tbody>

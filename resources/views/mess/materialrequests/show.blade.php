@@ -53,9 +53,9 @@
                 </tbody>
             </table>
             
-            <a href="{{ route('mess.materialrequests.index') }}" class="btn btn-secondary">Back</a>
+            <a href="{{ route('admin.mess.materialrequests.index') }}" class="btn btn-secondary">Back</a>
             @if($materialRequest->status == 'approved')
-                <a href="{{ route('mess.purchaseorders.create', ['material_request_id' => $materialRequest->id]) }}" class="btn btn-primary">Create PO</a>
+                <a href="{{ route('admin.mess.purchaseorders.create', ['material_request_id' => $materialRequest->id]) }}" class="btn btn-primary">Create PO</a>
             @endif
         </div>
     </div>

@@ -13,9 +13,16 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('subject_module_master', function (Blueprint $table) {
+        Schema::create('mess_vendor_item_mappings', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('vendor_id');
+            $table->unsignedBigInteger('inventory_id');
+            $table->decimal('rate', 10, 2)->nullable();
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
+            
+            $table->index('vendor_id');
+            $table->index('inventory_id');
         });
     }
 
@@ -26,6 +33,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('subject_module_master');
+        Schema::dropIfExists('mess_vendor_item_mappings');
     }
 };

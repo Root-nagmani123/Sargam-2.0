@@ -29,7 +29,7 @@ class StoreController extends Controller
             'status' => 'required|in:active,inactive',
         ]);
         Store::create($request->all());
-        return redirect()->route('mess.stores.index')->with('success', 'Store added successfully');
+        return redirect()->route('admin.mess.stores.index')->with('success', 'Store added successfully');
     }
 
     public function edit($id)
@@ -47,6 +47,6 @@ class StoreController extends Controller
         ]);
         $store = Store::findOrFail($id);
         $store->update($request->all());
-        return redirect()->route('mess.stores.index')->with('success', 'Store updated successfully');
+        return redirect()->route('admin.mess.stores.index')->with('success', 'Store updated successfully');
     }
 }

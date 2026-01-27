@@ -23,6 +23,6 @@ class VendorController extends Controller
             'address' => 'nullable',
         ]);
         Vendor::create($data);
-        return redirect()->route('mess.vendors.index')->with('success', 'Vendor created successfully.');
+        return redirect()->route('admin.mess.vendors.index')->with('success', 'Vendor created successfully.');
     }
 }

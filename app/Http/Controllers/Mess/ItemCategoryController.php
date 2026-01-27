@@ -25,6 +25,6 @@ class ItemCategoryController extends Controller
             'description' => 'nullable',
         ]);
         ItemCategory::create($request->all());
-        return redirect()->route('mess.itemcategories.index')->with('success', 'Category added successfully');
+        return redirect()->route('admin.mess.itemcategories.index')->with('success', 'Category added successfully');
     }
 }
