@@ -20,7 +20,7 @@ class MaterialRequestController extends Controller
 
     public function create()
     {
-        $stores = Store::where('status', 'active')->get();
+        $stores = Store::where('is_active', true)->get();
         $inventories = Inventory::all();
         $request_number = 'MR' . date('Ymd') . str_pad(MaterialRequest::count() + 1, 4, '0', STR_PAD_LEFT);
         return view('mess.materialrequests.create', compact('stores', 'inventories', 'request_number'));
@@ -60,7 +60,7 @@ class MaterialRequestController extends Controller
             }
         });
 
-        return redirect()->route('mess.materialrequests.index')->with('success', 'Material request created successfully');
+        return redirect()->route('admin.mess.materialrequests.index')->with('success', 'Material request created successfully');
     }
 
     public function show($id)
@@ -102,6 +102,6 @@ class MaterialRequestController extends Controller
             }
         });
 
-        return redirect()->route('mess.materialrequests.index')->with('success', 'Material request ' . $request->status . ' successfully');
+        return redirect()->route('admin.mess.materialrequests.index')->with('success', 'Material request ' . $request->status . ' successfully');
     }
 }

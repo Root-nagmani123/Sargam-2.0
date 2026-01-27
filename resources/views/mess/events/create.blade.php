@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Add Mess Event</h4>
-    <form method="POST" action="{{ route('mess.events.store') }}">
+    <form method="POST" action="{{ route('admin.mess.events.store') }}">
         @csrf
         <div class="mb-3">
             <label>Name</label>

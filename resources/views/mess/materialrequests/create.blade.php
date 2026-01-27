@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Create Material Request</h4>
-    <form method="POST" action="{{ route('mess.materialrequests.store') }}" id="materialRequestForm">
+    <form method="POST" action="{{ route('admin.mess.materialrequests.store') }}" id="materialRequestForm">
         @csrf
         <div class="row">
             <div class="col-md-4 mb-3">
@@ -55,7 +55,7 @@
         
         <div>
             <button type="submit" class="btn btn-success">Submit Request</button>
-            <a href="{{ route('mess.materialrequests.index') }}" class="btn btn-secondary">Cancel</a>
+            <a href="{{ route('admin.mess.materialrequests.index') }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

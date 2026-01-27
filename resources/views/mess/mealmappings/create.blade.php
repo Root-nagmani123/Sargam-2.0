@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Add Mess Meal Mapping</h4>
-    <form method="POST" action="{{ route('mess.mealmappings.store') }}">
+    <form method="POST" action="{{ route('admin.mess.mealmappings.store') }}">
         @csrf
         <div class="mb-3">
             <label>Meal Name</label>

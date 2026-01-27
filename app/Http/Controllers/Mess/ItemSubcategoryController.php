@@ -28,6 +28,6 @@ class ItemSubcategoryController extends Controller
             'description' => 'nullable',
         ]);
         ItemSubcategory::create($request->all());
-        return redirect()->route('mess.itemsubcategories.index')->with('success', 'Subcategory added successfully');
+        return redirect()->route('admin.mess.itemsubcategories.index')->with('success', 'Subcategory added successfully');
     }
 }

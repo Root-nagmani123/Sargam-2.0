@@ -23,6 +23,6 @@ class InventoryController extends Controller
             'expiry_date' => 'nullable|date',
         ]);
         Inventory::create($data);
-        return redirect()->route('mess.inventories.index')->with('success', 'Inventory item created successfully.');
+        return redirect()->route('admin.mess.inventories.index')->with('success', 'Inventory item created successfully.');
     }
 }

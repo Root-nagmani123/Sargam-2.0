@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Add Mess Permission Setting</h4>
-    <form method="POST" action="{{ route('mess.permissionsettings.store') }}">
+    <form method="POST" action="{{ route('admin.mess.permissionsettings.store') }}">
         @csrf
         <div class="mb-3">
             <label>Name</label>

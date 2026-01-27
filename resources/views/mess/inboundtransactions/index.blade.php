@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Inbound Transactions (Goods Receipt)</h4>
-        <a href="{{ route('mess.inboundtransactions.create') }}" class="btn btn-primary">Record Receipt</a>
+        <a href="{{ route('admin.mess.inboundtransactions.create') }}" class="btn btn-primary">Record Receipt</a>
     </div>
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -33,7 +33,7 @@
                 <td>{{ $txn->invoice_number ?? 'N/A' }}</td>
                 <td>₹{{ number_format($txn->invoice_amount ?? 0, 2) }}</td>
                 <td>
-                    <a href="{{ route('mess.inboundtransactions.show', $txn->id) }}" class="btn btn-sm btn-info">View</a>
+                    <a href="{{ route('admin.mess.inboundtransactions.show', $txn->id) }}" class="btn btn-sm btn-info">View</a>
                 </td>
             </tr>
         @endforeach
