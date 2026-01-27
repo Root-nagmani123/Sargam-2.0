@@ -98,6 +98,14 @@
                     <span class="hide-menu small small-sm-normal text-nowrap">Number Configuration</span>
                 </a>
             </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.permissions.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">
+                        <iconify-icon icon="solar:shield-user-bold" class="me-1"></iconify-icon>
+                        Permissions (RBAC)
+                    </span>
+                </a>
+            </li>
         </ul>
 
         <!-- ======= MATERIAL MANAGEMENT ======= -->

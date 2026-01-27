@@ -592,6 +592,12 @@ Route::middleware(['auth'])->group(function () {
         Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
         Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
         
+        // NEW: Mess RBAC - Permission Management
+        // IMPORTANT: Custom routes MUST come BEFORE resource route
+        Route::get('permissions/users-by-role', [\App\Http\Controllers\Mess\MessPermissionController::class, 'getUsersByRole'])->name('permissions.getUsersByRole');
+        Route::get('permissions/check/{action}', [\App\Http\Controllers\Mess\MessPermissionController::class, 'checkPermission'])->name('permissions.check');
+        Route::resource('permissions', \App\Http\Controllers\Mess\MessPermissionController::class);
+        
         // NEW: Reports
         Route::prefix('reports')->name('reports.')->group(function () {
             Route::get('items-list', [\App\Http\Controllers\Mess\ReportController::class, 'itemsList'])->name('items-list');
