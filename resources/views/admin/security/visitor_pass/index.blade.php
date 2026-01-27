@@ -2,6 +2,7 @@
 @section('title', 'Visitor Pass Management')
 @section('setup_content')
 <div class="container-fluid">
+    @include('components.breadcrum', ['title' => 'Visitor Pass Management']) 
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">

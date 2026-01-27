@@ -2,16 +2,15 @@
 @section('title', 'Register Visitor - Security Management')
 @section('setup_content')
 <div class="container-fluid">
+    @include('components.breadcrum', ['title' => 'Register New Visitor']) 
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-header bg-white">
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Register New Visitor</h4>
-                <a href="{{ route('admin.security.visitor_pass.index') }}" class="btn btn-secondary">
-                    <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">arrow_back</i>
-                    Back to List
-                </a>
             </div>
+
         </div>
+        <hr class="my-2">
         <div class="card-body">
             <p class="text-muted">Please fill in the visitor pass details below.</p>
             

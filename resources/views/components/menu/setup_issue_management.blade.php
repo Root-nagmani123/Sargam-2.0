@@ -1,4 +1,4 @@
-<nav class="sidebar-nav simplebar-scrollable-y" id="menu-right-mini-9" data-simplebar="init">
+<nav class="sidebar-nav simplebar-scrollable-y" id="menu-right-mini-10" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
             <div class="simplebar-height-auto-observer"></div>
@@ -8,51 +8,35 @@
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
-                        <ul class="sidebar-menu" id="sidebarnav">
+                        <ul class="sidebar-menu list-unstyled mb-0" id="sidebarnav">
                             <!-- ---------------------------------- -->
                             <!-- Issue Management / CENTCOM -->
                             <!-- ---------------------------------- -->
-                            <li class="sidebar-item" style="background: #4077ad;
-                                border-radius: 30px 0px 0px 30px;
-                                width: 100%;
-                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                                min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#issueManagementCollapse" role="button"
-                                    aria-expanded="false" aria-controls="issueManagementCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Issue Management</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">All Issues</span>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="issueManagementCollapse">
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link" href="{{ route('admin.issue-management.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">All Issues</span>
-                                    </a>
-                                </li>
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link" href="{{ route('admin.issue-management.centcom') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">CENTCOM - Reported Complaints</span>
-                                    </a>
-                                </li>
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link" href="{{ route('admin.issue-management.create') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Log New Issue</span>
-                                    </a>
-                                </li>
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link" href="{{ route('admin.issue-categories.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Manage Categories</span>
-                                    </a>
-                                </li>
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link" href="{{ route('admin.issue-sub-categories.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Manage Sub-Categories</span>
-                                    </a>
-                                </li>
-                            </ul>
-
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.centcom') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">CENTCOM - Reported Complaints</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.create') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Log New Issue</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-categories.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Manage Categories</span>
+                                </a>
+                            </li>
+                            <li class="sidebar-item mb-2">
+                                <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-sub-categories.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Manage Sub-Categories</span>
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </div>

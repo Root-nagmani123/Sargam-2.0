@@ -2,6 +2,7 @@
 @section('title', 'Apply for Vehicle Pass')
 @section('setup_content')
 <div class="container-fluid">
+    @include('components.breadcrum', ['title' => 'Apply for Vehicle Pass']) 
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-header bg-white">
             <h4 class="mb-0">Apply for Vehicle Pass</h4>

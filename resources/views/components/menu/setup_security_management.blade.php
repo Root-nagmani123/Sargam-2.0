@@ -8,58 +8,47 @@
                 <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
                     style="height: 100%; overflow: hidden scroll;">
                     <div class="simplebar-content" style="padding: 20px 0px 20px 24px">
-                        <ul class="sidebar-menu" id="sidebarnav">
+                        <ul class="sidebar-menu list-unstyled mb-0" id="sidebarnav">
                             <!-- Security Management Section -->
-                            <li class="sidebar-item" style="background: #4077ad;
-                                border-radius: 30px 0px 0px 30px;
-                                width: 100%;
-                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                                min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                    data-bs-toggle="collapse" href="#securityCollapse" role="button"
-                                    aria-expanded="false" aria-controls="securityCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Security Management</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
-                                </a>
-                            </li>
-                            <ul class="collapse list-unstyled ps-3" id="securityCollapse">
-                                <!-- Vehicle Management -->
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                        data-bs-toggle="collapse" href="#vehicleManagementCollapse" role="button"
-                                        aria-expanded="false" aria-controls="vehicleManagementCollapse">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Management</span>
-                                        <i class="material-icons menu-icon" style="font-size: 18px;">keyboard_arrow_down</i>
+                            <!-- Vehicle Management -->
+                                <li class="sidebar-item mb-2">
+                                    <a class="sidebar-link d-flex justify-content-between align-items-center rounded-pill px-3 py-2 text-decoration-none"
+                                        data-bs-toggle="collapse" 
+                                        href="#vehicleManagementCollapse" 
+                                        role="button"
+                                        aria-expanded="false" 
+                                        aria-controls="vehicleManagementCollapse">
+                                        <span class="hide-menu small small-sm-normal text-nowrap fw-semibold">Vehicle Management</span>
+                                        <i class="material-icons menu-icon transition-transform" style="font-size: 18px;">keyboard_arrow_down</i>
                                     </a>
-                                    <ul class="collapse list-unstyled ps-3" id="vehicleManagementCollapse">
-                                        <li class="sidebar-item">
-                                            <a class="sidebar-link" href="{{ route('admin.security.vehicle_type.index') }}">
+                                    <ul class="collapse list-unstyled ps-3 mt-2" id="vehicleManagementCollapse" data-bs-parent="#sidebarnav">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_type.index') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Types</span>
                                             </a>
                                         </li>
-                                        <li class="sidebar-item">
-                                            <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass_config.index') }}">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass_config.index') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">Pass Configuration</span>
                                             </a>
                                         </li>
-                                        <li class="sidebar-item">
-                                            <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass.index') }}">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass.index') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">My Applications</span>
                                             </a>
                                         </li>
-                                        <li class="sidebar-item">
-                                            <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass.create') }}">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass.create') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">Apply for Pass</span>
                                             </a>
                                         </li>
-                                        <li class="sidebar-item">
-                                            <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass_approval.index') }}">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass_approval.index') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">Pending Approvals</span>
                                             </a>
                                         </li>
-                                        <li class="sidebar-item">
-                                            <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass_approval.all') }}">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.vehicle_pass_approval.all') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">All Applications</span>
                                             </a>
                                         </li>
@@ -67,27 +56,29 @@
                                 </li>
 
                                 <!-- Visitor/Gate Pass Management -->
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link d-flex justify-content-between align-items-center"
-                                        data-bs-toggle="collapse" href="#visitorPassCollapse" role="button"
-                                        aria-expanded="false" aria-controls="visitorPassCollapse">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Visitor Pass</span>
-                                        <i class="material-icons menu-icon" style="font-size: 18px;">keyboard_arrow_down</i>
+                                <li class="sidebar-item mb-2">
+                                    <a class="sidebar-link d-flex justify-content-between align-items-center rounded-pill px-3 py-2 text-decoration-none"
+                                        data-bs-toggle="collapse" 
+                                        href="#visitorPassCollapse" 
+                                        role="button"
+                                        aria-expanded="false" 
+                                        aria-controls="visitorPassCollapse">
+                                        <span class="hide-menu small small-sm-normal text-nowrap fw-semibold">Visitor Pass</span>
+                                        <i class="material-icons menu-icon transition-transform" style="font-size: 18px;">keyboard_arrow_down</i>
                                     </a>
-                                    <ul class="collapse list-unstyled ps-3" id="visitorPassCollapse">
-                                        <li class="sidebar-item">
-                                            <a class="sidebar-link" href="{{ route('admin.security.visitor_pass.index') }}">
+                                    <ul class="collapse list-unstyled ps-3 mt-2" id="visitorPassCollapse" data-bs-parent="#sidebarnav">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.visitor_pass.index') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">All Visitors</span>
                                             </a>
                                         </li>
-                                        <li class="sidebar-item">
-                                            <a class="sidebar-link" href="{{ route('admin.security.visitor_pass.create') }}">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.security.visitor_pass.create') }}">
                                                 <span class="hide-menu small small-sm-normal text-nowrap">Register Visitor</span>
                                             </a>
                                         </li>
                                     </ul>
                                 </li>
-                            </ul>
                         </ul>
                     </div>
                 </div>
