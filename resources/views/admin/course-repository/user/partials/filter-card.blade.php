@@ -13,7 +13,7 @@
                                name="date" 
                                value="{{ $filters['date'] ?? '' }}">
                         <span class="input-group-text bg-white">
-                            <i class="bi bi-calendar3"></i>
+                            <span class="material-icons material-symbols-rounded">calendar_today</span>
                         </span>
                     </div>
                 </div>

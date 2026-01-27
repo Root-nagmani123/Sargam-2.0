@@ -134,6 +134,10 @@
                                         href="{{ route('course-repository.index') }}">
                                 <span class="hide-menu">Course Repository</span>
                                 </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.course-repository.user.index') }}">
+                                <span class="hide-menu">Course Repository - User</span>
+                                </a></li>
                             
                             @endif
 

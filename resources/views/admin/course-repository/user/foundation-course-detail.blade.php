@@ -20,16 +20,16 @@
                                 onclick="window.history.back()" 
                                 class="btn-back btn btn-link p-0 text-decoration-none"
                                 aria-label="Go back">
-                            <i class="bi bi-arrow-left fs-4 text-dark"></i>
+                            <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
                         </button>
                         <h1 class="h2 mb-0 fw-bold text-dark">Foundation Course-{{ $courseCode }}</h1>
                     </div>
                     <div class="d-flex gap-2">
                         <a href="javascript:void(0)" class="btn btn-outline-primary">
-                            <i class="bi bi-upload me-1"></i> Upload Documents
+                            <span class="material-icons material-symbols-rounded me-1">cloud_upload</span> Upload Documents
                         </a>
                         <a href="javascript:void(0)" class="btn btn-primary">
-                            <i class="bi bi-plus-lg me-1"></i> Add Category
+                            <span class="material-icons material-symbols-rounded me-1">add_circle</span> Add Category
                         </a>
                     </div>
                 </div>
@@ -64,7 +64,7 @@
                 <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
                     @if($repositories->isEmpty())
                         <div class="alert alert-info text-center">
-                            <i class="bi bi-info-circle me-2"></i>
+                            <span class="material-icons material-symbols-rounded me-2">info</span>
                             No materials found.
                         </div>
                     @else
@@ -94,7 +94,7 @@
                                         </td>
                                         <td class="text-center">
                                             <a href="{{ route('admin.course-repository.user.show', $repository->pk) }}" class="btn btn-sm btn-outline-primary">
-                                                <i class="bi bi-eye"></i> View
+                                                <span class="material-icons material-symbols-rounded me-1">visibility</span> View
                                             </a>
                                         </td>
                                     </tr>
@@ -108,7 +108,7 @@
                 <!-- Archive Tab -->
                 <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
                     <div class="alert alert-info text-center">
-                        <i class="bi bi-archive me-2"></i>
+                        <span class="material-icons material-symbols-rounded me-2">archive</span>
                         No archived materials found.
                     </div>
                 </div>

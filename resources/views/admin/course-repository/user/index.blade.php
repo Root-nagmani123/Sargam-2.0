@@ -6,18 +6,6 @@
 
 <!-- Main Content -->
 <div class="container-fluid px-4 py-4" id="main-content">
-    <!-- Title Section with Back Button -->
-    <div class="title-section sticky-top bg-white shadow-sm mb-4" style="z-index: 1020; padding: 1rem 0;">
-        <div class="d-flex align-items-center gap-3">
-            <button type="button" 
-                    onclick="window.history.back()" 
-                    class="btn-back btn btn-link p-0 text-decoration-none"
-                    aria-label="Go back">
-                <i class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back_ios</i>
-            </button>
-            <h1 class="h2 mb-0 fw-bold text-dark">Central Course Repository of LBSNAA</h1>
-        </div>
-    </div>
 
     <!-- Filter Card -->
     <div class="card filter-card shadow-sm mb-4">
@@ -34,7 +22,7 @@
                                    name="date" 
                                    value="{{ $filters['date'] ?? '' }}">
                             <span class="input-group-text bg-white">
-                                <i class="bi bi-calendar3"></i>
+                                <span class="material-icons material-symbols-rounded">calendar_today</span>
                             </span>
                         </div>
                     </div>
@@ -153,7 +141,7 @@
             @empty
                 <div class="col-12">
                     <div class="alert alert-info text-center">
-                        <i class="bi bi-info-circle me-2"></i>
+                        <span class="material-icons material-symbols-rounded me-2">info</span>
                         No course repositories found.
                     </div>
                 </div>

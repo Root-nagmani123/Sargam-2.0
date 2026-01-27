@@ -19,7 +19,7 @@
                             onclick="window.history.back()" 
                             class="btn-back btn btn-link p-0 text-decoration-none"
                             aria-label="Go back">
-                        <i class="bi bi-arrow-left fs-4 text-dark"></i>
+                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
                     </button>
                     <h1 class="h2 mb-0 fw-bold text-dark">Class Material (Week Wise)</h1>
                 </div>
@@ -47,7 +47,7 @@
                                 <div class="card-body">
                                     <div class="d-flex align-items-start gap-3">
                                         <div class="material-icon-wrapper">
-                                            <i class="bi bi-folder-fill"></i>
+                                            <span class="material-icons material-symbols-rounded">folder</span>
                                         </div>
                                         <div class="flex-grow-1">
                                             <h5 class="card-title fw-bold mb-2">{{ $cardTitle }}</h5>
@@ -74,11 +74,11 @@
                                         <div class="d-flex align-items-center justify-content-between">
                                             <div class="d-flex align-items-center gap-3">
                                                 <div class="week-icon-wrapper">
-                                                    <i class="bi bi-folder-fill"></i>
+                                                    <span class="material-icons material-symbols-rounded">folder</span>
                                                 </div>
                                                 <span class="fw-semibold">{{ $week['label'] }}</span>
                                             </div>
-                                            <i class="bi bi-chevron-right"></i>
+                                            <span class="material-icons material-symbols-rounded">chevron_right</span>
                                         </div>
                                     </div>
                                 </div>

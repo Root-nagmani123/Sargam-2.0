@@ -19,7 +19,7 @@
                             onclick="window.history.back()" 
                             class="btn-back btn btn-link p-0 text-decoration-none"
                             aria-label="Go back">
-                        <i class="bi bi-arrow-left fs-4 text-dark"></i>
+                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
                     </button>
                     <h1 class="h2 mb-0 fw-bold text-dark">Foundation Course</h1>
                 </div>
@@ -43,7 +43,7 @@
                                 <div class="card-body">
                                     <div class="d-flex align-items-start gap-3">
                                         <div class="material-icon-wrapper">
-                                            <i class="bi bi-folder-fill"></i>
+                                            <span class="material-icons material-symbols-rounded">folder</span>
                                         </div>
                                         <div class="flex-grow-1">
                                             <h5 class="card-title fw-bold mb-2">{{ $repository->course_repository_name }}</h5>
@@ -58,7 +58,7 @@
                     @empty
                         <div class="col-12">
                             <div class="alert alert-info text-center">
-                                <i class="bi bi-info-circle me-2"></i>
+                                <span class="material-icons material-symbols-rounded me-2">info</span>
                                 No materials found.
                             </div>
                         </div>
