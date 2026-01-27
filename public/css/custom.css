@@ -1,0 +1,14 @@
+/* Custom CSS for Sargam 2.0 Application */
+/* This file prevents 404 errors when loading custom.css */
+
+/* Add any custom styles below as needed */
+
+/* Placeholder styles to ensure file is valid */
+body.custom-loaded {
+    /* Custom styles can be added here */
+}
+
+/* Fix for any layout issues if needed */
+.error-fix {
+    display: none;
+}
