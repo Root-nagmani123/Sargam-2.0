@@ -21,6 +21,6 @@ class EventController extends Controller
             'event_date' => 'required|date',
         ]);
         Event::create($data);
-        return redirect()->route('mess.events.index')->with('success', 'Event created successfully.');
+        return redirect()->route('admin.mess.events.index')->with('success', 'Event created successfully.');
     }
 }

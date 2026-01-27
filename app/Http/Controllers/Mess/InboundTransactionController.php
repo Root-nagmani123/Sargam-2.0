@@ -93,7 +93,7 @@ class InboundTransactionController extends Controller
             }
         });
 
-        return redirect()->route('mess.inboundtransactions.index')->with('success', 'Inbound transaction created successfully');
+        return redirect()->route('admin.mess.inboundtransactions.index')->with('success', 'Inbound transaction created successfully');
     }
 
     public function show($id)

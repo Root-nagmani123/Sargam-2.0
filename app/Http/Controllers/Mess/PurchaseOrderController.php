@@ -23,7 +23,7 @@ class PurchaseOrderController extends Controller
     public function create(Request $request)
     {
         $vendors = Vendor::all();
-        $stores = Store::where('status', 'active')->get();
+        $stores = Store::where('is_active', true)->get();
         $inventories = Inventory::all();
         $materialRequest = null;
         
@@ -80,7 +80,7 @@ class PurchaseOrderController extends Controller
             }
         });
 
-        return redirect()->route('mess.purchaseorders.index')->with('success', 'Purchase order created successfully');
+        return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order created successfully');
     }
 
     public function show($id)
@@ -97,13 +97,13 @@ class PurchaseOrderController extends Controller
             'approved_by' => Auth::id(),
             'approved_at' => now(),
         ]);
-        return redirect()->route('mess.purchaseorders.index')->with('success', 'Purchase order approved successfully');
+        return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order approved successfully');
     }
 
     public function reject($id)
     {
         $purchaseOrder = PurchaseOrder::findOrFail($id);
         $purchaseOrder->update(['status' => 'rejected']);
-        return redirect()->route('mess.purchaseorders.index')->with('success', 'Purchase order rejected');
+        return redirect()->route('admin.mess.purchaseorders.index')->with('success', 'Purchase order rejected');
     }
 }

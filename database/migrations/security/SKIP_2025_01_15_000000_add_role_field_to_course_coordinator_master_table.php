@@ -13,9 +13,13 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::table('course_coordinator_master', function (Blueprint $table) {
-            $table->string('assistant_coordinator_role', 255)->nullable()->after('Assistant_Coordinator_name');
-        });
+        if (Schema::hasTable('course_coordinator_master')) {
+            Schema::table('course_coordinator_master', function (Blueprint $table) {
+                if (!Schema::hasColumn('course_coordinator_master', 'assistant_coordinator_role')) {
+                    $table->string('assistant_coordinator_role', 255)->nullable()->after('Assistant_Coordinator_name');
+                }
+            });
+        }
     }
 
     /**
@@ -25,8 +29,12 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::table('course_coordinator_master', function (Blueprint $table) {
-            $table->dropColumn('assistant_coordinator_role');
-        });
+        if (Schema::hasTable('course_coordinator_master')) {
+            Schema::table('course_coordinator_master', function (Blueprint $table) {
+                if (Schema::hasColumn('course_coordinator_master', 'assistant_coordinator_role')) {
+                    $table->dropColumn('assistant_coordinator_role');
+                }
+            });
+        }
     }
 };

@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Add Mess Invoice</h4>
-    <form method="POST" action="{{ route('mess.invoices.store') }}">
+    <form method="POST" action="{{ route('admin.mess.invoices.store') }}">
         @csrf
         <div class="mb-3">
             <label>Invoice No</label>

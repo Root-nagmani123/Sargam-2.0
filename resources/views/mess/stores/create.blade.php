@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Add Mess Store</h4>
-    <form method="POST" action="{{ route('mess.stores.store') }}">
+    <form method="POST" action="{{ route('admin.mess.stores.store') }}">
         @csrf
         <div class="row">
             <div class="col-md-6 mb-3">
@@ -40,7 +40,7 @@
             </div>
         </div>
         <button type="submit" class="btn btn-success">Save</button>
-        <a href="{{ route('mess.stores.index') }}" class="btn btn-secondary">Cancel</a>
+        <a href="{{ route('admin.mess.stores.index') }}" class="btn btn-secondary">Cancel</a>
     </form>
 </div>
 @endsection

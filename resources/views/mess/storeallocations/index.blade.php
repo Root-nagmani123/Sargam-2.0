@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Mess Store Allocations</h4>
-    <a href="{{ route('mess.storeallocations.create') }}" class="btn btn-primary mb-3">Add Store Allocation</a>
+    <a href="{{ route('admin.mess.storeallocations.create') }}" class="btn btn-primary mb-3">Add Store Allocation</a>
     <table class="table table-bordered">
         <thead><tr><th>Store Name</th><th>Allocated To</th><th>Date</th></tr></thead>
         <tbody>

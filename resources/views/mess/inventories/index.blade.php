@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Mess Inventory</h4>
-    <a href="{{ route('mess.inventories.create') }}" class="btn btn-primary mb-3">Add Inventory</a>
+    <a href="{{ route('admin.mess.inventories.create') }}" class="btn btn-primary mb-3">Add Inventory</a>
     <table class="table table-bordered">
         <thead><tr><th>Item Name</th><th>Category</th><th>Quantity</th><th>Unit</th><th>Expiry Date</th></tr></thead>
         <tbody>

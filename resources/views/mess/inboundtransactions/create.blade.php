@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Record Goods Receipt</h4>
-    <form method="POST" action="{{ route('mess.inboundtransactions.store') }}">
+    <form method="POST" action="{{ route('admin.mess.inboundtransactions.store') }}">
         @csrf
         <div class="row">
             <div class="col-md-3 mb-3">
@@ -117,7 +117,7 @@
         
         <div>
             <button type="submit" class="btn btn-success">Record Receipt</button>
-            <a href="{{ route('mess.inboundtransactions.index') }}" class="btn btn-secondary">Cancel</a>
+            <a href="{{ route('admin.mess.inboundtransactions.index') }}" class="btn btn-secondary">Cancel</a>
         </div>
     </form>
 </div>

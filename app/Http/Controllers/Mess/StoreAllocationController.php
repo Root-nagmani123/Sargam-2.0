@@ -26,6 +26,6 @@ class StoreAllocationController extends Controller
             'allocation_date' => 'required|date',
         ]);
         StoreAllocation::create($request->all());
-        return redirect()->route('mess.storeallocations.index')->with('success', 'Store allocation added successfully');
+        return redirect()->route('admin.mess.storeallocations.index')->with('success', 'Store allocation added successfully');
     }
 }

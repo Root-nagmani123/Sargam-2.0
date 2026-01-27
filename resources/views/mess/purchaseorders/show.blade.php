@@ -59,7 +59,7 @@
                 </tbody>
             </table>
             
-            <a href="{{ route('mess.purchaseorders.index') }}" class="btn btn-secondary">Back</a>
+            <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-secondary">Back</a>
         </div>
     </div>
 </div>

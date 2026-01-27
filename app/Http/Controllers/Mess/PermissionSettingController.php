@@ -25,6 +25,6 @@ class PermissionSettingController extends Controller
             'description' => 'nullable',
         ]);
         PermissionSetting::create($request->all());
-        return redirect()->route('mess.permissionsettings.index')->with('success', 'Permission setting added successfully');
+        return redirect()->route('admin.mess.permissionsettings.index')->with('success', 'Permission setting added successfully');
     }
 }
