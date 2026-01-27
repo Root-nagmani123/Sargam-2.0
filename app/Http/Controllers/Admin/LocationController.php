@@ -21,10 +21,21 @@ class LocationController extends Controller
 
     public function countryStore(Request $request)
     {
-        $validated = $request->validate([
+       /* $validated = $request->validate([
             'country_name.*' => 'required|string|max:100',
             'active_inactive' => 'required',
-        ]);
+        ]);*/
+        $request->validate(
+			[
+				'country_name.*' => 'required|string|max:100|unique:country_master,country_name',
+				'active_inactive' => 'required',
+			],
+			[
+				'country_name.*.unique' => 'This country name already exists.',
+				'country_name.*.required' => 'Country name is required.',
+				'country_name.*.max' => 'Country name must not exceed 100 characters.',
+			]
+		);
 
         foreach ($request->country_name as $name) {
             Country::create([
@@ -85,7 +96,7 @@ class LocationController extends Controller
             'country_master_pk' => 'required|exists:country_master,pk',
             'active_inactive' => 'required',
         ]);
- 
+
         $state = new State();
         $state->state_name = $request->state_name;
         $state->country_master_pk = $request->country_master_pk;
@@ -112,9 +123,9 @@ class LocationController extends Controller
             'active_inactive' => 'required',
         ]);
 
-        
+
         $state = State::findOrFail($pk);
-        
+
         // Update the state data
         $state->state_name = $request->state_name;
         $state->country_master_pk = $request->country_master_pk;
@@ -162,7 +173,7 @@ class LocationController extends Controller
             'state_master_pk' => $request->state_master_pk,
             'district_name' => $request->district_name,
             'active_inactive' => $request->active_inactive,
-            
+
         ]);
 
         return redirect()->route('master.district.index')->with('success', 'District added successfully.');
@@ -230,7 +241,7 @@ class LocationController extends Controller
         ]);
 
         City::create([
-            'country_master_pk' => $request->country_master_pk, 
+            'country_master_pk' => $request->country_master_pk,
             'state_master_pk' => $request->state_master_pk,
             'district_master_pk' => $request->district_master_pk,
             'city_name' => $request->city_name,
@@ -264,7 +275,7 @@ class LocationController extends Controller
 
         // Update the city details using the model
         $city->update([
-            'country_master_pk' => $request->country_master_pk, 
+            'country_master_pk' => $request->country_master_pk,
             'state_master_pk' => $request->state_master_pk,
             'district_master_pk' => $request->district_master_pk,
             'city_name' => $request->city_name,

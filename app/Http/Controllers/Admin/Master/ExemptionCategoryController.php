@@ -16,7 +16,7 @@ class ExemptionCategoryController extends Controller
 {
 
     public function index()
-    {    
+    {
         $categories = ExemptionCategoryMaster::paginate(10);
         return view('admin.master.exemption_categories_master.index');
     }
@@ -131,6 +131,7 @@ class ExemptionCategoryController extends Controller
 
 
             ->rawColumns(['status', 'action'])
+            ->orderColumn('DT_RowIndex', 'pk $1') //Added this line for ordering
             ->make(true);
     }
 
@@ -302,7 +303,7 @@ public function store(Request $request)
             /* ===============================
            ACTION BUTTONS
         ================================ */
-            
+
 
              ->addColumn('action', function ($row) {
               $disabled = $row->active_inactive == 1 ? 'disabled aria-disabled="true"' : '';

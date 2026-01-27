@@ -34,7 +34,8 @@ use App\Http\Controllers\Admin\{
     FacultyNoticeMemoViewController,
     NotificationController,
     MemoDisciplineController,
-    DashboardController
+    DashboardController,
+    CourseRepositoryController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -123,6 +124,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('edit/{id}',  'edit')->name('edit');
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
+        Route::delete('delete/{id}',  'destroy')->name('destroy');
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
         Route::post('check-unique', 'checkUnique')->name('checkUnique');
         Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
@@ -139,7 +141,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Programme Routes
     Route::prefix('programme')->name('programme.')->controller(CourseController::class)->group(function () {
-
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
@@ -173,7 +174,6 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::resource('stream', StreamController::class);
-
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
@@ -671,6 +671,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
+    Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
     Route::get('/upcoming-events', function () {
         return view('admin.dashboard.upcoming_events');
@@ -684,6 +685,41 @@ Route::middleware(['auth'])->group(function () {
     //      return view('admin.dashboard.inhouse_faculty');
     //  })->name('admin.dashboard.inhouse_faculty');
     // });
+    //course repository AJAX routes (MUST be before resource route)
+    Route::get('course-repository/subjects', [CourseRepositoryController::class, 'getSubjectsByCourse'])->name('course-repository.subjects');
+    Route::get('course-repository/topics', [CourseRepositoryController::class, 'getTopicsBySubject'])->name('course-repository.topics');
+    Route::get('course-repository/session-dates', [CourseRepositoryController::class, 'getSessionDateByTopic'])->name('course-repository.session-dates');
+    Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
+    Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
+    Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
+    
+    // Custom routes for document operations
+    Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
+    Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
+
+    // Search route
+    Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
+    
+    // AJAX endpoints for course repository
+    Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
+    
+    //course repository resource routes (MUST be after AJAX routes)
+    Route::resource('course-repository', CourseRepositoryController::class, [
+    'parameters' => ['course-repository' => 'pk']
+]);
+
+// User view routes
+Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
+Route::get('/course-repository-user/foundation-course', [CourseRepositoryController::class, 'foundationCourse'])->name('admin.course-repository.user.foundation-course');
+Route::get('/course-repository-user/foundation-course/{courseCode}', [CourseRepositoryController::class, 'foundationCourseDetail'])->name('admin.course-repository.user.foundation-course.detail');
+Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-subject-wise', [CourseRepositoryController::class, 'classMaterialSubjectWise'])->name('admin.course-repository.user.class-material-subject-wise');
+Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-week-wise', [CourseRepositoryController::class, 'classMaterialWeekWise'])->name('admin.course-repository.user.class-material-week-wise');
+Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNumber}', [CourseRepositoryController::class, 'weekDetail'])->name('admin.course-repository.user.week-detail');
+Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
+Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
+Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
+Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
 
     // Feedback Database Routes
     Route::prefix('faculty')->group(function () {
@@ -700,26 +736,12 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/feedback_details/export', [FeedbackController::class, 'exportFeedbackDetails'])->name('admin.feedback.feedback_details.export');
 });
 
-   Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
- Route::get(
-    '/admin/feedback/pending',
-    [FeedbackController::class, 'pendingFeedbackIndex']
-)->name('admin.feedback.pending');
-
-
-Route::get('/memo/view/{file}', function ($file) {
-
-    $path = 'memo_documents/' . $file;
-
-    if (!Storage::disk('public')->exists($path)) {
-        abort(404);
-    }
-
-    return response()->file(
-        storage_path('app/public/' . $path)
-    );
-});
-
+Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
+// Change export routes to POST
+Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::class, 'exportPendingStudentsPDF'])
+    ->name('admin.feedback.export.pdf');
 
 Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
+

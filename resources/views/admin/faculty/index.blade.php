@@ -58,4 +58,80 @@
 @endsection
 @push('scripts')
 {!! $dataTable->scripts() !!}
+
+<script>
+// Delete Faculty with SweetAlert Confirmation
+$(document).on('click', '.delete-faculty-btn', function(e) {
+    e.preventDefault();
+    
+    var deleteUrl = $(this).data('url');
+    var facultyName = $(this).data('name');
+    var csrfToken = $(this).data('token');
+    
+    Swal.fire({
+        title: 'Are you sure?',
+        html: 'You are about to delete faculty: <strong>' + facultyName + '</strong><br><br>This action cannot be undone!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: '<i class="material-icons" style="font-size:14px;vertical-align:middle;">delete</i> Yes, delete it!',
+        cancelButtonText: '<i class="material-icons" style="font-size:14px;vertical-align:middle;">close</i> Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Show loading state
+            Swal.fire({
+                title: 'Deleting...',
+                text: 'Please wait while we delete the faculty record.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Send AJAX delete request
+            $.ajax({
+                url: deleteUrl,
+                type: 'DELETE',
+                data: {
+                    _token: csrfToken
+                },
+                success: function(response) {
+                    if (response.status) {
+                        Swal.fire({
+                            title: 'Deleted!',
+                            text: response.message || 'Faculty has been deleted successfully.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // Reload the DataTable
+                            $('#faculty-table').DataTable().ajax.reload(null, false);
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: response.message || 'Failed to delete faculty.',
+                            icon: 'error'
+                        });
+                    }
+                },
+                error: function(xhr) {
+                    var errorMessage = 'Something went wrong. Please try again.';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                    Swal.fire({
+                        title: 'Error!',
+                        text: errorMessage,
+                        icon: 'error'
+                    });
+                }
+            });
+        }
+    });
+});
+</script>
 @endpush

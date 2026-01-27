@@ -2,6 +2,75 @@
 <html lang="en" dir="ltr" data-bs-theme="light">
 
 <head>
+    <!-- Force light mode - prevent system theme detection -->
+    <script>
+        // CRITICAL: This must run BEFORE Bootstrap loads to prevent dark mode detection
+        (function() {
+            'use strict';
+            
+            // Set light theme immediately
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+            
+            // Override matchMedia to prevent Bootstrap from detecting dark mode preference
+            if (window.matchMedia) {
+                const originalMatchMedia = window.matchMedia.bind(window);
+                window.matchMedia = function(query) {
+                    const result = originalMatchMedia(query);
+                    
+                    // Intercept prefers-color-scheme queries
+                    if (query && query.includes('prefers-color-scheme')) {
+                        // Create a fake MediaQueryList that always returns false for dark mode
+                        const fakeResult = {
+                            matches: false,
+                            media: query,
+                            onchange: null,
+                            addListener: function() {},
+                            removeListener: function() {},
+                            addEventListener: function() {},
+                            removeEventListener: function() {},
+                            dispatchEvent: function() { return false; }
+                        };
+                        
+                        // If query is for dark mode, return false
+                        if (query.includes('dark')) {
+                            return fakeResult;
+                        }
+                    }
+                    
+                    return result;
+                };
+            }
+            
+            // Monitor and prevent theme changes on html element
+            const htmlObserver = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && 
+                        mutation.attributeName === 'data-bs-theme') {
+                        const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                        if (currentTheme !== 'light') {
+                            document.documentElement.setAttribute('data-bs-theme', 'light');
+                            document.documentElement.style.colorScheme = 'light';
+                        }
+                    }
+                });
+            });
+            
+            // Start observing html element immediately
+            htmlObserver.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-bs-theme']
+            });
+            
+            // Periodic check as fallback
+            setInterval(function() {
+                if (document.documentElement.getAttribute('data-bs-theme') !== 'light') {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    document.documentElement.style.colorScheme = 'light';
+                }
+            }, 250);
+        })();
+    </script>
+    
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
@@ -9,6 +78,8 @@
     <meta name="keywords" content="LBSNAA, Sargam, Login, Government of India, Academy Portal">
     <meta name="author" content="LBSNAA">
     <meta name="theme-color" content="#003d7a">
+    <!-- Force light color scheme to prevent system dark mode -->
+    <meta name="color-scheme" content="light">
     
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="Login - Sargam | LBSNAA">
@@ -22,9 +93,114 @@
 
     <!-- Favicon -->
     <link rel="shortcut icon" type="image/x-icon" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
+    <!-- Force light mode CSS - must load before Bootstrap -->
+    <style id="force-light-mode-login">
+    /* CRITICAL: Force light mode before Bootstrap CSS loads */
+    html, html[data-bs-theme], html[data-bs-theme="dark"], html[data-bs-theme="light"] {
+      color-scheme: light !important;
+      --bs-body-bg: #fff !important;
+      --bs-body-color: #212529 !important;
+    }
+    
+    /* Override Bootstrap's dark mode media query */
+    @media (prefers-color-scheme: dark) {
+      html, html[data-bs-theme], html[data-bs-theme="dark"], html[data-bs-theme="light"],
+      body, body[data-bs-theme], body[data-bs-theme="dark"], body[data-bs-theme="light"] {
+        color-scheme: light !important;
+        --bs-body-bg: #fff !important;
+        --bs-body-color: #212529 !important;
+        --bs-emphasis-color: #000 !important;
+        --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
+        --bs-secondary-bg: #e9ecef !important;
+        --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
+        --bs-tertiary-bg: #f8f9fa !important;
+        --bs-border-color: #dee2e6 !important;
+        background-color: #fff !important;
+        color: #212529 !important;
+      }
+    }
+    </style>
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <!-- Icon library (Bootstrap Icons or Lucide) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
+    <style id="force-light-mode-override-login">
+    /* Override ALL Bootstrap dark mode styles - this MUST come after Bootstrap CSS */
+    :root,
+    [data-bs-theme="light"],
+    [data-bs-theme="dark"],
+    html,
+    html[data-bs-theme],
+    html[data-bs-theme="light"],
+    html[data-bs-theme="dark"],
+    body,
+    body[data-bs-theme],
+    body[data-bs-theme="light"],
+    body[data-bs-theme="dark"] {
+      color-scheme: light !important;
+      --bs-body-bg: #fff !important;
+      --bs-body-color: #212529 !important;
+      --bs-emphasis-color: #000 !important;
+      --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
+      --bs-secondary-bg: #e9ecef !important;
+      --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
+      --bs-tertiary-bg: #f8f9fa !important;
+      --bs-border-color: #dee2e6 !important;
+      --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
+      --bs-link-color: #0d6efd !important;
+      --bs-link-hover-color: #0a58ca !important;
+      --bs-heading-color: inherit !important;
+      --bs-body-color-rgb: 33, 37, 41 !important;
+      --bs-body-bg-rgb: 255, 255, 255 !important;
+      background-color: #fff !important;
+      color: #212529 !important;
+    }
+    
+    /* Force override Bootstrap's dark mode media query */
+    @media (prefers-color-scheme: dark) {
+      *,
+      :root,
+      html,
+      html[data-bs-theme],
+      html[data-bs-theme="light"],
+      html[data-bs-theme="dark"],
+      body,
+      body[data-bs-theme],
+      body[data-bs-theme="light"],
+      body[data-bs-theme="dark"],
+      .card,
+      .modal,
+      .dropdown-menu,
+      .popover,
+      .tooltip,
+      .offcanvas,
+      .navbar,
+      .nav,
+      .btn,
+      .form-control,
+      .form-select,
+      .table,
+      .alert,
+      .badge,
+      .list-group,
+      .pagination {
+        color-scheme: light !important;
+        --bs-body-bg: #fff !important;
+        --bs-body-color: #212529 !important;
+        --bs-emphasis-color: #000 !important;
+        --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
+        --bs-secondary-bg: #e9ecef !important;
+        --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
+        --bs-tertiary-bg: #f8f9fa !important;
+        --bs-border-color: #dee2e6 !important;
+        --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
+        background-color: #fff !important;
+        color: #212529 !important;
+      }
+    }
+    </style>
     <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1685,29 +1861,37 @@
         }
     }
 
-    /* Dark Mode Preparation (for future enhancement) */
+    /* Dark Mode Preparation (DISABLED - Force light mode only) */
     @media (prefers-color-scheme: dark) {
+        /* All dark mode styles disabled - force light mode */
+        html, body, :root {
+            color-scheme: light !important;
+            --bs-body-bg: #fff !important;
+            --bs-body-color: #212529 !important;
+            background-color: #fff !important;
+            color: #212529 !important;
+        }
         :root {
-            --text-primary: #e0e0e0;
-            --text-secondary: #b0b0b0;
-            --border-color: #3a3a3a;
-            --bg-light: #1a1a1a;
-            --bg-white: #2d2d2d;
+            --text-primary: #1f1f1f !important;
+            --text-secondary: #4a5568 !important;
+            --border-color: #cbd5e0 !important;
+            --bg-light: #f7fafc !important;
+            --bg-white: #ffffff !important;
         }
 
         body {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            background: linear-gradient(135deg, #ffffff 0%, #f7fafc 50%, #ffffff 100%) !important;
         }
 
         .login-card-enhanced {
-            background: #2d2d2d;
-            border-color: #404040;
+            background: #ffffff !important;
+            border-color: #cbd5e0 !important;
         }
 
         .form-control {
-            background: #1a1a1a;
-            color: #e0e0e0;
-            border-color: #404040;
+            background: #ffffff !important;
+            color: #212529 !important;
+            border-color: #cbd5e0 !important;
         }
     }
 
@@ -2609,6 +2793,21 @@
                 setTimeout(() => announcement.remove(), 3000);
             });
         })();
+        
+        // Final safeguard: Force light mode on page load
+        window.addEventListener('load', function() {
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+            document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
+            document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
+            
+            // Remove any dark mode classes
+            document.documentElement.classList.remove('dark');
+            if (document.body) {
+                document.body.classList.remove('dark');
+                document.body.style.colorScheme = 'light';
+            }
+        });
         </script>
 
         <footer class="gigw-footer mt-auto" role="contentinfo">
@@ -2635,6 +2834,46 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"
         integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous">
+    </script>
+    
+    <!-- Immediately intercept Bootstrap's theme detection on login page -->
+    <script>
+        (function() {
+            'use strict';
+            // Force light mode immediately after Bootstrap loads
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+            
+            // Override Bootstrap's getTheme function if it exists
+            if (window.bootstrap) {
+                window.bootstrap.getTheme = function() {
+                    return 'light';
+                };
+            }
+            
+            // Force light mode on window load
+            window.addEventListener('load', function() {
+                document.documentElement.setAttribute('data-bs-theme', 'light');
+                document.documentElement.style.colorScheme = 'light';
+                document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
+                document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
+                
+                // Remove any dark mode classes
+                document.documentElement.classList.remove('dark');
+                if (document.body) {
+                    document.body.classList.remove('dark');
+                    document.body.style.colorScheme = 'light';
+                }
+            });
+            
+            // Periodic check as fallback
+            setInterval(function() {
+                if (document.documentElement.getAttribute('data-bs-theme') !== 'light') {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    document.documentElement.style.colorScheme = 'light';
+                }
+            }, 500);
+        })();
     </script>
 
     <script>

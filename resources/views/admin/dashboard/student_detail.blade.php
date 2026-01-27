@@ -80,51 +80,6 @@
         </div>
     </div>
 
-    <!-- Enrolled Courses -->
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="fas fa-book me-2"></i>Enrolled Courses</h5>
-            <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('enrolledCoursesTable', 'Enrolled_Courses')">
-                    <i class="fas fa-file-excel me-1"></i>Export Excel
-                </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('enrolledCoursesTable')">
-                    <i class="fas fa-print me-1"></i>Print
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            @if($enrolledCourses->isNotEmpty())
-                <div class="table-responsive">
-                    <table class="table table-hover" id="enrolledCoursesTable">
-                        <thead>
-                            <tr>
-                                <th>Course Name</th>
-                                <th>Enrollment Date</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($enrolledCourses as $enrollment)
-                                <tr>
-                                    <td>{{ $enrollment->course->course_name ?? 'N/A' }}</td>
-                                    <td>{{ $enrollment->created_date ? \Carbon\Carbon::parse($enrollment->created_date)->format('d M Y h:i A') : 'N/A' }}</td>
-                                    <td>
-                                        <span class="badge {{ $enrollment->active_inactive ? 'bg-success' : 'bg-secondary' }}">
-                                            {{ $enrollment->active_inactive ? 'Active' : 'Inactive' }}
-                                        </span>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            @else
-                <p class="text-muted">No courses enrolled.</p>
-            @endif
-        </div>
-    </div>
-
     <!-- Medical Exceptions -->
     <div class="card mb-4" id="medicalExceptionsSection">
         <div class="card-header d-flex justify-content-between align-items-center">

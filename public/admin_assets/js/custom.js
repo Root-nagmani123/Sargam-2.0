@@ -354,6 +354,8 @@ document.addEventListener('DOMContentLoaded', function () {
         let permanent_address = $('input[name="permanent_address"]').val();
         let other_city = $('input[name="other_city"]').val();
 
+        let faculty_pa = $('input[name="faculty_pa"]').val();
+
         formData.append('facultyType', facultyType);
         formData.append('firstName', firstName);
         formData.append('middlename', middleName);
@@ -373,6 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('residence_address', residence_address);
         formData.append('permanent_address', permanent_address);
         formData.append('other_city', other_city);
+        formData.append('faculty_pa', faculty_pa);
 
         // photo is file
         const photoInput = $('input[name="photo"]')[0];
@@ -1490,22 +1493,25 @@ $('#editStudentModal').on('hidden.bs.modal', function () {
 //     }
 // });
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize DualListbox on page load
-    dualListbox = new DualListbox("#select_memo_student", {
-        addEvent: function (value) {
+    // Initialize DualListbox on page load only if element exists
+    var selectElement = document.getElementById("select_memo_student");
+    if (selectElement) {
+        dualListbox = new DualListbox("#select_memo_student", {
+            addEvent: function (value) {
 
-        },
-        removeEvent: function (value) {
+            },
+            removeEvent: function (value) {
 
-        },
-        availableTitle: "Defaulter Students",
-        selectedTitle: "Selected Students",
-        addButtonText: "Move Right",
-        removeButtonText: "Move Left",
-        addAllButtonText: "Move All Right",
-        removeAllButtonText: "Move All Left",
-        draggable: true
-    });
+            },
+            availableTitle: "Defaulter Students",
+            selectedTitle: "Selected Students",
+            addButtonText: "Move Right",
+            removeButtonText: "Move Left",
+            addAllButtonText: "Move All Right",
+            removeAllButtonText: "Move All Left",
+            draggable: true
+        });
+    }
 
     $('#topic_id').on('change', function () {
 
