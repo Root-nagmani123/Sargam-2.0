@@ -9,4 +9,12 @@ class ItemSubcategory extends Model
     use HasFactory;
     protected $table = 'mess_item_subcategories';
     protected $fillable = ['category_id', 'name', 'description'];
+    
+    /**
+     * Get the category that owns the subcategory
+     */
+    public function category()
+    {
+        return $this->belongsTo(ItemCategory::class, 'category_id');
+    }
 }

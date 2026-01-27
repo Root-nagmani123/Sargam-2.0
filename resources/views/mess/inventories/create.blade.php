@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Add Inventory</h4>
-    <form method="POST" action="{{ route('mess.inventories.store') }}">
+    <form method="POST" action="{{ route('admin.mess.inventories.store') }}">
         @csrf
         <div class="mb-3">
             <label>Item Name</label>

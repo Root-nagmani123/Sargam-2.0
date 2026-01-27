@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Mess Item Categories</h4>
-    <a href="{{ route('mess.itemcategories.create') }}" class="btn btn-primary mb-3">Add Category</a>
+    <a href="{{ route('admin.mess.itemcategories.create') }}" class="btn btn-primary mb-3">Add Category</a>
     <table class="table table-bordered">
         <thead><tr><th>Name</th><th>Description</th></tr></thead>
         <tbody>

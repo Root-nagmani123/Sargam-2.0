@@ -26,6 +26,6 @@ class MealMappingController extends Controller
             'date' => 'required|date',
         ]);
         MealMapping::create($request->all());
-        return redirect()->route('mess.mealmappings.index')->with('success', 'Meal mapping added successfully');
+        return redirect()->route('admin.mess.mealmappings.index')->with('success', 'Meal mapping added successfully');
     }
 }

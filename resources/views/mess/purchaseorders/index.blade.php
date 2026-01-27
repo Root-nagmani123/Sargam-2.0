@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Purchase Orders</h4>
-        <a href="{{ route('mess.purchaseorders.create') }}" class="btn btn-primary">Create Purchase Order</a>
+        <a href="{{ route('admin.mess.purchaseorders.create') }}" class="btn btn-primary">Create Purchase Order</a>
     </div>
     @if(session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
@@ -35,19 +35,19 @@
                     </span>
                 </td>
                 <td>
-                    <a href="{{ route('mess.purchaseorders.show', $po->id) }}" class="btn btn-sm btn-info">View</a>
+                    <a href="{{ route('admin.mess.purchaseorders.show', $po->id) }}" class="btn btn-sm btn-info">View</a>
                     @if($po->status == 'pending')
-                        <form action="{{ route('mess.purchaseorders.approve', $po->id) }}" method="POST" style="display:inline;">
+                        <form action="{{ route('admin.mess.purchaseorders.approve', $po->id) }}" method="POST" style="display:inline;">
                             @csrf
                             <button class="btn btn-sm btn-success">Approve</button>
                         </form>
-                        <form action="{{ route('mess.purchaseorders.reject', $po->id) }}" method="POST" style="display:inline;">
+                        <form action="{{ route('admin.mess.purchaseorders.reject', $po->id) }}" method="POST" style="display:inline;">
                             @csrf
                             <button class="btn btn-sm btn-danger">Reject</button>
                         </form>
                     @endif
                     @if($po->status == 'approved')
-                        <a href="{{ route('mess.inboundtransactions.create', ['purchase_order_id' => $po->id]) }}" class="btn btn-sm btn-primary">Receive Goods</a>
+                        <a href="{{ route('admin.mess.inboundtransactions.create', ['purchase_order_id' => $po->id]) }}" class="btn btn-sm btn-primary">Receive Goods</a>
                     @endif
                 </td>
             </tr>

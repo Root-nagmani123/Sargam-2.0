@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Add Mess Item Category</h4>
-    <form method="POST" action="{{ route('mess.itemcategories.store') }}">
+    <form method="POST" action="{{ route('admin.mess.itemcategories.store') }}">
         @csrf
         <div class="mb-3">
             <label>Name</label>

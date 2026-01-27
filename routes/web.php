@@ -61,7 +61,7 @@ Route::get('clear-cache', function () {
 Auth::routes(['verify' => true, 'register' => false]);
 
 // Public Routes
-Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
+Route::get('/', [LoginController::class, 'showLoginForm'])->name('home');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
 
 // Protected Routes
@@ -521,7 +521,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
-        Route::post('import', 'import')->name('import');
+        Route::post('import', 'processImport')->name('process.import');
     });
 
     Route::prefix('hostel-building-floor-room-map')->name('hostel.building.floor.room.map.')->controller(HostelBuildingFloorRoomMappingController::class)->group(function () {
@@ -534,7 +534,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Mess Management
-    Route::prefix('mess')->name('mess.')->group(function () {
+    Route::prefix('admin/mess')->name('admin.mess.')->group(function () {
         // Master Data
         Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
         Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
@@ -549,6 +549,15 @@ Route::middleware(['auth'])->group(function () {
         // Store Management
         Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['destroy', 'show']);
         
+        // NEW: Setup - Configuration Modules
+        Route::resource('vendor-item-mappings', \App\Http\Controllers\Mess\VendorItemMappingController::class);
+        Route::resource('menu-rate-lists', \App\Http\Controllers\Mess\MenuRateListController::class);
+        Route::resource('sale-counters', \App\Http\Controllers\Mess\SaleCounterController::class);
+        Route::resource('sale-counter-mappings', \App\Http\Controllers\Mess\SaleCounterMappingController::class);
+        Route::resource('credit-limits', \App\Http\Controllers\Mess\CreditLimitController::class);
+        Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class);
+        Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
+        
         // Material Request Workflow
         Route::resource('materialrequests', \App\Http\Controllers\Mess\MaterialRequestController::class)->except(['edit', 'update', 'destroy']);
         Route::get('materialrequests/{id}/approve', [\App\Http\Controllers\Mess\MaterialRequestController::class, 'approve'])->name('materialrequests.approve');
@@ -561,6 +570,47 @@ Route::middleware(['auth'])->group(function () {
         
         // Inbound Transactions (Goods Receipt)
         Route::resource('inboundtransactions', \App\Http\Controllers\Mess\InboundTransactionController::class)->except(['edit', 'update', 'destroy']);
+        
+        // Kitchen Issue Management
+        Route::resource('kitchen-issues', \App\Http\Controllers\Mess\KitchenIssueController::class);
+        Route::post('kitchen-issues/{id}/send-for-approval', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sendForApproval'])->name('kitchen-issues.send-for-approval');
+        Route::get('kitchen-issues/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('kitchen-issues.records');
+        Route::get('kitchen-issues/reports/bill', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'billReport'])->name('kitchen-issues.bill-report');
+        
+        // Kitchen Issue Approval
+        Route::prefix('kitchen-issue-approvals')->name('kitchen-issue-approvals.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'index'])->name('index');
+            Route::get('/{id}', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'show'])->name('show');
+            Route::post('/{id}/approve', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'approve'])->name('approve');
+            Route::post('/{id}/reject', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'reject'])->name('reject');
+        });
+        
+        // NEW: Billing & Finance
+        Route::resource('monthly-bills', \App\Http\Controllers\Mess\MonthlyBillController::class);
+        Route::post('monthly-bills/generate', [\App\Http\Controllers\Mess\MonthlyBillController::class, 'generateBills'])->name('monthly-bills.generate');
+        Route::resource('finance-bookings', \App\Http\Controllers\Mess\FinanceBookingController::class);
+        Route::post('finance-bookings/{id}/approve', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'approve'])->name('finance-bookings.approve');
+        Route::post('finance-bookings/{id}/reject', [\App\Http\Controllers\Mess\FinanceBookingController::class, 'reject'])->name('finance-bookings.reject');
+        
+        // NEW: Reports
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('items-list', [\App\Http\Controllers\Mess\ReportController::class, 'itemsList'])->name('items-list');
+            Route::get('mess-summary', [\App\Http\Controllers\Mess\ReportController::class, 'messSummary'])->name('mess-summary');
+            Route::get('category-material', [\App\Http\Controllers\Mess\ReportController::class, 'categoryMaterial'])->name('category-material');
+            Route::get('pending-orders', [\App\Http\Controllers\Mess\ReportController::class, 'pendingOrders'])->name('pending-orders');
+            Route::get('payment-overdue', [\App\Http\Controllers\Mess\ReportController::class, 'paymentOverdue'])->name('payment-overdue');
+            Route::get('approved-inbound', [\App\Http\Controllers\Mess\ReportController::class, 'approvedInbound'])->name('approved-inbound');
+            Route::get('invoice-bill', [\App\Http\Controllers\Mess\ReportController::class, 'invoiceBill'])->name('invoice-bill');
+            Route::get('purchase-orders', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseOrdersReport'])->name('purchase-orders');
+            Route::get('ot-not-taking-food', [\App\Http\Controllers\Mess\ReportController::class, 'otNotTakingFood'])->name('ot-not-taking-food');
+            Route::get('sale-counter', [\App\Http\Controllers\Mess\ReportController::class, 'saleCounterReport'])->name('sale-counter');
+            Route::get('store-due', [\App\Http\Controllers\Mess\ReportController::class, 'storeDue'])->name('store-due');
+            Route::get('mess-bill', [\App\Http\Controllers\Mess\ReportController::class, 'messBillReport'])->name('mess-bill');
+            Route::get('mess-invoice', [\App\Http\Controllers\Mess\ReportController::class, 'messInvoiceReport'])->name('mess-invoice');
+            Route::get('stock-purchase-details', [\App\Http\Controllers\Mess\ReportController::class, 'stockPurchaseDetails'])->name('stock-purchase-details');
+            Route::get('client-invoice', [\App\Http\Controllers\Mess\ReportController::class, 'clientInvoice'])->name('client-invoice');
+            Route::get('stock-issue-detail', [\App\Http\Controllers\Mess\ReportController::class, 'stockIssueDetail'])->name('stock-issue-detail');
+        });
     });
 });
 
@@ -726,11 +776,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/faculty_view', function () {
         return view('admin.feedback.faculty_view');
-    })->name('admin.feedback.faculty_view');
+    })->name('admin.feedback.faculty_view.page');
 
     Route::get('/feedback_details', function () {
         return view('admin.feedback.feedback_details');
-    })->name('admin.feedback.feedback_details');
+    })->name('admin.feedback.feedback_details.page');
 
     //  dashboard page route
 
