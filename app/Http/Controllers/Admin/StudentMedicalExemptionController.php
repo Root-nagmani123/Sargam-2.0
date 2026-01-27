@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\Log;
 
 class StudentMedicalExemptionController extends Controller
 {
-   
+
     public function index(Request $request)
     {
         /* =========================================================
@@ -116,7 +116,8 @@ class StudentMedicalExemptionController extends Controller
                 }
 
                 /* ✅ RETURN ONLY IDs (NO PDO ISSUE) */
-                return $query->pluck('pk')->toArray();
+                //return $query->pluck('pk')->toArray();
+                return $query->orderBy('pk', 'desc')->pluck('pk')->toArray();
             });
 
             /* ===============================
@@ -128,7 +129,10 @@ class StudentMedicalExemptionController extends Controller
                 'speciality',
                 'course',
                 'employee'
-            ])->whereIn('pk', $ids);
+           ])
+           ->whereIn('pk', $ids)
+                ->orderByRaw("FIELD(pk, " . implode(',', $ids) . ")");
+            // // ->whereIn('pk', $ids);
 
             /* ===============================
              | 4. DataTable Response
@@ -233,8 +237,32 @@ class StudentMedicalExemptionController extends Controller
         );
     }
 
+    	public function create()
+{
+    $courses = CourseMaster::where('active_inactive', '1');
 
-   public function create()
+    $data_course_id = get_Role_by_course();
+
+    if (!empty($data_course_id)) {
+        $courses = $courses->whereIn('pk', $data_course_id);
+    }
+
+    $courses = $courses
+        ->where('end_date', '>', now())
+        ->get();
+
+    $categories = ExemptionCategoryMaster::where('active_inactive', '1')->get();
+    $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')->get();
+
+    return view('admin.student_medical_exemption.create', compact(
+        'courses',
+        'categories',
+        'specialities'
+    ));
+}
+
+
+   public function create_2701226()
 {
     $courses = CourseMaster::where('active_inactive', '1');
     $data_course_id =  get_Role_by_course();
