@@ -7,7 +7,7 @@
 <!-- Main Content -->
 <div class="container-fluid px-4 py-4" id="main-content">
     <!-- Title Section with Back Button -->
-    <div class="title-section mb-4">
+    <div class="title-section sticky-top bg-white shadow-sm mb-4" style="z-index: 1020; padding: 1rem 0;">
         <div class="d-flex align-items-center gap-3">
             <button type="button" 
                     onclick="window.history.back()" 
@@ -111,13 +111,9 @@
                         <div class="card-img-wrapper">
                             @php
                                 $imageUrl = null;
-                                if($repository->documents && $repository->documents->count() > 0) {
-                                    $firstDoc = $repository->documents->first();
-                                    if($firstDoc && $firstDoc->document_path) {
-                                        $imageUrl = Storage::exists($firstDoc->document_path) 
-                                            ? Storage::url($firstDoc->document_path) 
-                                            : null;
-                                    }
+                                // Check if category has an image
+                                if($repository->category_image && \Storage::disk('public')->exists($repository->category_image)) {
+                                    $imageUrl = asset('storage/' . $repository->category_image);
                                 }
                                 // Use placeholder if no image found
                                 if(!$imageUrl) {
@@ -127,7 +123,8 @@
                             <img src="{{ $imageUrl }}" 
                                  alt="{{ $repository->course_repository_name }}"
                                  class="card-img-top"
-                                 loading="lazy">
+                                 loading="lazy"
+                                 onerror="this.src='https://via.placeholder.com/400x200/004a93/ffffff?text={{ urlencode($repository->course_repository_name) }}'">
                         </div>
                         <div class="card-body d-flex flex-column" style="background-color: #F2F2F2;">
                             <h5 class="card-title text-center fw-bold mb-3">{{ $repository->course_repository_name }}</h5>

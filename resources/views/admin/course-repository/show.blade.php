@@ -219,111 +219,51 @@
 
                     <!-- Documents Section -->
                     @if($documents->count() > 0)
-                    <div class="">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h5 class="mb-0 fw-semibold text-dark">
-                                <span class="material-icons material-symbols-rounded text-success me-2" style="font-size: 20px;">description</span>Documents
-                                <span class="badge bg-success-subtle text-success ms-2">{{ $documents->count() }}</span>
-                            </h5>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table" id="documents">
-                                <thead>
-                                    <tr>
-                                        <th class="text-center" style="width: 60px;">#</th>
-                                        <th>Document Name</th>
-                                        <th>File Title</th>
-                                        <th>Course Name</th>
-                                        <th>Subject</th>
-                                        <th>Topic</th>
-                                        <th class="text-center" style="width: 120px;">Session Date</th>
-                                        <th>Sector</th>
-                                        <th>Ministry</th>
-                                        <th>Author</th>
-                                        <th class="text-center" style="width: 150px;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($documents as $index => $doc)
-                                    <tr class="table-row-hover">
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-dark fw-normal">{{ $loop->iteration }}</span>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="material-icons material-symbols-rounded text-danger" style="font-size: 24px;">picture_as_pdf</span>
-                                                <span class="fw-semibold">{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</span>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="text-muted">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</span>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->course)
-                                                        {{ $doc->detail->course->course_name }}
-                                                    @elseif($doc->detail->program_structure_pk)
-                                                        {{ $doc->detail->program_structure_pk }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->subject)
-                                                        {{ Str::limit($doc->detail->subject->subject_name, 20) }}
-                                                    @elseif($doc->detail->subject_pk)
-                                                        {{ Str::limit($doc->detail->subject_pk, 20) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->topic)
-                                                        {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
-                                                    @elseif($doc->detail->topic_pk)
-                                                        {{ Str::limit($doc->detail->topic_pk, 15) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
-                                                @else
-                                                    <span class="text-muted">N/A</span>
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td class="text-center">
-                                            <small class="badge bg-info-subtle text-info">
-                                                @if($doc->detail && $doc->detail->session_date)
-                                                    {{ $doc->detail->session_date->format('d-m-Y') }}
-                                                @elseif($doc->detail && $doc->detail->session_date)
-                                                    {{ $doc->detail->session_date }}
-                                                @else
-                                                    N/A
-                                                @endif
-                                            </small>
-                                        </td>
-                                        <td>
-                                            <small class="text-muted">
-                                                @if($doc->detail)
-                                                    @if($doc->detail->sector)
-                                                        {{ Str::limit($doc->detail->sector->sector_name, 15) }}
-                                                    @elseif($doc->detail->sector_master_pk)
-                                                        {{ Str::limit($doc->detail->sector_master_pk, 15) }}
-                                                    @else
-                                                        <span class="text-muted">N/A</span>
-                                                    @endif
+                <div class="table-responsive mt-4">
+                    <table class="table text-nowrap mb-0" id="documents">
+                        <thead>
+                            <tr>
+                                <th class="col text-center">S.No.</th>
+                                <th class="col text-center">Document Name</th>
+                                <th class="col text-center">File Title</th>
+                                <th class="col text-center">Course Name</th>
+                                <th class="col text-center">Subject</th>
+                                <th class="col text-center">Topic</th>
+                                <th class="col text-center">Session Date</th>
+                                <th class="col text-center">Sector</th>
+                                <th class="col text-center">Ministry</th>
+                                <th class="col text-center">Author</th>
+                                <th class="col text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($documents as $index => $doc)
+                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td class="text-center">
+                                    <i class="fas fa-file-alt text-primary me-2"></i>
+                                    <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                </td>
+                                <td class="text-center">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                <td class="text-center">
+                                    <small>
+                                        @if($doc->detail)
+                                            @if($doc->detail->course)
+                                                {{ $doc->detail->course->course_name }}
+                                            @elseif($doc->detail->course_master_pk)
+                                                {{ $doc->detail->course_master_pk }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <small>
+                                            @if($doc->detail)
+                                                @if($doc->detail->subject)
+                                                    {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                                @elseif($doc->detail->subject_pk)
+                                                    {{ Str::limit($doc->detail->subject_pk, 20) }}
                                                 @else
                                                     <span class="text-muted">N/A</span>
                                                 @endif

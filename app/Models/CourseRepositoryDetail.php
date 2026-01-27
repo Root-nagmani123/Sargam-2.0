@@ -13,7 +13,7 @@ class CourseRepositoryDetail extends Model
     protected $fillable = [
         'course_repository_master_pk',
         'course_repository_type',
-        'program_structure_pk',
+        'course_master_pk',
         'subject_pk',
         'detail_document',
         'topic_pk',
@@ -74,7 +74,7 @@ class CourseRepositoryDetail extends Model
      */
     public function course()
     {
-        return $this->belongsTo(CourseMaster::class, 'program_structure_pk', 'pk');
+        return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
     }
 
     /**
