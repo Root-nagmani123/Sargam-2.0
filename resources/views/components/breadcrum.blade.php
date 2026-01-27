@@ -1,5 +1,5 @@
 <div class="breadcrumb-wrapper mb-4">
-    <div class="card card-body py-3 px-3 px-md-4 px-lg-5 border-0 mb-0 position-relative overflow-hidden">
+    <div class="card card-body py-3 px-3 px-md-4 px-lg-5 border-0 mb-0 position-relative overflow-hidden shadow-sm">
         <!-- Decorative Background Elements -->
         <div class="breadcrumb-bg-decoration" aria-hidden="true"></div>
         <div class="breadcrumb-accent-line" aria-hidden="true"></div>
@@ -11,7 +11,7 @@
                     <div class="d-flex align-items-center gap-2 gap-md-3 flex-wrap">
                         <button type="button" 
                                 onclick="window.history.back()" 
-                                class="btn-back btn d-flex align-items-center justify-content-center gap-2 rounded-3 px-3 px-sm-4 py-2 shadow-sm border-0" 
+                                class="btn-back btn d-flex align-items-center justify-content-center gap-2 rounded-pill px-3 px-sm-4 py-2 shadow-sm border-0" 
                                 title="Go back"
                                 aria-label="Go back to previous page">
                             <i class="material-icons material-symbols-rounded back-icon" aria-hidden="true">arrow_back_ios</i>
@@ -49,7 +49,7 @@
                                         <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                                     </svg>
                                 </div>
-                                <span class="badge-current-page">
+                                <span class="badge-current-page badge text-bg-primary-subtle">
                                     {{ $title }}
                                 </span>
                             </li>
