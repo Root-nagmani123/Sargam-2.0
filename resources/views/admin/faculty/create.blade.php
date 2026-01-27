@@ -16,7 +16,7 @@ input.is-invalid {
 #suggestionList a {
     cursor: pointer;
 }
-// print functionality
+
 @media print {
     body, html {
         margin: 0 !important;
@@ -54,7 +54,7 @@ input.is-invalid {
         flex-wrap: wrap !important;
     }
 }
-// print functionality
+
 </style>
 <div class="container-fluid" id="printFacultyFormData">
     <x-breadcrum title="Faculty" />
@@ -82,6 +82,16 @@ input.is-invalid {
                                         required="true"
                                         labelRequired="true"
                                         value="{{ $hostelFloorMapping->hostel_building_master_pk ?? '' }}"
+                                        />
+                                </div>
+                            </div>
+                            <div class="col-md-6 d-none" id="facultyPaContainer">
+                                <div class="mb-3">
+                                    <x-input
+                                        name="faculty_pa"
+                                        label="Faculty (PA) :"
+                                        placeholder="Faculty (PA)"
+                                        formLabelClass="form-label"
                                         />
                                 </div>
                             </div>
@@ -128,7 +138,6 @@ input.is-invalid {
                                         label="Middle Name :"
                                         placeholder="Middle Name"
                                         formLabelClass="form-label"
-                                        required="true"
                                         formInputClass="only-letters"
                                         />
 
@@ -159,6 +168,7 @@ input.is-invalid {
                                         placeholder="Full Name"
                                         formLabelClass="form-label"
                                         required="true"
+                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -208,8 +218,6 @@ input.is-invalid {
                                         label="Landline Number"
                                         placeholder="Landline Number"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         inputmode="numeric"
                                         pattern="\d*"
                                         formInputClass="only-numbers"
@@ -289,7 +297,9 @@ input.is-invalid {
 							label="State :"
 							placeholder="State"
 							formLabelClass="form-label"
-							:options="$state" />
+							:options="$state"
+							required="true"
+							labelRequired="true" />
 
                             </div>
                             </div>
@@ -346,7 +356,6 @@ input.is-invalid {
                                         label="Other City :"
                                         placeholder="Other City"
                                         formLabelClass="form-label"
-                                        required="true"
                                         value=""
                                         />
 
@@ -382,6 +391,7 @@ input.is-invalid {
                                     label="Email :"
                                     placeholder="Email :"
                                     formLabelClass="form-label"
+                                    required="true"
                                     labelRequired="true"
                                     />
 
@@ -402,7 +412,6 @@ input.is-invalid {
                                     label="Photo Upload:"
                                     placeholder="Photo Upload:"
                                     formLabelClass="form-label"
-                                    labelRequired="true"
                                     helperSmallText="Please upload a recent passport-sized photo"
                                 />
 
@@ -421,7 +430,6 @@ input.is-invalid {
                                     label="Document upload :"
                                     placeholder="Document upload :"
                                     formLabelClass="form-label"
-                                    labelRequired="true"
                                     helperSmallText="CV or any other supporting document"
                                     />
 
@@ -456,9 +464,7 @@ input.is-invalid {
                                         label="Degree :"
                                         placeholder="Degree Name"
                                         formLabelClass="form-label"
-                                        required="true"
                                         helperSmallText="Bachelors, Masters, PhD"
-                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -468,8 +474,6 @@ input.is-invalid {
                                         label="University/Institution Name :"
                                         placeholder="University/Institution Name"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-3">
@@ -491,9 +495,7 @@ input.is-invalid {
                                         placeholder="Year of Passing"
                                         formLabelClass="form-label"
                                         :options="$years"
-                                        required="true"
                                         helperSmallText="Select the year of passing"
-                                        labelRequired="true"
                                     />
                                 </div>
                                 <div class="col-3">
@@ -505,8 +507,6 @@ input.is-invalid {
                                         label="Percentage/CGPA"
                                         placeholder="Percentage/CGPA"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -518,9 +518,7 @@ input.is-invalid {
                                         label="Certificates/Documents Upload :"
                                         placeholder="Certificates/Documents Upload"
                                         formLabelClass="form-label"
-                                        required="true"
                                         helperSmallText="Please upload your certificates/documents, if any"
-                                        labelRequired="true"
                                         />
                                   </div>
 								  <div class="existing-certificate"></div>
@@ -550,8 +548,6 @@ input.is-invalid {
                                         label="Years of Experience :"
                                         placeholder="Years of Experience"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-3">
@@ -561,8 +557,6 @@ input.is-invalid {
                                         label="Area of Specialization :"
                                         placeholder="Area of Specialization blade file"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -572,8 +566,6 @@ input.is-invalid {
                                         label="Previous Institutions :"
                                         placeholder="Previous Institutions"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-3">
@@ -582,8 +574,6 @@ input.is-invalid {
                                         label="Position Held :"
                                         placeholder="Position Held"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -595,8 +585,6 @@ input.is-invalid {
                                         placeholder="Duration"
                                         formLabelClass="form-label"
                                         min="0"
-                                        required="true"
-                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-3 mt-3">
@@ -605,8 +593,6 @@ input.is-invalid {
                                         label="Nature of Work :"
                                         placeholder="Nature of Work"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
                                 </div>
                                 <div class="col-6">
@@ -635,8 +621,6 @@ input.is-invalid {
                                         label="Bank Name :"
                                         placeholder="Bank Name"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -648,8 +632,6 @@ input.is-invalid {
                                         label="Account Number :"
                                         placeholder="Account Number"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         formInputClass="only-numbers"
                                         />
 
@@ -661,8 +643,6 @@ input.is-invalid {
                                         label="IFSC Code :"
                                         placeholder="IFSC Code"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
 
                                 </div>
@@ -674,8 +654,6 @@ input.is-invalid {
                                         label="PAN Number :"
                                         placeholder="PAN Number"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
                                         />
                                 </div>
                             </div>
@@ -696,7 +674,6 @@ input.is-invalid {
                                         label="Research Publications :"
                                         placeholder="Research Publications"
                                         formLabelClass="form-label"
-                                        required="true"
                                         helperSmallText="Please upload your research publications, if any"
                                         />
 										<div class="research_publications"></div>
@@ -716,7 +693,6 @@ input.is-invalid {
                                         label="Professional Memberships :"
                                         placeholder="Professional Memberships"
                                         formLabelClass="form-label"
-                                        required="true"
                                         helperSmallText="Please upload your professional memberships, if any"
                                         />
                                      <div class="mt-2">
@@ -733,7 +709,6 @@ input.is-invalid {
                                         label="Reference/Recommendation Details :"
                                         placeholder="Reference/Recommendation Details"
                                         formLabelClass="form-label"
-                                        required="true"
                                         helperSmallText="Please upload your reference/recommendation details, if any"
                                         />
 
@@ -751,8 +726,6 @@ input.is-invalid {
                                         label="Joining Date :"
                                         placeholder="Joining Date"
                                         formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
 										value="{{ $value ?? '' }}"
                                         />
 
@@ -796,7 +769,6 @@ input.is-invalid {
                                         label="Area of Expertise :"
                                         formLabelClass="form-label"
                                         :options="$faculties"
-                                        required="true"
                                         />
                                 </div>
                             </div>
@@ -845,7 +817,26 @@ input.is-invalid {
 
 @section('scripts')
 <script>
+// Show/Hide Faculty (PA) field based on Faculty Type
+$(document).ready(function() {
+    function toggleFacultyPaField() {
+        var facultyType = $('select[name="facultytype"]').val();
+        if (facultyType == '1') { // Internal
+            $('#facultyPaContainer').removeClass('d-none');
+        } else {
+            $('#facultyPaContainer').addClass('d-none');
+            $('input[name="faculty_pa"]').val(''); // Clear the field when hidden
+        }
+    }
 
+    // Initial check on page load
+    toggleFacultyPaField();
+
+    // On change of faculty type
+    $('select[name="facultytype"]').on('change', function() {
+        toggleFacultyPaField();
+    });
+});
 </script>
 <script>
 let isMobileDuplicate = false;
@@ -1024,10 +1015,14 @@ $(document).ready(function () {
                     let html = "";
                     if (response.suggestions.length > 0) {
                         response.suggestions.forEach(function (item) {
+                            let displayText = item.full_name;
+                            if (item.faculty_code) {
+                                displayText += ` (${item.faculty_code})`;
+                            }
                             html += `<a href="#" class="list-group-item list-group-item-action suggestion-item"
                                       data-id="${item.id}"
                                       data-fullname="${item.full_name}">
-                                        ${item.full_name}
+                                        ${displayText}
                                      </a>`;
                         });
                     } else {
@@ -1072,7 +1067,8 @@ function fillFacultyForm(faculty) {
             );
 
             // Auto-fill remaining fields
-           $("select[name='facultytype']").val(faculty.faculty_type);
+           $("select[name='facultytype']").val(faculty.faculty_type).trigger('change');
+           $("input[name='faculty_pa']").val(faculty.faculty_pa ?? '');
            $("input[name='faculty_code']").val(faculty.faculty_code);
            $("input[name='landline']").val(faculty.landline_no);
            $("input[name='mobile']").val(faculty.mobile_no);

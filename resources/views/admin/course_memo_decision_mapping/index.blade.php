@@ -15,8 +15,8 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
-                                    Mapping</a>
+                                <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
+                                    Mapping</a> -->
                                 <button type="button" id="showConclusionAlert" class="btn btn-primary">
                                     +Add New Mapping
                                 </button>
@@ -189,6 +189,7 @@
             processing: true,
             serverSide: true,
             ajax: "{{ route('course.memo.decision.index') }}",
+            order: [[0, 'desc']],
             columns: [{
                     data: 'DT_RowIndex',
                     name: 'DT_RowIndex',
@@ -347,7 +348,7 @@
         active_inactive: $('#edit_active_inactive').val()
     };
     alert(data.course_master_pk);
-    
+
 
     fetch("{{ route('course.memo.decision.update') }}", {
         method: 'POST',

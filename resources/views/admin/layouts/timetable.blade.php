@@ -26,13 +26,58 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
 </head>
 <x-session_message />
 
-<body style="min-height: 100vh; display: flex; flex-direction: column;background-color: #dcdcdc;">
+<body style="min-height: 100vh; display: flex; flex-direction: column;background-color: #ffffff;">
     <!-- Top Blue Bar (Govt of India) -->
-
+<!-- Government Header Strips -->
+<div class="govt-header">
+    <!-- Dark Blue Strip -->
+    <div class="govt-header-top bg-primary text-white py-2">
+        <div class="container-fluid">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center gap-2">
+                        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png" 
+                             alt="India Emblem" 
+                             height="20" 
+                             class="d-inline-block">
+                        <span class="fw-semibold">भारत सरकार | Government of India</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center justify-content-end gap-3">
+                        <a href="#main-content" class="text-white text-decoration-none small">Skip to content</a>
+                        <div class="d-flex align-items-center gap-1">
+                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Increase font size">A+</button>
+                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Normal font size">A</button>
+                            <button class="btn btn-sm btn-link text-white p-0" aria-label="Decrease font size">A-</button>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-link text-white dropdown-toggle p-0" 
+                                    type="button" 
+                                    id="languageDropdown" 
+                                    data-bs-toggle="dropdown" 
+                                    aria-expanded="false">
+                                English
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                                <li><a class="dropdown-item" href="#">English</a></li>
+                                <li><a class="dropdown-item" href="#">हिंदी</a></li>
+                            </ul>
+                        </div>
+                        <button class="btn btn-sm btn-link text-white p-0" aria-label="Search">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
     <!-- Sticky Header -->
     <div class="header sticky-top bg-white shadow-sm mb-4">
         <div class="container-fluid p-1">
