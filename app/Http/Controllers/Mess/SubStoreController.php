@@ -5,18 +5,20 @@ namespace App\Http\Controllers\Mess;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Mess\SubStore;
+use App\Models\Mess\Store;
 
 class SubStoreController extends Controller
 {
     public function index()
     {
-        $subStores = SubStore::orderByDesc('id')->get();
+        $subStores = SubStore::with('parentStore')->orderByDesc('id')->get();
         return view('mess.sub-stores.index', compact('subStores'));
     }
 
     public function create()
     {
-        return view('mess.sub-stores.create');
+        $stores = Store::orderBy('store_name')->get();
+        return view('mess.sub-stores.create', compact('stores'));
     }
 
     public function store(Request $request)
@@ -31,7 +33,8 @@ class SubStoreController extends Controller
     public function edit($id)
     {
         $subStore = SubStore::findOrFail($id);
-        return view('mess.sub-stores.edit', compact('subStore'));
+        $stores = Store::orderBy('store_name')->get();
+        return view('mess.sub-stores.edit', compact('subStore', 'stores'));
     }
 
     public function update(Request $request, $id)
@@ -56,15 +59,17 @@ class SubStoreController extends Controller
     protected function validatedData(Request $request, ?SubStore $subStore = null): array
     {
         $validated = $request->validate([
-            'sub_store_name' => ['required', 'string', 'max:255'],
-            'status'         => ['nullable', 'in:active,inactive'],
+            'parent_store_id' => ['required', 'exists:mess_stores,id'],
+            'sub_store_name'  => ['required', 'string', 'max:255'],
+            'status'          => ['nullable', 'in:active,inactive'],
         ]);
 
         $status = $validated['status'] ?? SubStore::STATUS_ACTIVE;
 
         return [
-            'sub_store_name' => $validated['sub_store_name'],
-            'status'         => $status,
+            'parent_store_id' => $validated['parent_store_id'],
+            'sub_store_name'  => $validated['sub_store_name'],
+            'status'          => $status,
         ];
     }
 }

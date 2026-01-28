@@ -12,9 +12,18 @@ class SubStore extends Model
     protected $table = 'mess_sub_stores';
     
     protected $fillable = [
+        'parent_store_id',
         'sub_store_name',
         'status',
     ];
+
+    /**
+     * Get the parent store that owns this sub store
+     */
+    public function parentStore()
+    {
+        return $this->belongsTo(Store::class, 'parent_store_id');
+    }
 
     public function scopeActive($query)
     {

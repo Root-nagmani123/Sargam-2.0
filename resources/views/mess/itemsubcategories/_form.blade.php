@@ -33,9 +33,9 @@
 
 <div class="row">
     <div class="col-md-6 mb-3">
-        <label class="form-label">Item Code <span class="text-danger">*</span></label>
-        <input type="text" name="item_code" class="form-control bg-light" value="{{ old('item_code', $itemsubcategory ? $itemsubcategory->item_code : '') }}" readonly placeholder="Auto-generated on save">
-        <div class="text-muted small">Mandatory. Auto-generated.</div>
+        <label class="form-label">Item Code</label>
+        <input type="text" name="item_code" class="form-control" value="{{ old('item_code', $itemsubcategory ? $itemsubcategory->item_code : '') }}" readonly>
+        <div class="text-muted small">Auto-generated code.</div>
         @error('item_code')<div class="text-danger small">{{ $message }}</div>@enderror
     </div>
 

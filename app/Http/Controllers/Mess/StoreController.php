@@ -58,17 +58,14 @@ class StoreController extends Controller
     {
         $validated = $request->validate([
             'store_name' => ['required', 'string', 'max:255'],
-            'store_type' => ['nullable', 'string', 'in:'.implode(',', array_keys(Store::storeTypes()))],
             'location'   => ['nullable', 'string', 'max:255'],
             'status'     => ['nullable', 'in:active,inactive'],
         ]);
 
         $status = $validated['status'] ?? Store::STATUS_ACTIVE;
-        $storeType = $validated['store_type'] ?? Store::TYPE_MESS;
 
         return [
             'store_name' => $validated['store_name'],
-            'store_type' => $storeType,
             'location'   => $validated['location'] ?? null,
             'status'     => $status,
         ];
