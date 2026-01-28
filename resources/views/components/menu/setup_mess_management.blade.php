@@ -48,29 +48,6 @@
         </ul>
 
 
-        <!-- ======= PURCHASE ORDER ======= -->
-        <li class="sidebar-item mt-2"
-            style="background: #4077ad;
-            border-radius: 30px 0px 0px 30px;
-            width: 100%;
-            box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-            min-width: 250px;">
-            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                href="#collapsePurchaseOrder" role="button" aria-expanded="false"
-                aria-controls="collapsePurchaseOrder">
-                <span class="fw-bold">Purchase Order</span>
-                <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                    style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
-            </a>
-        </li>
-        <ul class="collapse list-unstyled ps-3" id="collapsePurchaseOrder">
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.purchaseorders.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Purchase Orders</span>
-                </a>
-            </li>
-        </ul>
-
         <!-- ======= MATERIAL MANAGEMENT ======= -->
         <li class="sidebar-item mt-2"
             style="background: #4077ad;
