@@ -29,7 +29,7 @@ class ReportController extends Controller
             })
             ->paginate(50);
             
-        $categories = ItemCategory::where('is_active', true)->get();
+        $categories = ItemCategory::where('status', 'active')->get();
         
         return view('admin.mess.reports.items-list', compact('items', 'categories'));
     }
@@ -53,7 +53,7 @@ class ReportController extends Controller
 
     public function categoryMaterial(Request $request)
     {
-        $categories = ItemCategory::with(['items' => function($q) {
+        $categories = ItemCategory::where('status', 'active')->with(['items' => function($q) {
             $q->where('is_active', true);
         }])->get();
         

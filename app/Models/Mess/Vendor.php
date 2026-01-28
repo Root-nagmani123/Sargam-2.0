@@ -7,6 +7,14 @@ use Illuminate\Database\Eloquent\Model;
 class Vendor extends Model
 {
     use HasFactory;
+    
     protected $table = 'mess_vendors';
-    protected $fillable = ['name', 'contact_person', 'phone', 'email', 'address'];
+    
+    protected $fillable = [
+        'name',
+        'email',
+        'contact_person',
+        'phone',
+        'address',
+    ];
 }
