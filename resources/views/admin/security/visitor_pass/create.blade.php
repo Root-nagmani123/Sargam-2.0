@@ -160,7 +160,7 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="mb-3">
                             <label for="in_time" class="form-label">
                                 In Time <span class="text-danger">*</span>
@@ -174,7 +174,7 @@
                         </div>
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="mb-3">
                             <label for="valid_for_days" class="form-label">
                                 Valid For (Days) <span class="text-danger">*</span>
@@ -190,7 +190,7 @@
                         </div>
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-6">
                         <div class="mb-3">
                             <label for="vehicle_number" class="form-label">Vehicle Number</label>
                             <input type="text" name="vehicle_number" id="vehicle_number" class="form-control" 
@@ -199,9 +199,6 @@
                             <small class="form-text text-muted">Optional: If visitor has vehicle</small>
                         </div>
                     </div>
-                </div>
-
-                <div class="row">
                     <div class="col-md-6">
                         <div class="mb-3">
                             <label for="upload_path" class="form-label">Upload Document</label>
@@ -217,13 +214,11 @@
                 </div>
 
                 <div class="row mt-3">
-                    <div class="col-md-12">
+                    <div class="col-md-12 text-end">
                         <button type="submit" class="btn btn-success me-2">
-                            <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">save</i>
                             Register Visitor
                         </button>
-                        <a href="{{ route('admin.security.visitor_pass.index') }}" class="btn btn-secondary">
-                            <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">cancel</i>
+                        <a href="{{ route('admin.security.visitor_pass.index') }}" class="btn btn-outline-secondary">
                             Cancel
                         </a>
                     </div>
