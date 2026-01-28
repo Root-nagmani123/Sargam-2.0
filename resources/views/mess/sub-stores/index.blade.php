@@ -1,12 +1,12 @@
 @extends('admin.layouts.master')
-@section('title', 'Item Category Master')
+@section('title', 'Sub Store Master')
 @section('setup_content')
 <div class="container-fluid">
     <div class="card">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Item Category Master</h4>
-                <a href="{{ route('admin.mess.itemcategories.create') }}" class="btn btn-primary">Add Item Category</a>
+                <h4 class="mb-0">Sub Store Master</h4>
+                <a href="{{ route('admin.mess.sub-stores.create') }}" class="btn btn-primary">Add Sub Store</a>
             </div>
 
             @if(session('success'))
@@ -18,38 +18,35 @@
                     <thead class="table-light">
                         <tr>
                             <th style="width: 70px; background-color: #af2910; color: #fff;">#</th>
-                            <th style="background-color: #af2910; color: #fff;">Category Name</th>
-                            <th style="width: 160px; background-color: #af2910; color: #fff;">Category Type</th>
-                            <th style="background-color: #af2910; color: #fff;">Item Category Description</th>
+                            <th style="background-color: #af2910; color: #fff;">Parent Store</th>
+                            <th style="background-color: #af2910; color: #fff;">Sub Store Name</th>
                             <th style="width: 120px; background-color: #af2910; color: #fff;">Status</th>
                             <th style="width: 160px; background-color: #af2910; color: #fff;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($itemcategories as $itemcategory)
+                        @forelse($subStores as $subStore)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>
-                                    <div class="fw-semibold">{{ $itemcategory->category_name }}</div>
+                                    <div class="fw-semibold">{{ $subStore->parentStore->store_name ?? '-' }}</div>
+                                    @if($subStore->parentStore)
+                                        <div class="text-muted small">Code: {{ $subStore->parentStore->store_code }}</div>
+                                    @endif
                                 </td>
                                 <td>
-                                    @php
-                                        $categoryType = $itemcategory->category_type ?? 'raw_material';
-                                        $types = \App\Models\Mess\ItemCategory::categoryTypes();
-                                    @endphp
-                                    {{ $types[$categoryType] ?? ucfirst(str_replace('_', ' ', $categoryType)) }}
+                                    <div class="fw-semibold">{{ $subStore->sub_store_name }}</div>
                                 </td>
-                                <td>{{ $itemcategory->description ?? '-' }}</td>
                                 <td>
-                                    <span class="badge bg-{{ $itemcategory->status_badge_class }}">
-                                        {{ $itemcategory->status_label }}
+                                    <span class="badge bg-{{ $subStore->status_badge_class }}">
+                                        {{ $subStore->status_label }}
                                     </span>
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2">
-                                        <a href="{{ route('admin.mess.itemcategories.edit', $itemcategory->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                        <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}"
-                                              onsubmit="return confirm('Are you sure you want to delete this item category?');">
+                                        <a href="{{ route('admin.mess.sub-stores.edit', $subStore->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                        <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}"
+                                              onsubmit="return confirm('Are you sure you want to delete this sub store?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-danger">Delete</button>
@@ -59,7 +56,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="text-center text-muted">No item categories found.</td>
+                                <td colspan="5" class="text-center text-muted">No sub stores found.</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -2,25 +2,53 @@
 
 namespace App\Models\Mess;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class ClientType extends Model
 {
-    use HasFactory;
-    
+    public const TYPE_EMPLOYEE = 'employee';
+    public const TYPE_OT = 'ot';
+    public const TYPE_COURSE = 'course';
+    public const TYPE_OTHER = 'other';
+    public const TYPE_SECTION = 'section';
+
+    public const STATUS_ACTIVE   = 'active';
+    public const STATUS_INACTIVE = 'inactive';
+
     protected $table = 'mess_client_types';
     
     protected $fillable = [
-        'type_name',
-        'type_code',
-        'description',
-        'default_credit_limit',
-        'is_active'
+        'client_type',
+        'client_name',
+        'status',
     ];
-    
-    protected $casts = [
-        'default_credit_limit' => 'decimal:2',
-        'is_active' => 'boolean'
-    ];
+
+    /**
+     * @return array<string,string>
+     */
+    public static function clientTypes(): array
+    {
+        return [
+            self::TYPE_EMPLOYEE => 'Employee',
+            self::TYPE_OT      => 'OT',
+            self::TYPE_COURSE  => 'Course',
+            self::TYPE_OTHER   => 'Other',
+            self::TYPE_SECTION => 'Section',
+        ];
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return $this->status ?: self::STATUS_ACTIVE;
+    }
+
+    public function getStatusBadgeClassAttribute(): string
+    {
+        return $this->status === self::STATUS_ACTIVE ? 'success' : 'danger';
+    }
 }

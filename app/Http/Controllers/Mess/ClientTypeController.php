@@ -10,76 +10,63 @@ class ClientTypeController extends Controller
 {
     public function index()
     {
-        $clientTypes = ClientType::paginate(20);
-        return view('admin.mess.client-types.index', compact('clientTypes'));
+        $clientTypes = ClientType::orderByDesc('id')->get();
+        return view('mess.client-types.index', compact('clientTypes'));
     }
 
     public function create()
     {
-        return view('admin.mess.client-types.create');
+        return view('mess.client-types.create');
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'type_name' => 'required|string|max:255',
-            'type_code' => 'required|string|unique:mess_client_types',
-            'default_credit_limit' => 'required|numeric|min:0'
-        ]);
+        $data = $this->validatedData($request);
 
-        ClientType::create($request->all());
-        return redirect()->route('admin.mess.client-types.index')->with('success', 'Client type created successfully.');
+        ClientType::create($data);
+
+        return redirect()->route('admin.mess.client-types.index')->with('success', 'Client Type added successfully');
     }
 
-    public function show($id)
-    {
-        $clientType = ClientType::findOrFail($id);
-        return view('admin.mess.client-types.show', compact('clientType'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function edit($id)
     {
         $clientType = ClientType::findOrFail($id);
-        return view('admin.mess.client-types.edit', compact('clientType'));
+        return view('mess.client-types.edit', compact('clientType'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function update(Request $request, $id)
     {
         $clientType = ClientType::findOrFail($id);
-        
-        $request->validate([
-            'type_name' => 'required|string|max:255',
-            'type_code' => 'required|string|unique:mess_client_types,type_code,' . $id,
-            'default_credit_limit' => 'required|numeric|min:0'
-        ]);
+        $data = $this->validatedData($request, $clientType);
 
-        $clientType->update($request->all());
-        return redirect()->route('admin.mess.client-types.index')->with('success', 'Client type updated successfully.');
+        $clientType->update($data);
+        return redirect()->route('admin.mess.client-types.index')->with('success', 'Client Type updated successfully');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function destroy($id)
     {
         $clientType = ClientType::findOrFail($id);
         $clientType->delete();
-        return redirect()->route('admin.mess.client-types.index')->with('success', 'Client type deleted successfully.');
+        return redirect()->route('admin.mess.client-types.index')->with('success', 'Client Type deleted successfully');
+    }
+
+    /**
+     * Build an array of validated attributes for create/update.
+     */
+    protected function validatedData(Request $request, ?ClientType $clientType = null): array
+    {
+        $validated = $request->validate([
+            'client_type' => ['required', 'string', 'in:employee,ot,course,other,section'],
+            'client_name' => ['required', 'string', 'max:255'],
+            'status'      => ['nullable', 'in:active,inactive'],
+        ]);
+
+        $status = $validated['status'] ?? ClientType::STATUS_ACTIVE;
+
+        return [
+            'client_type' => $validated['client_type'],
+            'client_name' => $validated['client_name'],
+            'status'      => $status,
+        ];
     }
 }
