@@ -7,6 +7,46 @@
     /* This ensures basic styling even if external CSS fails to load */
 }
 
+/* Modal Scrolling Enhancement */
+.modal-dialog-scrollable .modal-body {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+.modal-dialog-scrollable .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 1020;
+    background-color: white;
+}
+
+.modal-dialog-scrollable .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1020;
+    background-color: #f8f9fa;
+}
+
+/* Custom scrollbar styling */
+.modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: #0d6efd;
+    border-radius: 10px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: #0b5ed7;
+}
+
 </style>
 
 @endpush
@@ -530,7 +570,10 @@ document.getElementById('category_image_create')
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="uploadForm" enctype="multipart/form-data">
+            <form id="uploadForm"
+      method="POST"
+      action="javascript:void(0);"
+      enctype="multipart/form-data">
                 @csrf
                 <div class="modal-body p-4 bg-light">
                     <!-- Category Type Selection - Radio Buttons -->
@@ -703,31 +746,66 @@ document.getElementById('category_image_create')
                                     </div>
                                 </div>
 
-                                <!-- Upload Video Link Attachment -->
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        Upload Video Link Attachment <span class="text-danger">*</span>
+                                <!-- Video Link -->
+                                <div class="mb-4">
+                                    <label for="video_link_course" class="form-label">
+                                        <span class="material-icons material-symbols-rounded me-2" style="font-size: 18px; vertical-align: middle;">video_library</span>
+                                        Video Link
                                     </label>
-                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
-                                        style="border-style: dashed !important; cursor: pointer;">
-                                        <input type="file"
-                                            class="file-input-course position-absolute w-100 h-100 opacity-0"
-                                            name="attachments[]" accept="*/*" multiple
-                                            style="top: 0; left: 0; cursor: pointer;">
-                                        <div class="upload-icon mb-2">
-                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M12 15V3M12 3L8 7M12 3L16 7" stroke="#0d6efd" stroke-width="2"
-                                                    stroke-linecap="round" stroke-linejoin="round" />
-                                                <path
-                                                    d="M2 17L2.62 19.86C2.71 20.37 3.14 20.75 3.66 20.75H20.34C20.86 20.75 21.29 20.37 21.38 19.86L22 17"
-                                                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round"
-                                                    stroke-linejoin="round" />
-                                            </svg>
-                                        </div>
-                                        <p class="mb-1 text-primary fw-medium file-upload-text">Click to upload <span
-                                                class="text-muted">or drag and drop</span></p>
-                                        <div class="selected-files mt-2 text-start" style="display:none;"></div>
+                                    <input type="url" class="form-control" id="video_link_course" 
+                                        name="video_link_course" placeholder="https://www.youtube.com/watch?v=...">
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
+                                    </small>
+                                </div>
+
+                                <!-- Attachments with Titles -->
+                                <div class="mb-4">
+                                    <label class="form-label">
+                                        <span class="material-icons material-symbols-rounded me-2" style="font-size: 18px; vertical-align: middle;">attach_file</span>
+                                        Attachments <span class="text-danger">*</span>
+                                    </label>
+                                    
+                                    <!-- Attachments Table -->
+                                    <div class="table-responsive" id="course_attachments_container">
+                                        <table class="table table-bordered table-hover mb-0">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th style="width: 5%;">S.No.</th>
+                                                    <th>Attachment Title</th>
+                                                    <th>Upload File</th>
+                                                    <th style="width: 8%;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="course_attachments_tbody">
+                                                <tr class="attachment-row">
+                                                    <td class="row-number">1</td>
+                                                    <td>
+                                                        <input type="text" class="form-control form-control-sm" 
+                                                            name="attachment_titles[]" placeholder="e.g., Week-01">
+                                                    </td>
+                                                    <td>
+                                                        <input type="file" class="form-control form-control-sm" 
+                                                            name="attachments[]" accept="*/*">
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-danger delete-attachment" 
+                                                            style="display: none;">
+                                                            <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Add More Button -->
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-outline-primary btn-sm add-attachment-course" 
+                                            data-category="course">
+                                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">add_circle</span>
+                                            Add More Attachment
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -824,7 +902,7 @@ document.getElementById('category_image_create')
                                             Keywords <span class="text-danger">*</span>
                                         </label>
                                         <input type="text" class="form-control" id="keywords_other"
-                                            name="keywords_other" placeholder="ABCD12345" readonly>
+                                            name="keywords_other" placeholder="ABCD12345">
                                         <small class="text-muted d-flex align-items-center mt-1">
                                             <i class="bi bi-info-circle me-1"></i> Enter Keyword
                                         </small>
@@ -860,31 +938,66 @@ document.getElementById('category_image_create')
                                     </div>
                                 </div>
 
-                                <!-- Upload Attachment -->
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        Upload Video Link Attachment <span class="text-danger">*</span>
+                                <!-- Video Link -->
+                                <div class="mb-4">
+                                    <label for="video_link_other" class="form-label">
+                                        <span class="material-icons material-symbols-rounded me-2" style="font-size: 18px; vertical-align: middle;">video_library</span>
+                                        Video Link
                                     </label>
-                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
-                                        style="border-style: dashed !important; cursor: pointer;">
-                                        <input type="file"
-                                            class="file-input-other position-absolute w-100 h-100 opacity-0"
-                                            name="attachments_other[]" accept="*/*" multiple
-                                            style="top: 0; left: 0; cursor: pointer;">
-                                        <div class="upload-icon mb-2">
-                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M12 15V3M12 3L8 7M12 3L16 7" stroke="#0d6efd" stroke-width="2"
-                                                    stroke-linecap="round" stroke-linejoin="round" />
-                                                <path
-                                                    d="M2 17L2.62 19.86C2.71 20.37 3.14 20.75 3.66 20.75H20.34C20.86 20.75 21.29 20.37 21.38 19.86L22 17"
-                                                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round"
-                                                    stroke-linejoin="round" />
-                                            </svg>
-                                        </div>
-                                        <p class="mb-1 text-primary fw-medium">Click to upload <span
-                                                class="text-muted">or drag and drop</span></p>
-                                        <div class="selected-files-other mt-2 text-start" style="display:none;"></div>
+                                    <input type="url" class="form-control" id="video_link_other" 
+                                        name="video_link_other" placeholder="https://www.youtube.com/watch?v=...">
+                                    <small class="text-muted d-block mt-1">
+                                        <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
+                                    </small>
+                                </div>
+
+                                <!-- Attachments with Titles -->
+                                <div class="mb-4">
+                                    <label class="form-label">
+                                        <span class="material-icons material-symbols-rounded me-2" style="font-size: 18px; vertical-align: middle;">attach_file</span>
+                                        Attachments <span class="text-danger">*</span>
+                                    </label>
+                                    
+                                    <!-- Attachments Table -->
+                                    <div class="table-responsive" id="other_attachments_container">
+                                        <table class="table table-bordered table-hover mb-0">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th style="width: 5%;">S.No.</th>
+                                                    <th>Attachment Title</th>
+                                                    <th>Upload File</th>
+                                                    <th style="width: 8%;">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="other_attachments_tbody">
+                                                <tr class="attachment-row">
+                                                    <td class="row-number">1</td>
+                                                    <td>
+                                                        <input type="text" class="form-control form-control-sm" 
+                                                            name="attachment_titles_other[]" placeholder="e.g., Document-01">
+                                                    </td>
+                                                    <td>
+                                                        <input type="file" class="form-control form-control-sm" 
+                                                            name="attachments_other[]" accept="*/*">
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button type="button" class="btn btn-sm btn-danger delete-attachment" 
+                                                            style="display: none;">
+                                                            <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Add More Button -->
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-outline-primary btn-sm add-attachment-other" 
+                                            data-category="other">
+                                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">add_circle</span>
+                                            Add More Attachment
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1157,6 +1270,93 @@ document.getElementById('category_image_create')
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== DEFINE KEYWORDS FUNCTION FIRST =====
+    function updateKeywords() {
+        try {
+            // Get dropdown values (check both value and text to filter "Select")
+            const courseValue = $('#course_name').val()?.trim() || '';
+            const courseName = courseValue ? $('#course_name option:selected').text().trim() : '';
+            
+            const subjectValue = $('#subject_name').val()?.trim() || '';
+            const subjectName = subjectValue ? $('#subject_name option:selected').text().trim() : '';
+            
+            const topicValue = $('#timetable_name').val()?.trim() || '';
+            const topicName = topicValue ? $('#timetable_name option:selected').text().trim() : '';
+            
+            const sessionDate = $('#session_date').val()?.trim() || '';
+            
+            const facultyValue = $('#author_name').val()?.trim() || '';
+            const facultyName = facultyValue ? $('#author_name option:selected').text().trim() : '';
+            
+            const sectorValue = $('#sector_master').val()?.trim() || '';
+            const sectorName = sectorValue ? $('#sector_master option:selected').text().trim() : '';
+            
+            const ministryValue = $('#ministry_master').val()?.trim() || '';
+            const ministryName = ministryValue ? $('#ministry_master option:selected').text().trim() : '';
+            
+            console.log('updateKeywords called:', { courseName, subjectName, topicName, sessionDate, facultyName, sectorName, ministryName });
+            
+            // Build keywords string (comma-separated)
+            const keywordsParts = [];
+            
+            // Only add non-empty, non-select values
+            if (courseName && courseName !== '-- Select --' && courseName !== 'Select') keywordsParts.push(courseName);
+            if (subjectName && subjectName !== '-- Select Subject --' && subjectName !== 'Select') keywordsParts.push(subjectName);
+            if (topicName && topicName !== '-- Select Topic --' && topicName !== 'Select') keywordsParts.push(topicName);
+            if (sessionDate) keywordsParts.push(sessionDate);
+            if (facultyName && facultyName !== 'Select' && facultyName !== '-- Select --') keywordsParts.push(facultyName);
+            if (sectorName && sectorName !== '-- Select Sector --' && sectorName !== 'Select') keywordsParts.push(sectorName);
+            if (ministryName && ministryName !== '-- Select Ministry --' && ministryName !== 'Select') keywordsParts.push(ministryName);
+            
+            const keywords = keywordsParts.join(', ');  // Comma-separated
+            console.log('Setting keywords:', keywords);
+            $('#keywords_course').val(keywords);
+        } catch (error) {
+            console.error('Error in updateKeywords:', error);
+        }
+    }
+
+    // Keywords function for Other category
+    function updateKeywordsOther() {
+        try {
+            // SELECT dropdowns - check value exists, then get text
+            const courseValue = $('#course_name_other').val()?.trim() || '';
+            const courseName = courseValue ? $('#course_name_other option:selected').text().trim() : '';
+            
+            const sectorValue = $('#sector_master_other').val()?.trim() || '';
+            const sectorName = sectorValue ? $('#sector_master_other option:selected').text().trim() : '';
+            
+            const ministryValue = $('#ministry_master_other').val()?.trim() || '';
+            const ministryName = ministryValue ? $('#ministry_master_other option:selected').text().trim() : '';
+            
+            // TEXT INPUTS - just get their values directly
+            const subjectName = $('#major_subject_other').val()?.trim() || '';
+            const topicName = $('#topic_name_other').val()?.trim() || '';
+            const sessionDate = $('#session_date_other').val()?.trim() || '';
+            const facultyName = $('#author_name_other').val()?.trim() || '';
+            
+            console.log('updateKeywordsOther called:', { courseName, subjectName, topicName, sessionDate, facultyName, sectorName, ministryName });
+            
+            // Build keywords string (comma-separated)
+            const keywordsParts = [];
+            
+            // Only add non-empty, non-select values
+            if (courseName && courseName !== '-- Select --' && courseName !== 'Select') keywordsParts.push(courseName);
+            if (subjectName) keywordsParts.push(subjectName);
+            if (topicName) keywordsParts.push(topicName);
+            if (sessionDate) keywordsParts.push(sessionDate);
+            if (facultyName) keywordsParts.push(facultyName);
+            if (sectorName && sectorName !== '-- Select Sector --' && sectorName !== 'Select') keywordsParts.push(sectorName);
+            if (ministryName && ministryName !== '-- Select Ministry --' && ministryName !== 'Select') keywordsParts.push(ministryName);
+            
+            const keywords = keywordsParts.join(', ');  // Comma-separated
+            console.log('Setting keywords (Other):', keywords);
+            $('#keywords_other').val(keywords);
+        } catch (error) {
+            console.error('Error in updateKeywordsOther:', error);
+        }
+    }
+
     // Global error handler for unhandled promise rejections
     window.addEventListener('unhandledrejection', function(event) {
         console.warn('Unhandled promise rejection:', event.reason);
@@ -1171,6 +1371,365 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     const repositoryPk = {{ $repository->pk }};
+
+    // ===== COURSE FILTERING LOGIC =====
+    const courseStatusRadios = document.querySelectorAll('input[name="course_status"]');
+    const courseSelect = document.getElementById('course_name');
+    
+    if (courseStatusRadios.length > 0 && courseSelect) {
+        courseStatusRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const status = this.value;
+                const options = courseSelect.querySelectorAll('option');
+                
+                options.forEach(option => {
+                    if (option.value === '') {
+                        // Always show the empty/select option
+                        option.style.display = 'block';
+                    } else {
+                        const optionStatus = option.getAttribute('data-status');
+                        option.style.display = (optionStatus === status) ? 'block' : 'none';
+                    }
+                });
+                
+                // Reset course selection when filter changes
+                courseSelect.value = '';
+                // Reset dependent dropdowns
+                resetSubjectDropdown();
+                resetTopicDropdown();
+                resetSessionDateInput();
+                resetAuthorDropdown();
+                // Clear keywords when radio filter changes
+                updateKeywords();
+            });
+        });
+    }
+
+    // ===== CASCADING DROPDOWNS AJAX =====
+    
+    // Helper functions to reset dropdowns
+    function resetSubjectDropdown() {
+        const subjectSelect = document.getElementById('subject_name');
+        subjectSelect.innerHTML = '<option value="">Select</option>';
+    }
+    
+    function resetTopicDropdown() {
+        const topicSelect = document.getElementById('timetable_name');
+        topicSelect.innerHTML = '<option value="">Select</option>';
+    }
+    
+    function resetSessionDateInput() {
+        const sessionDate = document.getElementById('session_date');
+        if (sessionDate) {
+            sessionDate.value = '';
+        }
+    }
+    
+    function resetAuthorDropdown() {
+        const authorSelect = document.getElementById('author_name');
+        authorSelect.value = '';
+    }
+
+    // Course change - load subjects via AJAX
+    if (courseSelect) {
+        courseSelect.addEventListener('change', function() {
+            const coursePk = this.value;
+            const subjectSelect = document.getElementById('subject_name');
+            
+            resetTopicDropdown();
+            resetSessionDateInput();
+            resetAuthorDropdown();
+            updateKeywords();  // Update keywords when course changes
+            
+            if (!coursePk) {
+                resetSubjectDropdown();
+                return;
+            }
+            
+            // Fetch subjects for selected course
+            fetch(`/course-repository/subjects/${coursePk}`)
+                .then(response => response.json())
+                .then(data => {
+                    subjectSelect.innerHTML = '<option value="">Select</option>';
+                    // Handle response - data.data because API returns {success: true, data: [...]}
+                    const subjects = data.data || data || [];
+                    if (Array.isArray(subjects) && subjects.length > 0) {
+                        subjects.forEach(subject => {
+                            const option = document.createElement('option');
+                            option.value = subject.pk;
+                            option.textContent = subject.subject_name;
+                            subjectSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching subjects:', error);
+                    resetSubjectDropdown();
+                });
+        });
+    }
+
+    // Subject change - load topics via AJAX
+    const subjectSelect = document.getElementById('subject_name');
+    if (subjectSelect) {
+        subjectSelect.addEventListener('change', function() {
+            const subjectPk = this.value;
+            const coursePk = document.getElementById('course_name').value;
+            const topicSelect = document.getElementById('timetable_name');
+            
+            resetSessionDateInput();
+            resetAuthorDropdown();
+            updateKeywords();  // Update keywords when subject changes
+            
+            if (!subjectPk) {
+                resetTopicDropdown();
+                return;
+            }
+            
+            // Fetch topics for selected subject with course parameter
+            fetch(`/course-repository/topics/${subjectPk}?course_master_pk=${coursePk}`)
+                .then(response => response.json())
+                .then(data => {
+                    topicSelect.innerHTML = '<option value="">Select</option>';
+                    // Handle response - data.data because API returns {success: true, data: [...]}
+                    const topics = data.data || data || [];
+                    if (Array.isArray(topics) && topics.length > 0) {
+                        topics.forEach(topic => {
+                            const option = document.createElement('option');
+                            option.value = topic.pk;
+                            option.textContent = topic.subject_topic || topic.course_repo_topic || topic.course_repo_sub_topic;
+                            topicSelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching topics:', error);
+                    resetTopicDropdown();
+                });
+        });
+    }
+
+    // Topic change - load session dates and faculty via AJAX
+    const topicSelect = document.getElementById('timetable_name');
+    if (topicSelect) {
+        topicSelect.addEventListener('change', function() {
+            const topicPk = this.value;
+            const sessionDateInput = document.getElementById('session_date');
+            const authorSelect = document.getElementById('author_name');
+            
+            updateKeywords();  // Update keywords when topic changes
+            
+            if (!topicPk) {
+                resetSessionDateInput();
+                resetAuthorDropdown();
+                return;
+            }
+            
+            // Fetch session dates for selected topic
+            fetch(`/course-repository/session-dates?topic_pk=${topicPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    const dates = data.data || data || [];
+                    if (Array.isArray(dates) && dates.length > 0) {
+                        // Set first session date automatically
+                        if (sessionDateInput && dates[0].session_date) {
+                            sessionDateInput.value = dates[0].session_date;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching session dates:', error));
+            
+            // Fetch authors/faculty for selected topic
+            fetch(`/course-repository/authors-by-topic?topic_pk=${topicPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    authorSelect.innerHTML = '<option value="">Select</option>';
+                    const authors = data.data || data || [];
+                    if (Array.isArray(authors) && authors.length > 0) {
+                        authors.forEach(author => {
+                            const option = document.createElement('option');
+                            option.value = author.pk;
+                            option.textContent = author.full_name || author.author_name;
+                            authorSelect.appendChild(option);
+                        });
+                        // Auto-select first author if only one exists
+                        if (authors.length === 1) {
+                            authorSelect.value = authors[0].pk;
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching authors:', error));
+        });
+    }
+
+    // Session Date change - update keywords
+    const sessionDateInput = document.getElementById('session_date');
+    if (sessionDateInput) {
+        sessionDateInput.addEventListener('change', function() {
+            updateKeywords();  // Update keywords when session date changes
+        });
+    }
+
+    // Faculty/Author change - update keywords
+    const authorSelect = document.getElementById('author_name');
+    if (authorSelect) {
+        authorSelect.addEventListener('change', function() {
+            updateKeywords();  // Update keywords when faculty changes
+        });
+    }
+
+    // Sector change - load ministries via AJAX and update keywords
+    const sectorSelect = document.getElementById('sector_master');
+    const ministrySelect = document.getElementById('ministry_master');
+    
+    if (sectorSelect && ministrySelect) {
+        sectorSelect.addEventListener('change', function() {
+            const sectorPk = this.value;
+            
+            // Reset ministry dropdown
+            ministrySelect.innerHTML = '<option value="">Select</option>';
+            updateKeywords();  // Update keywords when sector changes
+            
+            if (!sectorPk) {
+                return;
+            }
+            
+            // Fetch ministries for selected sector
+            fetch(`/course-repository/ministries-by-sector?sector_pk=${sectorPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    const ministries = data.data || data || [];
+                    if (Array.isArray(ministries) && ministries.length > 0) {
+                        ministries.forEach(ministry => {
+                            const option = document.createElement('option');
+                            option.value = ministry.pk;
+                            option.textContent = ministry.ministry_name;
+                            ministrySelect.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching ministries:', error));
+        });
+    }
+
+    // Ministry change - update keywords
+    if (ministrySelect) {
+        ministrySelect.addEventListener('change', function() {
+            updateKeywords();  // Update keywords when ministry changes
+        });
+    }
+
+    // ===== OTHER CATEGORY KEYWORDS EVENT LISTENERS =====
+    
+    // Course Name (Other) - dropdown change
+    const courseSelectOther = document.getElementById('course_name_other');
+    if (courseSelectOther) {
+        courseSelectOther.addEventListener('change', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Major Subject (Other) - text input
+    const subjectInputOther = document.getElementById('major_subject_other');
+    if (subjectInputOther) {
+        subjectInputOther.addEventListener('input', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Topic Name (Other) - text input
+    const topicInputOther = document.getElementById('topic_name_other');
+    if (topicInputOther) {
+        topicInputOther.addEventListener('input', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Session Date (Other) - date input
+    const sessionDateOther = document.getElementById('session_date_other');
+    if (sessionDateOther) {
+        sessionDateOther.addEventListener('change', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Author Name (Other) - text input
+    const authorInputOther = document.getElementById('author_name_other');
+    if (authorInputOther) {
+        authorInputOther.addEventListener('input', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Sector (Other) - dropdown with ministry AJAX
+    const sectorSelectOther = document.getElementById('sector_master_other');
+    const ministrySelectOther = document.getElementById('ministry_master_other');
+    
+    if (sectorSelectOther && ministrySelectOther) {
+        sectorSelectOther.addEventListener('change', function() {
+            const sectorPk = this.value;
+            
+            // Reset ministry dropdown
+            ministrySelectOther.innerHTML = '<option value="">Select</option>';
+            updateKeywordsOther();
+            
+            if (!sectorPk) return;
+            
+            // Fetch ministries for selected sector
+            fetch(`/course-repository/ministries-by-sector?sector_pk=${sectorPk}`)
+                .then(response => response.json())
+                .then(data => {
+                    const ministries = data.data || data || [];
+                    if (Array.isArray(ministries) && ministries.length > 0) {
+                        ministries.forEach(ministry => {
+                            const option = document.createElement('option');
+                            option.value = ministry.pk;
+                            option.textContent = ministry.ministry_name;
+                            ministrySelectOther.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => console.error('Error fetching ministries (Other):', error));
+        });
+    }
+
+    // Ministry (Other) - dropdown change
+    if (ministrySelectOther) {
+        ministrySelectOther.addEventListener('change', function() {
+            updateKeywordsOther();
+        });
+    }
+
+    // Active/Archived radio for Other category
+    const courseStatusRadiosOther = document.querySelectorAll('input[name="course_status_other"]');
+    if (courseStatusRadiosOther.length > 0 && courseSelectOther) {
+        courseStatusRadiosOther.forEach(radio => {
+            radio.addEventListener('change', function() {
+                const status = this.value;
+                const options = courseSelectOther.querySelectorAll('option');
+                
+                options.forEach(option => {
+                    if (option.value === '') {
+                        option.style.display = 'block';
+                        return;
+                    }
+                    
+                    const optionStatus = option.getAttribute('data-status');
+                    if (status === 'active' && optionStatus === 'active') {
+                        option.style.display = 'block';
+                    } else if (status === 'archived' && optionStatus === 'archived') {
+                        option.style.display = 'block';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
+                
+                // Reset selection
+                courseSelectOther.value = '';
+                updateKeywordsOther();
+            });
+        });
+    }
 
     // Initialize tooltips with error handling
     try {
@@ -1574,75 +2133,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn('Populate dropdown error:', error);
         }
     }
-
-    // Utility functions that might be missing
-    function updateKeywords() {
-        try {
-            const keywordsInput = document.getElementById('keywords_course');
-            if (keywordsInput) {
-                // Auto-update keywords based on selected values
-                const inputs = [
-                    'course_name', 'subject_name', 'timetable_name', 
-                    'session_date', 'author_name', 'sector_master', 'ministry_master'
-                ];
-                
-                const keywords = [];
-                inputs.forEach(inputId => {
-                    const element = document.getElementById(inputId);
-                    if (element && element.selectedOptions && element.selectedOptions[0]) {
-                        const text = element.selectedOptions[0].text.trim();
-                        if (text && text !== '-- Select --' && text !== '-- Select Subject --' && text !== '-- Select Topic --' && text !== '-- Select Session Date --' && text !== '-- Select Author --' && text !== '-- Select Sector --' && text !== '-- Select Ministry --') {
-                            keywords.push(text);
-                        }
-                    }
-                });
-                
-                keywordsInput.value = keywords.join(', ');
-            }
-        } catch (error) {
-            console.warn('Update keywords error:', error);
-        }
-    }
-
-    function updateKeywordsOther() {
-        try {
-            const keywordsInput = document.getElementById('keywords_other');
-            if (keywordsInput) {
-                // Auto-update keywords for other category
-                const inputs = [
-                    { id: 'course_name_other', isSelect: true },
-                    { id: 'major_subject_other', isSelect: false },
-                    { id: 'topic_name_other', isSelect: false },
-                    { id: 'session_date_other', isSelect: false },
-                    { id: 'author_name_other', isSelect: false },
-                    { id: 'sector_master_other', isSelect: true },
-                    { id: 'ministry_master_other', isSelect: true }
-                ];
-                
-                const keywords = [];
-                inputs.forEach(input => {
-                    const element = document.getElementById(input.id);
-                    if (element) {
-                        let text = '';
-                        if (input.isSelect && element.selectedOptions && element.selectedOptions[0]) {
-                            text = element.selectedOptions[0].text.trim();
-                        } else if (!input.isSelect) {
-                            text = element.value.trim();
-                        }
-                        
-                        if (text && text !== '-- Select --' && text !== '-- Select Course --' && text !== '-- Select Sector --' && text !== '-- Select Ministry --') {
-                            keywords.push(text);
-                        }
-                    }
-                });
-                
-                keywordsInput.value = keywords.join(', ');
-            }
-        } catch (error) {
-            console.warn('Update keywords other error:', error);
-        }
-    }
-
     // Step 1: Course changes -> Load Groups
    function onCourseChange(courseSelectId, groupSelectId) {
 
@@ -1863,59 +2353,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Bind cascading change events for Course -> Group -> Timetable
     $('#course_name').on('change', function() {
         onCourseChange('course_name', 'subject_name');
+        updateKeywords();
     });
     
     $('#subject_name').on('change', function() {
         onGroupChange('subject_name', 'timetable_name');
+        updateKeywords();
     });
 
-    // Function to update keywords based on selected values
-    function updateKeywords() {
-        const courseName = $('#course_name option:selected').text().trim();
-        const subjectName = $('#subject_name option:selected').text().trim();
-        const topicName = $('#timetable_name option:selected').text().trim();
-        const sessionDate = $('#session_date option:selected').text().trim();
-        const authorName = $('#author_name option:selected').text().trim();
-        const sectorName = $('#sector_master option:selected').text().trim();
-        const ministryName = $('#ministry_master option:selected').text().trim();
-        
-        // Build keywords string from selected values (comma-separated)
-        const keywordsParts = [];
-        if (courseName && courseName !== '-- Select --') keywordsParts.push(courseName);
-        if (subjectName && subjectName !== '-- Select --') keywordsParts.push(subjectName);
-        if (topicName && topicName !== '-- Select --') keywordsParts.push(topicName);
-        if (sessionDate && sessionDate !== '-- Select --') keywordsParts.push(sessionDate);
-        if (authorName && authorName !== '-- Select --') keywordsParts.push(authorName);
-        if (sectorName && sectorName !== '-- Select --') keywordsParts.push(sectorName);
-        if (ministryName && ministryName !== '-- Select --') keywordsParts.push(ministryName);
-        
-        const keywords = keywordsParts.join(', ');
-        $('#keywords_course').val(keywords);
-    }
-
-    // Update keywords for Other category
-    function updateKeywordsOther() {
-        const courseName = $('#course_name_other option:selected').text().trim();
-        const subjectName = $('#major_subject_other').val().trim();
-        const topicName = $('#topic_name_other').val().trim();
-        const sessionDate = $('#session_date_other').val().trim();
-        const authorName = $('#author_name_other').val().trim();
-        const sectorName = $('#sector_master_other option:selected').text().trim();
-        const ministryName = $('#ministry_master_other option:selected').text().trim();
-        
-        // Build keywords string from all values (comma-separated)
-        const keywordsParts = [];
-        if (courseName && courseName !== '-- Select --') keywordsParts.push(courseName);
-        if (subjectName) keywordsParts.push(subjectName);
-        if (topicName) keywordsParts.push(topicName);
-        if (sessionDate) keywordsParts.push(sessionDate);
-        if (authorName) keywordsParts.push(authorName);
-        if (sectorName && sectorName !== '-- Select --') keywordsParts.push(sectorName);
-        if (ministryName && ministryName !== '-- Select --') keywordsParts.push(ministryName);
-        
-        const keywords = keywordsParts.join(', ');
-        $('#keywords_other').val(keywords);
-    }
+    // Update keywords for Other category - COMMENTED OUT (using the main function defined above)
+    // This prevents duplicate function definitions that override the correct version
 
     // Handle timetable selection to populate session date and author
     $('#timetable_name').on('change', function() {
@@ -2042,6 +2489,18 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#author_name_other').on('keyup change', updateKeywordsOther);
     $('#sector_master_other').on('change', updateKeywordsOther);
     $('#ministry_master_other').on('change', updateKeywordsOther);
+
+    // Listen for upload modal show event to trigger keywords update
+    const uploadModalElement = document.getElementById('uploadModal');
+    if (uploadModalElement) {
+        uploadModalElement.addEventListener('shown.bs.modal', function() {
+            console.log('Upload modal shown - triggering updateKeywords');
+            setTimeout(function() {
+                updateKeywords();
+                updateKeywordsOther();
+            }, 100);
+        });
+    }
 
     // Sector change handler for Other category -> Load Ministries
     $('#sector_master_other').on('change', function() {
@@ -2252,167 +2711,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Upload document with modern progress tracking
-    const uploadForm = document.getElementById('uploadForm');
-    if (uploadForm) {
-        uploadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const uploadModal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
         
         // Modern loading state
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing...';
-        
-        // Get selected category
-        const selectedCategory = document.querySelector('input[name="category"]:checked').value;
-        
-        // Get attachment files and titles based on selected category
-        let attachmentFiles, attachmentTitles;
-        
-        if (selectedCategory === 'Course') {
-            attachmentFiles = this.querySelectorAll('input[name="attachments[]"]');
-            attachmentTitles = this.querySelectorAll('input[name="attachment_titles[]"]');
-        } else if (selectedCategory === 'Other') {
-            attachmentFiles = this.querySelectorAll('input[name="attachments_other[]"]');
-            attachmentTitles = this.querySelectorAll('input[name="attachment_titles_other[]"]');
-        } else if (selectedCategory === 'Institutional') {
-            attachmentFiles = this.querySelectorAll('input[name="attachments_institutional[]"]');
-            attachmentTitles = this.querySelectorAll('input[name="attachment_titles_institutional[]"]');
-        }
-        
-        // Validate at least one attachment
-        let hasAttachment = false;
-        attachmentFiles.forEach(file => {
-            if (file.files.length > 0) {
-                hasAttachment = true;
-            }
-        });
-        
-        if (!hasAttachment) {
-            showToast('error', 'Please select at least one document to upload');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-            return;
-        }
-        
-        // Show upload progress
-        uploadModal.hide();
-        showUploadProgress();
-        
-        // Create new FormData with correct files and titles
-        const uploadData = new FormData();
-        
-        // Add CSRF token
-        uploadData.append('_token', document.querySelector('[name="_token"]').value);
-        
-        // Add category
-        uploadData.append('category', selectedCategory);
-        
-        // Add course, subject, timetable based on selected category
-        if (selectedCategory === 'Course') {
-            const course_name = formData.get('course_name') || '';
-            const subject_name = formData.get('subject_name') || '';
-            const timetable_name = formData.get('timetable_name') || '';
-            const session_date = formData.get('session_date') || '';
-            const author_name = formData.get('author_name') || '';
-            uploadData.append('course_name', course_name);
-            uploadData.append('subject_name', subject_name);
-            uploadData.append('timetable_name', timetable_name);
-            uploadData.append('session_date', session_date);
-            uploadData.append('author_name', author_name);
-        } else if (selectedCategory === 'Other') {
-            const course_name_other = formData.get('course_name_other') || '';
-            const major_subject_other = formData.get('major_subject_other') || '';
-            const topic_name_other = formData.get('topic_name_other') || '';
-            const session_date_other = formData.get('session_date_other') || '';
-            const author_name_other = formData.get('author_name_other') || '';
-            uploadData.append('course_name', course_name_other);
-            uploadData.append('subject_name', major_subject_other);
-            uploadData.append('timetable_name', topic_name_other);
-            uploadData.append('session_date', session_date_other);
-            uploadData.append('author_name', author_name_other);
-        } else if (selectedCategory === 'Institutional') {
-            // Institutional category doesn't have these fields, send empty
-            uploadData.append('course_name', '');
-            uploadData.append('subject_name', '');
-            uploadData.append('timetable_name', '');
-            uploadData.append('session_date', '');
-            uploadData.append('author_name', '');
-        }
-
-        
-        // Add files and titles
-        attachmentFiles.forEach((fileInput, index) => {
-            if (fileInput.files.length > 0) {
-                uploadData.append('attachments[]', fileInput.files[0]);
-                uploadData.append('attachment_titles[]', attachmentTitles[index].value || 'Untitled');
-            }
-        });
-        
-        // Add keywords based on selected category
-        if (selectedCategory === 'Course') {
-            const keywordsValue = document.getElementById('keywords_course').value;
-            uploadData.append('keywords', keywordsValue);
-            const videoLink = document.getElementById('video_link');
-            if (videoLink) {
-                uploadData.append('video_link', videoLink.value);
-            }
-        } else if (selectedCategory === 'Other') {
-            const keywordsValue = document.getElementById('keywords_other').value;
-            uploadData.append('keywords', keywordsValue);
-            uploadData.append('video_link', ''); // No video link for Other category
-        } else if (selectedCategory === 'Institutional') {
-            const keywordsValue = document.getElementById('Key_words_institutional').value;
-            uploadData.append('keywords', keywordsValue);
-            const videoLink = document.getElementById('keyword_institutional');
-            if (videoLink) {
-                uploadData.append('video_link', videoLink.value);
-            }
-        }
-        
-        fetch(`/course-repository/${repositoryPk}/upload-document`, {
-            method: 'POST',
-            body: uploadData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Progress modal will auto-close and show success toast
-            if (data.success) {
-                // Reset form
-                document.getElementById('uploadForm').reset();
-                // Reload page with smooth transition
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                // Hide progress modal first
-                const progressModal = bootstrap.Modal.getInstance(document.getElementById('uploadProgressModal'));
-                if (progressModal) progressModal.hide();
-                
-                showToast('error', data.error || 'Upload failed');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-                uploadModal.show();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            
-            // Hide progress modal
-            const progressModal = bootstrap.Modal.getInstance(document.getElementById('uploadProgressModal'));
-            if (progressModal) progressModal.hide();
-            
-            showToast('error', 'Network error occurred. Please try again.');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-            uploadModal.show();
-        });
-    });
-    }
 
     // Delete document
     document.querySelectorAll('.delete-doc').forEach(btn => {
@@ -2680,32 +2981,327 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (finalError) {
         console.warn('Final initialization error:', finalError);
     }
-});
 
-// Additional error prevention for external scripts
-document.addEventListener('DOMContentLoaded', function() {
-    // Prevent detectRouteTab undefined errors
-    if (typeof detectRouteTab === 'undefined') {
-        window.detectRouteTab = function() {
-            console.warn('detectRouteTab function was called but is not defined');
-            return false;
-        };
+    // ===== UPLOAD FORM SUBMISSION - INSIDE DOMContentLoaded =====
+    
+    // Upload document form submission handler
+    const uploadForm = document.getElementById('uploadForm');
+    console.log('uploadForm element:', uploadForm);
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            console.log('Form submit event triggered!');
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const uploadModalEl = document.getElementById('uploadModal');
+            let uploadModal = null;
+            try {
+                uploadModal = bootstrap.Modal.getInstance(uploadModalEl);
+            } catch(err) {
+                console.warn('Could not get modal instance:', err);
+                uploadModal = new bootstrap.Modal(uploadModalEl);
+            }
+            
+            // Modern loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing...';
+            
+            // Get selected category
+            const selectedCategory = document.querySelector('input[name="category"]:checked').value;
+            
+            // Get attachment files and titles based on selected category
+            let attachmentFiles, attachmentTitles;
+            
+            if (selectedCategory === 'Course') {
+                attachmentFiles = this.querySelectorAll('input[name="attachments[]"]');
+                attachmentTitles = this.querySelectorAll('input[name="attachment_titles[]"]');
+            } else if (selectedCategory === 'Other') {
+                attachmentFiles = this.querySelectorAll('input[name="attachments_other[]"]');
+                attachmentTitles = this.querySelectorAll('input[name="attachment_titles_other[]"]');
+            } else if (selectedCategory === 'Institutional') {
+                attachmentFiles = this.querySelectorAll('input[name="attachments_institutional[]"]');
+                attachmentTitles = this.querySelectorAll('input[name="attachment_titles_institutional[]"]');
+            }
+            
+            // Validate: Check if at least one attachment has both title and file
+            let validAttachmentCount = 0;
+            let validationErrors = [];
+            
+            attachmentFiles.forEach((fileInput, index) => {
+                const hasFile = fileInput.files.length > 0;
+                const hasTitle = attachmentTitles[index] && attachmentTitles[index].value.trim() !== '';
+                
+                if (hasFile && !hasTitle) {
+                    validationErrors.push(`Row ${index + 1}: File selected but title is missing`);
+                } else if (hasTitle && !hasFile) {
+                    validationErrors.push(`Row ${index + 1}: Title provided but no file selected`);
+                } else if (hasFile && hasTitle) {
+                    validAttachmentCount++;
+                }
+            });
+            
+            // Show validation errors if any
+            if (validationErrors.length > 0) {
+                alert('Please complete all attachment entries: ' + validationErrors[0]);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
+                return;
+            }
+            
+            // Check if at least one complete attachment exists
+            if (validAttachmentCount === 0) {
+                alert('Please select at least one document to upload with a title');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
+                return;
+            }
+            
+            // Show upload progress
+            if (uploadModal) uploadModal.hide();
+            
+            // Create new FormData with correct files and titles
+            const uploadData = new FormData();
+            
+            // Add CSRF token
+            uploadData.append('_token', document.querySelector('[name="_token"]').value);
+            
+            // Add category
+            uploadData.append('category', selectedCategory);
+            
+            // Add course, subject, timetable based on selected category
+            if (selectedCategory === 'Course') {
+                const course_name = formData.get('course_name') || '';
+                const subject_name = formData.get('subject_name') || '';
+                const timetable_name = formData.get('timetable_name') || '';
+                const session_date = formData.get('session_date') || '';
+                const author_name = formData.get('author_name') || '';
+                uploadData.append('course_name', course_name);
+                uploadData.append('subject_name', subject_name);
+                uploadData.append('timetable_name', timetable_name);
+                uploadData.append('session_date', session_date);
+                uploadData.append('author_name', author_name);
+            } else if (selectedCategory === 'Other') {
+                const course_name_other = formData.get('course_name_other') || '';
+                const major_subject_other = formData.get('major_subject_other') || '';
+                const topic_name_other = formData.get('topic_name_other') || '';
+                const session_date_other = formData.get('session_date_other') || '';
+                const author_name_other = formData.get('author_name_other') || '';
+                uploadData.append('course_name', course_name_other);
+                uploadData.append('subject_name', major_subject_other);
+                uploadData.append('timetable_name', topic_name_other);
+                uploadData.append('session_date', session_date_other);
+                uploadData.append('author_name', author_name_other);
+            } else if (selectedCategory === 'Institutional') {
+                uploadData.append('course_name', '');
+                uploadData.append('subject_name', '');
+                uploadData.append('timetable_name', '');
+                uploadData.append('session_date', '');
+                uploadData.append('author_name', '');
+            }
+            
+            // Add files and titles
+            attachmentFiles.forEach((fileInput, index) => {
+                if (fileInput.files.length > 0) {
+                    uploadData.append('attachments[]', fileInput.files[0]);
+                    uploadData.append('attachment_titles[]', attachmentTitles[index].value || 'Untitled');
+                }
+            });
+            
+            // Add keywords based on selected category
+            if (selectedCategory === 'Course') {
+                const keywordsValue = document.getElementById('keywords_course').value;
+                uploadData.append('keywords', keywordsValue);
+                const videoLink = document.getElementById('video_link_course');
+                if (videoLink) {
+                    uploadData.append('video_link', videoLink.value);
+                }
+            } else if (selectedCategory === 'Other') {
+                const keywordsValue = document.getElementById('keywords_other').value;
+                uploadData.append('keywords', keywordsValue);
+                uploadData.append('video_link', '');
+            } else if (selectedCategory === 'Institutional') {
+                const keywordsValue = document.getElementById('Key_words_institutional').value;
+                uploadData.append('keywords', keywordsValue);
+                const videoLink = document.getElementById('keyword_institutional');
+                if (videoLink) {
+                    uploadData.append('video_link', videoLink.value);
+                }
+            }
+            
+            const repositoryPk = {{ $repository->pk }};
+            
+            console.log('Sending fetch request to:', `/course-repository/${repositoryPk}/upload-document`);
+            
+            fetch(`/course-repository/${repositoryPk}/upload-document`, {
+                method: 'POST',
+                body: uploadData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Response data:', data);
+                if (data.success) {
+                    document.getElementById('uploadForm').reset();
+                    alert('Upload successful!');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
+                    if (uploadModal) uploadModal.show();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Network error occurred. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
+                if (uploadModal) uploadModal.show();
+            });
+        });
     }
 
-    // Handle missing image errors
-    document.querySelectorAll('img').forEach(img => {
-        img.addEventListener('error', function() {
-            // Create a placeholder for missing images
-            const placeholder = document.createElement('div');
-            placeholder.className = 'image-placeholder';
-            placeholder.textContent = 'No Image';
-            placeholder.style.width = this.width ? this.width + 'px' : '60px';
-            placeholder.style.height = this.height ? this.height + 'px' : '60px';
-            
-            if (this.parentNode) {
-                this.parentNode.replaceChild(placeholder, this);
-            }
-        });
-    });
 });
+
+// ===== ATTACHMENT ADD MORE FUNCTIONALITY - OUTSIDE DOMContentLoaded =====
+
+// Update Delete Button Visibility
+function updateDeleteButtons(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    
+    const rows = tbody.querySelectorAll('.attachment-row');
+    const deleteButtons = tbody.querySelectorAll('.delete-attachment');
+    
+    // Show delete buttons only if there's more than 1 row
+    deleteButtons.forEach((btn, index) => {
+        if (rows.length > 1) {
+            btn.style.display = 'inline-block';
+        } else {
+            btn.style.display = 'none';
+        }
+    });
+}
+
+// Add More Attachment for Course Category
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.add-attachment-course');
+    if (btn) {
+        e.preventDefault();
+        console.log('Course Add More clicked');
+        
+        const tbody = document.getElementById('course_attachments_tbody');
+        if (!tbody) {
+            console.error('course_attachments_tbody not found');
+            return;
+        }
+        
+        const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
+        
+        const newRow = document.createElement('tr');
+        newRow.className = 'attachment-row';
+        newRow.innerHTML = `
+            <td class="row-number">${rowCount}</td>
+            <td>
+                <input type="text" class="form-control form-control-sm" 
+                    name="attachment_titles[]" placeholder="e.g., Week-${rowCount}">
+            </td>
+            <td>
+                <input type="file" class="form-control form-control-sm" 
+                    name="attachments[]" accept="*/*">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-danger delete-attachment">
+                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(newRow);
+        updateDeleteButtons('course_attachments_tbody');
+        console.log('Added row to Course attachments. Total rows:', rowCount);
+    }
+});
+
+// Add More Attachment for Other Category
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.add-attachment-other');
+    if (btn) {
+        e.preventDefault();
+        console.log('Other Add More clicked');
+        
+        const tbody = document.getElementById('other_attachments_tbody');
+        if (!tbody) {
+            console.error('other_attachments_tbody not found');
+            return;
+        }
+        
+        const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
+        
+        const newRow = document.createElement('tr');
+        newRow.className = 'attachment-row';
+        newRow.innerHTML = `
+            <td class="row-number">${rowCount}</td>
+            <td>
+                <input type="text" class="form-control form-control-sm" 
+                    name="attachment_titles_other[]" placeholder="e.g., Document-${rowCount}">
+            </td>
+            <td>
+                <input type="file" class="form-control form-control-sm" 
+                    name="attachments_other[]" accept="*/*">
+            </td>
+            <td class="text-center">
+                <button type="button" class="btn btn-sm btn-danger delete-attachment">
+                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                </button>
+            </td>
+        `;
+        
+        tbody.appendChild(newRow);
+        updateDeleteButtons('other_attachments_tbody');
+        console.log('Added row to Other attachments. Total rows:', rowCount);
+    }
+});
+
+// Delete Attachment Row
+document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.delete-attachment');
+    if (btn) {
+        e.preventDefault();
+        console.log('Delete clicked');
+        
+        const row = btn.closest('.attachment-row');
+        const tbody = row.closest('tbody');
+        const tbodyId = tbody.id;
+        
+        // Immediately remove the required attribute from inputs to prevent validation errors
+        const inputs = row.querySelectorAll('input[required]');
+        inputs.forEach(input => input.removeAttribute('required'));
+        
+        // Remove the row with animation
+        row.style.opacity = '0';
+        row.style.transition = 'opacity 0.3s ease-out';
+        
+        // Use requestAnimationFrame for smoother timing
+        setTimeout(() => {
+            // Completely remove the row from DOM
+            row.remove();
+            
+            // Update row numbers
+            const rows = tbody.querySelectorAll('.attachment-row');
+            rows.forEach((r, index) => {
+                r.querySelector('.row-number').textContent = index + 1;
+            });
+            
+            // Update delete button visibility
+            updateDeleteButtons(tbodyId);
+            console.log('Row deleted');
+        }, 300);
+    }
+});
+
+
 </script>

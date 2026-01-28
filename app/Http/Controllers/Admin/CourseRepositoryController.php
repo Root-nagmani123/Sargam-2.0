@@ -12,6 +12,7 @@ use App\Models\SubjectMaster;
 use App\Models\FacultyMaster;
 use App\Models\SectorMaster;
 use App\Models\MinistryMaster;
+use App\Models\Timetable;
 use Illuminate\Http\Request; 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -581,23 +582,44 @@ class CourseRepositoryController extends Controller
     }
 
     /**
-     * Get subjects by course (AJAX endpoint)
-     * GET /course-repository/subjects?course_pk=X
+     * Get all courses (AJAX endpoint)
+     * GET /course-repository/courses
      */
-    public function getSubjectsByCourse(Request $request)
+    public function getCourses()
     {
         try {
-            $coursePk = $request->query('course_pk');
-            print_r($coursePk); exit;
+            $courses = CourseMaster::where('course_active_inactive', 1)
+                ->select('pk', 'course_name')
+                ->orderBy('course_name')
+                ->get();
+
+            return response()->json(['success' => true, 'data' => $courses]);
+        } catch (Exception $e) {
+            Log::error('Error in getCourses: ' . $e->getMessage());
+            return response()->json(['success' => false, 'error' => 'Failed to load courses'], 500);
+        }
+    }
+
+    /**
+     * Get subjects by course (AJAX endpoint)
+     * GET /course-repository/subjects/{coursePk}
+     */
+    public function getSubjectsByCourse($coursePk = null, Request $request = null)
+    {
+        try {
+            // Support both route parameter and query parameter for flexibility
+            if (!$coursePk && $request) {
+                $coursePk = $request->query('course_pk');
+            }
             
             if (!$coursePk) {
-                return response()->json(['success' => false, 'data' => []]);
+                return response()->json(['success' => false, 'data' => []], 422);
             }
 
             // Get all subjects that are mapped to this course in course_repository_details
-            $subjects = SubjectMaster::distinct()
-                ->join('course_repository_details', 'subject_master.pk', '=', 'course_repository_details.subject_pk')
-                ->where('course_repository_details.course_master_pk', $coursePk)
+             $subjects = SubjectMaster::distinct()
+                ->join('timetable', 'subject_master.pk', '=', 'timetable.subject_master_pk')
+                ->where('timetable.course_master_pk', $coursePk)
                 ->where('subject_master.active_inactive', 1)
                 ->select('subject_master.pk', 'subject_master.subject_name')
                 ->get();
@@ -611,22 +633,34 @@ class CourseRepositoryController extends Controller
 
     /**
      * Get topics by subject (AJAX endpoint)
-     * GET /course-repository/topics?subject_pk=X
+     * GET /course-repository/topics/{subjectPk}?course_master_pk={coursePk}
      */
-    public function getTopicsBySubject(Request $request)
+    public function getTopicsBySubject($subjectPk = null, Request $request = null)
     {
         try {
-            $subjectPk = $request->query('subject_pk');
+            // Support both route parameter and query parameter for flexibility
+            if (!$subjectPk && $request) {
+                $subjectPk = $request->query('subject_pk');
+            }
+            
+            // Get coursePk from query parameter
+            $coursePk = $request ? $request->query('course_master_pk') : null;
             
             if (!$subjectPk) {
-                return response()->json(['success' => false, 'data' => []]);
+                return response()->json(['success' => false, 'data' => []], 422);
             }
 
             // Get all topics that are mapped to this subject in course_repository_details
-            $topics = CourseRepositorySubtopic::distinct()
-                ->join('course_repository_details', 'course_repository_subtopic.pk', '=', 'course_repository_details.topic_pk')
-                ->where('course_repository_details.subject_pk', $subjectPk)
-                ->select('course_repository_subtopic.pk', 'course_repository_subtopic.course_repo_topic', 'course_repository_subtopic.course_repo_sub_topic')
+            $query = Timetable::distinct()
+                ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
+                ->where('timetable.subject_master_pk', $subjectPk);
+            
+            // Only filter by course if provided
+            if ($coursePk) {
+                $query->where('timetable.course_master_pk', $coursePk);
+            }
+            
+            $topics = $query->select('timetable.pk', 'timetable.subject_topic', 'faculty_master.full_name as faculty_name', 'timetable.START_DATE')
                 ->get();
 
             return response()->json(['success' => true, 'data' => $topics]);
@@ -650,16 +684,30 @@ class CourseRepositoryController extends Controller
             }
 
             // Get session dates for this topic from course_repository_details
-            $sessionDates = CourseRepositoryDetail::where('topic_pk', $topicPk)
-                ->where('status', 1)
+            $sessionDates = Timetable::where('pk', $topicPk)
                 ->distinct()
-                ->select('session_date')
-                ->orderBy('session_date', 'desc')
+                ->select('START_DATE')
+                ->orderBy('START_DATE', 'desc')
                 ->get()
                 ->map(function($item) {
+                    $date = $item->START_DATE;
+                    
+                    // Convert string to Carbon if needed
+                    if (is_string($date)) {
+                        try {
+                            $date = \Carbon\Carbon::createFromFormat('Y-m-d', $date) 
+                                 ?: \Carbon\Carbon::parse($date);
+                        } catch (\Exception $e) {
+                            return [
+                                'session_date' => null,
+                                'display' => 'No Date'
+                            ];
+                        }
+                    }
+                    
                     return [
-                        'session_date' => $item->session_date ? $item->session_date->format('Y-m-d') : null,
-                        'display' => $item->session_date ? $item->session_date->format('d-m-Y') : 'No Date'
+                        'session_date' => $date ? $date->format('Y-m-d') : null,
+                        'display' => $date ? $date->format('d-m-Y') : 'No Date'
                     ];
                 });
 
@@ -685,8 +733,8 @@ class CourseRepositoryController extends Controller
 
             // Get distinct faculty/authors for this topic from course_repository_details
             $authors = FacultyMaster::distinct()
-                ->join('course_repository_details', 'faculty_master.pk', '=', 'course_repository_details.author_name')
-                ->where('course_repository_details.topic_pk', $topicPk)
+                ->join('timetable', 'faculty_master.pk', '=', 'timetable.faculty_master')
+                ->where('timetable.pk', $topicPk)
                 ->select('faculty_master.pk', 'faculty_master.full_name')
                 ->get();
 
