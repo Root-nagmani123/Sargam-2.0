@@ -58,7 +58,7 @@
                                     <option value="">Select Format</option>
                                     <option value="xlsx">Excel</option>
                                     <option value="csv">CSV</option>
-                                    <option value="pdf">PDF</option>
+                                    <!-- <option value="pdf">PDF</option> -->
                                 </select>
                                 <button type="submit" class="btn btn-success">Export</button>
                             </form>
@@ -79,7 +79,7 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered table-striped align-middle text-center">
+                <table id="peerEvaluationTable" class="table table-bordered table-striped align-middle text-center">
                     <thead class="table-light">
                         <tr>
                             <th width="60">Sr.No</th>
@@ -109,7 +109,8 @@
                             @php
                                 // Get all unique evaluators for this member
                                 $evaluators = $scores->where('member_id', $member->id)->pluck('evaluator_id')->unique();
-                            @endphp
+                          
+                                @endphp
                             
                             @foreach ($evaluators as $evaluatorId)
                                 @php
@@ -233,3 +234,31 @@
         }
     </style>
 @endsection
+@push('scripts')
+<script>
+$(document).ready(function () {
+    $('#peerEvaluationTable').DataTable({
+        responsive: true,
+        scrollX: true,
+        autoWidth: false,
+        pageLength: 25,
+        lengthMenu: [10, 25, 50, 100],
+        ordering: true,
+        order: [[0, 'asc']], // Sr.No sorting
+        columnDefs: [
+            { orderable: false, targets: -1 } // disable sorting on last column if needed
+        ],
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ records",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            paginate: {
+                previous: "Prev",
+                next: "Next"
+            }
+        }
+    });
+});
+</script>
+
+@endpush

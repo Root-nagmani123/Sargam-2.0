@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             <li class="nav-small-cap">
-                                <span class="hide-menu">Meeting Management</span>
+                                <span class="hide-menu small small-sm-normal text-nowrap">Meeting Management</span>
                             </li>
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
@@ -21,42 +21,42 @@
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define Meeting Type</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Define Meeting Type</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define Meeting</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Define Meeting</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define MOM</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Define MOM</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">View MOM</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">View MOM</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">View MOM new</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">View MOM new</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Search Agenda</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Search Agenda</span>
                                 </a>
                             </li>
 

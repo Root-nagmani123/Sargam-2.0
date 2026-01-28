@@ -1,37 +1,24 @@
-<!-- DataTables CSS/JS -->
+
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
 @extends('admin.layouts.master')
 @section('title', 'Peer Evaluation - Admin Panel | Sargam Admin')
 @section('setup_content')
-<style>
-    /* ✅ Improve focus visibility */
-    .table a:focus, .btn:focus, .form-check-input:focus {
-        outline: 2px solid #0d6efd;
-        outline-offset: 2px;
-        box-shadow: none !important;
-    }
 
-    /* ✅ Custom toggle color for clarity */
-    .form-switch .form-check-input:checked {
-        background-color: #198754 !important; /* Bootstrap success green */
-        border-color: #198754 !important;
-    }
-
-    /* ✅ Hover feedback for rows */
-    .table-hover tbody tr:hover {
-        background-color: #f8f9fa !important;
-    }
-
-    /* ✅ High contrast for badges */
-    .badge.bg-info { color: #000; }
-</style>
 
 <div class="container-fluid">
      <x-breadcrum title="Peer Evaluation - Admin Panel" />
     <div class="card p-3" style="border-left: 4px solid #004a93;">
-        <h4 class="mb-4">Peer Evaluation - Admin Panel</h4>
+        <h4 class="mb-4">Peer Evaluation - Admin Panel  </h4>
 
         {{-- Manage Courses Section --}}
         <div class="mb-4">
@@ -40,58 +27,99 @@
                 <input type="text" id="course_name" class="form-control" placeholder="Enter Course Name">
                 <button class="btn btn-info" id="addCourseBtn">Add Course</button>
             </div>
+			
+			<span id="courseMessage" class="text-danger small ms-2" style="display:none;"></span>
+			
 
             {{-- Courses List --}}
             <div class="mt-3">
-    <h6>Existing Courses:</h6>
+    <h6>Existing Courses: <span id="successMessage" class="text-success small ms-2" style="display:none;"></span></h6>
 
     <div class="accordion" id="coursesAccordion">
-        @foreach ($courses as $index => $course)
-            <div class="accordion-item mb-2">
-                <h2 class="accordion-header" id="heading{{ $course->id }}">
-                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                        data-bs-target="#collapse{{ $course->id }}" aria-expanded="false"
-                        aria-controls="collapse{{ $course->id }}">
-                        <div class="d-flex justify-content-between align-items-center w-100">
-                            <strong>{{ $course->course_name }}</strong>
-                            <div>
-                                <span class="badge bg-primary">{{ $course->events_count }} Events</span>
-                                <span class="badge bg-secondary ms-1">{{ $course->groups_count }} Groups</span>
-                            </div>
-                        </div>
-                    </button>
-                </h2>
-                <div id="collapse{{ $course->id }}" class="accordion-collapse collapse"
-                    aria-labelledby="heading{{ $course->id }}" data-bs-parent="#coursesAccordion">
-                    <div class="accordion-body">
+		@foreach ($courses as $course)
+    <div class="accordion-item mb-2">
 
-                        {{-- Add Event to this Course --}}
-                        <div class="input-group input-group-sm mb-3">
-                            <input type="text" class="form-control event-input"
-                                placeholder="Add Event to {{ $course->course_name }}"
-                                data-course-id="{{ $course->id }}">
-                            <button class="btn btn-outline-primary add-event-btn"
-                                data-course-id="{{ $course->id }}">Add Event</button>
-                        </div>
+        <h2 class="accordion-header d-flex align-items-center justify-content-between px-3 py-2"
+            id="heading{{ $course->id }}">
 
-                        {{-- Events List --}}
-                        @foreach ($course->events as $event)
-                            <div
-                                class="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong>{{ $event->event_name }}</strong>
-                                    <span
-                                        class="badge bg-secondary ms-2">{{ $event->groups->count() }} Groups</span>
-                                </div>
-                                <small class="text-muted">Event ID: {{ $event->id }}</small>
-                            </div>
-                        @endforeach
+            <!-- Accordion Toggle -->
+            <button class="accordion-button collapsed flex-grow-1 me-2" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#collapse{{ $course->id }}"
+                    aria-expanded="false"
+                    aria-controls="collapse{{ $course->id }}">
+                <strong>{{ $course->course_name }}</strong>
+			</button>
 
-                    </div>
-                </div>
+            <!-- Actions -->
+            <div class="d-flex align-items-center gap-2">
+
+                <span class="badge bg-primary">{{ $course->events_count }} Events</span>
+                <span class="badge bg-secondary">{{ $course->groups_count }} Groups</span>
+
+                <!-- Edit -->
+                <button type="button"
+					class="btn btn-sm btn-outline-warning edit-course-btn"
+					data-id="{{ $course->id }}"
+					data-name="{{ $course->course_name }}"
+					title="Edit Course">
+					<i class="fa-solid fa-pen"></i>
+				</button>
+
+                <!-- Delete -->
+                <button type="button"
+					class="btn btn-sm btn-outline-danger delete-course-btn"
+					data-id="{{ $course->id }}"
+					title="Delete Course">
+					<i class="fa-solid fa-trash"></i>
+				</button>
+								
             </div>
-        @endforeach
+		
+		
+
+        </h2>
+
+        <!-- COLLAPSE BODY -->
+        <div id="collapse{{ $course->id }}"
+             class="accordion-collapse collapse"
+             aria-labelledby="heading{{ $course->id }}"
+             data-bs-parent="#coursesAccordion">
+
+            <div class="accordion-body">
+
+                <!-- Add Event -->
+                <div class="input-group input-group-sm mb-3">
+                    <input type="text"
+                           class="form-control event-input"
+                           placeholder="Add Event to {{ $course->course_name }}"
+                           data-course-id="{{ $course->id }}">
+                    <button class="btn btn-outline-primary add-event-btn"
+                            data-course-id="{{ $course->id }}">
+                        Add Event
+                    </button>
+                </div>
+
+                <!-- Events List -->
+                @foreach ($course->events as $event)
+                    <div class="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ $event->event_name }}</strong>
+                            <span class="badge bg-secondary ms-2">
+                                {{ $event->groups->count() }} Groups
+                            </span>
+                        </div>
+                        <small class="text-muted">Event ID: {{ $event->id }}</small>
+                    </div>
+                @endforeach
+
+            </div>
+        </div>
     </div>
+@endforeach
+</div>
+<div class="mt-3 d-flex justify-content-center">
+     {{ $courses->onEachSide(1)->links('pagination::bootstrap-5') }}
+</div>
 </div>
 
         </div>
@@ -212,7 +240,8 @@
                                 <i class="fas fa-eye"></i>
                             </a>
                             <button class="btn btn-outline-danger delete-group"
-                                data-id="{{ $group->id }}" title="Delete Group" aria-label="Delete Group">
+                                data-id="{{ $group->id }}"
+                                 title="Delete Group" aria-label="Delete Group">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
@@ -259,7 +288,7 @@
     <h6>Existing Columns:</h6>
     <div class="table-responsive">
     <table class="table table-bordered align-middle" id="datatable-groups">
-            <thead class="table-light">
+            <thead class="bg-primary text-white">
                 <tr>
                     <th scope="col">Column Name</th>
                     <th scope="col">Course</th>
@@ -304,7 +333,9 @@
 
                         <td class="text-center">
                             <button class="btn btn-sm btn-danger delete-column"
-                                data-id="{{ $column->id }}" title="Delete">
+                                data-id="{{ $column->id }}" title="Delete"
+                                {{ $column->is_visible == 1 ? 'disabled' : '' }}
+                                >
                                 <iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7">
                                                      </iconify-icon>
                             </button>
@@ -319,136 +350,97 @@
         </div>
 
         {{-- Manage Reflection Fields --}}
-        <div class="mb-4">
-            <h5>Manage Reflection Fields</h5>
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <label class="form-label">Course (Optional)</label>
-                    <select class="form-control" id="reflection_course_id">
+        <div class="mb-5 mt-5">
+            <h5 class="section-title d-flex align-items-center">
+                <i class="fas fa-lightbulb me-2"></i>Manage Reflection Fields
+            </h5>
+            <div class="row g-3 mt-4 mb-4">
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-600"><i class="fas fa-book-open me-2" style="color: #004a93;"></i>Course (Optional)</label>
+                    <select class="form-select form-select-lg" id="reflection_course_id">
                         <option value="">Global Field</option>
                         @foreach ($courses as $course)
                             <option value="{{ $course->id }}">{{ $course->course_name }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Event (Optional)</label>
-                    <select class="form-control" id="reflection_event_id" disabled>
+                <div class="col-lg-3 col-md-6">
+                    <label class="form-label fw-600"><i class="fas fa-calendar-alt me-2" style="color: #004a93;"></i>Event (Optional)</label>
+                    <select class="form-select form-select-lg" id="reflection_event_id" disabled>
                         <option value="">Select Event</option>
                     </select>
                 </div>
-                <div class="col-md-4">
-                    <label class="form-label">Reflection Field Name</label>
-                    <input type="text" id="reflection_field" class="form-control"
+                <div class="col-lg-4 col-md-6">
+                    <label class="form-label fw-600"><i class="fas fa-pen me-2" style="color: #004a93;"></i>Reflection Field Name</label>
+                    <input type="text" id="reflection_field" class="form-control form-control-lg"
                         placeholder="Enter Reflection Field Name">
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button class="btn btn-secondary" id="addReflectionBtn">Add Field</button>
+                <div class="col-lg-2 col-md-6 d-flex align-items-end">
+                    <button class="btn btn-secondary btn-modern w-100" id="addReflectionBtn"><i class="fas fa-plus me-2"></i>Add Field</button>
                 </div>
             </div>  
             {{-- Reflection Fields List --}}
-            <div class="mt-3">
-                <h6>Existing Reflection Fields:</h6>
-                <div class="row">
-                    @php
-                        $reflectionFields = DB::table('peer_reflection_fields as prf')
-                            ->leftJoin('peer_courses as pc', 'prf.course_id', '=', 'pc.id')
-                            ->leftJoin('peer_events as pe', 'prf.event_id', '=', 'pe.id')
-                            ->select('prf.*', 'pc.course_name', 'pe.event_name')
-                            ->get();
-                    @endphp
-
-                    <div class="mt-3">
-    <h6>Existing Reflection Fields:</h6>
-    <div class="table-responsive">
-    <table class="table table-bordered align-middle" id="datatable-columns">
-<script>
-$(document).ready(function() {
-    $('#datatable-courses').DataTable({
-        paging: true,
-        searching: true,
-        ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10,
-        language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ entries",
-            paginate: { previous: "Prev", next: "Next" }
-        }
-    });
-    $('#datatable-groups').DataTable({
-        paging: true,
-        searching: true,
-        ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10
-    });
-    $('#datatable-columns').DataTable({
-        paging: true,
-        searching: true,
-        ordering: true,
-        lengthMenu: [5, 10, 25, 50],
-        pageLength: 10
-    });
-});
-</script>
-            <thead class="table-light">
-                <tr>
-                    <th scope="col">Field Label</th>
-                    <th scope="col">Course</th>
-                    <th scope="col">Event</th>
-                    <th scope="col" class="text-center">Active</th>
-                    <th scope="col" class="text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach ($reflectionFields as $field)
-                    <tr>
-                        <td>
-                            <span class="badge {{ $field->is_active ? 'bg-success' : 'bg-secondary' }} me-1">
-                                {{ $field->field_label }}
-                            </span>
-                        </td>
-                        <td>
-                            @if ($field->course_name)
-                                <small class="text-muted">{{ $field->course_name }}</small>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
-                        </td>
-                        <td>
-                            @if ($field->event_name)
-                                <small class="text-muted">{{ $field->event_name }}</small>
-                            @else
-                                <small class="text-muted">—</small>
-                            @endif
-                        </td>
-                        <td class="text-center">
-    <div class="form-check form-switch d-inline-block">
-        <input type="checkbox"
-            class="form-check-input toggle-reflection"
-            data-id="{{ $field->id }}"
-            id="toggleReflection{{ $field->id }}"
-            {{ $field->is_active ? 'checked' : '' }}
-            title="Toggle Active">
-    </div>
-</td>
-
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-danger delete-reflection"
-                                data-id="{{ $field->id }}" title="Delete"><iconify-icon icon="solar:trash-bin-minimalistic-bold" class="fs-7">
-                                                     </iconify-icon></button>
-                        </td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-</div>
-
+            <div class="mt-4">
+                <h6 class="mb-3"><i class="fas fa-list me-2" style="color: #004a93;"></i>Existing Reflection Fields:</h6>
+                <div class="table-responsive">
+                    <table class="table table-modern" id="datatable-reflection-fields">
+                        <thead>
+                            <tr>
+                                <th scope="col"><i class="fas fa-pen me-1"></i>Field Label</th>
+                                <th scope="col"><i class="fas fa-book-open me-1"></i>Course</th>
+                                <th scope="col"><i class="fas fa-calendar-alt me-1"></i>Event</th>
+                                <th scope="col" class="text-center"><i class="fas fa-toggle-on me-1"></i>Active</th>
+                                <th scope="col" class="text-center"><i class="fas fa-cog me-1"></i>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($reflectionFields as $field)
+                                <tr>
+                                    <td>
+                                        <span class="badge badge-modern {{ $field->is_active ? 'bg-success' : 'bg-secondary' }}">
+                                            {{ $field->field_label }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if ($field->course_name)
+                                            <small class="text-muted">{{ $field->course_name }}</small>
+                                        @else
+                                            <small class="text-muted">Global</small>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if ($field->event_name)
+                                            <small class="text-muted">{{ $field->event_name }}</small>
+                                        @else
+                                            <small class="text-muted">Global</small>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check form-switch d-inline-block">
+                                            <input type="checkbox"
+                                                class="form-check-input toggle-reflection"
+                                                data-id="{{ $field->id }}"
+                                                id="toggleReflection{{ $field->id }}"
+                                                {{ $field->is_active ? 'checked' : '' }}
+                                                title="Toggle Active">
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-outline-danger delete-reflection"
+                                            data-id="{{ $field->id }}"
+                                            title="Delete"
+                                            {{ $field->is_active == 1 ? 'disabled' : '' }}>
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
 
             <div class="alert alert-info">
                 <strong>Note:</strong> This is the admin panel for managing courses, events, groups and columns.
@@ -456,8 +448,8 @@ $(document).ready(function() {
             </div>
         </div>
 
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+       
+      
         <script>
             $(document).ready(function() {
                 // Load events when course is selected for groups
@@ -530,113 +522,276 @@ $(document).ready(function() {
                 });
 
                 // Add Course
-                $('#addCourseBtn').click(function() {
-                    const courseName = $('#course_name').val();
-                    if (!courseName) {
-                        alert('Please enter course name');
-                        return;
-                    }
+				
+           	function validateCourseName() {
+			const courseName = $('#course_name').val().trim();
+			
+			if (!courseName) {
+				$('#courseMessage')
+					.removeClass('text-success')
+					.addClass('text-danger')
+					.text('Please enter course name')
+					.show();
+				return false;
+			}
 
-                    $.post('{{ route('admin.peer.course.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        course_name: courseName
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    }).fail(function() {
-                        alert('Error adding course');
-                    });
-                });
+				$('#courseMessage').hide().text('');
+				return true;
+			}
 
-                // Add Event to Course
-                $('.add-event-btn').click(function() {
-                    const courseId = $(this).data('course-id');
-                    const eventInput = $(`.event-input[data-course-id="${courseId}"]`);
-                    const eventName = eventInput.val();
+			$('#course_name').on('keyup', function () {
+				if ($(this).val().trim().length > 0) {
+					$('#courseMessage').fadeOut();
+				}
+			});
 
-                    if (!eventName) {
-                        alert('Please enter event name');
-                        return;
-                    }
+			$('#course_name').on('blur', function () {
+				validateCourseName();
+			});
 
-                    $.post('{{ route('admin.peer.event.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        event_name: eventName,
-                        course_id: courseId
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    }).fail(function() {
-                        alert('Error adding event');
-                    });
-                });
+		//$('#addCourseBtn').click(function () {
+		$(document).on('click', '#addCourseBtn', function () {
+
+		const courseName = $('#course_name').val().trim();
+
+		$('#courseMessage').hide().removeClass('text-success text-danger').text('');
+
+	   /* if (!courseName) {
+			$('#courseMessage').addClass('text-danger')
+				.text('Please enter course name')
+				.show();
+			return;
+		}*/
+		
+		if (!validateCourseName()) {
+			return;
+		}
+
+		$.post('{{ route('admin.peer.course.add') }}', {
+			_token: '{{ csrf_token() }}',
+			course_name: courseName
+		}, function (response) {
+
+		if (response.success) {
+
+           $('#courseMessage')
+           .addClass('text-success')
+           .text(response.message)
+           .show();
+
+           $('#course_name').val('');
+
+           setTimeout(() => $('#courseMessage').fadeOut(), 3000);
+           const course = response.course;
+
+            const html = `
+<div class="accordion-item mb-2">
+
+    <h2 class="accordion-header d-flex align-items-center justify-content-between px-3 py-2"
+        id="heading${course.id}">
+
+        <button class="accordion-button collapsed flex-grow-1 me-2"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#collapse${course.id}">
+            <strong>${course.course_name}</strong>
+        </button>
+
+        <div class="d-flex align-items-center gap-2">
+
+            <span class="badge bg-primary">0 Events</span>
+            <span class="badge bg-secondary">0 Groups</span>
+
+            <button type="button"
+                class="btn btn-sm btn-outline-warning edit-course-btn"
+                data-id="${course.id}"
+                data-name="${course.course_name}"
+                title="Edit Course">
+                <i class="fa-solid fa-pen"></i>
+            </button>
+
+            <button type="button"
+                class="btn btn-sm btn-outline-danger delete-course-btn"
+                data-id="${course.id}"
+                title="Delete Course">
+                <i class="fa-solid fa-trash"></i>
+            </button>
+
+        </div>
+    </h2>
+
+    <div id="collapse${course.id}"
+        class="accordion-collapse collapse"
+        data-bs-parent="#coursesAccordion">
+
+        <div class="accordion-body">
+            <div class="input-group input-group-sm mb-3">
+                <input type="text"
+                    class="form-control event-input"
+                    placeholder="Add Event to ${course.course_name}"
+                    data-course-id="${course.id}">
+                <button class="btn btn-outline-primary add-event-btn"
+                    data-course-id="${course.id}">
+                    Add Event
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+`;
+$('#coursesAccordion').prepend(html);
+        }
+
+    }).fail(function () {
+        $('#courseMessage').addClass('text-danger')
+            .text('Error adding course')
+            .show();
+    });
+});
+
+          // Add Event to Course
+                //$('.add-event-btn').click(function() {
+			$(document).on('click', '.add-event-btn', function () {
+    const courseId = $(this).data('course-id');
+    const eventInput = $(`.event-input[data-course-id="${courseId}"]`);
+    const eventName = eventInput.val();
+
+    if (!eventName) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Validation Error',
+            text: 'Please enter event name'
+        });
+        return;
+    }
+
+    $.post('{{ route('admin.peer.event.add') }}', {
+        _token: '{{ csrf_token() }}',
+        event_name: eventName,
+        course_id: courseId
+    }, function (response) {
+        if (response.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: 'Event added successfully',
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: response.message
+            });
+        }
+    }).fail(function () {
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops!',
+            text: 'Error adding event'
+        });
+    });
+});
+
 
                 // Add Group with Course and Event
-                $('#addGroupBtn').click(function() {
-                    const courseId = $('#group_course_id').val();
-                    const eventId = $('#group_event_id').val();
-                    const groupName = $('#group_name').val();
-                    const maxMarks = $('#max_marks').val();
+                $('#addGroupBtn').click(function () {
+                     
+                        const courseId = $('#group_course_id').val();
+                        const eventId = $('#group_event_id').val();
+                        const groupName = $('#group_name').val();
+                        const maxMarks = $('#max_marks').val();
 
-                    if (!courseId || !eventId || !groupName) {
-                        alert('Please select course, event and enter group name');
-                        return;
-                    }
-
-                    if (!maxMarks || maxMarks <= 0) {
-                        alert('Please enter valid max marks');
-                        return;
-                    }
-
-                    $.post('{{ route('admin.peer.group.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        course_id: courseId,
-                        event_id: eventId,
-                        group_name: groupName,
-                        max_marks: maxMarks
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
+                        if (!courseId || !eventId || !groupName) {
+                            Swal.fire('Warning', 'Please select course, event and enter group name', 'warning');
+                            return;
                         }
-                    }).fail(function() {
-                        alert('Error adding group');
+
+                        if (!maxMarks || maxMarks <= 0) {
+                            Swal.fire('Warning', 'Please enter valid max marks', 'warning');
+                            return;
+                        }
+
+                        $.post('{{ route('admin.peer.group.add') }}', {
+                            _token: '{{ csrf_token() }}',
+                            course_id: courseId,
+                            event_id: eventId,
+                            group_name: groupName,
+                            max_marks: maxMarks
+                        }, function (response) {
+
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Saved',
+                                    text: 'Group added successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire('Error', response.message, 'error');
+                            }
+
+                        }).fail(function () {
+                            Swal.fire('Error', 'Error adding group', 'error');
+                        });
                     });
-                });
 
                 // Add Column with Course and Event
-                $('#addColumnBtn').click(function() {
-                    const courseId = $('#column_course_id').val();
-                    const eventId = $('#column_event_id').val();
-                    const columnName = $('#column_name').val();
+               $('#addColumnBtn').click(function () {
 
-                    if (!columnName) {
-                        alert('Please enter column name');
-                        return;
-                    }
+    const courseId   = $('#column_course_id').val();
+    const eventId    = $('#column_event_id').val();
+    const columnName = $('#column_name').val();
 
-                    $.post('{{ route('admin.peer.column.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        course_id: courseId || null,
-                        event_id: eventId || null,
-                        column_name: columnName
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
-                        }
-                    }).fail(function() {
-                        alert('Error adding column');
-                    });
-                });
+    if (!columnName) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Validation Error',
+            text: 'Please enter column name'
+        });
+        return;
+    }
+
+    $.post('{{ route('admin.peer.column.add') }}', {
+        _token: '{{ csrf_token() }}',
+        course_id: courseId || null,
+        event_id: eventId || null,
+        column_name: columnName
+    }, function (response) {
+
+        if (response.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Saved!',
+                text: 'Column added successfully',
+                confirmButtonText: 'OK'
+            }).then(() => {
+            location.reload();
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: response.message || 'Something went wrong'
+            });
+        }
+
+    }).fail(function () {
+        Swal.fire({
+            icon: 'error',
+            title: 'Server Error',
+            text: 'Error adding column'
+        });
+    });
+
+});
+
 
                 // Update Max Marks
                 $('.update-marks').click(function() {
@@ -776,31 +931,57 @@ $(document).ready(function() {
                 });
 
                 // Add Reflection Field with Course and Event
-                $('#addReflectionBtn').click(function() {
-                    const courseId = $('#reflection_course_id').val();
-                    const eventId = $('#reflection_event_id').val();
-                    const fieldLabel = $('#reflection_field').val();
+               $('#addReflectionBtn').click(function () {
 
-                    if (!fieldLabel) {
-                        alert('Please enter reflection field label');
-                        return;
-                    }
+                        const courseId = $('#reflection_course_id').val();
+                        const eventId = $('#reflection_event_id').val();
+                        const fieldLabel = $('#reflection_field').val();
 
-                    $.post('{{ route('admin.peer.reflection.add') }}', {
-                        _token: '{{ csrf_token() }}',
-                        field_label: fieldLabel,
-                        course_id: courseId || null,
-                        event_id: eventId || null
-                    }, function(response) {
-                        if (response.success) {
-                            location.reload();
-                        } else {
-                            alert('Error: ' + response.message);
+                        if (!fieldLabel) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Validation Error',
+                                text: 'Please enter reflection field label'
+                            });
+                            return;
                         }
-                    }).fail(function() {
-                        alert('Error adding reflection field');
+
+                        $.post('{{ route('admin.peer.reflection.add') }}', {
+                            _token: '{{ csrf_token() }}',
+                            field_label: fieldLabel,
+                            course_id: courseId || null,
+                            event_id: eventId || null
+                        }, function (response) {
+
+                            if (response.success) {
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Saved!',
+                                    text: 'Reflection field added successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+
+                                location.reload(); // optional clear input
+
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: response.message
+                                });
+                            }
+
+                        }).fail(function () {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Server Error',
+                                text: 'Error adding reflection field'
+                            });
+                        });
                     });
-                });
+
 
                 // Toggle Reflection Field
                 $('.toggle-reflection').change(function() {
@@ -837,7 +1018,8 @@ $(document).ready(function() {
                             _token: '{{ csrf_token() }}'
                         }, function(response) {
                             if (response.success) {
-                                location.reload();
+                               // location.reload();
+                                $('#datatable-columns').DataTable().ajax.reload(null, false);
                             } else {
                                 alert('Error: ' + response.message);
                             }
@@ -872,4 +1054,180 @@ $(document).ready(function() {
                 max-width: 300px;
             }
         </style>
+		
+		
+<!-- Edit Course Modal -->
+<div class="modal fade" id="editCourseModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Course</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="editCourseId">
+                <input type="text" class="form-control" id="editCourseName">
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="updateCourseBtn">Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+		
     @endsection
+	
+@section('scripts')
+
+<script>
+// EDIT COURSE
+$(document).on('click', '.edit-course-btn', function (e) {
+    e.stopPropagation(); // Prevent accordion toggle
+    const id = $(this).data('id');
+    const name = $(this).data('name');
+    $('#editCourseId').val(id);
+    $('#editCourseName').val(name);
+
+    const modal = new bootstrap.Modal(document.getElementById('editCourseModal'));
+    modal.show();
+});
+
+// UPDATE COURSE
+$(document).on('click', '#updateCourseBtn', function () {
+    const id = $('#editCourseId').val();
+    const name = $('#editCourseName').val();
+
+    if (!name.trim()) {
+        alert('Course name is required');
+        return;
+    }
+
+    $.ajax({
+        url: "{{ route('admin.peer.course.update') }}",
+        type: "POST",
+        data: {
+            _token: "{{ csrf_token() }}",
+            course_id: id,
+            course_name: name
+        },
+        success: function (res) {
+    const heading = $('#heading' + id);
+
+    // Update accordion button text
+		heading.find('.accordion-button strong').text(name);
+
+		// Update edit button's data-name attribute for future edits
+		heading.find('.edit-course-btn').data('name', name);
+
+		// Close modal
+		const modalEl = document.getElementById('editCourseModal');
+		const modal = bootstrap.Modal.getInstance(modalEl);
+		modal.hide();
+
+		// Show success message
+		$('#successMessage')
+			.removeClass('text-danger')
+			.addClass('successMessage')
+			.text(res.message)
+			.fadeIn();
+
+		// Hide after 3 seconds
+		setTimeout(() => $('#successMessage').fadeOut(), 3000);
+	},
+        error: function (xhr) {
+            alert(xhr.responseJSON?.message || 'Update failed');
+        }
+    });
+});
+
+// DELETE COURSE
+$(document).on('click', '.delete-course-btn', function (e) {
+    e.stopPropagation();
+
+    const id = $(this).data('id');
+
+    if (!confirm('Are you sure you want to delete this course?')) return;
+
+    $.ajax({
+        url: "{{ route('admin.peer.course.delete', ':id') }}".replace(':id', id),
+        type: "DELETE",
+        data: {
+            _token: "{{ csrf_token() }}"
+        },
+        success: function (res) {
+
+            // remove row
+            $('#heading' + id).closest('.accordion-item').remove();
+
+            // success message
+            $('#successMessage')
+                .removeClass('text-danger')
+                .addClass('text-success')
+                .text(res.message)
+                .fadeIn();
+
+            
+            setTimeout(() => {
+                $('#successMessage').fadeOut();
+            }, 3000);
+        },
+        error: function (xhr) {
+            $('#successMessage')
+                .removeClass('text-success')
+                .addClass('text-danger')
+                .text(xhr.responseJSON?.message || 'Delete failed')
+                .fadeIn();
+        }
+    });
+});
+
+
+</script>
+
+<script>
+$(document).ready(function() {
+	 setTimeout(() => {
+  var table = $('#datatable-courses').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthMenu: [5, 10, 25, 50],
+        pageLength: 10,
+        language: {
+            search: "Search:",
+            lengthMenu: "Show _MENU_ entries",
+            info: "Showing _START_ to _END_ of _TOTAL_ entries",
+            paginate: { previous: "Prev", next: "Next" }
+        }
+    });
+   var table2 = $('#datatable-groups').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthMenu: [5, 10, 25, 50],
+        pageLength: 10
+    });
+    var table3 = $('#datatable-columns').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthMenu: [5, 10, 25, 50],
+        pageLength: 10
+    });
+    var table4 = $('#datatable-reflection-fields').DataTable({
+        paging: true,
+        searching: true,
+        ordering: true,
+        lengthMenu: [5, 10, 25, 50],
+        pageLength: 10
+    });
+	
+});
+</script>
+
+@endsection
+
+

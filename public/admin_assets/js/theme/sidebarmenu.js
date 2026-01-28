@@ -85,14 +85,21 @@ if ((at = "vertical")) {
       // This is for show menu
       //****************************
 
-      var closestNav = elements.closest("nav[class^=sidebar-nav]");
-      var menuid = (closestNav && closestNav.id) || "menu-right-mini-1";
-      var menu = menuid[menuid.length - 1];
+      if (elements) {
+        var closestNav = elements.closest("nav[class^=sidebar-nav]");
+        var menuid = (closestNav && closestNav.id) || "menu-right-mini-1";
+        var menu = menuid[menuid.length - 1];
 
-      document
-        .getElementById("menu-right-mini-" + menu)
-        .classList.add("d-block");
-      document.getElementById("mini-" + menu).classList.add("selected");
+        var menuElement = document.getElementById("menu-right-mini-" + menu);
+        var miniElement = document.getElementById("mini-" + menu);
+        
+        if (menuElement) {
+          menuElement.classList.add("d-block");
+        }
+        if (miniElement) {
+          miniElement.classList.add("selected");
+        }
+      }
 
       //****************************
       // This is for mini sidebar
@@ -145,10 +152,12 @@ var currentURL =
 
 var link = document.getElementById("get-url");
 
-if (currentURL.includes("/main/index.html")) {
-  link.setAttribute("href", "../main/index.html");
-} else if (currentURL.includes("/index.html")) {
-  link.setAttribute("href", "./index.html");
-} else {
-  link.setAttribute("href", "./");
+if (link) {
+  if (currentURL.includes("/main/index.html")) {
+    link.setAttribute("href", "../main/index.html");
+  } else if (currentURL.includes("/index.html")) {
+    link.setAttribute("href", "./index.html");
+  } else {
+    link.setAttribute("href", "./");
+  }
 }

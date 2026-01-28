@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             <li class="nav-small-cap">
-                                <span class="hide-menu">Reports</span>
+                                <span class="hide-menu small small-sm-normal text-nowrap">Reports</span>
                             </li>
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
@@ -21,13 +21,13 @@
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Participant Report</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Participant Report</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Employee Report</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Employee Report</span>
                                 </a>
                             </li>
 

@@ -2291,8 +2291,8 @@ console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
 // Configuration object
 const CalendarConfig = {
     api: {
-        events: '/calendar/full-calendar-details',
-        eventDetails: '/calendar/single-calendar-details',
+        events: "{{ route('calendar.event.calendar-details') }}",
+        eventDetails: "{{ route('calendar.event.Singlecalendar-details') }}",
         store: "{{ route('calendar.event.store') }}",
         update: '/calendar/event-update/',
         delete: '/calendar/event-delete/',

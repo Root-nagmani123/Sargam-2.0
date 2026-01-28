@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             <li class="nav-small-cap">
-                                <span class="hide-menu">OT Reports</span>
+                                <span class="hide-menu small small-sm-normal text-nowrap">OT Reports</span>
                             </li>
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
@@ -21,31 +21,31 @@
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" id="get-url" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Total Register OTs</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Total Register OTs</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Institute And Service Wise OTs Report</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Institute And Service Wise OTs Report</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Registered OTs</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Registered OTs</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Service Institute Wise Report</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Service Institute Wise Report</span>
                                 </a>
                             </li>
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">FC Travel Plan</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">FC Travel Plan</span>
                                 </a>
                             </li>
 

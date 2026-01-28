@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             <li class="nav-small-cap">
-                                <span class="hide-menu">PA Management</span>
+                                <span class="hide-menu small small-sm-normal text-nowrap">PA Management</span>
                             </li>
                             <!-- ---------------------------------- -->
                             <!-- Academic -->
@@ -21,63 +21,63 @@
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define Contacts</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Define Contacts</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define Contacts Group</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Define Contacts Group</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Contacts Group Mapping</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Contacts Group Mapping</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Define Sharing Mapping</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Define Sharing Mapping</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Shared Contacts</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Shared Contacts</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Address Book</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Address Book</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Guest Contact Master</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Guest Contact Master</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Call Receive Records</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Call Receive Records</span>
                                 </a>
                             </li>
 
                             <li class="sidebar-item">
                                 <a class="sidebar-link" href="#" aria-expanded="false">
                                     <iconify-icon icon="solar:atom-line-duotone"></iconify-icon>
-                                    <span class="hide-menu">Call Details</span>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Call Details</span>
                                 </a>
                             </li>
                         </ul>

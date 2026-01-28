@@ -6,6 +6,17 @@
         <div class="iconbar">
             <div>
                 <div class="mini-nav">
+                    <div class="d-flex align-items-center justify-content-end" style="margin-right: 0.5rem;">
+    <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
+        data-bs-custom-class="custom-tooltip" data-bs-placement="right"ria-label="Toggle menu">
+
+        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded text-dark"
+            style="font-size: 40px;">
+            keyboard_double_arrow_right
+        </i>
+
+    </a>
+</div>
                     <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
@@ -17,35 +28,18 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-
-                                            @include('components.profile')
                                             <li class="mini-nav-item" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right">
+                                                    data-bs-placement="right" data-bs-title="Training / Academic">
 
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
                                                             dashboard_customize
                                                         </i>
-                                                        <span class="mini-nav-title">
-                                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP'))
-                                                            Training
-                                                            @elseif(hasRole('Internal Faculty') || hasRole('Guest
-                                                            Faculty') || hasRole('Student-OT'))
-
-                                                            Academic
-                                                            @endif
-                                                        </span>
                                                     </div>
-
-                                                    <!-- Right Arrow -->
-                                                    <i class="material-icons material-symbols-rounded"
-                                                        style="font-size: 24px;">
-                                                        chevron_right
-                                                    </i>
                                                 </a>
                                             </li>
 
@@ -54,22 +48,14 @@
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right">
+                                                    data-bs-placement="right" data-bs-title="Time Table">
 
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
                                                             calendar_month
                                                         </i>
-                                                        <span class="mini-nav-title">Time
-                                                            Table</span>
                                                     </div>
-
-                                                    <!-- Right Arrow -->
-                                                    <i class="material-icons material-symbols-rounded"
-                                                        style="font-size: 24px;">
-                                                        chevron_right
-                                                    </i>
                                                 </a>
                                             </li>
                                             @if(! hasRole('Training-MCTP'))
@@ -77,43 +63,28 @@
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right">
+                                                    data-bs-placement="right" data-bs-title="User Management">
 
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
                                                             user_attributes
                                                         </i>
-                                                        <span class="mini-nav-title">User
-                                                            Management</span>
                                                     </div>
-
-                                                    <!-- Right Arrow -->
-                                                    <i class="material-icons material-symbols-rounded"
-                                                        style="font-size: 24px;">
-                                                        chevron_right
-                                                    </i>
                                                 </a>
                                             </li>
                                             <li class="mini-nav-item" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    data-bs-placement="right">
+                                                    data-bs-placement="right" data-bs-title="Master">
 
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
                                                             menu_open
                                                         </i>
-                                                        <span class="mini-nav-title">Master</span>
                                                     </div>
-
-                                                    <!-- Right Arrow -->
-                                                    <i class="material-icons material-symbols-rounded "
-                                                        style="font-size: 24px;">
-                                                        chevron_right
-                                                    </i>
                                                 </a>
                                             </li>
                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
@@ -126,12 +97,46 @@
                                                     <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">note_add</i>
-                                                        <span class="mini-nav-title fs-4 text-dark text-wrap">FC
-                                                            Registration</span>
                                                     </div>
+                                                </a>
+                                            </li>
+                                            <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}"
+                                                id="mini-8">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Mess Management">
 
-                                                    <i class="material-icons material-symbols-rounded"
-                                                        style="font-size: 20px;">chevron_right</i>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">add_notes</i>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                            <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}"
+                                                id="mini-9">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Security Management">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">shield</i>
+                                                    </div>
+                                                </a>
+                                            </li>
+                                             <li class="mini-nav-item {{ request()->is('admin/issue-management*') || request()->is('admin/issue-categories*') || request()->is('admin/issue-sub-categories*') ? 'selected' : '' }}"
+                                                id="mini-10">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link d-flex align-items-center justify-content-between w-100"
+                                                    data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
+                                                    data-bs-placement="right" data-bs-title="Issue Management (CENTCOM)">
+
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <i class="material-icons menu-icon material-symbols-rounded"
+                                                            style="font-size: 32px;">report_problem</i>
+                                                    </div>
                                                 </a>
                                             </li>
                                             @endif
@@ -181,6 +186,18 @@
                     <!-- Forms -->
                     <!-- ---------------------------------- -->
                     <x-menu.fc-sidebar />
+
+                    <!-- Mess Management -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_mess_management />
+
+                    <!-- Security Management (Vehicle & Visitor Pass) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_security_management />
+
+                    <!-- Issue Management (CENTCOM) -->
+                    <!-- ---------------------------------- -->
+                    <x-menu.setup_issue_management />
 
                 </div>
             </div>

@@ -34,4 +34,14 @@ class StudentMaster extends Model
             'pk'                 // primary key on service_master
         );
     }
+
+    // Relation with cadre
+    public function cadre()
+    {
+        return $this->belongsTo(
+            CadreMaster::class,
+            'cadre_master_pk', // foreign key on student_master
+            'pk'               // primary key on cadre_master
+        );
+    }
 }

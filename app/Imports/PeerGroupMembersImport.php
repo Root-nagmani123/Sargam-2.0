@@ -130,11 +130,11 @@ class PeerGroupMembersImport implements ToCollection, WithStartRow
                 DB::table('peer_group_members')->insert([
                     'group_id' => $this->groupId,
                     'member_pk' => $row[0] ?? $this->generateMemberPk(), // Use User ID as member_pk
-                    'course_name' => $row[1] ?? null,
-                    'event_name' => $row[2] ?? null,
+                    'course_name' => $row[3] ?? null,
+                    'event_name' => $row[4] ?? null,
                     'user_id' => $row[0] ?? null,
-                    'user_name' => $row[3] ?? null,
-                    'ot_code' => $row[4] ?? null,
+                    'user_name' => $row[1] ?? null,
+                    'ot_code' => $row[2] ?? null,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);

@@ -29,9 +29,16 @@ class PeerEvaluationController extends Controller
     public function index()
     {
         // Get courses with their events and group counts
-        $courses = PeerCourse::with(['events' => function ($query) {
+       /*  $courses = PeerCourse::with(['events' => function ($query) {
             $query->active()->withCount('groups');
-        }])->active()->withCount(['events', 'groups'])->get();
+        }])->active()->withCount(['events', 'groups'])->get(); */
+		
+		$courses = PeerCourse::with(['events' => function ($query) {
+		$query->active()->withCount('groups');
+		}])
+		->active()
+		->withCount(['events', 'groups'])
+		->paginate(5); 
 
         // Get events with their course and group counts
         $events = PeerEvent::active()->withCount('groups')->get();
@@ -62,15 +69,25 @@ class PeerEvaluationController extends Controller
         ]);
 
         try {
-            PeerCourse::create([
+            $course = PeerCourse::create([
                 'course_name' => $request->course_name,
                 'is_active' => true
             ]);
 
-            return response()->json([
+          /*   return response()->json([
                 'success' => true,
                 'message' => 'Course added successfully'
-            ]);
+            ]); */
+			return response()->json([
+            'success' => true,
+            'message' => 'Course added successfully',
+            'course' => [
+                'id' => $course->id,
+                'course_name' => $course->course_name,
+                'events_count' => 0,
+                'groups_count' => 0
+            ]
+			]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -78,6 +95,52 @@ class PeerEvaluationController extends Controller
             ], 500);
         }
     }
+	
+		/**
+		 * Update exiting course
+		 */
+		public function updateCourse(Request $request)
+		{
+			$request->validate([
+				'course_id' => 'required|exists:peer_courses,id',
+				'course_name' => 'required|string|max:255|unique:peer_courses,course_name,' . $request->course_id
+			]);
+
+			PeerCourse::where('id', $request->course_id)->update([
+				'course_name' => $request->course_name
+			]);
+
+			return response()->json([
+				'success' => true,
+				'message' => 'You have successfully updated the course!' 
+			]);
+		}
+
+
+		/**
+		 * Delete exiting course
+		 */
+		public function deleteCourse($id)
+		{
+			$course = PeerCourse::withCount(['events', 'groups'])->findOrFail($id);
+
+			if ($course->events_count > 0 || $course->groups_count > 0) {
+				return response()->json([
+					'success' => false,
+					'message' => 'Cannot delete course with events or groups'
+				], 400);
+			}
+
+			$course->delete();
+			//return response()->json(['success' => true]);
+			return response()->json([
+				'success' => true,
+				 'message' => 'Course deleted successfully!'
+			]);
+		}
+
+
+
 
     // ==================== EVENT MANAGEMENT METHODS ====================
 
@@ -474,19 +537,41 @@ class PeerEvaluationController extends Controller
      */
     public function user_index(Request $request)
     {
-        $groups = DB::table('peer_groups')
-            ->select(
-                'peer_groups.*',
-                DB::raw('COUNT(peer_group_members.id) as member_count')
-            )
-            ->leftJoin('peer_group_members', 'peer_groups.id', '=', 'peer_group_members.group_id')
-            ->groupBy('peer_groups.id')
-            ->get();
+       $userId = auth()->user()->user_id;
+$groupId = $request->query('group_id');
 
-        $allUsers = DB::table('fc_registration_master')
-            ->select('pk', 'first_name')
-            ->orderBy('first_name')
-            ->get();
+if ($groupId && hasRole('Student-OT')) {
+
+    $isMember = DB::table('peer_group_members')
+        ->where('member_pk', $userId)
+        ->where('group_id', $groupId)
+        ->exists(); // ✅ faster than first()
+
+    if (!$isMember) {
+      return redirect()->back()
+    ->with('error', 'You are not a member of the selected group.');
+
+    }
+}
+
+        
+      
+       $groups = DB::table('peer_groups')
+    ->select(
+        'peer_groups.id',
+        'peer_groups.group_name',
+        DB::raw('COUNT(peer_group_members.id) as member_count')
+    )
+    ->leftJoin(
+        'peer_group_members',
+        'peer_groups.id',
+        '=',
+        'peer_group_members.group_id'
+    )
+    ->groupBy('peer_groups.id', 'peer_groups.group_name')
+    ->get();
+
+
 
         $selectedGroupId = $request->query('group_id', $groups->first()->id ?? null);
         $selectedGroup = null;
@@ -515,9 +600,15 @@ class PeerEvaluationController extends Controller
             }
 
             $members = DB::table('peer_group_members')
-                ->where('group_id', $selectedGroupId)
-                ->select('id', 'member_pk', 'user_name as first_name', 'user_id', 'ot_code')
+            ->leftJoin('user_credentials', 'peer_group_members.member_pk', '=', 'user_credentials.user_id')
+            ->leftjoin('student_master', 'user_credentials.user_name', '=', 'student_master.user_id')
+                ->where('peer_group_members.group_id', $selectedGroupId);
+                 if(hasRole('Student-OT')) {
+                $members = $members->where('peer_group_members.member_pk', '!=', $userId);
+                 }
+                $members = $members->select('id', 'member_pk', 'student_master.display_name as first_name', 'student_master.user_id', 'student_master.generated_OT_code as ot_code')
                 ->get();
+                // print_r($members); exit;
         } else {
             $members = [];
         }
@@ -525,7 +616,6 @@ class PeerEvaluationController extends Controller
         return view('admin.forms.peer_evaluation.index', compact(
             'groups',
             'columns',
-            'allUsers',
             'members',
             'selectedGroupId',
             'reflectionFields',
@@ -704,27 +794,34 @@ class PeerEvaluationController extends Controller
      */
     public function user_groups()
     {
-        $userId = auth()->id();
+         $userId = auth()->user()->user_id;
 
-        $groups = DB::table('peer_groups as g')
-            ->leftJoin('peer_group_members as m', 'g.id', '=', 'm.group_id')
-            ->where('g.is_form_active', 1)
-            ->select(
-                'g.id',
-                'g.group_name',
-                DB::raw('MAX(m.course_name) as course_name'),
-                DB::raw('MAX(m.event_name) as event_name'),
-                DB::raw('GROUP_CONCAT(m.ot_code SEPARATOR ", ") as ot_codes')
-            )
-            ->groupBy('g.id', 'g.group_name')
-            ->get();
+    $groups = DB::table('peer_groups as g')
+        // ->join('peer_courses as c', 'g.course_id', '=', 'c.id')
+        ->join('peer_group_members as m', 'g.id', '=', 'm.group_id')
+        ->where('g.is_form_active', 1);
 
-        $userGroups = DB::table('peer_group_members')
-            ->where('user_id', $userId)
-            ->pluck('group_id')
-            ->toArray();
+    // ✅ Student ko sirf uske groups
+    if (hasRole('Student-OT')) {
+        $groups->where('m.user_id', $userId);
+    }
 
-        return view('admin.forms.peer_evaluation.user_groups', compact('groups', 'userGroups'));
+    $groups = $groups->select(
+            'g.id',
+            'g.group_name',
+            DB::raw('MAX(m.course_name) as course_name'),
+            DB::raw('MAX(m.event_name) as event_name'),
+            // DB::raw('GROUP_CONCAT(DISTINCT m.ot_code SEPARATOR ", ") as ot_codes')
+        )
+        ->groupBy('g.id', 'g.group_name')
+        ->get();
+
+        // print_r($groups);
+        // exit;
+
+
+
+        return view('admin.forms.peer_evaluation.user_groups', compact('groups'));
     }
 
     /**
@@ -821,13 +918,17 @@ class PeerEvaluationController extends Controller
 
     public function viewSubmissions($groupId)
     {
+      //  dd('ddd');
         $groups = DB::table('peer_groups')
             ->select('id', 'group_name', 'is_active', 'course_id', 'event_id')
             ->get();
+            // print_r($groups); exit;
 
         if ($groups->isEmpty()) {
             return redirect()->back()->with('error', 'Group not found.');
         }
+
+       
 
         // Get the specific group to access its course_id and event_id
         $currentGroup = DB::table('peer_groups')->where('id', $groupId)->first();
@@ -835,7 +936,7 @@ class PeerEvaluationController extends Controller
         if (!$currentGroup) {
             return redirect()->back()->with('error', 'Group not found.');
         }
-
+       
         $members = DB::table('peer_group_members')
             ->leftJoin('user_credentials', 'peer_group_members.user_id', '=', 'user_credentials.pk')
             ->where('peer_group_members.group_id', $groupId)
@@ -849,6 +950,8 @@ class PeerEvaluationController extends Controller
                 'user_credentials.last_name as user_last_name'
             )
             ->get();
+            // print_r($members);
+            
 
         // Get columns related to this group's course and event
         $columns = DB::table('peer_columns')
@@ -868,6 +971,7 @@ class PeerEvaluationController extends Controller
                     });
             })->orderBy('id')
             ->get();
+      
 
         $scores = DB::table('peer_scores')
             ->leftJoin('user_credentials', 'peer_scores.evaluator_id', '=', 'user_credentials.pk')
@@ -878,6 +982,8 @@ class PeerEvaluationController extends Controller
                 'user_credentials.last_name as evaluator_last_name'
             )
             ->get();
+            // print_r($scores); exit;
+                
 
         // Get reflection fields related to this group's course and event
         $reflectionFields = DB::table('peer_reflection_fields')
@@ -897,6 +1003,7 @@ class PeerEvaluationController extends Controller
                     });
             })
             ->get();
+            
 
         $reflectionResponses = DB::table('reflection_responses')
             ->leftJoin('user_credentials', 'reflection_responses.evaluator_id', '=', 'user_credentials.pk')
@@ -910,9 +1017,10 @@ class PeerEvaluationController extends Controller
             ->keyBy(function ($item) {
                 return $item->evaluator_id . '-' . $item->field_id;
             });
+           
 
         $selectedGroupId = $groupId;
-
+     
         return view('admin.forms.peer_evaluation.view_submissions', compact(
             'groups',
             'members',

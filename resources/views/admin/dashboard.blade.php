@@ -783,6 +783,40 @@ table>thead {
         </div>
         @endif
 
+        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+        <!-- Total Sessions -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard.sessions') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-blue">
+                        <img src="{{ asset('images/attendance.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Session Details</div>
+                        <div class="stat-value">{{ $totalSessions }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+
+        @if(isset($isCCorACC) && $isCCorACC)
+        <!-- Total Students - Only for CC/ACC -->
+        <div class="col-lg-3 col-md-6 col-sm-12">
+            <a href="{{ route('admin.dashboard.students') }}">
+                <div class="stat-card clean-style">
+                    <div class="stat-icon icon-green">
+                        <img src="{{ asset('images/classes.svg') }}" alt="">
+                    </div>
+                    <div>
+                        <div class="stat-label">Total Students</div>
+                        <div class="stat-value">{{ $totalStudents }}</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
+
 
     </div>
 
@@ -906,7 +940,7 @@ table>thead {
                     </section>
 
                     <!-- Today's Timetable -->
-                    @if(hasRole('Student-OT'))
+                    @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
                     <section aria-labelledby="timetable-title" style="margin-top: 20px;">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h2 id="timetable-title" style="font-size: 1.2rem; font-weight: 600; margin: 0; color: #1a1a1a;">

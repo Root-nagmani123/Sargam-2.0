@@ -1,8 +1,135 @@
 <!DOCTYPE html>
-<html lang="zxx">
+<html lang="zxx" data-bs-theme="light">
 
 <head>
+    <!-- Force light mode - prevent system theme detection -->
+    <script>
+        // CRITICAL: This must run BEFORE Bootstrap loads to prevent dark mode detection
+        (function() {
+            'use strict';
+            
+            // Set light theme immediately
+            document.documentElement.setAttribute('data-bs-theme', 'light');
+            
+            // Override matchMedia to prevent Bootstrap from detecting dark mode preference
+            if (window.matchMedia) {
+                const originalMatchMedia = window.matchMedia.bind(window);
+                window.matchMedia = function(query) {
+                    const result = originalMatchMedia(query);
+                    
+                    // Intercept prefers-color-scheme queries
+                    if (query && query.includes('prefers-color-scheme')) {
+                        // Create a fake MediaQueryList that always returns false for dark mode
+                        const fakeResult = {
+                            matches: false,
+                            media: query,
+                            onchange: null,
+                            addListener: function() {},
+                            removeListener: function() {},
+                            addEventListener: function() {},
+                            removeEventListener: function() {},
+                            dispatchEvent: function() { return false; }
+                        };
+                        
+                        // If query is for dark mode, return false
+                        if (query.includes('dark')) {
+                            return fakeResult;
+                        }
+                    }
+                    
+                    return result;
+                };
+            }
+            
+            // Monitor and prevent theme changes on html element
+            const htmlObserver = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && 
+                        mutation.attributeName === 'data-bs-theme') {
+                        const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                        if (currentTheme !== 'light') {
+                            document.documentElement.setAttribute('data-bs-theme', 'light');
+                            // Force reapply light mode styles
+                            document.documentElement.style.colorScheme = 'light';
+                        }
+                    }
+                });
+            });
+            
+            // Start observing html element immediately
+            htmlObserver.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['data-bs-theme']
+            });
+            
+            // Also monitor body element
+            if (document.body) {
+                const bodyObserver = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'attributes' && 
+                            mutation.attributeName === 'data-bs-theme') {
+                            const currentTheme = document.body.getAttribute('data-bs-theme');
+                            if (currentTheme && currentTheme !== 'light') {
+                                document.body.setAttribute('data-bs-theme', 'light');
+                            }
+                        }
+                    });
+                });
+                
+                bodyObserver.observe(document.body, {
+                    attributes: true,
+                    attributeFilter: ['data-bs-theme']
+                });
+            }
+            
+            // Periodic check as fallback
+            setInterval(function() {
+                if (document.documentElement.getAttribute('data-bs-theme') !== 'light') {
+                    document.documentElement.setAttribute('data-bs-theme', 'light');
+                    document.documentElement.style.colorScheme = 'light';
+                }
+                if (document.body && document.body.getAttribute('data-bs-theme') && 
+                    document.body.getAttribute('data-bs-theme') !== 'light') {
+                    document.body.setAttribute('data-bs-theme', 'light');
+                }
+            }, 250);
+        })();
+    </script>
     @include('admin.layouts.pre_header')
+    <!-- Inject CSS to override Bootstrap dark mode immediately -->
+    <script>
+        // Inject critical CSS override immediately
+        (function() {
+            const style = document.createElement('style');
+            style.id = 'bootstrap-dark-mode-override';
+            style.textContent = `
+                /* Force light mode - override Bootstrap's dark mode completely */
+                @media (prefers-color-scheme: dark) {
+                    html, html[data-bs-theme], html[data-bs-theme="light"], html[data-bs-theme="dark"],
+                    body, body[data-bs-theme], body[data-bs-theme="light"], body[data-bs-theme="dark"],
+                    :root, [data-bs-theme], [data-bs-theme="light"], [data-bs-theme="dark"] {
+                        color-scheme: light !important;
+                        --bs-body-bg: #fff !important;
+                        --bs-body-color: #212529 !important;
+                        --bs-emphasis-color: #000 !important;
+                        --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
+                        --bs-secondary-bg: #e9ecef !important;
+                        --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
+                        --bs-tertiary-bg: #f8f9fa !important;
+                        --bs-border-color: #dee2e6 !important;
+                        background-color: #fff !important;
+                        color: #212529 !important;
+                    }
+                }
+                html, html[data-bs-theme], html[data-bs-theme="light"], html[data-bs-theme="dark"] {
+                    color-scheme: light !important;
+                    --bs-body-bg: #fff !important;
+                    --bs-body-color: #212529 !important;
+                }
+            `;
+            document.head.appendChild(style);
+        })();
+    </script>
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
     @section('css')
     <style>
@@ -469,6 +596,8 @@
      <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('scripts')
     <script>
 document.addEventListener('DOMContentLoaded', function () {
@@ -615,6 +744,26 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 
+  <!-- Final safeguard: Force light mode on window load -->
+  <script>
+    window.addEventListener('load', function() {
+      // Force light mode one final time after everything loads
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+      document.documentElement.style.colorScheme = 'light';
+      document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
+      document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
+      
+      // Remove any dark mode classes
+      document.documentElement.classList.remove('dark');
+      if (document.body) {
+        document.body.classList.remove('dark');
+        document.body.style.colorScheme = 'light';
+      }
+      
+      // Force reflow to apply styles
+      document.documentElement.offsetHeight;
+    });
+  </script>
 </body>
 
 </html>
