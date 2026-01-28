@@ -18,6 +18,17 @@
                 />
         </div>
     </div>
+    <div class="col-md-6 {{ $faculty->faculty_type != '1' ? 'd-none' : '' }}" id="facultyPaContainer">
+        <div class="mb-3">
+            <x-input
+                name="faculty_pa"
+                label="Faculty (PA) :"
+                placeholder="Faculty (PA)"
+                formLabelClass="form-label"
+                value="{{ $faculty->faculty_pa }}"
+                />
+        </div>
+    </div>
     <div class="col-md-6">
         <div class="mb-3">
             <x-input

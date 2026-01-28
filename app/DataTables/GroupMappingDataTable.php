@@ -8,6 +8,7 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
+use Illuminate\Support\Facades\DB;
 
 class GroupMappingDataTable extends DataTable
 {
@@ -137,24 +138,32 @@ HTML;
                 });
             })
             ->filterColumn('group_name', function ($query, $keyword) {
+              
                 $query->where('group_name', 'like', "%{$keyword}%");
             })
-            ->filter(function ($query) {
-                $searchValue = request()->input('search.value');
 
-                if (!empty($searchValue)) {
-                    $query->where(function ($subQuery) use ($searchValue) {
-                        $subQuery->where('group_name', 'like', "%{$searchValue}%")
-                            ->orWhereHas('courseGroup', function ($courseQuery) use ($searchValue) {
-                                $courseQuery->where('course_name', 'like', "%{$searchValue}%");
-                            })
-                            ->orWhereHas('courseGroupType', function ($typeQuery) use ($searchValue) {
-                                $typeQuery->where('type_name', 'like', "%{$searchValue}%");
-                            });
-                    });
-                }
-            }, true)
-            ->rawColumns(['course_name', 'group_name', 'view_download', 'action', 'status']);
+            ->filter(function ($query) {
+    $searchValue = request()->input('search.value');
+
+    if (!empty($searchValue)) {
+        $query->where(function ($subQuery) use ($searchValue) {
+
+            $subQuery->where('group_name', 'like', "%{$searchValue}%")
+
+                ->orWhereHas('courseGroup', function ($courseQuery) use ($searchValue) {
+                    $courseQuery->where('course_name', 'like', "%{$searchValue}%");
+                })
+
+                        ->orWhereExists(function ($existsQuery) use ($searchValue) {
+                            $existsQuery->select(DB::raw(1))
+                                ->from('course_group_type_master')
+                                ->where('type_name', 'like', "%{$searchValue}%");
+                        });
+                });
+            }
+        })
+
+        ->rawColumns(['course_name', 'group_name', 'type_name', 'view_download', 'action', 'status']);
     }
 
     public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder

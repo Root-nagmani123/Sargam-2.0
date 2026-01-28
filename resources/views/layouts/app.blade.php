@@ -34,8 +34,9 @@
     <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/vendors/feather-icon.css')}}">
     <!-- Plugins css start-->
     <!-- Plugins css Ends-->
-    <!-- Bootstrap css-->
-    <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/vendors/bootstrap.css')}}">
+    <!-- Bootstrap css (CDN latest stable) -->
+    <!-- Previously: admin_assets/css/vendors/bootstrap.css -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="" crossorigin="anonymous">
     <!-- App css-->
     <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/styles.css')}}">
     <link id="color" rel="stylesheet" href="{{asset('admin_assets/css/color-1.css')}}" media="screen">
@@ -43,6 +44,8 @@
     <link rel="stylesheet" type="text/css" href="{{asset('admin_assets/css/responsive.css')}}">
     <!-- Mobile-First Responsive css-->
     <link rel="stylesheet" type="text/css" href="{{asset('css/mobile-responsive.css')}}">
+    <!-- Mobile Sidebar CSS (must load after theme CSS) -->
+    <link rel="stylesheet" type="text/css" href="{{asset('css/mobile-sidebar.css')}}">
     <!-- Custom css-->
     <link rel="stylesheet" type="text/css" href="{{asset('css/custom.css')}}">
 </head>
@@ -54,10 +57,10 @@
             @yield('content')
         </main>
     </div>
-     <!-- latest jquery-->
+    <!-- latest jquery-->
      <script src="{{asset('admin_assets/js/jquery.min.js')}}"></script>
-    <!-- Bootstrap js-->
-    <script src="{{asset('admin_assets/js/bootstrap/bootstrap.bundle.min.js')}}"></script>
+    <!-- Bootstrap js (local) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <!-- feather icon js-->
     <script src="{{asset('admin_assets/js/icons/feather-icon/feather.min.js')}}"></script>
     <script src="{{asset('admin_assets/js/icons/feather-icon/feather-icon.js')}}"></script>
@@ -67,8 +70,9 @@
     <!-- Plugins JS start-->
     <!-- calendar js-->
     <!-- Plugins JS Ends-->
-    <!-- Theme js-->
-    <script src="{{asset('admin_assets/js/script.js')}}"></script>
+    <!-- Theme js / Sidebar logic -->
+    <script src="{{asset('admin_assets/js/sidebar-enhanced.js')}}"></script>
+    <script src="{{asset('admin_assets/js/sidebar-navigation-fixed.js')}}"></script>
 </body>
 
 </html>

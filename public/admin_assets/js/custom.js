@@ -160,11 +160,11 @@ $(document).on('mousedown', 'select[data-readonly]', function (e) {
 $(document).on('change', '.status-toggle', function () {
     let $checkbox = $(this);
     let table = $checkbox.data('table');
+    
     let column = $checkbox.data('column');
     let id = $checkbox.data('id');
     let id_column = $checkbox.data('id_column');
     let status = $checkbox.is(':checked') ? 1 : 0;
-
 
     table = $(this).data('table');
     column = $(this).data('column');
@@ -212,10 +212,8 @@ $(document).on('change', '.status-toggle', function () {
                     </div>
                 `);
                  setTimeout(function() {
-       location.reload();
-
-       //console.log(data);
-    }, 1000);
+                 $('.dataTable ').DataTable().ajax.reload();
+                }, 500);
             },
             error: function () {
                 Swal.fire('Error', 'Status update failed', 'error');
@@ -356,6 +354,8 @@ document.addEventListener('DOMContentLoaded', function () {
         let permanent_address = $('input[name="permanent_address"]').val();
         let other_city = $('input[name="other_city"]').val();
 
+        let faculty_pa = $('input[name="faculty_pa"]').val();
+
         formData.append('facultyType', facultyType);
         formData.append('firstName', firstName);
         formData.append('middlename', middleName);
@@ -375,6 +375,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('residence_address', residence_address);
         formData.append('permanent_address', permanent_address);
         formData.append('other_city', other_city);
+        formData.append('faculty_pa', faculty_pa);
 
         // photo is file
         const photoInput = $('input[name="photo"]')[0];
@@ -1492,22 +1493,25 @@ $('#editStudentModal').on('hidden.bs.modal', function () {
 //     }
 // });
 document.addEventListener('DOMContentLoaded', function () {
-    // Initialize DualListbox on page load
-    dualListbox = new DualListbox("#select_memo_student", {
-        addEvent: function (value) {
+    // Initialize DualListbox on page load only if element exists
+    var selectElement = document.getElementById("select_memo_student");
+    if (selectElement) {
+        dualListbox = new DualListbox("#select_memo_student", {
+            addEvent: function (value) {
 
-        },
-        removeEvent: function (value) {
+            },
+            removeEvent: function (value) {
 
-        },
-        availableTitle: "Defaulter Students",
-        selectedTitle: "Selected Students",
-        addButtonText: "Move Right",
-        removeButtonText: "Move Left",
-        addAllButtonText: "Move All Right",
-        removeAllButtonText: "Move All Left",
-        draggable: true
-    });
+            },
+            availableTitle: "Defaulter Students",
+            selectedTitle: "Selected Students",
+            addButtonText: "Move Right",
+            removeButtonText: "Move Left",
+            addAllButtonText: "Move All Right",
+            removeAllButtonText: "Move All Left",
+            draggable: true
+        });
+    }
 
     $('#topic_id').on('change', function () {
 
@@ -1638,6 +1642,15 @@ function performAttendanceSearch() {
         }
     });
 }
+
+// Auto-trigger search when course is selected
+$(document).on('change', '#programme', function () {
+    // Trigger search when course is selected
+    let programme = $(this).val();
+    if (programme) {
+        performAttendanceSearch();
+    }
+});
 
 // Auto-trigger search when date is selected
 $(document).on('change', '#from_date, #to_date', function () {

@@ -59,7 +59,6 @@ class CourseMasterDataTable extends DataTable
         <!-- View -->
         <a
             href="{$viewUrl}"
-            target="_blank"
             class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
             aria-label="View course"
         >

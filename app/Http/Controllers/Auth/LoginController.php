@@ -269,11 +269,18 @@ class LoginController extends Controller
                  ->where('pk', $user->pk)
                  ->update(['last_login' => $current_date_time]);
 
+            $coursedate = DB::table('employee_role_mapping')
+                    ->where('user_credentials_pk', $user->pk)
+                    ->first();
+
                 if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
+                       Session::put('user_roles', $roles);
                     }else{
                     $roles = $user->roles()->pluck('user_role_name')->toArray();
                     }
+                    // print_r($roles); exit;
+                    Session::put('user_role_master_pk', $coursedate->user_role_master_pk);
                     Session::put('user_roles', $roles);
 
     return redirect()->intended($this->redirectTo)->cookie(cookie()->make('fresh_login', 'true', 0));

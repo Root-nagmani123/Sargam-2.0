@@ -1,0 +1,172 @@
+/* ============================================
+   Modern Sidebar Menu Component Styles
+   Using Bootstrap 5.3+ Utilities & Custom Enhancements
+   ============================================ */
+
+/* CSS Custom Properties for Easy Theming */
+:root {
+    --sidebar-primary-color: #004a93;
+    --sidebar-primary-hover: #003d7a;
+    --sidebar-primary-light: rgba(0, 74, 147, 0.1);
+    --sidebar-primary-medium: rgba(0, 74, 147, 0.15);
+    --sidebar-bg-hover: rgba(0, 74, 147, 0.08);
+    --sidebar-text-color: #ffffff;
+    --sidebar-text-muted: rgba(255, 255, 255, 0.7);
+    --sidebar-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --sidebar-border-radius: 0.5rem;
+}
+
+/* Enhanced Sidebar Menu Items */
+.sidebar-menu .sidebar-item {
+    margin-bottom: 0.25rem;
+}
+
+/* Modern Sidebar Links with Bootstrap 5.3+ Enhancements */
+.sidebar-menu .sidebar-link {
+    position: relative;
+    transition: var(--sidebar-transition);
+    border-radius: var(--sidebar-border-radius);
+    font-weight: 500;
+    overflow: hidden;
+}
+
+/* Hover Effect with Modern Gradient */
+.sidebar-menu .sidebar-link:hover {
+    background: linear-gradient(135deg, var(--sidebar-bg-hover) 0%, rgba(0, 74, 147, 0.05) 100%);
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.15);
+}
+
+/* Active State Enhancement */
+.sidebar-menu .sidebar-link.active,
+.sidebar-menu .sidebar-link[aria-expanded="true"] {
+    background: linear-gradient(135deg, var(--sidebar-primary-medium) 0%, var(--sidebar-primary-light) 100%);
+    color: var(--sidebar-primary-color);
+    font-weight: 600;
+    box-shadow: 0 2px 12px rgba(0, 74, 147, 0.2);
+}
+
+/* Collapse Icon Animation */
+.sidebar-menu .menu-icon {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.sidebar-menu .sidebar-link[aria-expanded="true"] .menu-icon {
+    transform: rotate(180deg);
+}
+
+/* Bootstrap 5.3+ Transition Utility Enhancement */
+.transition-transform {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapse Animation Enhancement */
+.sidebar-menu .collapse {
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-menu .collapsing {
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Nested Menu Items */
+.sidebar-menu .collapse .sidebar-item {
+    margin-left: 0.5rem;
+    margin-bottom: 0.125rem;
+}
+
+.sidebar-menu .collapse .sidebar-link {
+    padding-left: 1rem;
+    font-size: 0.875rem;
+    border-left: 2px solid transparent;
+}
+
+.sidebar-menu .collapse .sidebar-link:hover {
+    border-left-color: var(--sidebar-primary-color);
+    padding-left: 1.25rem;
+}
+
+/* Focus States for Accessibility (Bootstrap 5.3+ focus-visible) */
+.sidebar-menu .sidebar-link:focus-visible {
+    outline: 3px solid rgba(0, 74, 147, 0.5);
+    outline-offset: 2px;
+    border-radius: var(--sidebar-border-radius);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.25);
+}
+
+/* Rounded Pill Enhancement */
+.sidebar-menu .sidebar-link.rounded-pill {
+    border-radius: 50rem !important;
+}
+
+/* Spacing Utilities Enhancement */
+.sidebar-menu .sidebar-item.mb-2 {
+    margin-bottom: 0.5rem !important;
+}
+
+.sidebar-menu .sidebar-item.mb-1 {
+    margin-bottom: 0.25rem !important;
+}
+
+/* Text Decoration Enhancement */
+.sidebar-menu .sidebar-link.text-decoration-none {
+    text-decoration: none !important;
+}
+
+.sidebar-menu .sidebar-link.text-decoration-none:hover {
+    text-decoration: none !important;
+}
+
+/* Modern Badge Integration */
+.sidebar-menu .badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 575.98px) {
+    .sidebar-menu .sidebar-link {
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+    }
+    
+    .sidebar-menu .collapse .sidebar-link {
+        padding-left: 0.75rem;
+        font-size: 0.8125rem;
+    }
+    
+    .sidebar-menu .menu-icon {
+        font-size: 16px !important;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+    .sidebar-menu .sidebar-link {
+        padding: 0.625rem 0.875rem;
+    }
+}
+
+/* Smooth Scroll Behavior */
+.sidebar-nav {
+    scroll-behavior: smooth;
+}
+
+/* Loading State */
+.sidebar-menu.loading .sidebar-link {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Print Styles */
+@media print {
+    .sidebar-menu .sidebar-link {
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+    
+    .sidebar-menu .collapse {
+        display: block !important;
+    }
+}

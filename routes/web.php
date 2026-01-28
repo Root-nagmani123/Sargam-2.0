@@ -34,16 +34,18 @@ use App\Http\Controllers\Admin\{
     FacultyNoticeMemoViewController,
     NotificationController,
     MemoDisciplineController,
-    DashboardController
+    DashboardController,
+    CourseRepositoryController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
 use App\Http\Controllers\Admin\Master\DisciplineMasterController;
 use App\Http\Controllers\Admin\FeedbackController;
-
-
-
-
+use App\Http\Controllers\Admin\IssueManagement\{
+    IssueManagementController,
+    IssueCategoryController,
+    IssueSubCategoryController
+};
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -90,6 +92,8 @@ Route::middleware(['auth'])->group(function () {
     // })->name('admin.dashboard');
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
+    Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
 
 
     Route::get('/calendar', [Calendar1Controller::class, 'index'])->name('calendar.index');
@@ -125,6 +129,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('edit/{id}',  'edit')->name('edit');
         Route::post('update',  'update')->name('update');
         Route::get('show/{id}',  'show')->name('show');
+        Route::delete('delete/{id}',  'destroy')->name('destroy');
         Route::get('excel-export',  'excelExportFaculty')->name('excel.export');
         Route::post('check-unique', 'checkUnique')->name('checkUnique');
         Route::get('search-first-name', 'searchFirstName')->name('searchFirstName');
@@ -141,7 +146,6 @@ Route::middleware(['auth'])->group(function () {
 
     // Programme Routes
     Route::prefix('programme')->name('programme.')->controller(CourseController::class)->group(function () {
-
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
@@ -175,7 +179,6 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::resource('stream', StreamController::class);
-
     Route::resource('subject-module', SubjectModuleController::class);
     Route::resource('Venue-Master', VenueMasterController::class);
 
@@ -301,6 +304,68 @@ Route::middleware(['auth'])->group(function () {
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
     });
 
+    // ============================================
+    // Security Management Routes (Vehicle & Visitor Pass)
+    // ============================================
+    
+    // Vehicle Type Master Routes
+    Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(\App\Http\Controllers\Admin\Security\VehicleTypeController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
+    });
+
+    // Vehicle Pass Configuration Routes
+    Route::prefix('security/vehicle-pass-config')->name('admin.security.vehicle_pass_config.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassConfigController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::put('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/toggle-status/{id}', 'toggleStatus')->name('toggle.status');
+    });
+
+    // Vehicle Pass Application Routes
+    Route::prefix('security/vehicle-pass')->name('admin.security.vehicle_pass.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // Vehicle Pass Approval Routes
+    Route::prefix('security/vehicle-pass-approval')->name('admin.security.vehicle_pass_approval.')->controller(\App\Http\Controllers\Admin\Security\VehiclePassApprovalController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/all', 'allApplications')->name('all');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::post('/approve/{id}', 'approve')->name('approve');
+        Route::post('/reject/{id}', 'reject')->name('reject');
+    });
+
+    // Visitor/Gate Pass Routes
+    Route::prefix('security/visitor-pass')->name('admin.security.visitor_pass.')->controller(\App\Http\Controllers\Admin\Security\VisitorPassController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{id}', 'show')->name('show');
+        Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'delete')->name('delete');
+        Route::post('/checkout/{id}', 'checkOut')->name('checkout');
+    });
+
+    // ============================================
+    // End Security Management Routes
+    // ============================================
+
     // Attendance Routes
     Route::prefix('attendance')->name('attendance.')->controller(AttendanceController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -355,7 +420,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/create', 'create')->name('create');
             Route::post('/store', 'store')->name('store');
             Route::get('/edit/{id}', 'edit')->name('edit');
-            Route::post('/update/{id}', 'update')->name('update');
+            Route::post('/update', 'update')->name('update');
             Route::delete('/delete/{id}', 'destroy')->name('delete');
         });
     Route::prefix('admin/memo-notice-management')
@@ -593,6 +658,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/incoming-course', [DashboardController::class, 'incoming_course'])->name('admin.dashboard.incoming_course');
     Route::get('/guest-faculty', [DashboardController::class, 'guest_faculty'])->name('admin.dashboard.guest_faculty');
     Route::get('/inhouse-faculty', [DashboardController::class, 'inhouse_faculty'])->name('admin.dashboard.inhouse_faculty');
+    Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
     Route::get('/upcoming-events', function () {
         return view('admin.dashboard.upcoming_events');
@@ -606,6 +672,41 @@ Route::middleware(['auth'])->group(function () {
     //      return view('admin.dashboard.inhouse_faculty');
     //  })->name('admin.dashboard.inhouse_faculty');
     // });
+    //course repository AJAX routes (MUST be before resource route)
+    Route::get('course-repository/subjects', [CourseRepositoryController::class, 'getSubjectsByCourse'])->name('course-repository.subjects');
+    Route::get('course-repository/topics', [CourseRepositoryController::class, 'getTopicsBySubject'])->name('course-repository.topics');
+    Route::get('course-repository/session-dates', [CourseRepositoryController::class, 'getSessionDateByTopic'])->name('course-repository.session-dates');
+    Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
+    Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
+    Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
+    
+    // Custom routes for document operations
+    Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
+    Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
+
+    // Search route
+    Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
+    
+    // AJAX endpoints for course repository
+    Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
+    
+    //course repository resource routes (MUST be after AJAX routes)
+    Route::resource('course-repository', CourseRepositoryController::class, [
+    'parameters' => ['course-repository' => 'pk']
+]);
+
+// User view routes
+Route::get('/course-repository-user', [CourseRepositoryController::class, 'userIndex'])->name('admin.course-repository.user.index');
+Route::get('/course-repository-user/foundation-course', [CourseRepositoryController::class, 'foundationCourse'])->name('admin.course-repository.user.foundation-course');
+Route::get('/course-repository-user/foundation-course/{courseCode}', [CourseRepositoryController::class, 'foundationCourseDetail'])->name('admin.course-repository.user.foundation-course.detail');
+Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-subject-wise', [CourseRepositoryController::class, 'classMaterialSubjectWise'])->name('admin.course-repository.user.class-material-subject-wise');
+Route::get('/course-repository-user/foundation-course/{courseCode}/class-material-week-wise', [CourseRepositoryController::class, 'classMaterialWeekWise'])->name('admin.course-repository.user.class-material-week-wise');
+Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNumber}', [CourseRepositoryController::class, 'weekDetail'])->name('admin.course-repository.user.week-detail');
+Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
+Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
+Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
+Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
 
     // Feedback Database Routes
     Route::prefix('faculty')->group(function () {
@@ -630,3 +731,35 @@ Route::post('/admin/feedback/pending-students/export/pdf', [FeedbackController::
 
 Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController::class, 'exportPendingStudentsExcel'])
     ->name('admin.feedback.export.excel');
+
+// ============================================
+// Issue Management Module Routes (CENTCOM)
+// ============================================
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+    
+    // Issue Management - Main Routes
+    Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
+    Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
+    Route::get('issue-management/create', [IssueManagementController::class, 'create'])->name('issue-management.create');
+    Route::post('issue-management', [IssueManagementController::class, 'store'])->name('issue-management.store');
+    Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
+    Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
+    Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
+    
+    // AJAX Routes
+    Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
+    Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
+    
+    // Category Management
+    Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
+    Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
+    Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
+    Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');
+    
+    // Sub-Category Management
+    Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
+    Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
+    Route::put('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'update'])->name('issue-sub-categories.update');
+    Route::delete('issue-sub-categories/{id}', [IssueSubCategoryController::class, 'destroy'])->name('issue-sub-categories.destroy');
+});
+

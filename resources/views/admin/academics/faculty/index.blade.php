@@ -331,7 +331,7 @@
                 </h2>
                 
                 <div class="table-responsive">
-                    <table class="table table-hover" aria-label="Address details">
+                    <table class="table table-hover" aria-label="Address details" id="dom_jq_event">
                         <thead>
                             <tr>
                                 <th scope="col">Country</th>

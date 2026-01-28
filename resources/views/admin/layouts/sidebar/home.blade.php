@@ -1,4 +1,4 @@
- <aside class="side-mini-panel with-vertical">
+ <aside class="side-mini-panel with-vertical" id="mainSidebar">
      <div style="height: 100vh; display: flex; flex-direction: column;">
          <!-- ---------------------------------- -->
          <!-- Start Vertical Layout Sidebar -->
@@ -6,6 +6,17 @@
          <div class="iconbar" style="flex: 1 1 auto; display: flex; flex-direction: column;">
              <div style="flex: 1 1 auto; display: flex; flex-direction: column;">
                  <div class="mini-nav" style="flex: 1 1 auto; display: flex; flex-direction: column;">
+                    <div class="d-flex align-items-center justify-content-end" style="margin-right: 0.5rem;">
+    <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
+        data-bs-custom-class="custom-tooltip" data-bs-placement="right"ria-label="Toggle menu">
+
+        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded text-dark"
+            style="font-size: 40px;">
+            keyboard_double_arrow_right
+        </i>
+
+    </a>
+</div>
                      <ul class="mini-nav-ul simplebar-scrollable-y" data-simplebar="init" style="flex: 1 1 auto;">
                          <div class="simplebar-wrapper" style="margin: 0px;">
                              <div class="simplebar-height-auto-observer-wrapper">
@@ -17,9 +28,6 @@
                                          aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                          <div class="simplebar-content" style="padding: 0px;">
 
-                                             @include('components.profile')
-
-
                                              <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                  id="mini-1">
                                                  <a href="javascript:void(0)"
@@ -30,12 +38,7 @@
                                                      <div class="d-flex align-items-center gap-2">
                                                          <i class="material-icons menu-icon material-symbols-rounded"
                                                              style="font-size: 32px;">apps</i>
-                                                         <span
-                                                             class="mini-nav-title fs-4 fw-medium text-dark">General</span>
                                                      </div>
-
-                                                     <i class="material-icons material-symbols-rounded"
-                                                         style="font-size: 20px;">chevron_right</i>
                                                  </a>
                                              </li>
 

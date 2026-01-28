@@ -4,7 +4,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-<x-breadcrum title="Course Memo Decision Mapping" />
+    <x-breadcrum title="Course Memo Decision Mapping" />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
@@ -15,14 +15,17 @@
                         </div>
                         <div class="col-6">
                             <div class="float-end gap-2">
-                                <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
-                                    Mapping</a>
+                                <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
+                                    Mapping</a> -->
+                                <button type="button" id="showConclusionAlert" class="btn btn-primary">
+                                    +Add New Mapping
+                                </button>
                             </div>
                         </div>
                     </div>
                     <hr>
                     <div>
-                        <table class="table w-100" style="border-radius: 10px; overflow: hidden;">
+                        <table class="table w-100" id="memoDecisionTable">
                             <thead style="background-color: #af2910;">
                                 <tr>
                                     <th>S.No.</th>
@@ -33,81 +36,346 @@
                                     <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach($mappings as $key => $mapping)
-                                <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                    <td>{{ $key + 1 }}</td>
-                                    <td>{{ $mapping->course->course_name ?? '-' }}</td>
-                                    <td>{{ $mapping->memo->memo_type_name ?? '-' }}</td>
-                                    <td>{{ $mapping->memoConclusion->discussion_name ?? '-' }}</td>
-                                    <td>
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                                data-table="course_memo_decision_mapp" data-column="active_inactive"
-                                                data-id="{{ $mapping->pk }}" data-id_column="pk"
-                                                {{ $mapping->active_inactive == 1 ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-inline-flex align-items-center gap-2"
-     role="group"
-     aria-label="Memo decision actions">
-
-    <!-- Edit -->
-    <a href="{{ route('course.memo.decision.edit', ['id' => encrypt($mapping->pk)]) }}"
-       class="btn btn-sm btn-outline-warning d-flex align-items-center gap-1"
-       aria-label="Edit memo decision">
-        <i class="material-icons material-symbols-rounded"
-           style="font-size:18px;"
-           aria-hidden="true">edit</i>
-        <span class="d-none d-md-inline">Edit</span>
-    </a>
-
-    <!-- Delete -->
-    @if($mapping->active_inactive == 1)
-        <button type="button"
-                class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
-                disabled
-                aria-disabled="true"
-                title="Cannot delete active memo decision">
-            <i class="material-icons material-symbols-rounded"
-               style="font-size:18px;"
-               aria-hidden="true">delete</i>
-            <span class="d-none d-md-inline">Delete</span>
-        </button>
-    @else
-        <form action="{{ route('course.memo.decision.delete', ['id' => encrypt($mapping->pk)]) }}"
-              method="POST"
-              class="d-inline">
-            @csrf
-            @method('DELETE')
-
-            <button type="submit"
-                    class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                    aria-label="Delete memo decision"
-                    onclick="return confirm('Are you sure you want to delete this memo type?');">
-                <i class="material-icons material-symbols-rounded"
-                   style="font-size:18px;"
-                   aria-hidden="true">delete</i>
-                <span class="d-none d-md-inline">Delete</span>
-            </button>
-        </form>
-    @endif
-
-</div>
-
-                                    </td>
-
-
-                                </tr>
-                                @endforeach
-                            </tbody>
                         </table>
+
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="conclusionModal" tabindex="-1" aria-labelledby="conclusionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="conclusionModalLabel">Add Memo Conclusion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="conclusionForm">
+                    <div class="row">
+                        <!-- Course Dropdown -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Select Course <span style="color:red;">*</span></label>
+                            <select name="course_master_pk" id="course_master_pk" class="form-select" required>
+                                <option value="">-- Select Course --</option>
+                                @foreach($CourseMaster as $course)
+                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Memo Dropdown -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Select Memo <span style="color:red;">*</span></label>
+                            <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-select" required>
+                                <option value="">-- Select Memo --</option>
+                                @foreach($MemoTypeMaster as $memo)
+                                <option value="{{ $memo->pk }}">{{ $memo->memo_type_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Memo Conclusion Dropdown -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Select Memo Conclusion <span style="color:red;">*</span></label>
+                            <select name="memo_conclusion_master_pk" id="memo_conclusion_master_pk" class="form-select" required>
+                                <option value="">-- Select Memo Conclusion --</option>
+                                @foreach($MemoConclusionMaster as $memo)
+                                <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status <span style="color:red;">*</span></label>
+                            <select name="active_inactive" id="active_inactive" class="form-select" required>
+                                <option value="1">Active</option>
+                                <option value="2">Inactive</option>
+                            </select>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" id="submitConclusionForm" class="btn btn-primary">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="editconclusionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="editConclusionLabel">Edit Memo Conclusion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="edit_conclusionForm">
+
+                    <!-- ✅ Hidden ID -->
+                    <input type="hidden" id="edit_id" name="edit_id">
+
+                    <div class="row">
+
+                        <!-- Course -->
+                        <div class="col-md-6 mb-3">
+                            <label>Select Course *</label>
+                            <select id="edit_course_master_pk" class="form-select">
+                                <option value="">-- Select Course --</option>
+                                @foreach($CourseMaster as $course)
+                                <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Memo -->
+                        <div class="col-md-6 mb-3">
+                            <label>Select Memo *</label>
+                            <select id="edit_memo_type_master_pk" class="form-select">
+                                <option value="">-- Select Memo --</option>
+                                @foreach($MemoTypeMaster as $memo)
+                                <option value="{{ $memo->pk }}">{{ $memo->memo_type_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Memo Conclusion -->
+                        <div class="col-md-6 mb-3">
+                            <label>Select Memo Conclusion *</label>
+                            <select id="edit_memo_conclusion_master_pk" class="form-select">
+                                <option value="">-- Select Memo Conclusion --</option>
+                                @foreach($MemoConclusionMaster as $memo)
+                                <option value="{{ $memo->pk }}">{{ $memo->discussion_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="col-md-6 mb-3">
+                            <label>Status *</label>
+                            <select id="edit_active_inactive" class="form-select">
+                                <option value="1">Active</option>
+                                <option value="2">Inactive</option>
+                            </select>
+                        </div>
+
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button class="btn btn-primary" id="edit_submitConclusionForm">Update</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@endsection
+@section('scripts')
+<script>
+    $(function() {
+        $('#memoDecisionTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: "{{ route('course.memo.decision.index') }}",
+            order: [[0, 'desc']],
+            columns: [{
+                    data: 'DT_RowIndex',
+                    name: 'DT_RowIndex',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'course_name',
+                    name: 'course.course_name'
+                },
+                {
+                    data: 'memo_decision',
+                    name: 'memo.memo_type_name'
+                },
+                {
+                    data: 'memo_conclusion',
+                    name: 'memoConclusion.discussion_name'
+                },
+                {
+                    data: 'status',
+                    name: 'status',
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'action',
+                    name: 'action',
+                    orderable: false,
+                    searchable: false
+                }
+            ],
+            order: [
+                [1, 'asc']
+            ]
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // Show modal on button click
+        document.getElementById('showConclusionAlert').addEventListener('click', function() {
+            var conclusionModal = new bootstrap.Modal(document.getElementById('conclusionModal'));
+            conclusionModal.show();
+        });
+
+        // Handle form submission
+        document.getElementById('submitConclusionForm').addEventListener('click', function(e) {
+            e.preventDefault(); // ✅ prevent form double submit
+
+            const course = document.getElementById('course_master_pk').value;
+            const memo = document.getElementById('memo_type_master_pk').value;
+            const conclusion = document.getElementById('memo_conclusion_master_pk').value;
+            const status = document.getElementById('active_inactive').value;
+
+            // ✅ Client-side validation
+            if (!course || !memo || !conclusion || !status) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Required',
+                    text: 'Please fill all required fields!'
+                });
+                return;
+            }
+
+            const data = {
+                course_master_pk: course,
+                memo_type_master_pk: memo,
+                memo_conclusion_master_pk: conclusion,
+                active_inactive: status
+            };
+
+            console.log('Submitting:', data);
+
+            fetch("{{ route('course.memo.decision.store') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(res => {
+                    if (res.status === true) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: res.message || 'Course Memo Decision Mapping saved successfully!',
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            // ✅ Reload DataTable
+                            $('#memoDecisionTable').DataTable().ajax.reload(null, false);
+
+                            // ✅ Reset form
+                            document.getElementById('conclusionForm').reset();
+                            $('#conclusionModal').modal('hide');
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: res.message || 'Something went wrong!'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: 'Please try again later.'
+                    });
+                });
+        });
+
+
+    });
+
+    //edit form//
+
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // EDIT button click
+        $(document).on('click', '.editConclusion', function() {
+
+            let id = $(this).data('id');
+            let course = $(this).data('course');
+            let memo = $(this).data('memo');
+            let conclusion = $(this).data('conclusion');
+            let status = $(this).data('status');
+
+            console.log(id, course, memo, conclusion, status); // 🔍 debug
+            $('#edit_id').val(id);
+            $('#edit_course_master_pk').val(course).trigger('change');
+            $('#edit_memo_type_master_pk').val(memo).trigger('change');
+            $('#edit_memo_conclusion_master_pk').val(conclusion).trigger('change');
+            $('#edit_active_inactive').val(status).trigger('change');
+
+            // Show modal
+            new bootstrap.Modal(document.getElementById('editconclusionModal')).show();
+        });
+    });
+
+    $('#edit_submitConclusionForm').on('click', function (e) {
+    e.preventDefault();
+
+    const data = {
+        id: $('#edit_id').val(),
+        course_master_pk: $('#edit_course_master_pk').val(),
+        memo_type_master_pk: $('#edit_memo_type_master_pk').val(),
+        memo_conclusion_master_pk: $('#edit_memo_conclusion_master_pk').val(),
+        active_inactive: $('#edit_active_inactive').val()
+    };
+    alert(data.course_master_pk);
+
+
+    fetch("{{ route('course.memo.decision.update') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.status) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Updated',
+                text: res.message,
+                timer: 1500,
+                showConfirmButton: false
+            }).then(() => {
+                $('#memoDecisionTable').DataTable().ajax.reload(null, false);
+                $('#editconclusionModal').modal('hide');
+            });
+        }
+    });
+});
+
+</script>
 
 @endsection

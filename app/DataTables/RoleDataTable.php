@@ -87,7 +87,8 @@ class RoleDataTable extends DataTable
 
     public function query(UserRoleMaster $model): QueryBuilder
     {
-        return $model->orderBy('pk')->newQuery();
+        //return $model->orderBy('pk')->newQuery();
+		return $model->newQuery()->orderByDesc('pk');//Added by Dhananjay
     }
 
     public function html(): HtmlBuilder
@@ -98,7 +99,7 @@ class RoleDataTable extends DataTable
             ->minifiedAjax()
             ->parameters([
                 'order' => [],
-                'ordering' => false,
+                'ordering' => true,//Change for ordering
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,

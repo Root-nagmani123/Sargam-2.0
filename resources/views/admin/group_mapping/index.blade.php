@@ -99,7 +99,7 @@
                         {{-- Filters --}}
                         <div class="row g-3 mb-4 align-items-end">
 
-                            
+
                         </div>
 
 
@@ -191,14 +191,17 @@
                                 <div class="modal-content"> 
                                     <form method="POST" enctype="multipart/form-data" id="importExcelForm">
                                         @csrf
+
+                                        <!-- Modal Header -->
                                         <div class="modal-header">
                                             <h5 class="modal-title" id="importModalLabel">Import Excel File</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                aria-label="Close"></button>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                         </div>
-                                      
+                                     
+                                        <!-- Dropdown Section -->
+                                        <div class="modal-body pt-3">
 
-                                        <div class="modal-body">
+                                            <!-- File Upload -->
                                             <div class="mb-3">
                                                 <label for="importFile" class="form-label">Select Course</label>
                                                <select name="course_master_pk" id="course_master_pk_model" class="form-select shadow-sm " required>
@@ -212,23 +215,27 @@
                                                 <label for="importFile" class="form-label">Select Excel File</label>
                                                 <input type="file" name="file" id="importFile" class="form-control"
                                                     accept=".xlsx, .xls, .csv" required>
-                                                <small class="text-muted">Allowed: .xlsx, .xls, .csv | Max ~500
-                                                    MB</small>
+                                                <small class="text-muted">
+                                                    Allowed: .xlsx, .xls, .csv | Max ~500 MB
+                                                </small>
                                             </div>
                                         </div>
 
+                                        <!-- Modal Footer -->
                                         <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary btn-cancel"
-                                                data-bs-dismiss="modal">Cancel</button>
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+
                                             <button type="button" class="btn btn-success" id="upload_import">
                                                 <i class="mdi mdi-upload"></i> Upload & Import
                                             </button>
+
                                             <a href="{{ asset('admin_assets/sample/group_mapping_sample.xlsx') }}"
                                                 class="btn btn-info" download>
                                                 <i class="mdi mdi-download"></i> Download Sample
                                             </a>
                                         </div>
                                     </form>
+
                                     <div id="importErrors" class="alert  d-none ">
                                         <h5 class="text-center mb-3">
                                             <i class="mdi mdi-alert-circle-outline"></i> Validation Errors Found
@@ -280,7 +287,7 @@
                                                 </span>
                                                 <input type="text" class="form-control border-start-0"
                                                     id="studentSearchInput"
-                                                    placeholder="Search students by name, email, or contact number..."
+                                                    placeholder="Search students by name, OT code, email, or contact number..."
                                                     autocomplete="off">
                                                 <button class="btn btn-outline-secondary border-start-0" type="button"
                                                     id="clearStudentSearch" style="display: none;">
@@ -361,7 +368,6 @@
                                                 data-bs-dismiss="modal">Close</button>
                                         </div>
                                     </div>
-
                                 </div>
                             </div>
                         </div>
@@ -421,235 +427,235 @@
     @push('scripts')
     {!! $dataTable->scripts() !!}
     <script>
-    $(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) {
-        // Only send filters if they are explicitly set
-        if (window.groupMappingCurrentFilter) {
-            data.status_filter = window.groupMappingCurrentFilter;
-        }
-        var courseFilter = $('#courseFilter').val();
-        var groupTypeFilter = $('#groupTypeFilter').val();
+        $(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) {
+            // Only send filters if they are explicitly set
+            if (window.groupMappingCurrentFilter) {
+                data.status_filter = window.groupMappingCurrentFilter;
+            }
+            var courseFilter = $('#courseFilter').val();
+            var groupTypeFilter = $('#groupTypeFilter').val();
 
-        if (courseFilter) {
-            data.course_filter = courseFilter;
-        }
-        if (groupTypeFilter) {
-            data.group_type_filter = groupTypeFilter;
-        }
-    });
+            if (courseFilter) {
+                data.course_filter = courseFilter;
+            }
+            if (groupTypeFilter) {
+                data.group_type_filter = groupTypeFilter;
+            }
+        });
 
-    $(document).ready(function() {
-        // Set default filter to active courses
-        window.groupMappingCurrentFilter = 'active';
+        $(document).ready(function() {
+            // Set default filter to active courses
+            window.groupMappingCurrentFilter = 'active';
 
-        setTimeout(function() {
-            var table = $('#group-mapping-table').DataTable();
+            setTimeout(function() {
+                var table = $('#group-mapping-table').DataTable();
 
-            // Set Active button as active by default
-            setActiveButton($('#filterGroupActive'));
-
-            $('#filterGroupActive').on('click', function() {
-                setActiveButton($(this));
-                window.groupMappingCurrentFilter = 'active';
-                table.ajax.reload();
-            });
-
-            $('#filterGroupArchive').on('click', function() {
-                setActiveButton($(this));
-                window.groupMappingCurrentFilter = 'archive';
-                table.ajax.reload();
-            });
-
-            $('#courseFilter, #groupTypeFilter').on('change', function() {
-                // Reload table when filters change
-                table.ajax.reload();
-            });
-
-            $('#resetFilters').on('click', function() {
-                $('#courseFilter').val('');
-                $('#groupTypeFilter').val('');
-                window.groupMappingCurrentFilter = 'active'; // Reset to active by default
+                // Set Active button as active by default
                 setActiveButton($('#filterGroupActive'));
-                table.ajax.reload();
-            });
 
-            function setActiveButton(activeBtn) {
-                $('#filterGroupActive')
-                    .removeClass('btn-success active text-white')
-                    .addClass('btn-outline-success')
-                    .attr('aria-pressed', 'false');
+                $('#filterGroupActive').on('click', function() {
+                    setActiveButton($(this));
+                    window.groupMappingCurrentFilter = 'active';
+                    table.ajax.reload();
+                });
 
-                $('#filterGroupArchive')
-                    .removeClass('btn-secondary active text-white')
-                    .addClass('btn-outline-secondary')
-                    .attr('aria-pressed', 'false');
+                $('#filterGroupArchive').on('click', function() {
+                    setActiveButton($(this));
+                    window.groupMappingCurrentFilter = 'archive';
+                    table.ajax.reload();
+                });
 
-                if (activeBtn.attr('id') === 'filterGroupActive') {
-                    activeBtn.removeClass('btn-outline-success')
-                        .addClass('btn-success text-white active')
-                        .attr('aria-pressed', 'true');
-                } else {
-                    activeBtn.removeClass('btn-outline-secondary')
-                        .addClass('btn-secondary text-white active')
-                        .attr('aria-pressed', 'true');
-                }
-            }
+                $('#courseFilter, #groupTypeFilter').on('change', function() {
+                    // Reload table when filters change
+                    table.ajax.reload();
+                });
 
-            function resetFilterButtons() {
-                $('#filterGroupActive')
-                    .removeClass('btn-success active text-white')
-                    .addClass('btn-outline-success')
-                    .attr('aria-pressed', 'false');
+                $('#resetFilters').on('click', function() {
+                    $('#courseFilter').val('');
+                    $('#groupTypeFilter').val('');
+                    window.groupMappingCurrentFilter = 'active'; // Reset to active by default
+                    setActiveButton($('#filterGroupActive'));
+                    table.ajax.reload();
+                });
 
-                $('#filterGroupArchive')
-                    .removeClass('btn-secondary active text-white')
-                    .addClass('btn-outline-secondary')
-                    .attr('aria-pressed', 'false');
-            }
+                function setActiveButton(activeBtn) {
+                    $('#filterGroupActive')
+                        .removeClass('btn-success active text-white')
+                        .addClass('btn-outline-success')
+                        .attr('aria-pressed', 'false');
 
-        }, 150);
+                    $('#filterGroupArchive')
+                        .removeClass('btn-secondary active text-white')
+                        .addClass('btn-outline-secondary')
+                        .attr('aria-pressed', 'false');
 
-        // Handle Group Type change - Load Group Names
-        $('#studentGroupType').on('change', function() {
-            const groupTypeSelect = $(this);
-            const groupNameSelect = $('#studentGroupName');
-            const groupNameHelp = $('#groupNameHelp');
-            const selectedOption = groupTypeSelect.find('option:selected');
-            const groupTypeId = selectedOption.data('type-id');
-            const groupTypeName = selectedOption.val();
-
-            // Reset group name dropdown
-            groupNameSelect.html('<option value="">Loading...</option>').prop('disabled', true);
-
-            if (!groupTypeId || !groupTypeName) {
-                groupNameSelect.html('<option value="">Select Group Name</option>').prop('disabled',
-                    true);
-                groupNameHelp.text('Please select a group type first').removeClass('text-success')
-                    .addClass(
-                        'text-muted');
-                return;
-            }
-
-            // Fetch group names for selected group type
-            $.ajax({
-                url: routes.groupMappingGetGroupNamesByType,
-                type: 'POST',
-                data: {
-                    _token: $('meta[name="csrf-token"]').attr('content'),
-                    group_type_id: groupTypeId
-                },
-                success: function(response) {
-                    if (response.status === 'success' && response.group_names && response
-                        .group_names.length > 0) {
-                        groupNameSelect.html('<option value="">Select Group Name</option>');
-
-                        // Populate group names
-                        response.group_names.forEach(function(groupName) {
-                            groupNameSelect.append($('<option>', {
-                                value: groupName,
-                                text: groupName
-                            }));
-                        });
-
-                        groupNameSelect.prop('disabled', false);
-                        groupNameHelp.text(
-                                `${response.group_names.length} group name(s) available`)
-                            .removeClass('text-muted').addClass('text-success');
+                    if (activeBtn.attr('id') === 'filterGroupActive') {
+                        activeBtn.removeClass('btn-outline-success')
+                            .addClass('btn-success text-white active')
+                            .attr('aria-pressed', 'true');
                     } else {
-                        groupNameSelect.html(
-                                '<option value="">No group names found</option>')
-                            .prop('disabled', true);
-                        groupNameHelp.text('No group names available for this group type')
-                            .removeClass('text-success').addClass('text-danger');
+                        activeBtn.removeClass('btn-outline-secondary')
+                            .addClass('btn-secondary text-white active')
+                            .attr('aria-pressed', 'true');
                     }
-                },
-                error: function(xhr) {
-                    let errorMessage = 'Error loading group names.';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMessage = xhr.responseJSON.message;
-                    }
-                    groupNameSelect.html('<option value="">Error loading</option>').prop(
-                        'disabled', true);
-                    groupNameHelp.text(errorMessage).removeClass('text-success').addClass(
-                        'text-danger');
                 }
-            });
-        });
 
-        // Reset form when modal is closed
-        $('#addStudentModal').on('hidden.bs.modal', function() {
-            $('#addStudentForm')[0].reset();
-            $('#addStudentAlert').addClass('d-none');
-            $('#studentGroupName').html('<option value="">Select Group Name</option>').prop('disabled',
-                true);
-            $('#groupNameHelp').text('Please select a group type first').removeClass(
-                'text-success text-danger').addClass('text-muted');
-        });
+                function resetFilterButtons() {
+                    $('#filterGroupActive')
+                        .removeClass('btn-success active text-white')
+                        .addClass('btn-outline-success')
+                        .attr('aria-pressed', 'false');
 
-        // Handle Add Student Form Submission
-        $('#addStudentForm').on('submit', function(e) {
-            e.preventDefault();
+                    $('#filterGroupArchive')
+                        .removeClass('btn-secondary active text-white')
+                        .addClass('btn-outline-secondary')
+                        .attr('aria-pressed', 'false');
+                }
 
-            const form = $(this);
-            const submitBtn = form.find('button[type="submit"]');
-            const alertBox = $('#addStudentAlert');
+            }, 150);
 
-            // Disable submit button
-            submitBtn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Adding...');
-            alertBox.addClass('d-none');
+            // Handle Group Type change - Load Group Names
+            $('#studentGroupType').on('change', function() {
+                const groupTypeSelect = $(this);
+                const groupNameSelect = $('#studentGroupName');
+                const groupNameHelp = $('#groupNameHelp');
+                const selectedOption = groupTypeSelect.find('option:selected');
+                const groupTypeId = selectedOption.data('type-id');
+                const groupTypeName = selectedOption.val();
 
-            $.ajax({
-                url: '{{ route("group.mapping.add.single.student") }}',
-                type: 'POST',
-                data: form.serialize(),
-                success: function(response) {
-                    if (response.status === 'success') {
-                        alertBox.removeClass('d-none alert-danger')
-                            .addClass('alert-success')
-                            .html('<i class="mdi mdi-check-circle"></i> ' + response
-                                .message);
+                // Reset group name dropdown
+                groupNameSelect.html('<option value="">Loading...</option>').prop('disabled', true);
 
-                        // Reset form
-                        form[0].reset();
+                if (!groupTypeId || !groupTypeName) {
+                    groupNameSelect.html('<option value="">Select Group Name</option>').prop('disabled',
+                        true);
+                    groupNameHelp.text('Please select a group type first').removeClass('text-success')
+                        .addClass(
+                            'text-muted');
+                    return;
+                }
 
-                        // Reload DataTable
-                        $('#group-mapping-table').DataTable().ajax.reload();
+                // Fetch group names for selected group type
+                $.ajax({
+                    url: routes.groupMappingGetGroupNamesByType,
+                    type: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        group_type_id: groupTypeId
+                    },
+                    success: function(response) {
+                        if (response.status === 'success' && response.group_names && response
+                            .group_names.length > 0) {
+                            groupNameSelect.html('<option value="">Select Group Name</option>');
 
-                        // Close modal after 1.5 seconds
-                        setTimeout(function() {
-                            $('#addStudentModal').modal('hide');
-                            alertBox.addClass('d-none');
-                        }, 1500);
-                    }
-                },
-                error: function(xhr) {
-                    let errorMessage = 'An error occurred while adding the student.';
+                            // Populate group names
+                            response.group_names.forEach(function(groupName) {
+                                groupNameSelect.append($('<option>', {
+                                    value: groupName,
+                                    text: groupName
+                                }));
+                            });
 
-                    if (xhr.responseJSON) {
-                        if (xhr.responseJSON.message) {
-                            errorMessage = xhr.responseJSON.message;
-                        } else if (xhr.responseJSON.errors) {
-                            const errors = Object.values(xhr.responseJSON.errors).flat();
-                            errorMessage = errors.join('<br>');
+                            groupNameSelect.prop('disabled', false);
+                            groupNameHelp.text(
+                                    `${response.group_names.length} group name(s) available`)
+                                .removeClass('text-muted').addClass('text-success');
+                        } else {
+                            groupNameSelect.html(
+                                    '<option value="">No group names found</option>')
+                                .prop('disabled', true);
+                            groupNameHelp.text('No group names available for this group type')
+                                .removeClass('text-success').addClass('text-danger');
                         }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'Error loading group names.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+                        groupNameSelect.html('<option value="">Error loading</option>').prop(
+                            'disabled', true);
+                        groupNameHelp.text(errorMessage).removeClass('text-success').addClass(
+                            'text-danger');
                     }
+                });
+            });
 
-                    alertBox.removeClass('d-none alert-success')
-                        .addClass('alert-danger')
-                        .html('<i class="mdi mdi-alert-circle"></i> ' + errorMessage);
-                },
-                complete: function() {
-                    // Re-enable submit button
-                    submitBtn.prop('disabled', false).html(
-                        '<i class="mdi mdi-content-save"></i> Add Student');
-                }
+            // Reset form when modal is closed
+            $('#addStudentModal').on('hidden.bs.modal', function() {
+                $('#addStudentForm')[0].reset();
+                $('#addStudentAlert').addClass('d-none');
+                $('#studentGroupName').html('<option value="">Select Group Name</option>').prop('disabled',
+                    true);
+                $('#groupNameHelp').text('Please select a group type first').removeClass(
+                    'text-success text-danger').addClass('text-muted');
+            });
+
+            // Handle Add Student Form Submission
+            $('#addStudentForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const form = $(this);
+                const submitBtn = form.find('button[type="submit"]');
+                const alertBox = $('#addStudentAlert');
+
+                // Disable submit button
+                submitBtn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Adding...');
+                alertBox.addClass('d-none');
+
+                $.ajax({
+                    url: '{{ route("group.mapping.add.single.student") }}',
+                    type: 'POST',
+                    data: form.serialize(),
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alertBox.removeClass('d-none alert-danger')
+                                .addClass('alert-success')
+                                .html('<i class="mdi mdi-check-circle"></i> ' + response
+                                    .message);
+
+                            // Reset form
+                            form[0].reset();
+
+                            // Reload DataTable
+                            $('#group-mapping-table').DataTable().ajax.reload();
+
+                            // Close modal after 1.5 seconds
+                            setTimeout(function() {
+                                $('#addStudentModal').modal('hide');
+                                alertBox.addClass('d-none');
+                            }, 1500);
+                        }
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'An error occurred while adding the student.';
+
+                        if (xhr.responseJSON) {
+                            if (xhr.responseJSON.message) {
+                                errorMessage = xhr.responseJSON.message;
+                            } else if (xhr.responseJSON.errors) {
+                                const errors = Object.values(xhr.responseJSON.errors).flat();
+                                errorMessage = errors.join('<br>');
+                            }
+                        }
+
+                        alertBox.removeClass('d-none alert-success')
+                            .addClass('alert-danger')
+                            .html('<i class="mdi mdi-alert-circle"></i> ' + errorMessage);
+                    },
+                    complete: function() {
+                        // Re-enable submit button
+                        submitBtn.prop('disabled', false).html(
+                            '<i class="mdi mdi-content-save"></i> Add Student');
+                    }
+                });
+            });
+
+            // Reset alert when modal is closed
+            $('#addStudentModal').on('hidden.bs.modal', function() {
+                $('#addStudentForm')[0].reset();
+                $('#addStudentAlert').addClass('d-none');
             });
         });
-
-        // Reset alert when modal is closed
-        $('#addStudentModal').on('hidden.bs.modal', function() {
-            $('#addStudentForm')[0].reset();
-            $('#addStudentAlert').addClass('d-none');
-        });
-    });
     </script>
     @endpush
