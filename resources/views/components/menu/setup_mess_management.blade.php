@@ -47,53 +47,6 @@
             </li>
         </ul>
 
-        <!-- ======= SETUP & CONFIGURATION ======= -->
-        <li class="sidebar-item mt-2"
-            style="background: #4077ad;
-            border-radius: 30px 0px 0px 30px;
-            width: 100%;
-            box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-            min-width: 250px;">
-            <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                href="#collapseSetupConfig" role="button" aria-expanded="false"
-                aria-controls="collapseSetupConfig">
-                <span class="fw-bold">Setup & Configuration</span>
-                <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
-                    style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
-            </a>
-        </li>
-        <ul class="collapse list-unstyled ps-3" id="collapseSetupConfig">
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.vendor-item-mappings.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Vendor Item Mapping</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.menu-rate-lists.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Menu Rate List</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.sale-counters.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Sale Counters</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.sale-counter-mappings.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Sale Counter Mapping</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.credit-limits.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Credit Limits</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.number-configs.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Number Configuration</span>
-                </a>
-            </li>
-        </ul>
 
         <!-- ======= MATERIAL MANAGEMENT ======= -->
         <li class="sidebar-item mt-2"
