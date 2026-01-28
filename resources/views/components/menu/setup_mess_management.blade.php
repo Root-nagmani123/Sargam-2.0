@@ -48,7 +48,8 @@
         </ul>
 
 
-        <!-- ======= MATERIAL MANAGEMENT ======= -->
+
+        <!-- ======= KITCHEN ISSUE MANAGEMENT ======= -->
         <li class="sidebar-item mt-2"
             style="background: #4077ad;
             border-radius: 30px 0px 0px 30px;
@@ -56,21 +57,31 @@
             box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
             min-width: 250px;">
             <a class="sidebar-link d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
-                href="#collapseMaterialManagement" role="button" aria-expanded="false" aria-controls="collapseMaterialManagement">
-                <span class="fw-bold">Material Management</span>
+                href="#collapseKitchenIssue" role="button" aria-expanded="false" aria-controls="collapseKitchenIssue">
+                <span class="fw-bold">Kitchen Issues</span>
                 <i class="material-icons menu-icon material-symbols-rounded toggle-icon"
                     style="font-size: 24px; transition: transform 0.3s ease;">keyboard_arrow_right</i>
             </a>
         </li>
-        <ul class="collapse list-unstyled ps-3" id="collapseMaterialManagement">
+        <ul class="collapse list-unstyled ps-3" id="collapseKitchenIssue">
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.material-management.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Selling Voucher</span>
+                <a class="sidebar-link" href="{{ route('admin.mess.kitchen-issues.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">All Kitchen Issues</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.selling-voucher-date-range.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Selling Voucher With Date Range</span>
+                <a class="sidebar-link" href="{{ route('admin.mess.kitchen-issues.create') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Create New Issue</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.kitchen-issue-approvals.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Pending Approvals</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.kitchen-issues.bill-report') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Bill Reports</span>
                 </a>
             </li>
         </ul>
