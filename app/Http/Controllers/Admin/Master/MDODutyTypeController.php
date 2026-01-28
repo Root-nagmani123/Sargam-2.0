@@ -13,6 +13,22 @@ class MDODutyTypeController extends Controller
     public function index(MDODutyTypeMasterDataTable $dataTable)
     {
         return $dataTable->render('admin.master.mdo_duty_type.index');
+        
+    }
+
+    public function changeStatus(Request $request)
+    {
+        DB::table('mdo_duty_type_master')
+            ->where('pk', $request->pk)
+            ->update([
+                'active_inactive' => $request->active_inactive,
+                'modified_date' => now()
+            ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Status updated successfully'
+        ]);
     }
 
     public function changeStatus(Request $request)
