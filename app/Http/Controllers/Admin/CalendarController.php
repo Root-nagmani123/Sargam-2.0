@@ -925,10 +925,9 @@ class CalendarController extends Controller
                 abort(403, 'Missing token');
             }
 
-    public function studentFacultyFeedback(Request $request)
-    {
-        try {
-            $otUrl = '';
+            // ================= TOKEN AUTH =================
+            $key = config('services.moodle.key');
+            $iv  = config('services.moodle.iv');
 
             $username = openssl_decrypt(
                 base64_decode($request->token),
