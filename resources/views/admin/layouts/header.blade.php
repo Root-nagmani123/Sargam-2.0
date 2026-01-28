@@ -1,4 +1,61 @@
 <header class="topbar">
+    <!-- Skip to Content (GIGW Mandatory) -->
+<a href="#main-content" class="visually-hidden-focusable skip-link">
+    Skip to main content
+</a>
+
+<header class="bg-dark text-white border-bottom border-primary" style="height: 40px;">
+    <div class="px-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+
+            <!-- Left: Government Identity -->
+            <div class="d-flex align-items-center gap-2">
+                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                     alt="Emblem of India" style="height:20px;">
+                <span class="fw-semibold small">
+                    भारत सरकार | Government of India
+                </span>
+            </div>
+
+            <!-- Right: Utilities -->
+            <nav aria-label="Utility Navigation">
+                <ul class="list-inline mb-0 d-flex align-items-center gap-3 small">
+
+                    <!-- Skip to Content -->
+                    <li class="list-inline-item">
+                        <a href="#main-content" class="text-white text-decoration-none">
+                            Skip to content
+                        </a>
+                    </li>
+
+                    <!-- Font Size Controls -->
+                    <li class="list-inline-item d-flex align-items-center gap-1"
+                        aria-label="Font size controls">
+                        <a href="javascript:void(0)"class="text-white px-2"
+                                aria-label="Decrease font size">A-</a>
+                        <a href="javascript:void(0)"class="text-white px-2"
+                                aria-label="Normal font size">A</a>
+                        <a href="javascript:void(0)"class="text-white px-2"
+                                aria-label="Increase font size">A+</a>
+                    </li>
+
+                    <!-- Language Switcher -->
+                    <li class="list-inline-item">
+                        <select class="form-select form-select-sm bg-dark text-white border-0"
+                                aria-label="Select Language">
+                            <option selected>English</option>
+                            <option>हिन्दी</option>
+                        </select>
+                    </li>
+
+                </ul>
+            </nav>
+        </div>
+    </div>
+</header>
+
+<main id="main-content" tabindex="-1"></main>
+
     <div class="with-vertical">
         <nav class="navbar navbar-expand-lg p-0">
             <ul class="navbar-nav">
@@ -323,6 +380,28 @@
             </div>
 
             <style>
+                /* Skip link visibility */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 10px;
+    background: #0d6efd;
+    color: #fff;
+    padding: 6px 12px;
+    z-index: 1000;
+    border-radius: 4px;
+}
+
+.skip-link:focus {
+    top: 10px;
+}
+
+/* Improve focus visibility (GIGW) */
+:focus-visible {
+    outline: 3px solid #ffbf47;
+    outline-offset: 2px;
+}
+
             @media (max-width: 991.98px) {
                 body {
                     padding-bottom: 64px !important;
@@ -568,6 +647,19 @@
                 }
             }
             </style>
+<script>
+    const root = document.documentElement;
+    let fontSize = 100;
+
+    document.querySelectorAll('[aria-label]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (btn.textContent === 'A+') fontSize += 10;
+            if (btn.textContent === 'A-') fontSize -= 10;
+            if (btn.textContent === 'A') fontSize = 100;
+            root.style.fontSize = fontSize + '%';
+        });
+    });
+</script>
 
             <script>
             document.addEventListener('DOMContentLoaded', function() {

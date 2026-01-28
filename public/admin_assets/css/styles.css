@@ -38944,7 +38944,7 @@ fieldset:disabled .btn {
 }
 
 .body-wrapper {
-    margin-top: 72px;
+    margin-top: 122px;
     margin-left: calc(80px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
@@ -39080,7 +39080,7 @@ pre.code-view code.hljs {
     position: relative;
     background: #ECEDF8;
     width: 70px;
-    margin-top: 70px;
+    margin-top: 110px;
     padding: 5px;
     border-radius: 0px 30px 0px 0px;
 }
@@ -39150,7 +39150,7 @@ pre.code-view code.hljs {
 /* MAIN SIDEBAR */
 .side-mini-panel .sidebarmenu .sidebar-nav {
     position: absolute;
-    top: 90px;
+    top: 130px;
     left: 65px;
     width: 280px;
     height: calc(100vh - 72px);
