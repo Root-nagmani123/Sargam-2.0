@@ -16,38 +16,33 @@
         </li>
         <ul class="collapse list-unstyled ps-3" id="collapseMasterData">
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.events.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Events</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.inventories.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Inventory Items</span>
+                <a class="sidebar-link" href="{{ route('admin.mess.stores.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Store Master</span>
                 </a>
             </li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.vendors.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Vendors</span>
+                    <span class="hide-menu small small-sm-normal text-nowrap">Vendor Master</span>
                 </a>
             </li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.itemcategories.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Item Categories</span>
+                    <span class="hide-menu small small-sm-normal text-nowrap">Item Category Master</span>
                 </a>
             </li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.itemsubcategories.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Item Subcategories</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.stores.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Stores</span>
+                    <span class="hide-menu small small-sm-normal text-nowrap">Item Subcategory / Item Master</span>
                 </a>
             </li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.client-types.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Client Types</span>
+                    <span class="hide-menu small small-sm-normal text-nowrap">Client Master</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.sub-stores.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Sub Store Master</span>
                 </a>
             </li>
         </ul>
