@@ -257,12 +257,6 @@ Route::middleware(['auth'])->group(function () {
 
     // City route
 
-    // section route
-    Route::prefix('section')->name('section.')->group(function () {
-        Route::get('/', function () {
-            return view('admin.section.index');
-        })->name('index');
-    });
 
     // Group Mapping Routes
     Route::prefix('group-mapping')->name('group.mapping.')->controller(GroupMappingController::class)->group(function () {
@@ -450,16 +444,18 @@ Route::middleware(['auth'])->group(function () {
         // Master Data
         Route::resource('events', \App\Http\Controllers\Mess\EventController::class)->only(['index', 'create', 'store']);
         Route::resource('inventories', \App\Http\Controllers\Mess\InventoryController::class)->only(['index', 'create', 'store']);
-        Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->only(['index', 'create', 'store']);
+        Route::resource('vendors', \App\Http\Controllers\Mess\VendorController::class)->except(['show']);
         Route::resource('invoices', \App\Http\Controllers\Mess\InvoiceController::class)->only(['index', 'create', 'store']);
-        Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->only(['index', 'create', 'store']);
-        Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->only(['index', 'create', 'store']);
+        Route::resource('itemcategories', \App\Http\Controllers\Mess\ItemCategoryController::class)->except(['show']);
+        Route::resource('itemsubcategories', \App\Http\Controllers\Mess\ItemSubcategoryController::class)->except(['show']);
         Route::resource('mealmappings', \App\Http\Controllers\Mess\MealMappingController::class)->only(['index', 'create', 'store']);
         Route::resource('permissionsettings', \App\Http\Controllers\Mess\PermissionSettingController::class)->only(['index', 'create', 'store']);
         Route::resource('storeallocations', \App\Http\Controllers\Mess\StoreAllocationController::class)->only(['index', 'create', 'store']);
         
         // Store Management
-        Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['destroy', 'show']);
+        Route::resource('stores', \App\Http\Controllers\Mess\StoreController::class)->except(['show']);
+        
+        Route::resource('sub-stores', \App\Http\Controllers\Mess\SubStoreController::class)->except(['show']);
         
         // NEW: Setup - Configuration Modules
         Route::resource('vendor-item-mappings', \App\Http\Controllers\Mess\VendorItemMappingController::class);
@@ -467,7 +463,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('sale-counters', \App\Http\Controllers\Mess\SaleCounterController::class);
         Route::resource('sale-counter-mappings', \App\Http\Controllers\Mess\SaleCounterMappingController::class);
         Route::resource('credit-limits', \App\Http\Controllers\Mess\CreditLimitController::class);
-        Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class);
+        Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
         Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
         
         // Material Request Workflow

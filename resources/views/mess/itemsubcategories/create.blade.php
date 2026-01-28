@@ -1,27 +1,22 @@
 @extends('admin.layouts.master')
-@section('title', 'Add Mess Item Subcategory')
+@section('title', 'Add Item Sub Category')
 @section('setup_content')
 <div class="container-fluid">
-    <h4>Add Mess Item Subcategory</h4>
-    <form method="POST" action="{{ route('admin.mess.itemsubcategories.store') }}">
-        @csrf
-        <div class="mb-3">
-            <label>Name</label>
-            <input type="text" name="name" class="form-control" required>
+    <div class="card">
+        <div class="card-body">
+            <h4 class="mb-3">Add Item Sub Category</h4>
+
+            <form method="POST" action="{{ route('admin.mess.itemsubcategories.store') }}">
+                @csrf
+
+                @include('mess.itemsubcategories._form', ['itemsubcategory' => null, 'categories' => $categories])
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success">Save</button>
+                    <a href="{{ route('admin.mess.itemsubcategories.index') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
         </div>
-        <div class="mb-3">
-            <label>Category</label>
-            <select name="category_id" class="form-control" required>
-                @foreach($categories as $category)
-                    <option value="{{ $category->id }}">{{ $category->name }}</option>
-                @endforeach
-            </select>
-        </div>
-        <div class="mb-3">
-            <label>Description</label>
-            <textarea name="description" class="form-control"></textarea>
-        </div>
-        <button type="submit" class="btn btn-success">Save</button>
-    </form>
+    </div>
 </div>
 @endsection
