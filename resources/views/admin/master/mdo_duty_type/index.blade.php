@@ -491,10 +491,154 @@ $(document).on('click', '.add-btn', function () {
                     title: 'Error',
                     text: xhr.responseJSON?.message ?? 'Something went wrong'
                 });
+
+            const bsModal = new bootstrap.Modal(modalEl);
+            bsModal.show();
+        }
+
+        if (createBtn) {
+            createBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                openModalWithUrl(this.getAttribute('href'), 'Create MDO Duty Type');
+            });
+        }
+
+        editLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
+            });
+
+            // Handle AJAX form submit inside modal
+            document.getElementById('dutyTypeModal')?.addEventListener('submit', function(e) {
+                const form = e.target;
+                if (form && form.tagName === 'FORM') {
+                    e.preventDefault();
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    if (submitBtn) submitBtn.disabled = true;
+
+                    fetch(form.action, {
+                            method: form.method || 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: new FormData(form)
+                        })
+                        .then(async (res) => {
+                            if (res.ok) {
+                                // Try to parse JSON; fallback to text
+                                const ct = res.headers.get('content-type') || '';
+                                if (ct.includes('application/json')) {
+                                    const data = await res.json();
+                                    if (data.success || data.status === true) {
+                                        // Update table without full reload
+                                        updateTableAfterSave(data);
+                                        bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
+                                        return;
+                                    }
+                                }
+                                // Non-JSON success fallback
+                                updateTableAfterSave(null);
+                                bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
+                            } else if (res.status === 422) {
+                                // Validation errors: re-render returned HTML into modal
+                                const html = await res.text();
+                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
+                                modalBody.innerHTML = html;
+                            } else {
+                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
+                                modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Save failed. Please try again.</div>');
+                            }
+                        })
+                        .catch(() => {
+                            const modalBody = document.querySelector('#dutyTypeModal .modal-body');
+                            modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Network error. Please try again.</div>');
+                        })
+                        .finally(() => {
+                            if (submitBtn) submitBtn.disabled = false;
+                        });
+                }
+            });
+        });
+    });
+
+    function buildEditUrl(encryptedPk) {
+        return `${window.location.origin}/master/mdo_duty_type/edit/${encodeURIComponent(encryptedPk)}`;
+    }
+
+    function escapeHtml(str) {
+        if (typeof str !== 'string') return '';
+        return str.replace(/[&<>"']/g, function(ch) {
+            return ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                '\'': '&#39;'
+            } [ch]);
+        });
+    }
+
+    function interceptEditLink(e) {
+        e.preventDefault();
+        openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
+    }
+
+    function updateTableAfterSave(payload) {
+        // Reload DataTable after create/update
+        if (typeof $.fn.DataTable !== 'undefined') {
+            const table = $('#mdodutytypemaster-table').DataTable();
+            if (table) {
+                table.ajax.reload(null, false); // false = don't reset pagination
+            }
+        }
+    }
+
+
+    $(document).on('change', '.plain-status-toggle', function() {
+        let checkbox = $(this);
+        let pk = checkbox.data('id');
+        let active_inactive = checkbox.is(':checked') ? 1 : 0;
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: 'Are you sure? You want to deactivate this item?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, deactivate',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed){
+                $.ajax({
+                    url: "{{ route('master.mdo_duty_type.status') }}", // route
+                    type: "POST",
+                    data: {
+                        pk: pk,
+                        active_inactive: active_inactive,
+                        _token: "{{ csrf_token() }}"
+                    },
+                    success: function(response) {
+
+                        $('#mdodutytypemaster-table').DataTable().ajax.reload(null, false);
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated!',
+                            text: response.message,
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    }
+                });
+
+            } else {
+                // revert checkbox
+                checkbox.prop('checked', !active_inactive);
             }
         });
     });
-});
 
 </script>
 @if(session('success'))
