@@ -873,10 +873,10 @@ class CalendarController extends Controller
                 abort(403, 'Missing token');
             }
 
-   public function studentFacultyFeedback(Request $request)
-{
-    try {
-        $otUrl = '';
+    public function studentFacultyFeedback(Request $request)
+    {
+        try {
+            $otUrl = '';
 
             $username = openssl_decrypt(
                 base64_decode($request->token),
