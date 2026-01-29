@@ -673,8 +673,9 @@ Route::middleware(['auth'])->group(function () {
     //  })->name('admin.dashboard.inhouse_faculty');
     // });
     //course repository AJAX routes (MUST be before resource route)
-    Route::get('course-repository/subjects', [CourseRepositoryController::class, 'getSubjectsByCourse'])->name('course-repository.subjects');
-    Route::get('course-repository/topics', [CourseRepositoryController::class, 'getTopicsBySubject'])->name('course-repository.topics');
+    Route::get('course-repository/courses', [CourseRepositoryController::class, 'getCourses'])->name('course-repository.courses');
+    Route::get('course-repository/subjects/{coursePk}', [CourseRepositoryController::class, 'getSubjectsByCourse'])->name('course-repository.subjects');
+    Route::get('course-repository/topics/{subjectPk}', [CourseRepositoryController::class, 'getTopicsBySubject'])->name('course-repository.topics');
     Route::get('course-repository/session-dates', [CourseRepositoryController::class, 'getSessionDateByTopic'])->name('course-repository.session-dates');
     Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
     Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
