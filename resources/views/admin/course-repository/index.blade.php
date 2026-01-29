@@ -11,7 +11,7 @@
 
     /* Accessible link styling */
     .breadcrumb-link {
-        color: #495057;
+        color: #495057; 
         text-decoration: none;
         font-weight: 500;
     }
