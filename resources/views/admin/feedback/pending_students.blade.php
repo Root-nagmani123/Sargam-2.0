@@ -66,8 +66,8 @@
                             <th>Email</th>
                             <th>Phone</th>
                             <th>OT Code</th>
-                            <th>Course</th>
-                            <th>Session</th>
+                            {{-- <th>Course</th>
+                            <th>Session</th> --}}
                         </tr>
                     </thead>
 
@@ -79,8 +79,8 @@
                                 <td>{{ $row->email }}</td>
                                 <td>{{ $row->contact_no }}</td>
                                 <td>{{ $row->generated_OT_code }}</td>
-                                <td>{{ $row->course_name }}</td>
-                                <td>{{ $row->subject_topic }}</td>
+                                {{-- <td>{{ $row->course_name }}</td>
+                                <td>{{ $row->subject_topic }}</td> --}}
                             </tr>
                         @empty
                             <tr>
