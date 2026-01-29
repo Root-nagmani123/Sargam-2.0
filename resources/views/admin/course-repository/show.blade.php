@@ -6,7 +6,6 @@
 .fallback-styles {
     /* This ensures basic styling even if external CSS fails to load */
 }
-
 </style>
 
 @endpush
@@ -15,7 +14,6 @@
 
 @section('setup_content')
 <style>
-    
 .upload-zone {
     display: block;
     border: 2px dashed #cfe2ff;
@@ -40,7 +38,7 @@
 </style>
 <script>
 document.getElementById('category_image_create')
-    .addEventListener('change', function (e) {
+    .addEventListener('change', function(e) {
         const file = e.target.files[0];
         const preview = document.getElementById('preview_create_show');
 
@@ -194,7 +192,7 @@ document.getElementById('category_image_create')
                                                 data-bs-toggle="tooltip" title="View">
                                                 <span class="material-icons material-symbols-rounded">visibility</span>
                                             </a> -->
-                                            <a href="javascript:void(0)" class="text-primary edit-repo" 
+                                            <a href="javascript:void(0)" class="text-primary edit-repo"
                                                 data-pk="{{ $child->pk }}"
                                                 data-name="{{ $child->course_repository_name }}"
                                                 data-details="{{ $child->course_repository_details }}"
@@ -218,8 +216,8 @@ document.getElementById('category_image_create')
 
                 <!-- Documents Section -->
                 @if($documents->count() > 0)
-                <div class="table-responsive mt-4">
-                    <table class="table text-nowrap mb-0" id="documents">
+                <div class="table-responsive">
+                    <table class="table" id="documents">
                         <thead>
                             <tr>
                                 <th class="col text-center">S.No.</th>
@@ -300,22 +298,19 @@ document.getElementById('category_image_create')
                                         @endif
                                     </small>
                                 </td>
+                                <td></td>
+                                <td></td>
+                                <td></td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
                                         <a href="{{ route('course-repository.document.download', $doc->pk) }}"
-                                            class="btn btn-sm btn-outline-info rounded-start" data-bs-toggle="tooltip"
-                                            title="Download">
-                                            <span class="material-icons material-symbols-rounded"
-                                                style="font-size: 16px;">download</span>
-                                            <span class="d-none d-lg-inline ms-1">Download</span>
+                                            class="text-primary" data-bs-toggle="tooltip" title="Download">
+                                            <span class="material-icons material-symbols-rounded">download</span>
                                         </a>
-                                        <button type="button"
-                                            class="btn btn-sm btn-outline-danger rounded-end delete-doc"
-                                            data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Delete">
-                                            <span class="material-icons material-symbols-rounded"
-                                                style="font-size: 16px;">delete</span>
-                                            <span class="d-none d-lg-inline ms-1">Delete</span>
-                                        </button>
+                                        <a class="text-primary delete-doc" data-pk="{{ $doc->pk }}"
+                                            data-bs-toggle="tooltip" title="Delete">
+                                            <span class="material-icons material-symbols-rounded">delete</span>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -332,31 +327,25 @@ document.getElementById('category_image_create')
 </div>
 
 <!-- Create Category Modal -->
-<div class="modal fade" id="createModal" tabindex="-1"
-     aria-labelledby="createModalLabel" aria-hidden="true">
+<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
 
             <!-- Header -->
             <div class="modal-header bg-primary bg-gradient text-white border-0 rounded-top-4">
-                <h5 class="modal-title fw-semibold d-flex align-items-center"
-                    id="createModalLabel">
+                <h5 class="modal-title fw-semibold d-flex align-items-center" id="createModalLabel">
                     <span class="material-icons material-symbols-rounded me-2 fs-5">
                         add_circle
                     </span>
                     Create New Category
                 </h5>
-                <button type="button"
-                        class="btn-close btn-close-white"
-                        data-bs-dismiss="modal"
-                        aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
 
             <!-- Form -->
-            <form id="createForm"
-                  method="POST"
-                  action="{{ route('course-repository.store') }}"
-                  enctype="multipart/form-data">
+            <form id="createForm" method="POST" action="{{ route('course-repository.store') }}"
+                enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="parent_type" value="{{ $repository->pk }}">
 
@@ -365,12 +354,8 @@ document.getElementById('category_image_create')
                     <!-- Category Name -->
                     <div class="mb-4">
                         <div class="form-floating">
-                            <input type="text"
-                                   class="form-control form-control-lg"
-                                   id="course_repository_name"
-                                   name="course_repository_name"
-                                   placeholder="Category Name"
-                                   required>
+                            <input type="text" class="form-control form-control-lg" id="course_repository_name"
+                                name="course_repository_name" placeholder="Category Name" required>
                             <label for="course_repository_name">
                                 <span class="material-icons material-symbols-rounded me-1 fs-6">
                                     folder
@@ -383,11 +368,8 @@ document.getElementById('category_image_create')
                     <!-- Details -->
                     <div class="mb-4">
                         <div class="form-floating">
-                            <textarea class="form-control"
-                                      id="course_repository_details"
-                                      name="course_repository_details"
-                                      placeholder="Details"
-                                      style="height: 110px"></textarea>
+                            <textarea class="form-control" id="course_repository_details"
+                                name="course_repository_details" placeholder="Details" style="height: 110px"></textarea>
                             <label for="course_repository_details">
                                 <span class="material-icons material-symbols-rounded me-1 fs-6">
                                     subject
@@ -403,8 +385,7 @@ document.getElementById('category_image_create')
                             Category Image
                         </label>
 
-                        <label for="category_image_create"
-                               class="upload-zone">
+                        <label for="category_image_create" class="upload-zone">
 
                             <div class="text-center">
                                 <span class="material-icons material-symbols-rounded upload-icon">
@@ -419,19 +400,14 @@ document.getElementById('category_image_create')
                                 </small>
                             </div>
 
-                            <input type="file"
-                                   id="category_image_create"
-                                   name="category_image"
-                                   accept="image/jpeg,image/png,image/jpg,image/gif"
-                                   hidden>
+                            <input type="file" id="category_image_create" name="category_image"
+                                accept="image/jpeg,image/png,image/jpg,image/gif" hidden>
                         </label>
 
                         <!-- Preview -->
                         <div class="mt-3">
-                            <img id="preview_create_show"
-                                 class="img-thumbnail shadow-sm d-none"
-                                 alt="Category image preview"
-                                 style="max-width: 150px;">
+                            <img id="preview_create_show" class="img-thumbnail shadow-sm d-none"
+                                alt="Category image preview" style="max-width: 150px;">
                         </div>
                     </div>
 
@@ -439,13 +415,10 @@ document.getElementById('category_image_create')
 
                 <!-- Footer -->
                 <div class="modal-footer bg-light border-0 px-4 py-3">
-                    <button type="button"
-                            class="btn btn-outline-secondary rounded-pill px-4"
-                            data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit"
-                            class="btn btn-primary rounded-pill px-4 shadow-sm">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
                         Save Category
                     </button>
                 </div>
@@ -892,58 +865,62 @@ document.getElementById('category_image_create')
                             <!-- Institutional Category Fields -->
                             <div id="institutionalFields" class="category-fields" style="display: none;">
 
-                            <div class="row">
-                                <div class="col-md-6">
-<!-- Keywords -->
-                                <div class="mb-3">
-                                    <label for="Key_words_institutional" class="form-label">
-                                        Add Key words <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" id="Key_words_institutional"
-                                        name="Key_words_institutional" placeholder="Enter Keywords">
-                                </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <!-- Keywords -->
-                                <div class="mb-3">
-                                    <label for="Key_words_institutional" class="form-label">
-                                        Keywords <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="text" class="form-control" id="Key_words_institutional"
-                                        name="Key_words_institutional" placeholder="Enter Keywords">
-                                </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <!-- sector -->
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <!-- Keywords -->
+                                        <div class="mb-3">
+                                            <label for="Key_words_institutional" class="form-label">
+                                                Add Key words <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="Key_words_institutional"
+                                                name="Key_words_institutional" placeholder="Enter Keywords">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- Keywords -->
+                                        <div class="mb-3">
+                                            <label for="Key_words_institutional" class="form-label">
+                                                Keywords <span class="text-danger">*</span>
+                                            </label>
+                                            <input type="text" class="form-control" id="Key_words_institutional"
+                                                name="Key_words_institutional" placeholder="Enter Keywords">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- sector -->
 
-                                <div class="mb-3">
-                                    <label for="sector_master_institutional" class="form-label">
-                                        Sector <span class="text-danger">*</span>
-                                    </label>
-                                    <select class="form-select" id="sector_master_institutional"
-                                        name="sector_master_institutional">
-                                        <option value="" selected>Select</option>
-                                        @foreach(($sectors ?? []) as $sector)
-                                        <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
-                                        @endforeach
-                                    </select>   
-</div>
-                                </div>
-                                <div class="col-md-6">
-                                    <!-- ministries -->
+                                        <div class="mb-3">
+                                            <label for="sector_master_institutional" class="form-label">
+                                                Sector <span class="text-danger">*</span>
+                                            </label>
+                                            <select class="form-select" id="sector_master_institutional"
+                                                name="sector_master_institutional">
+                                                <option value="" selected>Select</option>
+                                                @foreach(($sectors ?? []) as $sector)
+                                                <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <!-- ministries -->
 
-                                <div class="mb-3">
-                                    <label for="ministry_master_institutional" class="form-label">Ministry <span class="text-danger">*</span></label>
-                                    <select class="form-select" id="ministry_master_institutional" name="ministry_master_institutional">
-                                        <option value="" selected>Select</option>
-                                        @foreach(($ministries ?? []) as $ministry)
-                                        <option value="{{ $ministry->pk }}" data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">{{ $ministry->ministry_name }}</option>
-                                        @endforeach
-                                    </select>
-</div>
+                                        <div class="mb-3">
+                                            <label for="ministry_master_institutional" class="form-label">Ministry <span
+                                                    class="text-danger">*</span></label>
+                                            <select class="form-select" id="ministry_master_institutional"
+                                                name="ministry_master_institutional">
+                                                <option value="" selected>Select</option>
+                                                @foreach(($ministries ?? []) as $ministry)
+                                                <option value="{{ $ministry->pk }}"
+                                                    data-sector="{{ $ministry->sector_master_pk }}"
+                                                    style="display:none;">{{ $ministry->ministry_name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                                
+
 
                                 <!-- Video Link -->
                                 <!-- <div class="mb-3">
@@ -1170,12 +1147,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Don't prevent default handling for critical errors
     });
 
-    const repositoryPk = {{ $repository->pk }};
+    const repositoryPk = {
+        {
+            $repository - > pk
+        }
+    };
 
     // Initialize tooltips with error handling
     try {
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     } catch (error) {
@@ -1187,16 +1168,16 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const toastElement = document.getElementById(type + 'Toast');
             const messageElement = document.getElementById(type + 'Message');
-            
+
             if (!toastElement) {
                 console.warn('Toast element not found:', type + 'Toast');
                 return;
             }
-            
+
             if (messageElement) {
                 messageElement.textContent = message;
             }
-            
+
             if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
                 const toast = new bootstrap.Toast(toastElement, {
                     autohide: true,
@@ -1214,37 +1195,41 @@ document.addEventListener('DOMContentLoaded', function() {
     if (advancedSearchForm) {
         advancedSearchForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             try {
                 const formData = new FormData(this);
                 const searchQueryInput = document.getElementById('searchQuery');
-                const searchQuery = formData.get('searchQuery') || (searchQueryInput ? searchQueryInput.value : '');
-                
+                const searchQuery = formData.get('searchQuery') || (searchQueryInput ? searchQueryInput
+                    .value : '');
+
                 // Show loading state
                 const submitBtn = this.querySelector('button[type="submit"]');
                 if (submitBtn) {
                     const originalText = submitBtn.innerHTML;
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Searching...';
+                    submitBtn.innerHTML =
+                        '<span class="spinner-border spinner-border-sm me-2"></span>Searching...';
                     submitBtn.disabled = true;
-                    
+
                     // Simulate search (replace with actual search logic)
                     setTimeout(() => {
                         // Filter table rows based on search criteria
                         performTableSearch(searchQuery);
-                        
+
                         // Restore button
                         submitBtn.innerHTML = originalText;
                         submitBtn.disabled = false;
-                        
+
                         // Close offcanvas
                         const searchOffcanvasEl = document.getElementById('searchOffcanvas');
-                        if (searchOffcanvasEl && typeof bootstrap !== 'undefined' && bootstrap.Offcanvas) {
-                            const offcanvas = bootstrap.Offcanvas.getInstance(searchOffcanvasEl);
+                        if (searchOffcanvasEl && typeof bootstrap !== 'undefined' && bootstrap
+                            .Offcanvas) {
+                            const offcanvas = bootstrap.Offcanvas.getInstance(
+                            searchOffcanvasEl);
                             if (offcanvas) {
                                 offcanvas.hide();
                             }
                         }
-                        
+
                         // Show success message
                         showToast('success', `Found results for: "${searchQuery}"`);
                     }, 1000);
@@ -1259,13 +1244,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function performTableSearch(query) {
         const tables = document.querySelectorAll('.modern-table tbody tr');
         let visibleCount = 0;
-        
+
         tables.forEach(row => {
             const text = row.textContent.toLowerCase();
             const isVisible = query === '' || text.includes(query.toLowerCase());
-            
+
             row.style.display = isVisible ? '' : 'none';
-            
+
             if (isVisible) {
                 visibleCount++;
                 // Add highlight animation
@@ -1275,7 +1260,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 2000);
             }
         });
-        
+
         // Update search results info
         console.log(`Found ${visibleCount} results`);
     }
@@ -1303,19 +1288,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const uploadProgressModalEl = document.getElementById('uploadProgressModal');
             const progressBar = document.getElementById('uploadProgress');
             const statusText = document.getElementById('uploadStatus');
-            
+
             if (!uploadProgressModalEl || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
                 console.warn('Upload progress modal not available');
                 return;
             }
-            
+
             const modal = new bootstrap.Modal(uploadProgressModalEl);
             modal.show();
-            
+
             let progress = 0;
             const interval = setInterval(() => {
                 progress += Math.random() * 15;
-                
+
                 if (progress >= 100) {
                     progress = 100;
                     if (progressBar) {
@@ -1324,12 +1309,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (statusText) {
                         statusText.textContent = 'Upload completed!';
                     }
-                    
+
                     setTimeout(() => {
                         modal.hide();
                         showToast('success', 'Files uploaded successfully!');
                     }, 1000);
-                    
+
                     clearInterval(interval);
                 } else {
                     if (progressBar) {
@@ -1363,7 +1348,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, 300);
                 }
             }
-            
+
             // Ctrl/Cmd + N for new category
             if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
                 e.preventDefault();
@@ -1379,7 +1364,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, 300);
                 }
             }
-            
+
             // Ctrl/Cmd + U for upload
             if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
                 e.preventDefault();
@@ -1389,7 +1374,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     uploadModal.show();
                 }
             }
-            
+
             // Escape to close modals/offcanvas
             if (e.key === 'Escape') {
                 // Close any open toasts
@@ -1462,7 +1447,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.table tbody tr').forEach(row => {
             row.classList.add('skeleton');
         });
-        
+
         setTimeout(() => {
             document.querySelectorAll('.skeleton').forEach(el => {
                 el.classList.remove('skeleton');
@@ -1486,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.warn('Row animation error:', rowError);
             }
         });
-        
+
         // Show helpful hints
         try {
             if (typeof localStorage !== 'undefined' && localStorage.getItem('first_visit') !== 'false') {
@@ -1509,7 +1494,7 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const preview = document.getElementById('preview_create_show');
                 const file = e.target.files[0];
-                
+
                 if (file && preview) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
@@ -1525,7 +1510,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Image preview for edit modal
     const editImageInput = document.getElementById('category_image_edit');
     if (editImageInput) {
@@ -1533,7 +1518,7 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const preview = document.getElementById('preview_edit_show');
                 const file = e.target.files[0];
-                
+
                 if (file && preview) {
                     const reader = new FileReader();
                     reader.onload = function(e) {
@@ -1558,15 +1543,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.warn('Select element not found:', selectId);
                 return;
             }
-            
+
             // Clear existing options
             selectElement.innerHTML = '<option value="">-- Select --</option>';
-            
+
             if (data && data.length > 0) {
                 data.forEach(function(item) {
                     const option = document.createElement('option');
                     option.value = item[valueKey] || '';
-                    option.textContent = typeof textKey === 'function' ? textKey(item) : item[textKey] || '';
+                    option.textContent = typeof textKey === 'function' ? textKey(item) : item[
+                        textKey] || '';
                     selectElement.appendChild(option);
                 });
             }
@@ -1582,21 +1568,24 @@ document.addEventListener('DOMContentLoaded', function() {
             if (keywordsInput) {
                 // Auto-update keywords based on selected values
                 const inputs = [
-                    'course_name', 'subject_name', 'timetable_name', 
+                    'course_name', 'subject_name', 'timetable_name',
                     'session_date', 'author_name', 'sector_master', 'ministry_master'
                 ];
-                
+
                 const keywords = [];
                 inputs.forEach(inputId => {
                     const element = document.getElementById(inputId);
                     if (element && element.selectedOptions && element.selectedOptions[0]) {
                         const text = element.selectedOptions[0].text.trim();
-                        if (text && text !== '-- Select --' && text !== '-- Select Subject --' && text !== '-- Select Topic --' && text !== '-- Select Session Date --' && text !== '-- Select Author --' && text !== '-- Select Sector --' && text !== '-- Select Ministry --') {
+                        if (text && text !== '-- Select --' && text !== '-- Select Subject --' &&
+                            text !== '-- Select Topic --' && text !== '-- Select Session Date --' &&
+                            text !== '-- Select Author --' && text !== '-- Select Sector --' && text !==
+                            '-- Select Ministry --') {
                             keywords.push(text);
                         }
                     }
                 });
-                
+
                 keywordsInput.value = keywords.join(', ');
             }
         } catch (error) {
@@ -1609,16 +1598,36 @@ document.addEventListener('DOMContentLoaded', function() {
             const keywordsInput = document.getElementById('keywords_other');
             if (keywordsInput) {
                 // Auto-update keywords for other category
-                const inputs = [
-                    { id: 'course_name_other', isSelect: true },
-                    { id: 'major_subject_other', isSelect: false },
-                    { id: 'topic_name_other', isSelect: false },
-                    { id: 'session_date_other', isSelect: false },
-                    { id: 'author_name_other', isSelect: false },
-                    { id: 'sector_master_other', isSelect: true },
-                    { id: 'ministry_master_other', isSelect: true }
+                const inputs = [{
+                        id: 'course_name_other',
+                        isSelect: true
+                    },
+                    {
+                        id: 'major_subject_other',
+                        isSelect: false
+                    },
+                    {
+                        id: 'topic_name_other',
+                        isSelect: false
+                    },
+                    {
+                        id: 'session_date_other',
+                        isSelect: false
+                    },
+                    {
+                        id: 'author_name_other',
+                        isSelect: false
+                    },
+                    {
+                        id: 'sector_master_other',
+                        isSelect: true
+                    },
+                    {
+                        id: 'ministry_master_other',
+                        isSelect: true
+                    }
                 ];
-                
+
                 const keywords = [];
                 inputs.forEach(input => {
                     const element = document.getElementById(input.id);
@@ -1629,13 +1638,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else if (!input.isSelect) {
                             text = element.value.trim();
                         }
-                        
-                        if (text && text !== '-- Select --' && text !== '-- Select Course --' && text !== '-- Select Sector --' && text !== '-- Select Ministry --') {
+
+                        if (text && text !== '-- Select --' && text !== '-- Select Course --' &&
+                            text !== '-- Select Sector --' && text !== '-- Select Ministry --') {
                             keywords.push(text);
                         }
                     }
                 });
-                
+
                 keywordsInput.value = keywords.join(', ');
             }
         } catch (error) {
@@ -1644,65 +1654,72 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Step 1: Course changes -> Load Groups
-   function onCourseChange(courseSelectId, groupSelectId) {
+    function onCourseChange(courseSelectId, groupSelectId) {
 
-    let coursePk = $('#' + courseSelectId).val();
-    let $group = $('#' + groupSelectId);
+        let coursePk = $('#' + courseSelectId).val();
+        let $group = $('#' + groupSelectId);
 
-    $group.empty().append('<option value="">-- Select --</option>');
+        $group.empty().append('<option value="">-- Select --</option>');
 
-    if (!coursePk) return;
+        if (!coursePk) return;
 
-    $.ajax({
-        url: "{{ route('course-repository.groups') }}",
-        type: "GET",
-        data: { course_pk: coursePk },
+        $.ajax({
+            url: "{{ route('course-repository.groups') }}",
+            type: "GET",
+            data: {
+                course_pk: coursePk
+            },
 
-        // 🔥 THESE 3 LINES FIX 302
-        headers: {
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        },
+            // 🔥 THESE 3 LINES FIX 302
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
 
-        success: function (response) {
-            if (response.success) {
-                $.each(response.data, function (i, group) {
-                    $group.append(
-                        `<option value="${group.pk}">
+            success: function(response) {
+                if (response.success) {
+                    $.each(response.data, function(i, group) {
+                        $group.append(
+                            `<option value="${group.pk}">
                             ${group.subject_name}
                         </option>`
-                    );
-                });
-            }
-        },
+                        );
+                    });
+                }
+            },
 
-        error: function (xhr) {
-            if (xhr.status === 401) {
-                Swal.fire('Session Expired', 'Please login again', 'warning');
-            } else {
-                console.error(xhr.responseText);
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    Swal.fire('Session Expired', 'Please login again', 'warning');
+                } else {
+                    console.error(xhr.responseText);
+                }
             }
-        }
-    });
-}
+        });
+    }
 
 
     // Step 2: Group changes -> Load Timetables
     function onGroupChange(groupSelectId, timetableSelectId) {
         var groupPk = $('#' + groupSelectId).val();
         var course_master_pk = $('#course_name').val();
-        
+
         // Clear timetable dropdown
-        populateDropdown(timetableSelectId, [], 'pk', function(t) { return ''; });
-        
+        populateDropdown(timetableSelectId, [], 'pk', function(t) {
+            return '';
+        });
+
         if (!groupPk) return;
         console.log('Selected Group PK:', groupPk);
-         
+
         // AJAX call to get timetables
         $.ajax({
             url: '/course-repository/timetables',
             type: 'GET',
-            data: { group_pk: groupPk , course_master_pk: course_master_pk },
+            data: {
+                group_pk: groupPk,
+                course_master_pk: course_master_pk
+            },
             dataType: 'json',
             headers: {
                 'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -1724,19 +1741,19 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.category-radio').forEach(radio => {
         radio.addEventListener('change', function() {
             const category = this.value;
-            
+
             // Hide all category-specific fields and document tables
             document.querySelectorAll('.category-fields').forEach(field => {
                 field.style.display = 'none';
             });
-            
+
             // Show the selected category fields
             if (category === 'Course') {
                 document.getElementById('courseFields').style.display = 'block';
                 document.getElementById('courseVideoLink').style.display = 'block';
                 document.getElementById('courseAttachments').style.display = 'block';
                 // Make course-specific keywords required
-                document.getElementById('keywords_course').setAttribute('required' , 'required');
+                document.getElementById('keywords_course').setAttribute('required', 'required');
                 document.getElementById('keywords_other').removeAttribute('required');
                 document.getElementById('Key_words_institutional').removeAttribute('required');
             } else if (category === 'Other') {
@@ -1750,11 +1767,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Make institutional-specific keywords required
                 document.getElementById('keywords_course').removeAttribute('required');
                 document.getElementById('keywords_other').removeAttribute('required');
-                document.getElementById('Key_words_institutional').setAttribute('required', 'required');
+                document.getElementById('Key_words_institutional').setAttribute('required',
+                    'required');
             }
         });
     });
-    
+
     // Set initial state (Course is default)
     document.getElementById('courseFields').style.display = 'block';
     document.getElementById('courseVideoLink').style.display = 'block';
@@ -1773,7 +1791,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     const btnArchivedCourses = document.getElementById('btnArchivedCourses');
     if (btnArchivedCourses) {
         btnArchivedCourses.addEventListener('change', function() {
@@ -1800,7 +1818,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     const btnArchivedCoursesOther = document.getElementById('btnArchivedCoursesOther');
     if (btnArchivedCoursesOther) {
         btnArchivedCoursesOther.addEventListener('change', function() {
@@ -1821,10 +1839,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.warn('Course select element not found:', selectId);
                 return;
             }
-            
+
             // Reset selection
             courseSelect.value = '';
-            
+
             // Hide all options except the first one (-- Select --)
             Array.from(courseSelect.options).forEach(option => {
                 if (option.value === '') {
@@ -1835,13 +1853,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     option.style.display = 'none';
                 }
             });
-            
+
             // Clear dependent dropdowns
             if (selectId === 'course_name') {
                 const subjectSelect = document.getElementById('subject_name');
                 const timetableSelect = document.getElementById('timetable_name');
                 const sessionSelect = document.getElementById('session_date');
-                
+
                 if (subjectSelect) {
                     subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
                 }
@@ -1864,7 +1882,7 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#course_name').on('change', function() {
         onCourseChange('course_name', 'subject_name');
     });
-    
+
     $('#subject_name').on('change', function() {
         onGroupChange('subject_name', 'timetable_name');
     });
@@ -1878,7 +1896,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const authorName = $('#author_name option:selected').text().trim();
         const sectorName = $('#sector_master option:selected').text().trim();
         const ministryName = $('#ministry_master option:selected').text().trim();
-        
+
         // Build keywords string from selected values (comma-separated)
         const keywordsParts = [];
         if (courseName && courseName !== '-- Select --') keywordsParts.push(courseName);
@@ -1888,7 +1906,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (authorName && authorName !== '-- Select --') keywordsParts.push(authorName);
         if (sectorName && sectorName !== '-- Select --') keywordsParts.push(sectorName);
         if (ministryName && ministryName !== '-- Select --') keywordsParts.push(ministryName);
-        
+
         const keywords = keywordsParts.join(', ');
         $('#keywords_course').val(keywords);
     }
@@ -1902,7 +1920,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const authorName = $('#author_name_other').val().trim();
         const sectorName = $('#sector_master_other option:selected').text().trim();
         const ministryName = $('#ministry_master_other option:selected').text().trim();
-        
+
         // Build keywords string from all values (comma-separated)
         const keywordsParts = [];
         if (courseName && courseName !== '-- Select --') keywordsParts.push(courseName);
@@ -1912,7 +1930,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (authorName) keywordsParts.push(authorName);
         if (sectorName && sectorName !== '-- Select --') keywordsParts.push(sectorName);
         if (ministryName && ministryName !== '-- Select --') keywordsParts.push(ministryName);
-        
+
         const keywords = keywordsParts.join(', ');
         $('#keywords_other').val(keywords);
     }
@@ -1922,18 +1940,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const timetablePk = $(this).val();
         const $sessionDate = $('#session_date');
         const $authorName = $('#author_name');
-        
+
         // Clear the dropdowns
         $sessionDate.html('<option value="">-- Select --</option>');
         $authorName.html('<option value="">-- Select --</option>');
-        
+
         if (!timetablePk) return;
-        
+
         // Get the full timetable data to extract date and faculty
         $.ajax({
             url: "{{ route('course-repository.timetables') }}",
             type: "GET",
-            data: { 
+            data: {
                 group_pk: $('#subject_name').val(),
                 course_master_pk: $('#course_name').val()
             },
@@ -1948,29 +1966,33 @@ document.addEventListener('DOMContentLoaded', function() {
                     const selectedTimetable = response.data.find(t => t.pk == timetablePk);
                     if (selectedTimetable) {
                         // Format date as dd-mm-yyyy for display
-                        const dateFormatted = selectedTimetable.START_DATE 
-                            ? new Date(selectedTimetable.START_DATE).toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                            }).replace(/\//g, '-')
-                            : '';
-                        
+                        const dateFormatted = selectedTimetable.START_DATE ?
+                            new Date(selectedTimetable.START_DATE).toLocaleDateString(
+                                'en-GB', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                }).replace(/\//g, '-') :
+                            '';
+
                         // Populate session date using jQuery for better compatibility
                         $sessionDate.empty().append(
-                            $('<option></option>').val(dateFormatted).text(dateFormatted)
+                            $('<option></option>').val(dateFormatted).text(
+                                dateFormatted)
                         ).val(dateFormatted);
-                        
+
                         // Populate author/faculty name if exists
-                        if (selectedTimetable.faculty_name && selectedTimetable.faculty_name.trim()) {
+                        if (selectedTimetable.faculty_name && selectedTimetable.faculty_name
+                            .trim()) {
                             $authorName.empty().append(
-                                $('<option></option>').val(selectedTimetable.pk).text(selectedTimetable.faculty_name)
+                                $('<option></option>').val(selectedTimetable.pk).text(
+                                    selectedTimetable.faculty_name)
                             ).val(selectedTimetable.pk);
                         } else {
                             // If no faculty name, show empty option
                             $authorName.html('<option value="">-- Select --</option>');
                         }
-                        
+
                         // Auto-update keywords after loading date and author
                         setTimeout(function() {
                             updateKeywords();
@@ -1997,30 +2019,32 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#sector_master').on('change', function() {
         const sectorPk = $(this).val();
         const $ministrySelect = $('#ministry_master');
-        
+
         if (!sectorPk) {
             // Reset ministry dropdown
             $ministrySelect.html('<option value="">-- Select --</option>').val('');
             return;
         }
-        
+
         // Fetch ministries for selected sector
         $.ajax({
             url: '{{ route("course-repository.ministries-by-sector") }}',
             type: 'GET',
-            data: { sector_pk: sectorPk },
+            data: {
+                sector_pk: sectorPk
+            },
             success: function(response) {
                 if (response.success) {
                     $ministrySelect.html('<option value="">-- Select --</option>');
-                    
+
                     response.data.forEach(function(ministry) {
                         $ministrySelect.append(
                             $('<option></option>')
-                                .val(ministry.pk)
-                                .text(ministry.ministry_name)
+                            .val(ministry.pk)
+                            .text(ministry.ministry_name)
                         );
                     });
-                    
+
                     // Clear ministry selection and update keywords
                     $ministrySelect.val('');
                     updateKeywords();
@@ -2047,30 +2071,32 @@ document.addEventListener('DOMContentLoaded', function() {
     $('#sector_master_other').on('change', function() {
         const sectorPk = $(this).val();
         const $ministrySelect = $('#ministry_master_other');
-        
+
         if (!sectorPk) {
             // Reset ministry dropdown
             $ministrySelect.html('<option value="">-- Select --</option>').val('');
             return;
         }
-        
+
         // Fetch ministries for selected sector
         $.ajax({
             url: '{{ route("course-repository.ministries-by-sector") }}',
             type: 'GET',
-            data: { sector_pk: sectorPk },
+            data: {
+                sector_pk: sectorPk
+            },
             success: function(response) {
                 if (response.success) {
                     $ministrySelect.html('<option value="">-- Select --</option>');
-                    
+
                     response.data.forEach(function(ministry) {
                         $ministrySelect.append(
                             $('<option></option>')
-                                .val(ministry.pk)
-                                .text(ministry.ministry_name)
+                            .val(ministry.pk)
+                            .text(ministry.ministry_name)
                         );
                     });
-                    
+
                     // Clear ministry selection and update keywords
                     $ministrySelect.val('');
                     updateKeywordsOther();
@@ -2089,42 +2115,44 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             try {
                 const pk = this.getAttribute('data-pk');
                 const name = this.getAttribute('data-name');
                 const details = this.getAttribute('data-details');
                 const image = this.getAttribute('data-image');
-                
+
                 // Populate edit form
                 const nameInput = document.getElementById('edit_course_repository_name');
                 const detailsInput = document.getElementById('edit_course_repository_details');
-                
+
                 if (nameInput) nameInput.value = name || '';
                 if (detailsInput) detailsInput.value = details || '';
-                
+
                 // Show current image if exists
-                const currentImageContainer = document.getElementById('current_image_container_show');
+                const currentImageContainer = document.getElementById(
+                    'current_image_container_show');
                 const currentImage = document.getElementById('current_image_show');
-                if (image && image !== 'null' && image !== '' && currentImage && currentImageContainer) {
+                if (image && image !== 'null' && image !== '' && currentImage &&
+                    currentImageContainer) {
                     currentImage.src = '/storage/' + image;
                     currentImageContainer.style.display = 'block';
                 } else if (currentImageContainer) {
                     currentImageContainer.style.display = 'none';
                 }
-                
+
                 // Clear preview
                 const previewImage = document.getElementById('preview_edit_show');
                 if (previewImage) {
                     previewImage.style.display = 'none';
                 }
-                
+
                 // Update form action
                 const editForm = document.getElementById('editForm');
                 if (editForm && pk) {
                     editForm.action = `/course-repository/${pk}`;
                 }
-                
+
                 // Show modal
                 const editModalEl = document.getElementById('editModal');
                 if (editModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -2142,59 +2170,61 @@ document.addEventListener('DOMContentLoaded', function() {
     if (createForm) {
         createForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             try {
                 const formData = new FormData(this);
                 const submitBtn = this.querySelector('button[type="submit"]');
-                
+
                 if (!submitBtn) {
                     console.warn('Submit button not found in create form');
                     return;
                 }
-                
+
                 const originalText = submitBtn.innerHTML;
-                
+
                 // Modern loading state
                 submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
-                
+                submitBtn.innerHTML =
+                    '<span class="spinner-border spinner-border-sm me-2"></span>Creating...';
+
                 fetch(this.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Close modal
-                        const createModalEl = document.getElementById('createModal');
-                        if (createModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                            const modal = bootstrap.Modal.getInstance(createModalEl);
-                            if (modal) {
-                                modal.hide();
-                            }
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
                         }
-                        
-                        // Show success toast
-                        showToast('success', data.message || 'Category created successfully!');
-                        
-                        // Reload with smooth transition
-                        setTimeout(() => location.reload(), 1000);
-                    } else {
-                        showToast('error', data.message || 'Failed to create category');
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Close modal
+                            const createModalEl = document.getElementById('createModal');
+                            if (createModalEl && typeof bootstrap !== 'undefined' && bootstrap
+                                .Modal) {
+                                const modal = bootstrap.Modal.getInstance(createModalEl);
+                                if (modal) {
+                                    modal.hide();
+                                }
+                            }
+
+                            // Show success toast
+                            showToast('success', data.message || 'Category created successfully!');
+
+                            // Reload with smooth transition
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showToast('error', data.message || 'Failed to create category');
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalText;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Create form error:', error);
+                        showToast('error', 'Network error occurred. Please try again.');
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = originalText;
-                    }
-                })
-                .catch(error => {
-                    console.error('Create form error:', error);
-                    showToast('error', 'Network error occurred. Please try again.');
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = originalText;
-                });
+                    });
             } catch (error) {
                 console.warn('Create form submit error:', error);
             }
@@ -2204,214 +2234,222 @@ document.addEventListener('DOMContentLoaded', function() {
     // Edit form submit
     document.getElementById('editForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         const formData = new FormData(this);
         const submitBtn = this.querySelector('button[type="submit"]');
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
-        
+
         fetch(this.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success!',
-                    text: data.message || 'Category updated successfully',
-                    showConfirmButton: false,
-                    timer: 1500
-                }).then(() => {
-                    location.reload();
-                });
-            } else {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message || 'Category updated successfully',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: data.message || 'Failed to update category'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> Update';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
-                    text: data.message || 'Failed to update category'
+                    text: 'Failed to update category'
                 });
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-save"></i> Update';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: 'Failed to update category'
             });
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-save"></i> Update';
-        });
     });
 
     // Upload document with modern progress tracking
     const uploadForm = document.getElementById('uploadForm');
     if (uploadForm) {
         uploadForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        const submitBtn = this.querySelector('button[type="submit"]');
-        const uploadModal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
-        
-        // Modern loading state
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing...';
-        
-        // Get selected category
-        const selectedCategory = document.querySelector('input[name="category"]:checked').value;
-        
-        // Get attachment files and titles based on selected category
-        let attachmentFiles, attachmentTitles;
-        
-        if (selectedCategory === 'Course') {
-            attachmentFiles = this.querySelectorAll('input[name="attachments[]"]');
-            attachmentTitles = this.querySelectorAll('input[name="attachment_titles[]"]');
-        } else if (selectedCategory === 'Other') {
-            attachmentFiles = this.querySelectorAll('input[name="attachments_other[]"]');
-            attachmentTitles = this.querySelectorAll('input[name="attachment_titles_other[]"]');
-        } else if (selectedCategory === 'Institutional') {
-            attachmentFiles = this.querySelectorAll('input[name="attachments_institutional[]"]');
-            attachmentTitles = this.querySelectorAll('input[name="attachment_titles_institutional[]"]');
-        }
-        
-        // Validate at least one attachment
-        let hasAttachment = false;
-        attachmentFiles.forEach(file => {
-            if (file.files.length > 0) {
-                hasAttachment = true;
-            }
-        });
-        
-        if (!hasAttachment) {
-            showToast('error', 'Please select at least one document to upload');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-            return;
-        }
-        
-        // Show upload progress
-        uploadModal.hide();
-        showUploadProgress();
-        
-        // Create new FormData with correct files and titles
-        const uploadData = new FormData();
-        
-        // Add CSRF token
-        uploadData.append('_token', document.querySelector('[name="_token"]').value);
-        
-        // Add category
-        uploadData.append('category', selectedCategory);
-        
-        // Add course, subject, timetable based on selected category
-        if (selectedCategory === 'Course') {
-            const course_name = formData.get('course_name') || '';
-            const subject_name = formData.get('subject_name') || '';
-            const timetable_name = formData.get('timetable_name') || '';
-            const session_date = formData.get('session_date') || '';
-            const author_name = formData.get('author_name') || '';
-            uploadData.append('course_name', course_name);
-            uploadData.append('subject_name', subject_name);
-            uploadData.append('timetable_name', timetable_name);
-            uploadData.append('session_date', session_date);
-            uploadData.append('author_name', author_name);
-        } else if (selectedCategory === 'Other') {
-            const course_name_other = formData.get('course_name_other') || '';
-            const major_subject_other = formData.get('major_subject_other') || '';
-            const topic_name_other = formData.get('topic_name_other') || '';
-            const session_date_other = formData.get('session_date_other') || '';
-            const author_name_other = formData.get('author_name_other') || '';
-            uploadData.append('course_name', course_name_other);
-            uploadData.append('subject_name', major_subject_other);
-            uploadData.append('timetable_name', topic_name_other);
-            uploadData.append('session_date', session_date_other);
-            uploadData.append('author_name', author_name_other);
-        } else if (selectedCategory === 'Institutional') {
-            // Institutional category doesn't have these fields, send empty
-            uploadData.append('course_name', '');
-            uploadData.append('subject_name', '');
-            uploadData.append('timetable_name', '');
-            uploadData.append('session_date', '');
-            uploadData.append('author_name', '');
-        }
+            e.preventDefault();
 
-        
-        // Add files and titles
-        attachmentFiles.forEach((fileInput, index) => {
-            if (fileInput.files.length > 0) {
-                uploadData.append('attachments[]', fileInput.files[0]);
-                uploadData.append('attachment_titles[]', attachmentTitles[index].value || 'Untitled');
+            const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const uploadModal = bootstrap.Modal.getInstance(document.getElementById('uploadModal'));
+
+            // Modern loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML =
+                '<span class="spinner-border spinner-border-sm me-2"></span>Preparing...';
+
+            // Get selected category
+            const selectedCategory = document.querySelector('input[name="category"]:checked').value;
+
+            // Get attachment files and titles based on selected category
+            let attachmentFiles, attachmentTitles;
+
+            if (selectedCategory === 'Course') {
+                attachmentFiles = this.querySelectorAll('input[name="attachments[]"]');
+                attachmentTitles = this.querySelectorAll('input[name="attachment_titles[]"]');
+            } else if (selectedCategory === 'Other') {
+                attachmentFiles = this.querySelectorAll('input[name="attachments_other[]"]');
+                attachmentTitles = this.querySelectorAll('input[name="attachment_titles_other[]"]');
+            } else if (selectedCategory === 'Institutional') {
+                attachmentFiles = this.querySelectorAll('input[name="attachments_institutional[]"]');
+                attachmentTitles = this.querySelectorAll(
+                    'input[name="attachment_titles_institutional[]"]');
             }
-        });
-        
-        // Add keywords based on selected category
-        if (selectedCategory === 'Course') {
-            const keywordsValue = document.getElementById('keywords_course').value;
-            uploadData.append('keywords', keywordsValue);
-            const videoLink = document.getElementById('video_link');
-            if (videoLink) {
-                uploadData.append('video_link', videoLink.value);
-            }
-        } else if (selectedCategory === 'Other') {
-            const keywordsValue = document.getElementById('keywords_other').value;
-            uploadData.append('keywords', keywordsValue);
-            uploadData.append('video_link', ''); // No video link for Other category
-        } else if (selectedCategory === 'Institutional') {
-            const keywordsValue = document.getElementById('Key_words_institutional').value;
-            uploadData.append('keywords', keywordsValue);
-            const videoLink = document.getElementById('keyword_institutional');
-            if (videoLink) {
-                uploadData.append('video_link', videoLink.value);
-            }
-        }
-        
-        fetch(`/course-repository/${repositoryPk}/upload-document`, {
-            method: 'POST',
-            body: uploadData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Progress modal will auto-close and show success toast
-            if (data.success) {
-                // Reset form
-                document.getElementById('uploadForm').reset();
-                // Reload page with smooth transition
-                setTimeout(() => location.reload(), 1500);
-            } else {
-                // Hide progress modal first
-                const progressModal = bootstrap.Modal.getInstance(document.getElementById('uploadProgressModal'));
-                if (progressModal) progressModal.hide();
-                
-                showToast('error', data.error || 'Upload failed');
+
+            // Validate at least one attachment
+            let hasAttachment = false;
+            attachmentFiles.forEach(file => {
+                if (file.files.length > 0) {
+                    hasAttachment = true;
+                }
+            });
+
+            if (!hasAttachment) {
+                showToast('error', 'Please select at least one document to upload');
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-                uploadModal.show();
+                submitBtn.innerHTML =
+                    '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
+                return;
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            
-            // Hide progress modal
-            const progressModal = bootstrap.Modal.getInstance(document.getElementById('uploadProgressModal'));
-            if (progressModal) progressModal.hide();
-            
-            showToast('error', 'Network error occurred. Please try again.');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-            uploadModal.show();
+
+            // Show upload progress
+            uploadModal.hide();
+            showUploadProgress();
+
+            // Create new FormData with correct files and titles
+            const uploadData = new FormData();
+
+            // Add CSRF token
+            uploadData.append('_token', document.querySelector('[name="_token"]').value);
+
+            // Add category
+            uploadData.append('category', selectedCategory);
+
+            // Add course, subject, timetable based on selected category
+            if (selectedCategory === 'Course') {
+                const course_name = formData.get('course_name') || '';
+                const subject_name = formData.get('subject_name') || '';
+                const timetable_name = formData.get('timetable_name') || '';
+                const session_date = formData.get('session_date') || '';
+                const author_name = formData.get('author_name') || '';
+                uploadData.append('course_name', course_name);
+                uploadData.append('subject_name', subject_name);
+                uploadData.append('timetable_name', timetable_name);
+                uploadData.append('session_date', session_date);
+                uploadData.append('author_name', author_name);
+            } else if (selectedCategory === 'Other') {
+                const course_name_other = formData.get('course_name_other') || '';
+                const major_subject_other = formData.get('major_subject_other') || '';
+                const topic_name_other = formData.get('topic_name_other') || '';
+                const session_date_other = formData.get('session_date_other') || '';
+                const author_name_other = formData.get('author_name_other') || '';
+                uploadData.append('course_name', course_name_other);
+                uploadData.append('subject_name', major_subject_other);
+                uploadData.append('timetable_name', topic_name_other);
+                uploadData.append('session_date', session_date_other);
+                uploadData.append('author_name', author_name_other);
+            } else if (selectedCategory === 'Institutional') {
+                // Institutional category doesn't have these fields, send empty
+                uploadData.append('course_name', '');
+                uploadData.append('subject_name', '');
+                uploadData.append('timetable_name', '');
+                uploadData.append('session_date', '');
+                uploadData.append('author_name', '');
+            }
+
+
+            // Add files and titles
+            attachmentFiles.forEach((fileInput, index) => {
+                if (fileInput.files.length > 0) {
+                    uploadData.append('attachments[]', fileInput.files[0]);
+                    uploadData.append('attachment_titles[]', attachmentTitles[index].value ||
+                        'Untitled');
+                }
+            });
+
+            // Add keywords based on selected category
+            if (selectedCategory === 'Course') {
+                const keywordsValue = document.getElementById('keywords_course').value;
+                uploadData.append('keywords', keywordsValue);
+                const videoLink = document.getElementById('video_link');
+                if (videoLink) {
+                    uploadData.append('video_link', videoLink.value);
+                }
+            } else if (selectedCategory === 'Other') {
+                const keywordsValue = document.getElementById('keywords_other').value;
+                uploadData.append('keywords', keywordsValue);
+                uploadData.append('video_link', ''); // No video link for Other category
+            } else if (selectedCategory === 'Institutional') {
+                const keywordsValue = document.getElementById('Key_words_institutional').value;
+                uploadData.append('keywords', keywordsValue);
+                const videoLink = document.getElementById('keyword_institutional');
+                if (videoLink) {
+                    uploadData.append('video_link', videoLink.value);
+                }
+            }
+
+            fetch(`/course-repository/${repositoryPk}/upload-document`, {
+                    method: 'POST',
+                    body: uploadData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Progress modal will auto-close and show success toast
+                    if (data.success) {
+                        // Reset form
+                        document.getElementById('uploadForm').reset();
+                        // Reload page with smooth transition
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        // Hide progress modal first
+                        const progressModal = bootstrap.Modal.getInstance(document.getElementById(
+                            'uploadProgressModal'));
+                        if (progressModal) progressModal.hide();
+
+                        showToast('error', data.error || 'Upload failed');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML =
+                            '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
+                        uploadModal.show();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+
+                    // Hide progress modal
+                    const progressModal = bootstrap.Modal.getInstance(document.getElementById(
+                        'uploadProgressModal'));
+                    if (progressModal) progressModal.hide();
+
+                    showToast('error', 'Network error occurred. Please try again.');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML =
+                        '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
+                    uploadModal.show();
+                });
         });
-    });
     }
 
     // Delete document
@@ -2419,10 +2457,10 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            
+
             try {
                 const pk = this.getAttribute('data-pk');
-                
+
                 if (typeof Swal !== 'undefined') {
                     Swal.fire({
                         title: 'Are you sure?',
@@ -2439,42 +2477,43 @@ document.addEventListener('DOMContentLoaded', function() {
                                 console.warn('CSRF token not found');
                                 return;
                             }
-                            
+
                             fetch(`/course-repository/document/${pk}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRF-TOKEN': csrfToken.value,
-                                    'Content-Type': 'application/json'
-                                }
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Deleted!',
-                                        text: 'Document has been deleted.',
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    }).then(() => {
-                                        location.reload();
-                                    });
-                                } else {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'X-CSRF-TOKEN': csrfToken.value,
+                                        'Content-Type': 'application/json'
+                                    }
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Deleted!',
+                                            text: 'Document has been deleted.',
+                                            showConfirmButton: false,
+                                            timer: 1500
+                                        }).then(() => {
+                                            location.reload();
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error!',
+                                            text: data.error ||
+                                                'Delete failed'
+                                        });
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Delete error:', error);
                                     Swal.fire({
                                         icon: 'error',
                                         title: 'Error!',
-                                        text: data.error || 'Delete failed'
+                                        text: 'Delete failed'
                                     });
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Delete error:', error);
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error!',
-                                    text: 'Delete failed'
                                 });
-                            });
                         }
                     });
                 } else {
@@ -2496,7 +2535,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             const pk = this.getAttribute('data-pk');
-            
+
             Swal.fire({
                 title: 'Are you sure?',
                 text: "You won't be able to revert this!",
@@ -2510,17 +2549,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     const form = document.createElement('form');
                     form.method = 'POST';
                     form.action = `/course-repository/${pk}`;
-                    
+
                     const csrfInput = document.createElement('input');
                     csrfInput.type = 'hidden';
                     csrfInput.name = '_token';
                     csrfInput.value = document.querySelector('[name="_token"]').value;
-                    
+
                     const methodInput = document.createElement('input');
                     methodInput.type = 'hidden';
                     methodInput.name = '_method';
                     methodInput.value = 'DELETE';
-                    
+
                     form.appendChild(csrfInput);
                     form.appendChild(methodInput);
                     document.body.appendChild(form);
@@ -2535,16 +2574,17 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             const category = this.getAttribute('data-category');
-            const tableBody = this.closest('.mb-3').querySelector(`.attachmentTableBody[data-category="${category}"]`);
+            const tableBody = this.closest('.mb-3').querySelector(
+                `.attachmentTableBody[data-category="${category}"]`);
             const rowCount = tableBody.querySelectorAll('.attachment-row').length + 1;
-            
+
             const newRow = document.createElement('tr');
             newRow.className = 'attachment-row';
-            
+
             // Get correct field names based on category
             let titleFieldName = 'attachment_titles[]';
             let filesFieldName = 'attachments[]';
-            
+
             if (category === 'other') {
                 titleFieldName = 'attachment_titles_other[]';
                 filesFieldName = 'attachments_other[]';
@@ -2552,7 +2592,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 titleFieldName = 'attachment_titles_institutional[]';
                 filesFieldName = 'attachments_institutional[]';
             }
-            
+
             newRow.innerHTML = `
                 <td class="text-center row-number">
                     <span class="badge bg-light text-dark">${rowCount}</span>
@@ -2569,10 +2609,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </td>
             `;
-            
+
             tableBody.appendChild(newRow);
             updateRowNumbersForCategory(tableBody);
-            
+
             // Add delete handler to new row
             newRow.querySelector('.remove-row').addEventListener('click', function(e) {
                 e.preventDefault();
@@ -2581,13 +2621,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
-    
+
     // Function to update row numbers for specific category
     function updateRowNumbersForCategory(tableBody) {
         const rows = tableBody.querySelectorAll('.attachment-row');
         rows.forEach((row, index) => {
             row.querySelector('.row-number').textContent = index + 1;
-            
+
             // Show/hide delete button: hide for first row if only 1 row, show for others
             const deleteBtn = row.querySelector('.remove-row');
             if (rows.length === 1) {
@@ -2597,7 +2637,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Remove attachment row - Category Specific
     document.querySelectorAll('.attachmentTableBody').forEach(tableBody => {
         tableBody.querySelectorAll('.remove-row').forEach(btn => {
@@ -2619,7 +2659,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const criticalElements = [
             'createForm', 'editForm', 'uploadForm'
         ];
-        
+
         criticalElements.forEach(id => {
             const element = document.getElementById(id);
             if (!element) {
@@ -2630,7 +2670,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialize any remaining tooltips that might have been missed
         setTimeout(() => {
             try {
-                const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]:not([data-bs-original-title])');
+                const tooltips = document.querySelectorAll(
+                    '[data-bs-toggle="tooltip"]:not([data-bs-original-title])');
                 tooltips.forEach(el => {
                     if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
                         new bootstrap.Tooltip(el);
@@ -2701,7 +2742,7 @@ document.addEventListener('DOMContentLoaded', function() {
             placeholder.textContent = 'No Image';
             placeholder.style.width = this.width ? this.width + 'px' : '60px';
             placeholder.style.height = this.height ? this.height + 'px' : '60px';
-            
+
             if (this.parentNode) {
                 this.parentNode.replaceChild(placeholder, this);
             }

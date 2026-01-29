@@ -6,7 +6,7 @@
 <style>
     /* Chevron-style divider */
     .breadcrumb-divider-chevron {
-        --bs-breadcrumb-divider: "â€º";
+        --bs-breadcrumb-divider: ">";
     }
 
     /* Accessible link styling */
