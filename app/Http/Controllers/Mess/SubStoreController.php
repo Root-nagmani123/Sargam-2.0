@@ -12,7 +12,8 @@ class SubStoreController extends Controller
     public function index()
     {
         $subStores = SubStore::with('parentStore')->orderByDesc('id')->get();
-        return view('mess.sub-stores.index', compact('subStores'));
+        $stores = Store::orderBy('store_name')->get();
+        return view('mess.sub-stores.index', compact('subStores', 'stores'));
     }
 
     public function create()
