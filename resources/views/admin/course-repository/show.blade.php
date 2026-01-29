@@ -11,7 +11,7 @@
 #uploadModal .modal-dialog-scrollable .modal-body {
     max-height: calc(100vh - 250px) !important;
     overflow-y: auto !important;
-    overflow-x: hidden !important;
+    overflow-x: hidden !important; 
     padding: 1.5rem;
 }
 
@@ -358,45 +358,74 @@ document.getElementById('category_image_create')
                                     @endif
                                     @endif
                                 </td>
-                                <td>
-                                    @if($doc->detail)
-                                    @if($doc->detail->subject)
-                                    {{ Str::limit($doc->detail->subject->subject_name, 20) }}
-                                    @elseif($doc->detail->subject_pk)
-                                    {{ Str::limit($doc->detail->subject_pk, 20) }}
-                                    @else
-                                    <span class="text-muted">N/A</span>
-                                    @endif
-                                    @endif
+                                <td class="text-center">
+                                    <small class="text-muted">
+                                        @if($doc->detail)
+                                        @if($doc->detail->timetable)
+                                        {{ Str::limit($doc->detail->timetable->topic_name, 20) }}
+                                        @elseif($doc->detail->topic_pk)
+                                        {{ Str::limit($doc->detail->topic_pk, 20) }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                    </small>
                                 </td>
-                                <td>
-                                    @if($doc->detail)
-                                    @if($doc->detail->ministry)
-                                    {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
-                                    @elseif($doc->detail->ministry_master_pk)
-                                    {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
-                                    @else
-                                    <span class="text-muted">N/A</span>
-                                    @endif
-                                    @else
-                                    <span class="text-muted">N/A</span>
-                                    @endif
+                                <td class="text-center">
+                                    <small class="text-muted">
+                                        @if($doc->detail && $doc->detail->session_date)
+                                        {{ \Carbon\Carbon::parse($doc->detail->session_date)->format('d M Y') }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                    </small>
                                 </td>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td>
-                                    @if($doc->detail)
-                                    @if($doc->detail->author)
-                                    {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                    @elseif($doc->detail->author_name)
-                                    {{ Str::limit($doc->detail->author_name, 15) }}
-                                    @else
-                                    <span class="text-muted">N/A</span>
-                                    @endif
-                                    @else
-                                    <span class="text-muted">N/A</span>
-                                    @endif
+                                <td class="text-center">
+                                    <small class="text-muted">
+                                        @if($doc->detail)
+                                        @if($doc->detail->sector)
+                                        {{ Str::limit($doc->detail->sector->sector_name, 15) }}
+                                        @elseif($doc->detail->sector_master_pk)
+                                        {{ Str::limit($doc->detail->sector_master_pk, 15) }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <small class="text-muted">
+                                        @if($doc->detail)
+                                        @if($doc->detail->ministry)
+                                        {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
+                                        @elseif($doc->detail->ministry_master_pk)
+                                        {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <small class="text-muted">
+                                        @if($doc->detail)
+                                        @if($doc->detail->author)
+                                        {{ Str::limit($doc->detail->author->full_name, 15) }}
+                                        @elseif($doc->detail->author_name)
+                                        {{ Str::limit($doc->detail->author_name, 15) }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                    </small>
                                 </td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
