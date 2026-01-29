@@ -554,18 +554,13 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('client-types', \App\Http\Controllers\Mess\ClientTypeController::class)->except(['show']);
         Route::resource('number-configs', \App\Http\Controllers\Mess\NumberConfigController::class);
         
-        // Material Request Workflow
-        Route::resource('materialrequests', \App\Http\Controllers\Mess\MaterialRequestController::class)->except(['edit', 'update', 'destroy']);
-        Route::get('materialrequests/{id}/approve', [\App\Http\Controllers\Mess\MaterialRequestController::class, 'approve'])->name('materialrequests.approve');
-        Route::post('materialrequests/{id}/process-approval', [\App\Http\Controllers\Mess\MaterialRequestController::class, 'processApproval'])->name('materialrequests.processApproval');
-        
         // Purchase Order Management
         Route::resource('purchaseorders', \App\Http\Controllers\Mess\PurchaseOrderController::class)->except(['edit', 'update', 'destroy']);
+        Route::get('purchaseorders/{id}/edit', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'edit'])->name('purchaseorders.edit');
+        Route::put('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'update'])->name('purchaseorders.update');
+        Route::delete('purchaseorders/{id}', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'destroy'])->name('purchaseorders.destroy');
         Route::post('purchaseorders/{id}/approve', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
         Route::post('purchaseorders/{id}/reject', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
-        
-        // Inbound Transactions (Goods Receipt)
-        Route::resource('inboundtransactions', \App\Http\Controllers\Mess\InboundTransactionController::class)->except(['edit', 'update', 'destroy']);
         
         // Kitchen Issue Management
         Route::resource('kitchen-issues', \App\Http\Controllers\Mess\KitchenIssueController::class);

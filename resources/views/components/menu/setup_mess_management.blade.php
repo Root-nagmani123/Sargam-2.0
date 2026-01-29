@@ -65,18 +65,8 @@
         </li>
         <ul class="collapse list-unstyled ps-3" id="collapseMaterialManagement">
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.materialrequests.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Material Requests</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.purchaseorders.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Purchase Orders</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.inboundtransactions.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Goods Receipt</span>
                 </a>
             </li>
         </ul>
