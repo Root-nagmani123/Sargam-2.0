@@ -129,20 +129,22 @@
 }
 </style>
 <script>
-document.getElementById('category_image_create')
-    .addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const preview = document.getElementById('preview_create_show');
-
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            preview.src = reader.result;
-            preview.classList.remove('d-none');
-        };
-        reader.readAsDataURL(file);
-    });
+document.addEventListener('DOMContentLoaded', function() {
+    var el = document.getElementById('category_image_create');
+    if (el) {
+        el.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            var preview = document.getElementById('preview_create_show');
+            if (!file || !preview) return;
+            var reader = new FileReader();
+            reader.onload = function() {
+                preview.src = reader.result;
+                preview.classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+});
 </script>
 
 <div class="container-fluid">
@@ -210,7 +212,7 @@ document.getElementById('category_image_create')
 
                         <!-- Add Category (Primary Action) -->
                         <button type="button"
-                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift">
+                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift" data-bs-toggle="modal" data-bs-target="#createModal">
                             <span class="material-icons material-symbols-rounded fs-6">
                                 add
                             </span>
@@ -302,7 +304,7 @@ document.getElementById('category_image_create')
                                                 data-name="{{ $child->course_repository_name }}"
                                                 data-details="{{ $child->course_repository_details }}"
                                                 data-image="{{ $child->category_image }}" data-bs-toggle="tooltip"
-                                                title="Edit">
+                                                title="Edit" aria-label="Edit" aria-haspopup="true" aria-expanded="false" data-bs-target="#editModal">
                                                 <span class=" material-icons material-symbols-rounded">edit</span>
                                             </a>
                                             <a href="javascript:void(0)" class="text-primary delete-repo"
@@ -1587,11 +1589,7 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             uploadData.append('video_link', vi ? vi.value : '');
         }
 
-        var repositoryPk = {
-            {
-                $repository - > pk
-            }
-        };
+        var repositoryPk = {{ $repository->pk }};
         fetch('/course-repository/' + repositoryPk + '/upload-document', {
                 method: 'POST',
                 body: uploadData,
@@ -1664,6 +1662,149 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== EDIT/DELETE BUTTONS - Register first so they work even if other code throws =====
+    document.addEventListener('click', function(e) {
+        const editBtn = e.target.closest('.edit-repo');
+        if (editBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                const pk = editBtn.getAttribute('data-pk');
+                const image = editBtn.getAttribute('data-image');
+                const nameInput = document.getElementById('edit_course_repository_name');
+                const detailsInput = document.getElementById('edit_course_repository_details');
+                if (nameInput) nameInput.value = editBtn.getAttribute('data-name') || '';
+                if (detailsInput) detailsInput.value = editBtn.getAttribute('data-details') || '';
+                const currentImageContainer = document.getElementById('current_image_container_show');
+                const currentImage = document.getElementById('current_image_show');
+                if (image && image !== 'null' && image !== '' && currentImage && currentImageContainer) {
+                    currentImage.src = '/storage/' + image;
+                    currentImageContainer.style.display = 'block';
+                } else if (currentImageContainer) currentImageContainer.style.display = 'none';
+                const previewImage = document.getElementById('preview_edit_show');
+                if (previewImage) previewImage.style.display = 'none';
+                const editForm = document.getElementById('editForm');
+                if (editForm && pk) editForm.action = '/course-repository/' + pk;
+                const editModalEl = document.getElementById('editModal');
+                if (editModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    (new bootstrap.Modal(editModalEl)).show();
+                }
+            } catch (err) { console.warn('Edit error:', err); }
+            return;
+        }
+        const deleteRepoBtn = e.target.closest('.delete-repo');
+        if (deleteRepoBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const pk = deleteRepoBtn.getAttribute('data-pk');
+            const tokenEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
+            const token = tokenEl ? (tokenEl.getAttribute('content') || tokenEl.value) : null;
+            if (!pk || !token) return;
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, delete it!'
+                }).then(function(result) {
+                    if (result.isConfirmed) {
+                        var form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = '/course-repository/' + pk;
+                        var csrfInput = document.createElement('input');
+                        csrfInput.type = 'hidden';
+                        csrfInput.name = '_token';
+                        csrfInput.value = token;
+                        var methodInput = document.createElement('input');
+                        methodInput.type = 'hidden';
+                        methodInput.name = '_method';
+                        methodInput.value = 'DELETE';
+                        form.appendChild(csrfInput);
+                        form.appendChild(methodInput);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
+                });
+            } else {
+                if (confirm('Are you sure you want to delete this category?')) {
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/course-repository/' + pk;
+                    var csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = '_token';
+                    csrfInput.value = token;
+                    var methodInput = document.createElement('input');
+                    methodInput.type = 'hidden';
+                    methodInput.name = '_method';
+                    methodInput.value = 'DELETE';
+                    form.appendChild(csrfInput);
+                    form.appendChild(methodInput);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            }
+            return;
+        }
+        const deleteDocBtn = e.target.closest('.delete-doc');
+        if (deleteDocBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const pk = deleteDocBtn.getAttribute('data-pk');
+            if (!pk) return;
+            try {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        title: 'Are you sure?',
+                        text: "You won't be able to revert this!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it!'
+                    }).then(function(result) {
+                        if (result.isConfirmed) {
+                            var csrfEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
+                            var csrfToken = csrfEl ? (csrfEl.getAttribute('content') || csrfEl.value) : null;
+                            if (!csrfToken) return;
+                            fetch('/course-repository/document/' + pk, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': csrfToken,
+                                    'Content-Type': 'application/json'
+                                }
+                            })
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) {
+                                if (data.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Deleted!',
+                                        text: 'Document has been deleted.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    }).then(function() { location.reload(); });
+                                } else {
+                                    Swal.fire({ icon: 'error', title: 'Error!', text: data.error || 'Delete failed' });
+                                }
+                            })
+                            .catch(function() {
+                                Swal.fire({ icon: 'error', title: 'Error!', text: 'Delete failed' });
+                            });
+                        }
+                    });
+                } else {
+                    if (confirm('Are you sure you want to delete this document?')) {
+                        showToast('success', 'Document deleted successfully');
+                    }
+                }
+            } catch (err) { console.warn('Delete document error:', err); }
+        }
+    });
+
     // ===== DEFINE KEYWORDS FUNCTION FIRST =====
     function updateKeywords() {
         try {
@@ -1789,11 +1930,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Don't prevent default handling for critical errors
     });
 
-    const repositoryPk = {
-        {
-            $repository - > pk
-        }
-    };
+    var repositoryPk = {{ $repository->pk }};
 
     // ===== COURSE FILTERING LOGIC =====
     const courseStatusRadios = document.querySelectorAll('input[name="course_status"]');
@@ -2993,61 +3130,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Edit button functionality
-    document.querySelectorAll('.edit-repo').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            try {
-                const pk = this.getAttribute('data-pk');
-                const name = this.getAttribute('data-name');
-                const details = this.getAttribute('data-details');
-                const image = this.getAttribute('data-image');
-
-                // Populate edit form
-                const nameInput = document.getElementById('edit_course_repository_name');
-                const detailsInput = document.getElementById('edit_course_repository_details');
-
-                if (nameInput) nameInput.value = name || '';
-                if (detailsInput) detailsInput.value = details || '';
-
-                // Show current image if exists
-                const currentImageContainer = document.getElementById(
-                    'current_image_container_show');
-                const currentImage = document.getElementById('current_image_show');
-                if (image && image !== 'null' && image !== '' && currentImage &&
-                    currentImageContainer) {
-                    currentImage.src = '/storage/' + image;
-                    currentImageContainer.style.display = 'block';
-                } else if (currentImageContainer) {
-                    currentImageContainer.style.display = 'none';
-                }
-
-                // Clear preview
-                const previewImage = document.getElementById('preview_edit_show');
-                if (previewImage) {
-                    previewImage.style.display = 'none';
-                }
-
-                // Update form action
-                const editForm = document.getElementById('editForm');
-                if (editForm && pk) {
-                    editForm.action = `/course-repository/${pk}`;
-                }
-
-                // Show modal
-                const editModalEl = document.getElementById('editModal');
-                if (editModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                    const editModal = new bootstrap.Modal(editModalEl);
-                    editModal.show();
-                }
-            } catch (error) {
-                console.warn('Edit button functionality error:', error);
-            }
-        });
-    });
-
     // Create form submit with modern UX
     const createForm = document.getElementById('createForm');
     if (createForm) {
@@ -3165,127 +3247,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-
-    // Modern loading state
-    submitBtn.disabled = true;
-
-    // Delete document
-    document.querySelectorAll('.delete-doc').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-
-            try {
-                const pk = this.getAttribute('data-pk');
-
-                if (typeof Swal !== 'undefined') {
-                    Swal.fire({
-                        title: 'Are you sure?',
-                        text: "You won't be able to revert this!",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#d33',
-                        cancelButtonColor: '#3085d6',
-                        confirmButtonText: 'Yes, delete it!'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            const csrfToken = document.querySelector('[name="_token"]');
-                            if (!csrfToken) {
-                                console.warn('CSRF token not found');
-                                return;
-                            }
-
-                            fetch(`/course-repository/document/${pk}`, {
-                                    method: 'DELETE',
-                                    headers: {
-                                        'X-CSRF-TOKEN': csrfToken.value,
-                                        'Content-Type': 'application/json'
-                                    }
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        Swal.fire({
-                                            icon: 'success',
-                                            title: 'Deleted!',
-                                            text: 'Document has been deleted.',
-                                            showConfirmButton: false,
-                                            timer: 1500
-                                        }).then(() => {
-                                            location.reload();
-                                        });
-                                    } else {
-                                        Swal.fire({
-                                            icon: 'error',
-                                            title: 'Error!',
-                                            text: data.error ||
-                                                'Delete failed'
-                                        });
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error('Delete error:', error);
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error!',
-                                        text: 'Delete failed'
-                                    });
-                                });
-                        }
-                    });
-                } else {
-                    // Fallback if SweetAlert is not available
-                    if (confirm('Are you sure you want to delete this document?')) {
-                        showToast('success', 'Document deleted successfully');
-                        // Add actual delete logic here
-                    }
-                }
-            } catch (error) {
-                console.warn('Delete document error:', error);
-            }
-        });
-    });
-
-    // Delete category
-    document.querySelectorAll('.delete-repo').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const pk = this.getAttribute('data-pk');
-
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `/course-repository/${pk}`;
-
-                    const csrfInput = document.createElement('input');
-                    csrfInput.type = 'hidden';
-                    csrfInput.name = '_token';
-                    csrfInput.value = document.querySelector('[name="_token"]').value;
-
-                    const methodInput = document.createElement('input');
-                    methodInput.type = 'hidden';
-                    methodInput.name = '_method';
-                    methodInput.value = 'DELETE';
-
-                    form.appendChild(csrfInput);
-                    form.appendChild(methodInput);
-                    document.body.appendChild(form);
-                    form.submit();
-                }
-            });
-        });
-    });
-
     // Add new attachment row - Category Specific
     document.querySelectorAll('.addAttachmentRowBtn').forEach(btn => {
         btn.addEventListener('click', function(e) {
@@ -3331,11 +3292,14 @@ document.addEventListener('DOMContentLoaded', function() {
             updateRowNumbersForCategory(tableBody);
 
             // Add delete handler to new row
-            newRow.querySelector('.remove-row').addEventListener('click', function(e) {
-                e.preventDefault();
-                newRow.remove();
-                updateRowNumbersForCategory(tableBody);
-            });
+            var removeBtn = newRow.querySelector('.remove-row');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    newRow.remove();
+                    updateRowNumbersForCategory(tableBody);
+                });
+            }
         });
     });
 

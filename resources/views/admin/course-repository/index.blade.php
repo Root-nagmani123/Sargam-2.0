@@ -1,4 +1,4 @@
-﻿@extends('admin.layouts.master')
+@extends('admin.layouts.master')
 
 @section('title', 'Course Repositories | Lal Bahadur')
 
@@ -270,7 +270,7 @@
                                         data-image="{{ $repo->category_image }}" aria-label="Edit category">
                                         <span class="material-icons material-symbols-rounded">edit</span>
                                     </a>
-                                    <a class="delete-repo text-primary ms-2" data-pk="{{ $repo->pk }}" aria-label="Delete category">
+                                    <a href="javascript:void(0)" class="delete-repo text-primary ms-2" data-pk="{{ $repo->pk }}" aria-label="Delete category">
                                         <span class="material-icons material-symbols-rounded">delete</span>
                                     </a>
                                 </div>
@@ -597,6 +597,13 @@
 
 @section('scripts')
 <script>
+(function() {
+    // Use Laravel-generated URLs so prefix (e.g. /admin) is correct
+    var courseRepoUpdateUrlTemplate = "{{ route('course-repository.update', ['pk' => '___PK___']) }}";
+    var courseRepoDestroyUrlTemplate = "{{ route('course-repository.destroy', ['pk' => '___PK___']) }}";
+    window.getCourseRepoUpdateUrl = function(pk) { return courseRepoUpdateUrlTemplate.replace('___PK___', pk); };
+    window.getCourseRepoDestroyUrl = function(pk) { return courseRepoDestroyUrlTemplate.replace('___PK___', pk); };
+})();
 document.addEventListener('DOMContentLoaded', function() {
 
     // Image preview for create modal
@@ -635,7 +642,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Edit button functionality
     document.querySelectorAll('.edit-repo').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
             const pk = this.getAttribute('data-pk');
             const name = this.getAttribute('data-name');
             const details = this.getAttribute('data-details');
@@ -651,16 +659,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Show current image if exists
             const currentImageContainer = document.getElementById('current_image_container');
-            if (image && image.trim() !== '') {
-                document.getElementById('current_image').src = '/storage/' + image;
-                currentImageContainer.style.display = 'block';
-            } else {
-                currentImageContainer.style.display = 'none';
+            const currentImageEl = document.getElementById('current_image');
+            if (currentImageContainer && currentImageEl) {
+                if (image && image.trim() !== '') {
+                    currentImageEl.src = '/storage/' + image;
+                    currentImageContainer.style.display = 'block';
+                } else {
+                    currentImageContainer.style.display = 'none';
+                }
             }
 
-            // Update form action
+            // Update form action (use Laravel route so URL is correct)
             const editForm = document.getElementById('editForm');
-            editForm.action = `/course-repository/${pk}`;
+            editForm.action = window.getCourseRepoUpdateUrl(pk);
 
             // Show modal
             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -804,35 +815,55 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Accept': 'application/json'
                 }
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
+            .then(function(response) {
+                return response.text().then(function(text) {
+                    var data = null;
+                    try {
+                        data = text ? JSON.parse(text) : {};
+                    } catch (e) {
+                        return { ok: response.ok, status: response.status, message: text || 'Server error' };
+                    }
+                    return { ok: response.ok, status: response.status, data: data, raw: text };
+                });
+            })
+            .then(function(result) {
+                if (result.data && result.data.success) {
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
-                        text: data.message || 'Category updated successfully',
+                        text: result.data.message || 'Category updated successfully',
                         showConfirmButton: false,
                         timer: 1500
-                    }).then(() => {
+                    }).then(function() {
                         location.reload();
                     });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error!',
-                        text: data.message || 'Failed to update category'
-                    });
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML =
-                        '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
+                    return;
                 }
+                var errMsg = 'Failed to update category';
+                if (result.data) {
+                    if (result.data.message) errMsg = result.data.message;
+                    if (result.data.errors && typeof result.data.errors === 'object') {
+                        var first = Object.keys(result.data.errors).map(function(k) { return result.data.errors[k][0]; })[0];
+                        if (first) errMsg = first;
+                    }
+                } else if (result.status === 419) {
+                    errMsg = 'Session expired. Please refresh the page and try again.';
+                } else if (result.status === 422) {
+                    errMsg = 'Validation failed. Please check your input.';
+                } else if (result.message && result.message.length < 200) {
+                    errMsg = result.message;
+                }
+                Swal.fire({ icon: 'error', title: 'Error!', text: errMsg });
+                submitBtn.disabled = false;
+                submitBtn.innerHTML =
+                    '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
             })
-            .catch(error => {
+            .catch(function(error) {
                 console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
-                    text: 'Failed to update category'
+                    text: 'Failed to update category. Please try again.'
                 });
                 submitBtn.disabled = false;
                 submitBtn.innerHTML =
@@ -842,7 +873,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Delete button functionality with SweetAlert
     document.querySelectorAll('.delete-repo').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
             const pk = this.getAttribute('data-pk');
 
             Swal.fire({
@@ -855,18 +887,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 confirmButtonText: 'Yes, delete it!'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Create a form and submit it
+                    // Create a form and submit it (use Laravel route so URL is correct)
                     const form = document.createElement('form');
                     form.method = 'POST';
-                    form.action = `/course-repository/${pk}`;
+                    form.action = window.getCourseRepoDestroyUrl(pk);
 
-                    const csrfToken = document.querySelector('[name="_token"]').value;
-
-                    form.innerHTML = `
-                        <input type="hidden" name="_token" value="${csrfToken}">
-                        <input type="hidden" name="_method" value="DELETE">
-                    `;
-
+                    var csrfToken = (document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content')) || (document.querySelector('[name="_token"]') && document.querySelector('[name="_token"]').value);
+                    if (!csrfToken) {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Security token missing. Please refresh the page.' });
+                        return;
+                    }
+                    form.innerHTML = '<input type="hidden" name="_token" value="' + csrfToken + '"><input type="hidden" name="_method" value="DELETE">';
                     document.body.appendChild(form);
                     form.submit();
                 }
