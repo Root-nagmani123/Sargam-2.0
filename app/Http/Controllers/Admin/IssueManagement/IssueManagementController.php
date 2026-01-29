@@ -37,7 +37,15 @@ class IssueManagementController extends Controller
             'statusHistory'
         ])->orderBy('created_date', 'desc');
 
-        // Filter by status
+        // Active vs Archive tab: Active = non-completed (0,1,3,6), Archive = completed (2)
+        $tab = $request->get('tab', 'active');
+        if ($tab === 'archive') {
+            $query->where('issue_status', 2); // Completed only
+        } else {
+            $query->whereIn('issue_status', [0, 1, 3, 6]); // Reported, In Progress, Pending, Reopened
+        }
+
+        // Filter by status (further refines within the tab)
         if ($request->has('status') && $request->status !== '') {
             $query->where('issue_status', $request->status);
         }
@@ -65,7 +73,11 @@ class IssueManagementController extends Controller
         $categories = IssueCategoryMaster::active()->get();
         $priorities = IssuePriorityMaster::active()->ordered()->get();
 
-        return view('admin.issue_management.index', compact('issues', 'categories', 'priorities'));
+        $baseQuery = IssueLogManagement::query();
+        $activeCount = (clone $baseQuery)->whereIn('issue_status', [0, 1, 3, 6])->count();
+        $archiveCount = (clone $baseQuery)->where('issue_status', 2)->count();
+
+        return view('admin.issue_management.index', compact('issues', 'categories', 'priorities', 'tab', 'activeCount', 'archiveCount'));
     }
 
     /**
