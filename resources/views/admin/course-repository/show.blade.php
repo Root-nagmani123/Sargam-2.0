@@ -8,43 +8,95 @@
 }
 
 /* Modal Scrolling Enhancement */
-.modal-dialog-scrollable .modal-body {
-    max-height: calc(100vh - 200px);
-    overflow-y: auto;
+#uploadModal .modal-dialog-scrollable .modal-body {
+    max-height: calc(100vh - 250px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
     padding: 1.5rem;
 }
 
-.modal-dialog-scrollable .modal-header {
+#uploadModal .modal-dialog-scrollable .modal-header {
     position: sticky;
     top: 0;
     z-index: 1020;
     background-color: white;
+    flex-shrink: 0;
 }
 
-.modal-dialog-scrollable .modal-footer {
+#uploadModal .modal-dialog-scrollable .modal-footer {
     position: sticky;
     bottom: 0;
     z-index: 1020;
-    background-color: #f8f9fa;
+    background-color: white;
+    flex-shrink: 0;
+}
+
+#uploadModal .modal-dialog-scrollable {
+    max-height: calc(100vh - 1rem);
+}
+
+#uploadModal .modal-content {
+    max-height: calc(100vh - 1rem);
+    display: flex;
+    flex-direction: column;
 }
 
 /* Custom scrollbar styling */
-.modal-body::-webkit-scrollbar {
-    width: 8px;
+#uploadModal .modal-body::-webkit-scrollbar {
+    width: 10px;
 }
 
-.modal-body::-webkit-scrollbar-track {
+#uploadModal .modal-body::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 10px;
 }
 
-.modal-body::-webkit-scrollbar-thumb {
+#uploadModal .modal-body::-webkit-scrollbar-thumb {
     background: #0d6efd;
     border-radius: 10px;
 }
 
-.modal-body::-webkit-scrollbar-thumb:hover {
+#uploadModal .modal-body::-webkit-scrollbar-thumb:hover {
     background: #0b5ed7;
+}
+
+/* Attachments table container scrolling */
+#uploadModal #course_attachments_container,
+#uploadModal #other_attachments_container {
+    max-height: 300px !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    position: relative;
+}
+
+#uploadModal #course_attachments_container table,
+#uploadModal #other_attachments_container table {
+    margin-bottom: 0;
+}
+
+#uploadModal #course_attachments_container::-webkit-scrollbar,
+#uploadModal #other_attachments_container::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+#uploadModal #course_attachments_container::-webkit-scrollbar-track,
+#uploadModal #other_attachments_container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+#uploadModal #course_attachments_container::-webkit-scrollbar-thumb,
+#uploadModal #other_attachments_container::-webkit-scrollbar-thumb {
+    background: #6c757d;
+    border-radius: 10px;
+}
+
+#uploadModal #course_attachments_container::-webkit-scrollbar-thumb:hover,
+#uploadModal #other_attachments_container::-webkit-scrollbar-thumb:hover {
+    background: #5a6268;
 }
 
 </style>
@@ -573,9 +625,11 @@ document.getElementById('category_image_create')
             <form id="uploadForm"
       method="POST"
       action="javascript:void(0);"
-      enctype="multipart/form-data">
+      enctype="multipart/form-data"
+      novalidate>
                 @csrf
-                <div class="modal-body p-4 bg-light">
+                <div id="uploadFormErrors" class="alert alert-danger d-none mx-4 mt-3 mb-0" role="alert"></div>
+                <div class="modal-body p-4 bg-light" style="max-height: calc(100vh - 250px); overflow-y: auto; overflow-x: hidden;">
                     <!-- Category Type Selection - Radio Buttons -->
                     <div class="mb-3">
                         <div class="d-flex gap-4 align-items-center">
@@ -767,7 +821,7 @@ document.getElementById('category_image_create')
                                     </label>
                                     
                                     <!-- Attachments Table -->
-                                    <div class="table-responsive" id="course_attachments_container">
+                                    <div class="table-responsive" id="course_attachments_container" style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
                                         <table class="table table-bordered table-hover mb-0">
                                             <thead class="bg-light">
                                                 <tr>
@@ -959,7 +1013,7 @@ document.getElementById('category_image_create')
                                     </label>
                                     
                                     <!-- Attachments Table -->
-                                    <div class="table-responsive" id="other_attachments_container">
+                                    <div class="table-responsive" id="other_attachments_container" style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
                                         <table class="table table-bordered table-hover mb-0">
                                             <thead class="bg-light">
                                                 <tr>
@@ -1269,6 +1323,269 @@ document.getElementById('category_image_create')
 @endsection
 
 <script>
+// ===== UPLOAD FORM SUBMIT - EVENT DELEGATION (runs first, always attached) =====
+document.addEventListener('submit', function uploadFormSubmitHandler(e) {
+    if (!e.target || e.target.id !== 'uploadForm') return;
+    e.preventDefault();
+
+    var uploadFormErrorsEl = document.getElementById('uploadFormErrors');
+    var showUploadError = function(msg) {
+        var text = (typeof msg === 'string') ? msg : String(msg);
+        if (uploadFormErrorsEl) {
+            uploadFormErrorsEl.textContent = text;
+            uploadFormErrorsEl.classList.remove('d-none');
+            uploadFormErrorsEl.style.display = 'block';
+            uploadFormErrorsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        try { alert(text); } catch (a) {}
+    };
+    var hideUploadError = function() {
+        if (uploadFormErrorsEl) {
+            uploadFormErrorsEl.classList.add('d-none');
+            uploadFormErrorsEl.innerHTML = '';
+        }
+    };
+    hideUploadError();
+
+    var form = e.target;
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var uploadModalEl = document.getElementById('uploadModal');
+    var uploadModal = null;
+    try {
+        if (typeof bootstrap !== 'undefined' && uploadModalEl) {
+            uploadModal = bootstrap.Modal.getInstance(uploadModalEl) || new bootstrap.Modal(uploadModalEl);
+        }
+    } catch (err) {}
+
+    try {
+        var formData = new FormData(form);
+        var selectedCategory = (document.querySelector('input[name="category"]:checked') || {}).value;
+        if (!selectedCategory) {
+            showUploadError('Please select a category (Course, Other or Institutional).');
+            return;
+        }
+
+        if (selectedCategory === 'Course') {
+            var course_name = formData.get('course_name');
+            var subject_name = formData.get('subject_name');
+            var timetable_name = formData.get('timetable_name');
+            var session_date = formData.get('session_date');
+            var author_name = formData.get('author_name');
+            var keywordsEl = document.getElementById('keywords_course');
+            var keywords = keywordsEl ? keywordsEl.value.trim() : '';
+            var sector = formData.get('sector_master');
+            var ministry = formData.get('ministry_master');
+            var req = [];
+            if (!course_name) req.push('Course Name');
+            if (!subject_name) req.push('Major Subject Name');
+            if (!timetable_name) req.push('Topic Name');
+            if (!session_date) req.push('Session Date');
+            if (!author_name) req.push('Author Name');
+            if (!keywords) req.push('Keywords');
+            if (!sector) req.push('Sector');
+            if (!ministry) req.push('Ministry');
+            if (req.length > 0) {
+                showUploadError('Please fill required fields: ' + req.join(', '));
+                return;
+            }
+        } else if (selectedCategory === 'Other') {
+            var course_name_other = formData.get('course_name_other');
+            var major_subject_other = formData.get('major_subject_other');
+            var topic_name_other = formData.get('topic_name_other');
+            var session_date_other = formData.get('session_date_other');
+            var author_name_other = formData.get('author_name_other');
+            var keywordsOtherEl = document.getElementById('keywords_other');
+            var keywords_other = keywordsOtherEl ? keywordsOtherEl.value.trim() : '';
+            var sector_other = formData.get('sector_master_other');
+            var ministry_other = formData.get('ministry_master_other');
+            var req = [];
+            if (!course_name_other) req.push('Course Name');
+            if (!major_subject_other) req.push('Major Subject Name');
+            if (!topic_name_other) req.push('Topic Name');
+            if (!session_date_other) req.push('Session Date');
+            if (!author_name_other) req.push('Author Name');
+            if (!keywords_other) req.push('Keywords');
+            if (!sector_other) req.push('Sector');
+            if (!ministry_other) req.push('Ministry');
+            if (req.length > 0) {
+                showUploadError('Please fill required fields: ' + req.join(', '));
+                return;
+            }
+        } else if (selectedCategory === 'Institutional') {
+            var keywordsInstEl = document.getElementById('Key_words_institutional');
+            var keywordsInst = keywordsInstEl ? keywordsInstEl.value.trim() : '';
+            if (!keywordsInst) {
+                showUploadError('Please fill Keywords.');
+                return;
+            }
+        }
+
+        var attachmentFiles = [];
+        var attachmentTitles = [];
+        if (selectedCategory === 'Course') {
+            attachmentFiles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachments[]"]'));
+            attachmentTitles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachment_titles[]"]'));
+        } else if (selectedCategory === 'Other') {
+            attachmentFiles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachments_other[]"]'));
+            attachmentTitles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachment_titles_other[]"]'));
+        } else if (selectedCategory === 'Institutional') {
+            attachmentFiles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachments_institutional[]"]'));
+            attachmentTitles = [];
+        }
+
+        var validAttachmentCount = 0;
+        var validationErrors = [];
+        if (selectedCategory === 'Institutional') {
+            attachmentFiles.forEach(function(fileInput) {
+                if (fileInput.files && fileInput.files.length > 0) validAttachmentCount += fileInput.files.length;
+            });
+            if (validAttachmentCount === 0) {
+                showUploadError('Please select at least one file to upload.');
+                return;
+            }
+        } else {
+            attachmentFiles.forEach(function(fileInput, index) {
+                var hasFile = fileInput.files && fileInput.files.length > 0;
+                var titleEl = attachmentTitles[index];
+                var hasTitle = titleEl && titleEl.value && titleEl.value.trim() !== '';
+                if (hasFile && !hasTitle) validationErrors.push('Row ' + (index + 1) + ': File selected but title is missing');
+                else if (hasTitle && !hasFile) validationErrors.push('Row ' + (index + 1) + ': Title provided but no file selected');
+                else if (hasFile && hasTitle) validAttachmentCount++;
+            });
+            if (validationErrors.length > 0) {
+                showUploadError(validationErrors.join(' | '));
+                return;
+            }
+            if (validAttachmentCount === 0) {
+                showUploadError('Please add at least one attachment with both title and file.');
+                return;
+            }
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+        }
+        if (uploadModal) try { uploadModal.hide(); } catch (h) {}
+
+        var uploadData = new FormData();
+        uploadData.append('_token', (form.querySelector('[name="_token"]') || {}).value || '');
+        uploadData.append('category', selectedCategory);
+
+        if (selectedCategory === 'Course') {
+            uploadData.append('course_name', formData.get('course_name') || '');
+            uploadData.append('subject_name', formData.get('subject_name') || '');
+            uploadData.append('timetable_name', formData.get('timetable_name') || '');
+            uploadData.append('session_date', formData.get('session_date') || '');
+            uploadData.append('author_name', formData.get('author_name') || '');
+            uploadData.append('sector_master', formData.get('sector_master') || '');
+            uploadData.append('ministry_master', formData.get('ministry_master') || '');
+        } else if (selectedCategory === 'Other') {
+            uploadData.append('course_name', formData.get('course_name_other') || '');
+            uploadData.append('subject_name', formData.get('major_subject_other') || '');
+            uploadData.append('timetable_name', formData.get('topic_name_other') || '');
+            uploadData.append('session_date', formData.get('session_date_other') || '');
+            uploadData.append('author_name', formData.get('author_name_other') || '');
+            uploadData.append('sector_master', formData.get('sector_master_other') || '');
+            uploadData.append('ministry_master', formData.get('ministry_master_other') || '');
+        } else {
+            uploadData.append('course_name', '');
+            uploadData.append('subject_name', '');
+            uploadData.append('timetable_name', '');
+            uploadData.append('session_date', '');
+            uploadData.append('author_name', '');
+        }
+
+        if (selectedCategory === 'Institutional') {
+            attachmentFiles.forEach(function(fileInput) {
+                if (fileInput.files) {
+                    for (var i = 0; i < fileInput.files.length; i++) {
+                        uploadData.append('attachments[]', fileInput.files[i]);
+                        uploadData.append('attachment_titles[]', fileInput.files[i].name || ('Document ' + (i + 1)));
+                    }
+                }
+            });
+        } else {
+            attachmentFiles.forEach(function(fileInput, index) {
+                if (fileInput.files && fileInput.files.length > 0) {
+                    uploadData.append('attachments[]', fileInput.files[0]);
+                    var title = (attachmentTitles[index] && attachmentTitles[index].value && attachmentTitles[index].value.trim()) ? attachmentTitles[index].value.trim() : 'Untitled';
+                    uploadData.append('attachment_titles[]', title);
+                }
+            });
+        }
+
+        if (selectedCategory === 'Course') {
+            var kw = document.getElementById('keywords_course');
+            uploadData.append('keywords', kw ? kw.value : '');
+            var vc = document.getElementById('video_link_course');
+            uploadData.append('video_link', vc ? vc.value : '');
+        } else if (selectedCategory === 'Other') {
+            var ko = document.getElementById('keywords_other');
+            uploadData.append('keywords', ko ? ko.value : '');
+            var vo = document.getElementById('video_link_other');
+            uploadData.append('video_link', vo ? vo.value : '');
+        } else {
+            var ki = document.getElementById('Key_words_institutional');
+            uploadData.append('keywords', ki ? ki.value : '');
+            var vi = document.getElementById('keyword_institutional');
+            uploadData.append('video_link', vi ? vi.value : '');
+        }
+
+        var repositoryPk = {{ $repository->pk }};
+        fetch('/course-repository/' + repositoryPk + '/upload-document', {
+            method: 'POST',
+            body: uploadData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+        .then(function(response) {
+            return response.json().then(function(data) {
+                return { ok: response.ok, status: response.status, data: data };
+            }).catch(function() {
+                return { ok: false, data: { error: 'Server returned an invalid response. Please try again.' } };
+            });
+        })
+        .then(function(result) {
+            if (result.ok && result.data && result.data.success) {
+                hideUploadError();
+                form.reset();
+                alert('Upload successful!');
+                setTimeout(function() { location.reload(); }, 1500);
+                return;
+            }
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Save';
+            }
+            if (uploadModal) try { uploadModal.show(); } catch (s) {}
+            var errMsg = (result.data && result.data.error) || 'Upload failed';
+            if (result.data && result.data.errors && typeof result.data.errors === 'object') {
+                var parts = [];
+                Object.keys(result.data.errors).forEach(function(field) {
+                    var val = result.data.errors[field];
+                    parts.push(Array.isArray(val) ? val.join(' ') : val);
+                });
+                if (parts.length) errMsg = parts.join(' | ');
+            }
+            showUploadError(errMsg);
+        })
+        .catch(function(error) {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = 'Save';
+            }
+            if (uploadModal) try { uploadModal.show(); } catch (s) {}
+            showUploadError('Network error. Please try again.');
+        });
+    } catch (err) {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'Save';
+        }
+        showUploadError('Error: ' + (err.message || String(err)));
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // ===== DEFINE KEYWORDS FUNCTION FIRST =====
     function updateKeywords() {
@@ -2494,7 +2811,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const uploadModalElement = document.getElementById('uploadModal');
     if (uploadModalElement) {
         uploadModalElement.addEventListener('shown.bs.modal', function() {
-            console.log('Upload modal shown - triggering updateKeywords');
+            const errEl = document.getElementById('uploadFormErrors');
+            if (errEl) {
+                errEl.classList.add('d-none');
+                errEl.innerHTML = '';
+            }
             setTimeout(function() {
                 updateKeywords();
                 updateKeywordsOther();
@@ -2982,188 +3303,7 @@ document.addEventListener('DOMContentLoaded', function() {
         console.warn('Final initialization error:', finalError);
     }
 
-    // ===== UPLOAD FORM SUBMISSION - INSIDE DOMContentLoaded =====
-    
-    // Upload document form submission handler
-    const uploadForm = document.getElementById('uploadForm');
-    console.log('uploadForm element:', uploadForm);
-    if (uploadForm) {
-        uploadForm.addEventListener('submit', function(e) {
-            console.log('Form submit event triggered!');
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            const submitBtn = this.querySelector('button[type="submit"]');
-            const uploadModalEl = document.getElementById('uploadModal');
-            let uploadModal = null;
-            try {
-                uploadModal = bootstrap.Modal.getInstance(uploadModalEl);
-            } catch(err) {
-                console.warn('Could not get modal instance:', err);
-                uploadModal = new bootstrap.Modal(uploadModalEl);
-            }
-            
-            // Modern loading state
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing...';
-            
-            // Get selected category
-            const selectedCategory = document.querySelector('input[name="category"]:checked').value;
-            
-            // Get attachment files and titles based on selected category
-            let attachmentFiles, attachmentTitles;
-            
-            if (selectedCategory === 'Course') {
-                attachmentFiles = this.querySelectorAll('input[name="attachments[]"]');
-                attachmentTitles = this.querySelectorAll('input[name="attachment_titles[]"]');
-            } else if (selectedCategory === 'Other') {
-                attachmentFiles = this.querySelectorAll('input[name="attachments_other[]"]');
-                attachmentTitles = this.querySelectorAll('input[name="attachment_titles_other[]"]');
-            } else if (selectedCategory === 'Institutional') {
-                attachmentFiles = this.querySelectorAll('input[name="attachments_institutional[]"]');
-                attachmentTitles = this.querySelectorAll('input[name="attachment_titles_institutional[]"]');
-            }
-            
-            // Validate: Check if at least one attachment has both title and file
-            let validAttachmentCount = 0;
-            let validationErrors = [];
-            
-            attachmentFiles.forEach((fileInput, index) => {
-                const hasFile = fileInput.files.length > 0;
-                const hasTitle = attachmentTitles[index] && attachmentTitles[index].value.trim() !== '';
-                
-                if (hasFile && !hasTitle) {
-                    validationErrors.push(`Row ${index + 1}: File selected but title is missing`);
-                } else if (hasTitle && !hasFile) {
-                    validationErrors.push(`Row ${index + 1}: Title provided but no file selected`);
-                } else if (hasFile && hasTitle) {
-                    validAttachmentCount++;
-                }
-            });
-            
-            // Show validation errors if any
-            if (validationErrors.length > 0) {
-                alert('Please complete all attachment entries: ' + validationErrors[0]);
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-                return;
-            }
-            
-            // Check if at least one complete attachment exists
-            if (validAttachmentCount === 0) {
-                alert('Please select at least one document to upload with a title');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-                return;
-            }
-            
-            // Show upload progress
-            if (uploadModal) uploadModal.hide();
-            
-            // Create new FormData with correct files and titles
-            const uploadData = new FormData();
-            
-            // Add CSRF token
-            uploadData.append('_token', document.querySelector('[name="_token"]').value);
-            
-            // Add category
-            uploadData.append('category', selectedCategory);
-            
-            // Add course, subject, timetable based on selected category
-            if (selectedCategory === 'Course') {
-                const course_name = formData.get('course_name') || '';
-                const subject_name = formData.get('subject_name') || '';
-                const timetable_name = formData.get('timetable_name') || '';
-                const session_date = formData.get('session_date') || '';
-                const author_name = formData.get('author_name') || '';
-                uploadData.append('course_name', course_name);
-                uploadData.append('subject_name', subject_name);
-                uploadData.append('timetable_name', timetable_name);
-                uploadData.append('session_date', session_date);
-                uploadData.append('author_name', author_name);
-            } else if (selectedCategory === 'Other') {
-                const course_name_other = formData.get('course_name_other') || '';
-                const major_subject_other = formData.get('major_subject_other') || '';
-                const topic_name_other = formData.get('topic_name_other') || '';
-                const session_date_other = formData.get('session_date_other') || '';
-                const author_name_other = formData.get('author_name_other') || '';
-                uploadData.append('course_name', course_name_other);
-                uploadData.append('subject_name', major_subject_other);
-                uploadData.append('timetable_name', topic_name_other);
-                uploadData.append('session_date', session_date_other);
-                uploadData.append('author_name', author_name_other);
-            } else if (selectedCategory === 'Institutional') {
-                uploadData.append('course_name', '');
-                uploadData.append('subject_name', '');
-                uploadData.append('timetable_name', '');
-                uploadData.append('session_date', '');
-                uploadData.append('author_name', '');
-            }
-            
-            // Add files and titles
-            attachmentFiles.forEach((fileInput, index) => {
-                if (fileInput.files.length > 0) {
-                    uploadData.append('attachments[]', fileInput.files[0]);
-                    uploadData.append('attachment_titles[]', attachmentTitles[index].value || 'Untitled');
-                }
-            });
-            
-            // Add keywords based on selected category
-            if (selectedCategory === 'Course') {
-                const keywordsValue = document.getElementById('keywords_course').value;
-                uploadData.append('keywords', keywordsValue);
-                const videoLink = document.getElementById('video_link_course');
-                if (videoLink) {
-                    uploadData.append('video_link', videoLink.value);
-                }
-            } else if (selectedCategory === 'Other') {
-                const keywordsValue = document.getElementById('keywords_other').value;
-                uploadData.append('keywords', keywordsValue);
-                uploadData.append('video_link', '');
-            } else if (selectedCategory === 'Institutional') {
-                const keywordsValue = document.getElementById('Key_words_institutional').value;
-                uploadData.append('keywords', keywordsValue);
-                const videoLink = document.getElementById('keyword_institutional');
-                if (videoLink) {
-                    uploadData.append('video_link', videoLink.value);
-                }
-            }
-            
-            const repositoryPk = {{ $repository->pk }};
-            
-            console.log('Sending fetch request to:', `/course-repository/${repositoryPk}/upload-document`);
-            
-            fetch(`/course-repository/${repositoryPk}/upload-document`, {
-                method: 'POST',
-                body: uploadData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Response data:', data);
-                if (data.success) {
-                    document.getElementById('uploadForm').reset();
-                    alert('Upload successful!');
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    alert('Upload failed: ' + (data.error || 'Unknown error'));
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-                    if (uploadModal) uploadModal.show();
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Network error occurred. Please try again.');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span class="material-symbols-outlined me-1" style="font-size: 16px;">cloud_upload</span>Upload Documents';
-                if (uploadModal) uploadModal.show();
-            });
-        });
-    }
-
+    // Upload form submit is handled by document-level listener (see top of script)
 });
 
 // ===== ATTACHMENT ADD MORE FUNCTIONALITY - OUTSIDE DOMContentLoaded =====
