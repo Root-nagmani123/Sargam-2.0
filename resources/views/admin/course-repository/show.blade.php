@@ -375,6 +375,21 @@ document.getElementById('category_image_create')
                                 </td>
                                 <td class="text-center">
                                     <small class="text-muted">
+                                        @if($doc->detail)
+                                        @if($doc->detail->timetable)
+                                        {{ Str::limit($doc->detail->timetable->topic_name, 20) }}
+                                        @elseif($doc->detail->topic_pk)
+                                        {{ Str::limit($doc->detail->topic_pk, 20) }}
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                        @else
+                                        <span class="text-muted">N/A</span>
+                                        @endif
+                                    </small>
+                                </td>
+                                <td class="text-center">
+                                    <small class="text-muted">
                                         @if($doc->detail && $doc->detail->session_date)
                                         {{ \Carbon\Carbon::parse($doc->detail->session_date)->format('d M Y') }}
                                         @else
