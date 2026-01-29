@@ -98,7 +98,6 @@
 #uploadModal #other_attachments_container::-webkit-scrollbar-thumb:hover {
     background: #5a6268;
 }
-
 </style>
 
 @endpush
@@ -197,16 +196,29 @@ document.getElementById('category_image_create')
                             <h3 class="mb-0 fw-bold text-primary">{{ $repository->course_repository_name }}</h3>
                         </div>
                     </div>
-                    <div class="d-flex gap-2 flex-wrap">
-                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm px-3 rounded-pill"
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+
+                        <!-- Upload Documents (Secondary Action) -->
+                        <button type="button"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow-sm btn-hover-lift"
                             data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            Upload Documents
-                        </a>
-                        <a href="javascript:void(0)" class="btn btn-primary btn-sm px-3 rounded-pill shadow-sm"
-                            data-bs-toggle="modal" data-bs-target="#createModal">
-                            Add Category
-                        </a>
+                            <span class="material-icons material-symbols-rounded fs-6">
+                                upload
+                            </span>
+                            <span>Upload Documents</span>
+                        </button>
+
+                        <!-- Add Category (Primary Action) -->
+                        <button type="button"
+                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift">
+                            <span class="material-icons material-symbols-rounded fs-6">
+                                add
+                            </span>
+                            <span>Add Category</span>
+                        </button>
+
                     </div>
+
                 </div>
 
                 @if($repository->children->count() == 0 && $documents->count() == 0)
@@ -219,11 +231,11 @@ document.getElementById('category_image_create')
                     <h5 class="text-muted mb-2">No Content Found</h5>
                     <p class="text-muted mb-4">Start by adding a category or uploading a document to get started.</p>
                     <div class="d-flex gap-2 justify-content-center">
-                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded-pill" data-bs-toggle="modal"
+                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded" data-bs-toggle="modal"
                             data-bs-target="#createModal">
                             Add Category
                         </a>
-                        <a href="" class="btn btn-outline-primary btn-sm rounded-pill">Upload Document
+                        <a href="" class="btn btn-outline-primary btn-sm rounded">Upload Document
                         </a>
                     </div>
                 </div>
@@ -329,71 +341,63 @@ document.getElementById('category_image_create')
                         <tbody>
                             @foreach ($documents as $index => $doc)
                             <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                <td class="text-center">{{ $loop->iteration }}</td>
-                                <td class="text-center">
+                                <td>{{ $loop->iteration }}</td>
+                                <td>
                                     <i class="fas fa-file-alt text-primary me-2"></i>
                                     <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
                                 </td>
-                                <td class="text-center">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail)
-                                        @if($doc->detail->course)
-                                        {{ $doc->detail->course->course_name }}
-                                        @elseif($doc->detail->course_master_pk)
-                                        {{ $doc->detail->course_master_pk }}
-                                        @else
-                                        N/A
-                                        @endif
-                                        @endif
-                                    </small>
-                                </td>
-                                <td class="text-center">
-                                    <small>
-                                        @if($doc->detail)
-                                        @if($doc->detail->subject)
-                                        {{ Str::limit($doc->detail->subject->subject_name, 20) }}
-                                        @elseif($doc->detail->subject_pk)
-                                        {{ Str::limit($doc->detail->subject_pk, 20) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @endif
-                                    </small>
+                                <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                <td>
+                                    @if($doc->detail)
+                                    @if($doc->detail->course)
+                                    {{ $doc->detail->course->course_name }}
+                                    @elseif($doc->detail->course_master_pk)
+                                    {{ $doc->detail->course_master_pk }}
+                                    @else
+                                    N/A
+                                    @endif
+                                    @endif
                                 </td>
                                 <td>
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->ministry)
-                                        {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
-                                        @elseif($doc->detail->ministry_master_pk)
-                                        {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
+                                    @if($doc->detail)
+                                    @if($doc->detail->subject)
+                                    {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                    @elseif($doc->detail->subject_pk)
+                                    {{ Str::limit($doc->detail->subject_pk, 20) }}
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                    @endif
                                 </td>
                                 <td>
-                                    <small class="text-muted">
-                                        @if($doc->detail)
-                                        @if($doc->detail->author)
-                                        {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                        @elseif($doc->detail->author_name)
-                                        {{ Str::limit($doc->detail->author_name, 15) }}
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                        @else
-                                        <span class="text-muted">N/A</span>
-                                        @endif
-                                    </small>
+                                    @if($doc->detail)
+                                    @if($doc->detail->ministry)
+                                    {{ Str::limit($doc->detail->ministry->ministry_name, 15) }}
+                                    @elseif($doc->detail->ministry_master_pk)
+                                    {{ Str::limit($doc->detail->ministry_master_pk, 15) }}
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
                                 </td>
                                 <td></td>
                                 <td></td>
                                 <td></td>
+                                <td>
+                                    @if($doc->detail)
+                                    @if($doc->detail->author)
+                                    {{ Str::limit($doc->detail->author->full_name, 15) }}
+                                    @elseif($doc->detail->author_name)
+                                    {{ Str::limit($doc->detail->author_name, 15) }}
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                    @else
+                                    <span class="text-muted">N/A</span>
+                                    @endif
+                                </td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
                                         <a href="{{ route('course-repository.document.download', $doc->pk) }}"
@@ -596,14 +600,11 @@ document.getElementById('category_image_create')
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="uploadForm"
-      method="POST"
-      action="javascript:void(0);"
-      enctype="multipart/form-data"
-      novalidate>
+            <form id="uploadForm" method="POST" action="javascript:void(0);" enctype="multipart/form-data" novalidate>
                 @csrf
                 <div id="uploadFormErrors" class="alert alert-danger d-none mx-4 mt-3 mb-0" role="alert"></div>
-                <div class="modal-body p-4 bg-light" style="max-height: calc(100vh - 250px); overflow-y: auto; overflow-x: hidden;">
+                <div class="modal-body p-4 bg-light"
+                    style="max-height: calc(100vh - 250px); overflow-y: auto; overflow-x: hidden;">
                     <!-- Category Type Selection - Radio Buttons -->
                     <div class="mb-3">
                         <div class="d-flex gap-4 align-items-center">
@@ -777,10 +778,11 @@ document.getElementById('category_image_create')
                                 <!-- Video Link -->
                                 <div class="mb-4">
                                     <label for="video_link_course" class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2" style="font-size: 18px; vertical-align: middle;">video_library</span>
+                                        <span class="material-icons material-symbols-rounded me-2"
+                                            style="font-size: 18px; vertical-align: middle;">video_library</span>
                                         Video Link
                                     </label>
-                                    <input type="url" class="form-control" id="video_link_course" 
+                                    <input type="url" class="form-control" id="video_link_course"
                                         name="video_link_course" placeholder="https://www.youtube.com/watch?v=...">
                                     <small class="text-muted d-block mt-1">
                                         <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
@@ -790,12 +792,14 @@ document.getElementById('category_image_create')
                                 <!-- Attachments with Titles -->
                                 <div class="mb-4">
                                     <label class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2" style="font-size: 18px; vertical-align: middle;">attach_file</span>
+                                        <span class="material-icons material-symbols-rounded me-2"
+                                            style="font-size: 18px; vertical-align: middle;">attach_file</span>
                                         Attachments <span class="text-danger">*</span>
                                     </label>
-                                    
+
                                     <!-- Attachments Table -->
-                                    <div class="table-responsive" id="course_attachments_container" style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
+                                    <div class="table-responsive" id="course_attachments_container"
+                                        style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
                                         <table class="table table-bordered table-hover mb-0">
                                             <thead class="bg-light">
                                                 <tr>
@@ -809,17 +813,19 @@ document.getElementById('category_image_create')
                                                 <tr class="attachment-row">
                                                     <td class="row-number">1</td>
                                                     <td>
-                                                        <input type="text" class="form-control form-control-sm" 
+                                                        <input type="text" class="form-control form-control-sm"
                                                             name="attachment_titles[]" placeholder="e.g., Week-01">
                                                     </td>
                                                     <td>
-                                                        <input type="file" class="form-control form-control-sm" 
+                                                        <input type="file" class="form-control form-control-sm"
                                                             name="attachments[]" accept="*/*">
                                                     </td>
                                                     <td class="text-center">
-                                                        <button type="button" class="btn btn-sm btn-danger delete-attachment" 
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-danger delete-attachment"
                                                             style="display: none;">
-                                                            <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                                                            <span class="material-icons material-symbols-rounded"
+                                                                style="font-size: 16px;">delete</span>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -829,9 +835,11 @@ document.getElementById('category_image_create')
 
                                     <!-- Add More Button -->
                                     <div class="mt-3">
-                                        <button type="button" class="btn btn-outline-primary btn-sm add-attachment-course" 
+                                        <button type="button"
+                                            class="btn btn-outline-primary btn-sm add-attachment-course"
                                             data-category="course">
-                                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">add_circle</span>
+                                            <span class="material-icons material-symbols-rounded me-1"
+                                                style="font-size: 16px;">add_circle</span>
                                             Add More Attachment
                                         </button>
                                     </div>
@@ -969,11 +977,12 @@ document.getElementById('category_image_create')
                                 <!-- Video Link -->
                                 <div class="mb-4">
                                     <label for="video_link_other" class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2" style="font-size: 18px; vertical-align: middle;">video_library</span>
+                                        <span class="material-icons material-symbols-rounded me-2"
+                                            style="font-size: 18px; vertical-align: middle;">video_library</span>
                                         Video Link
                                     </label>
-                                    <input type="url" class="form-control" id="video_link_other" 
-                                        name="video_link_other" placeholder="https://www.youtube.com/watch?v=...">
+                                    <input type="url" class="form-control" id="video_link_other" name="video_link_other"
+                                        placeholder="https://www.youtube.com/watch?v=...">
                                     <small class="text-muted d-block mt-1">
                                         <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
                                     </small>
@@ -982,12 +991,14 @@ document.getElementById('category_image_create')
                                 <!-- Attachments with Titles -->
                                 <div class="mb-4">
                                     <label class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2" style="font-size: 18px; vertical-align: middle;">attach_file</span>
+                                        <span class="material-icons material-symbols-rounded me-2"
+                                            style="font-size: 18px; vertical-align: middle;">attach_file</span>
                                         Attachments <span class="text-danger">*</span>
                                     </label>
-                                    
+
                                     <!-- Attachments Table -->
-                                    <div class="table-responsive" id="other_attachments_container" style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
+                                    <div class="table-responsive" id="other_attachments_container"
+                                        style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
                                         <table class="table table-bordered table-hover mb-0">
                                             <thead class="bg-light">
                                                 <tr>
@@ -1001,17 +1012,20 @@ document.getElementById('category_image_create')
                                                 <tr class="attachment-row">
                                                     <td class="row-number">1</td>
                                                     <td>
-                                                        <input type="text" class="form-control form-control-sm" 
-                                                            name="attachment_titles_other[]" placeholder="e.g., Document-01">
+                                                        <input type="text" class="form-control form-control-sm"
+                                                            name="attachment_titles_other[]"
+                                                            placeholder="e.g., Document-01">
                                                     </td>
                                                     <td>
-                                                        <input type="file" class="form-control form-control-sm" 
+                                                        <input type="file" class="form-control form-control-sm"
                                                             name="attachments_other[]" accept="*/*">
                                                     </td>
                                                     <td class="text-center">
-                                                        <button type="button" class="btn btn-sm btn-danger delete-attachment" 
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-danger delete-attachment"
                                                             style="display: none;">
-                                                            <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                                                            <span class="material-icons material-symbols-rounded"
+                                                                style="font-size: 16px;">delete</span>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -1021,9 +1035,11 @@ document.getElementById('category_image_create')
 
                                     <!-- Add More Button -->
                                     <div class="mt-3">
-                                        <button type="button" class="btn btn-outline-primary btn-sm add-attachment-other" 
+                                        <button type="button"
+                                            class="btn btn-outline-primary btn-sm add-attachment-other"
                                             data-category="other">
-                                            <span class="material-icons material-symbols-rounded me-1" style="font-size: 16px;">add_circle</span>
+                                            <span class="material-icons material-symbols-rounded me-1"
+                                                style="font-size: 16px;">add_circle</span>
                                             Add More Attachment
                                         </button>
                                     </div>
@@ -1313,9 +1329,14 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             uploadFormErrorsEl.textContent = text;
             uploadFormErrorsEl.classList.remove('d-none');
             uploadFormErrorsEl.style.display = 'block';
-            uploadFormErrorsEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            uploadFormErrorsEl.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
         }
-        try { alert(text); } catch (a) {}
+        try {
+            alert(text);
+        } catch (a) {}
     };
     var hideUploadError = function() {
         if (uploadFormErrorsEl) {
@@ -1402,12 +1423,16 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
         var attachmentTitles = [];
         if (selectedCategory === 'Course') {
             attachmentFiles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachments[]"]'));
-            attachmentTitles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachment_titles[]"]'));
+            attachmentTitles = Array.prototype.slice.call(form.querySelectorAll(
+                'input[name="attachment_titles[]"]'));
         } else if (selectedCategory === 'Other') {
-            attachmentFiles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachments_other[]"]'));
-            attachmentTitles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachment_titles_other[]"]'));
+            attachmentFiles = Array.prototype.slice.call(form.querySelectorAll(
+                'input[name="attachments_other[]"]'));
+            attachmentTitles = Array.prototype.slice.call(form.querySelectorAll(
+                'input[name="attachment_titles_other[]"]'));
         } else if (selectedCategory === 'Institutional') {
-            attachmentFiles = Array.prototype.slice.call(form.querySelectorAll('input[name="attachments_institutional[]"]'));
+            attachmentFiles = Array.prototype.slice.call(form.querySelectorAll(
+                'input[name="attachments_institutional[]"]'));
             attachmentTitles = [];
         }
 
@@ -1415,7 +1440,8 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
         var validationErrors = [];
         if (selectedCategory === 'Institutional') {
             attachmentFiles.forEach(function(fileInput) {
-                if (fileInput.files && fileInput.files.length > 0) validAttachmentCount += fileInput.files.length;
+                if (fileInput.files && fileInput.files.length > 0) validAttachmentCount += fileInput
+                    .files.length;
             });
             if (validAttachmentCount === 0) {
                 showUploadError('Please select at least one file to upload.');
@@ -1426,8 +1452,10 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 var hasFile = fileInput.files && fileInput.files.length > 0;
                 var titleEl = attachmentTitles[index];
                 var hasTitle = titleEl && titleEl.value && titleEl.value.trim() !== '';
-                if (hasFile && !hasTitle) validationErrors.push('Row ' + (index + 1) + ': File selected but title is missing');
-                else if (hasTitle && !hasFile) validationErrors.push('Row ' + (index + 1) + ': Title provided but no file selected');
+                if (hasFile && !hasTitle) validationErrors.push('Row ' + (index + 1) +
+                    ': File selected but title is missing');
+                else if (hasTitle && !hasFile) validationErrors.push('Row ' + (index + 1) +
+                    ': Title provided but no file selected');
                 else if (hasFile && hasTitle) validAttachmentCount++;
             });
             if (validationErrors.length > 0) {
@@ -1444,7 +1472,9 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
         }
-        if (uploadModal) try { uploadModal.hide(); } catch (h) {}
+        if (uploadModal) try {
+            uploadModal.hide();
+        } catch (h) {}
 
         var uploadData = new FormData();
         uploadData.append('_token', (form.querySelector('[name="_token"]') || {}).value || '');
@@ -1479,7 +1509,8 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                 if (fileInput.files) {
                     for (var i = 0; i < fileInput.files.length; i++) {
                         uploadData.append('attachments[]', fileInput.files[i]);
-                        uploadData.append('attachment_titles[]', fileInput.files[i].name || ('Document ' + (i + 1)));
+                        uploadData.append('attachment_titles[]', fileInput.files[i].name || (
+                            'Document ' + (i + 1)));
                     }
                 }
             });
@@ -1487,7 +1518,9 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             attachmentFiles.forEach(function(fileInput, index) {
                 if (fileInput.files && fileInput.files.length > 0) {
                     uploadData.append('attachments[]', fileInput.files[0]);
-                    var title = (attachmentTitles[index] && attachmentTitles[index].value && attachmentTitles[index].value.trim()) ? attachmentTitles[index].value.trim() : 'Untitled';
+                    var title = (attachmentTitles[index] && attachmentTitles[index].value &&
+                            attachmentTitles[index].value.trim()) ? attachmentTitles[index].value
+                    .trim() : 'Untitled';
                     uploadData.append('attachment_titles[]', title);
                 }
             });
@@ -1510,51 +1543,73 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             uploadData.append('video_link', vi ? vi.value : '');
         }
 
-        var repositoryPk = {{ $repository->pk }};
+        var repositoryPk = {
+            {
+                $repository - > pk
+            }
+        };
         fetch('/course-repository/' + repositoryPk + '/upload-document', {
-            method: 'POST',
-            body: uploadData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-        })
-        .then(function(response) {
-            return response.json().then(function(data) {
-                return { ok: response.ok, status: response.status, data: data };
-            }).catch(function() {
-                return { ok: false, data: { error: 'Server returned an invalid response. Please try again.' } };
-            });
-        })
-        .then(function(result) {
-            if (result.ok && result.data && result.data.success) {
-                hideUploadError();
-                form.reset();
-                alert('Upload successful!');
-                setTimeout(function() { location.reload(); }, 1500);
-                return;
-            }
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Save';
-            }
-            if (uploadModal) try { uploadModal.show(); } catch (s) {}
-            var errMsg = (result.data && result.data.error) || 'Upload failed';
-            if (result.data && result.data.errors && typeof result.data.errors === 'object') {
-                var parts = [];
-                Object.keys(result.data.errors).forEach(function(field) {
-                    var val = result.data.errors[field];
-                    parts.push(Array.isArray(val) ? val.join(' ') : val);
+                method: 'POST',
+                body: uploadData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                        data: data
+                    };
+                }).catch(function() {
+                    return {
+                        ok: false,
+                        data: {
+                            error: 'Server returned an invalid response. Please try again.'
+                        }
+                    };
                 });
-                if (parts.length) errMsg = parts.join(' | ');
-            }
-            showUploadError(errMsg);
-        })
-        .catch(function(error) {
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'Save';
-            }
-            if (uploadModal) try { uploadModal.show(); } catch (s) {}
-            showUploadError('Network error. Please try again.');
-        });
+            })
+            .then(function(result) {
+                if (result.ok && result.data && result.data.success) {
+                    hideUploadError();
+                    form.reset();
+                    alert('Upload successful!');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1500);
+                    return;
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Save';
+                }
+                if (uploadModal) try {
+                    uploadModal.show();
+                } catch (s) {}
+                var errMsg = (result.data && result.data.error) || 'Upload failed';
+                if (result.data && result.data.errors && typeof result.data.errors === 'object') {
+                    var parts = [];
+                    Object.keys(result.data.errors).forEach(function(field) {
+                        var val = result.data.errors[field];
+                        parts.push(Array.isArray(val) ? val.join(' ') : val);
+                    });
+                    if (parts.length) errMsg = parts.join(' | ');
+                }
+                showUploadError(errMsg);
+            })
+            .catch(function(error) {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Save';
+                }
+                if (uploadModal) try {
+                    uploadModal.show();
+                } catch (s) {}
+                showUploadError('Network error. Please try again.');
+            });
     } catch (err) {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -1571,39 +1626,53 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get dropdown values (check both value and text to filter "Select")
             const courseValue = $('#course_name').val()?.trim() || '';
             const courseName = courseValue ? $('#course_name option:selected').text().trim() : '';
-            
+
             const subjectValue = $('#subject_name').val()?.trim() || '';
             const subjectName = subjectValue ? $('#subject_name option:selected').text().trim() : '';
-            
+
             const topicValue = $('#timetable_name').val()?.trim() || '';
             const topicName = topicValue ? $('#timetable_name option:selected').text().trim() : '';
-            
+
             const sessionDate = $('#session_date').val()?.trim() || '';
-            
+
             const facultyValue = $('#author_name').val()?.trim() || '';
             const facultyName = facultyValue ? $('#author_name option:selected').text().trim() : '';
-            
+
             const sectorValue = $('#sector_master').val()?.trim() || '';
             const sectorName = sectorValue ? $('#sector_master option:selected').text().trim() : '';
-            
+
             const ministryValue = $('#ministry_master').val()?.trim() || '';
             const ministryName = ministryValue ? $('#ministry_master option:selected').text().trim() : '';
-            
-            console.log('updateKeywords called:', { courseName, subjectName, topicName, sessionDate, facultyName, sectorName, ministryName });
-            
+
+            console.log('updateKeywords called:', {
+                courseName,
+                subjectName,
+                topicName,
+                sessionDate,
+                facultyName,
+                sectorName,
+                ministryName
+            });
+
             // Build keywords string (comma-separated)
             const keywordsParts = [];
-            
+
             // Only add non-empty, non-select values
-            if (courseName && courseName !== '-- Select --' && courseName !== 'Select') keywordsParts.push(courseName);
-            if (subjectName && subjectName !== '-- Select Subject --' && subjectName !== 'Select') keywordsParts.push(subjectName);
-            if (topicName && topicName !== '-- Select Topic --' && topicName !== 'Select') keywordsParts.push(topicName);
+            if (courseName && courseName !== '-- Select --' && courseName !== 'Select') keywordsParts.push(
+                courseName);
+            if (subjectName && subjectName !== '-- Select Subject --' && subjectName !== 'Select') keywordsParts
+                .push(subjectName);
+            if (topicName && topicName !== '-- Select Topic --' && topicName !== 'Select') keywordsParts.push(
+                topicName);
             if (sessionDate) keywordsParts.push(sessionDate);
-            if (facultyName && facultyName !== 'Select' && facultyName !== '-- Select --') keywordsParts.push(facultyName);
-            if (sectorName && sectorName !== '-- Select Sector --' && sectorName !== 'Select') keywordsParts.push(sectorName);
-            if (ministryName && ministryName !== '-- Select Ministry --' && ministryName !== 'Select') keywordsParts.push(ministryName);
-            
-            const keywords = keywordsParts.join(', ');  // Comma-separated
+            if (facultyName && facultyName !== 'Select' && facultyName !== '-- Select --') keywordsParts.push(
+                facultyName);
+            if (sectorName && sectorName !== '-- Select Sector --' && sectorName !== 'Select') keywordsParts
+                .push(sectorName);
+            if (ministryName && ministryName !== '-- Select Ministry --' && ministryName !== 'Select')
+                keywordsParts.push(ministryName);
+
+            const keywords = keywordsParts.join(', '); // Comma-separated
             console.log('Setting keywords:', keywords);
             $('#keywords_course').val(keywords);
         } catch (error) {
@@ -1617,34 +1686,45 @@ document.addEventListener('DOMContentLoaded', function() {
             // SELECT dropdowns - check value exists, then get text
             const courseValue = $('#course_name_other').val()?.trim() || '';
             const courseName = courseValue ? $('#course_name_other option:selected').text().trim() : '';
-            
+
             const sectorValue = $('#sector_master_other').val()?.trim() || '';
             const sectorName = sectorValue ? $('#sector_master_other option:selected').text().trim() : '';
-            
+
             const ministryValue = $('#ministry_master_other').val()?.trim() || '';
             const ministryName = ministryValue ? $('#ministry_master_other option:selected').text().trim() : '';
-            
+
             // TEXT INPUTS - just get their values directly
             const subjectName = $('#major_subject_other').val()?.trim() || '';
             const topicName = $('#topic_name_other').val()?.trim() || '';
             const sessionDate = $('#session_date_other').val()?.trim() || '';
             const facultyName = $('#author_name_other').val()?.trim() || '';
-            
-            console.log('updateKeywordsOther called:', { courseName, subjectName, topicName, sessionDate, facultyName, sectorName, ministryName });
-            
+
+            console.log('updateKeywordsOther called:', {
+                courseName,
+                subjectName,
+                topicName,
+                sessionDate,
+                facultyName,
+                sectorName,
+                ministryName
+            });
+
             // Build keywords string (comma-separated)
             const keywordsParts = [];
-            
+
             // Only add non-empty, non-select values
-            if (courseName && courseName !== '-- Select --' && courseName !== 'Select') keywordsParts.push(courseName);
+            if (courseName && courseName !== '-- Select --' && courseName !== 'Select') keywordsParts.push(
+                courseName);
             if (subjectName) keywordsParts.push(subjectName);
             if (topicName) keywordsParts.push(topicName);
             if (sessionDate) keywordsParts.push(sessionDate);
             if (facultyName) keywordsParts.push(facultyName);
-            if (sectorName && sectorName !== '-- Select Sector --' && sectorName !== 'Select') keywordsParts.push(sectorName);
-            if (ministryName && ministryName !== '-- Select Ministry --' && ministryName !== 'Select') keywordsParts.push(ministryName);
-            
-            const keywords = keywordsParts.join(', ');  // Comma-separated
+            if (sectorName && sectorName !== '-- Select Sector --' && sectorName !== 'Select') keywordsParts
+                .push(sectorName);
+            if (ministryName && ministryName !== '-- Select Ministry --' && ministryName !== 'Select')
+                keywordsParts.push(ministryName);
+
+            const keywords = keywordsParts.join(', '); // Comma-separated
             console.log('Setting keywords (Other):', keywords);
             $('#keywords_other').val(keywords);
         } catch (error) {
@@ -1674,23 +1754,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // ===== COURSE FILTERING LOGIC =====
     const courseStatusRadios = document.querySelectorAll('input[name="course_status"]');
     const courseSelect = document.getElementById('course_name');
-    
+
     if (courseStatusRadios.length > 0 && courseSelect) {
         courseStatusRadios.forEach(radio => {
             radio.addEventListener('change', function() {
                 const status = this.value;
                 const options = courseSelect.querySelectorAll('option');
-                
+
                 options.forEach(option => {
                     if (option.value === '') {
                         // Always show the empty/select option
                         option.style.display = 'block';
                     } else {
                         const optionStatus = option.getAttribute('data-status');
-                        option.style.display = (optionStatus === status) ? 'block' : 'none';
+                        option.style.display = (optionStatus === status) ? 'block' :
+                            'none';
                     }
                 });
-                
+
                 // Reset course selection when filter changes
                 courseSelect.value = '';
                 // Reset dependent dropdowns
@@ -1705,25 +1786,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ===== CASCADING DROPDOWNS AJAX =====
-    
+
     // Helper functions to reset dropdowns
     function resetSubjectDropdown() {
         const subjectSelect = document.getElementById('subject_name');
         subjectSelect.innerHTML = '<option value="">Select</option>';
     }
-    
+
     function resetTopicDropdown() {
         const topicSelect = document.getElementById('timetable_name');
         topicSelect.innerHTML = '<option value="">Select</option>';
     }
-    
+
     function resetSessionDateInput() {
         const sessionDate = document.getElementById('session_date');
         if (sessionDate) {
             sessionDate.value = '';
         }
     }
-    
+
     function resetAuthorDropdown() {
         const authorSelect = document.getElementById('author_name');
         authorSelect.value = '';
@@ -1734,17 +1815,17 @@ document.addEventListener('DOMContentLoaded', function() {
         courseSelect.addEventListener('change', function() {
             const coursePk = this.value;
             const subjectSelect = document.getElementById('subject_name');
-            
+
             resetTopicDropdown();
             resetSessionDateInput();
             resetAuthorDropdown();
-            updateKeywords();  // Update keywords when course changes
-            
+            updateKeywords(); // Update keywords when course changes
+
             if (!coursePk) {
                 resetSubjectDropdown();
                 return;
             }
-            
+
             // Fetch subjects for selected course
             fetch(`/course-repository/subjects/${coursePk}`)
                 .then(response => response.json())
@@ -1775,16 +1856,16 @@ document.addEventListener('DOMContentLoaded', function() {
             const subjectPk = this.value;
             const coursePk = document.getElementById('course_name').value;
             const topicSelect = document.getElementById('timetable_name');
-            
+
             resetSessionDateInput();
             resetAuthorDropdown();
-            updateKeywords();  // Update keywords when subject changes
-            
+            updateKeywords(); // Update keywords when subject changes
+
             if (!subjectPk) {
                 resetTopicDropdown();
                 return;
             }
-            
+
             // Fetch topics for selected subject with course parameter
             fetch(`/course-repository/topics/${subjectPk}?course_master_pk=${coursePk}`)
                 .then(response => response.json())
@@ -1796,7 +1877,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         topics.forEach(topic => {
                             const option = document.createElement('option');
                             option.value = topic.pk;
-                            option.textContent = topic.subject_topic || topic.course_repo_topic || topic.course_repo_sub_topic;
+                            option.textContent = topic.subject_topic || topic
+                                .course_repo_topic || topic.course_repo_sub_topic;
                             topicSelect.appendChild(option);
                         });
                     }
@@ -1815,15 +1897,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const topicPk = this.value;
             const sessionDateInput = document.getElementById('session_date');
             const authorSelect = document.getElementById('author_name');
-            
-            updateKeywords();  // Update keywords when topic changes
-            
+
+            updateKeywords(); // Update keywords when topic changes
+
             if (!topicPk) {
                 resetSessionDateInput();
                 resetAuthorDropdown();
                 return;
             }
-            
+
             // Fetch session dates for selected topic
             fetch(`/course-repository/session-dates?topic_pk=${topicPk}`)
                 .then(response => response.json())
@@ -1837,7 +1919,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(error => console.error('Error fetching session dates:', error));
-            
+
             // Fetch authors/faculty for selected topic
             fetch(`/course-repository/authors-by-topic?topic_pk=${topicPk}`)
                 .then(response => response.json())
@@ -1865,7 +1947,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sessionDateInput = document.getElementById('session_date');
     if (sessionDateInput) {
         sessionDateInput.addEventListener('change', function() {
-            updateKeywords();  // Update keywords when session date changes
+            updateKeywords(); // Update keywords when session date changes
         });
     }
 
@@ -1873,26 +1955,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const authorSelect = document.getElementById('author_name');
     if (authorSelect) {
         authorSelect.addEventListener('change', function() {
-            updateKeywords();  // Update keywords when faculty changes
+            updateKeywords(); // Update keywords when faculty changes
         });
     }
 
     // Sector change - load ministries via AJAX and update keywords
     const sectorSelect = document.getElementById('sector_master');
     const ministrySelect = document.getElementById('ministry_master');
-    
+
     if (sectorSelect && ministrySelect) {
         sectorSelect.addEventListener('change', function() {
             const sectorPk = this.value;
-            
+
             // Reset ministry dropdown
             ministrySelect.innerHTML = '<option value="">Select</option>';
-            updateKeywords();  // Update keywords when sector changes
-            
+            updateKeywords(); // Update keywords when sector changes
+
             if (!sectorPk) {
                 return;
             }
-            
+
             // Fetch ministries for selected sector
             fetch(`/course-repository/ministries-by-sector?sector_pk=${sectorPk}`)
                 .then(response => response.json())
@@ -1914,12 +1996,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Ministry change - update keywords
     if (ministrySelect) {
         ministrySelect.addEventListener('change', function() {
-            updateKeywords();  // Update keywords when ministry changes
+            updateKeywords(); // Update keywords when ministry changes
         });
     }
 
     // ===== OTHER CATEGORY KEYWORDS EVENT LISTENERS =====
-    
+
     // Course Name (Other) - dropdown change
     const courseSelectOther = document.getElementById('course_name_other');
     if (courseSelectOther) {
@@ -1963,17 +2045,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sector (Other) - dropdown with ministry AJAX
     const sectorSelectOther = document.getElementById('sector_master_other');
     const ministrySelectOther = document.getElementById('ministry_master_other');
-    
+
     if (sectorSelectOther && ministrySelectOther) {
         sectorSelectOther.addEventListener('change', function() {
             const sectorPk = this.value;
-            
+
             // Reset ministry dropdown
             ministrySelectOther.innerHTML = '<option value="">Select</option>';
             updateKeywordsOther();
-            
+
             if (!sectorPk) return;
-            
+
             // Fetch ministries for selected sector
             fetch(`/course-repository/ministries-by-sector?sector_pk=${sectorPk}`)
                 .then(response => response.json())
@@ -2006,13 +2088,13 @@ document.addEventListener('DOMContentLoaded', function() {
             radio.addEventListener('change', function() {
                 const status = this.value;
                 const options = courseSelectOther.querySelectorAll('option');
-                
+
                 options.forEach(option => {
                     if (option.value === '') {
                         option.style.display = 'block';
                         return;
                     }
-                    
+
                     const optionStatus = option.getAttribute('data-status');
                     if (status === 'active' && optionStatus === 'active') {
                         option.style.display = 'block';
@@ -2022,7 +2104,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         option.style.display = 'none';
                     }
                 });
-                
+
                 // Reset selection
                 courseSelectOther.value = '';
                 updateKeywordsOther();
@@ -2101,7 +2183,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (searchOffcanvasEl && typeof bootstrap !== 'undefined' && bootstrap
                             .Offcanvas) {
                             const offcanvas = bootstrap.Offcanvas.getInstance(
-                            searchOffcanvasEl);
+                                searchOffcanvasEl);
                             if (offcanvas) {
                                 offcanvas.hide();
                             }
@@ -3039,9 +3121,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
 
-        
-        // Modern loading state
-        submitBtn.disabled = true;
+
+    // Modern loading state
+    submitBtn.disabled = true;
 
     // Delete document
     document.querySelectorAll('.delete-doc').forEach(btn => {
@@ -3322,10 +3404,10 @@ document.addEventListener('DOMContentLoaded', function() {
 function updateDeleteButtons(tbodyId) {
     const tbody = document.getElementById(tbodyId);
     if (!tbody) return;
-    
+
     const rows = tbody.querySelectorAll('.attachment-row');
     const deleteButtons = tbody.querySelectorAll('.delete-attachment');
-    
+
     // Show delete buttons only if there's more than 1 row
     deleteButtons.forEach((btn, index) => {
         if (rows.length > 1) {
@@ -3342,15 +3424,15 @@ document.addEventListener('click', function(e) {
     if (btn) {
         e.preventDefault();
         console.log('Course Add More clicked');
-        
+
         const tbody = document.getElementById('course_attachments_tbody');
         if (!tbody) {
             console.error('course_attachments_tbody not found');
             return;
         }
-        
+
         const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
-        
+
         const newRow = document.createElement('tr');
         newRow.className = 'attachment-row';
         newRow.innerHTML = `
@@ -3369,7 +3451,7 @@ document.addEventListener('click', function(e) {
                 </button>
             </td>
         `;
-        
+
         tbody.appendChild(newRow);
         updateDeleteButtons('course_attachments_tbody');
         console.log('Added row to Course attachments. Total rows:', rowCount);
@@ -3382,15 +3464,15 @@ document.addEventListener('click', function(e) {
     if (btn) {
         e.preventDefault();
         console.log('Other Add More clicked');
-        
+
         const tbody = document.getElementById('other_attachments_tbody');
         if (!tbody) {
             console.error('other_attachments_tbody not found');
             return;
         }
-        
+
         const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
-        
+
         const newRow = document.createElement('tr');
         newRow.className = 'attachment-row';
         newRow.innerHTML = `
@@ -3409,7 +3491,7 @@ document.addEventListener('click', function(e) {
                 </button>
             </td>
         `;
-        
+
         tbody.appendChild(newRow);
         updateDeleteButtons('other_attachments_tbody');
         console.log('Added row to Other attachments. Total rows:', rowCount);
@@ -3422,36 +3504,34 @@ document.addEventListener('click', function(e) {
     if (btn) {
         e.preventDefault();
         console.log('Delete clicked');
-        
+
         const row = btn.closest('.attachment-row');
         const tbody = row.closest('tbody');
         const tbodyId = tbody.id;
-        
+
         // Immediately remove the required attribute from inputs to prevent validation errors
         const inputs = row.querySelectorAll('input[required]');
         inputs.forEach(input => input.removeAttribute('required'));
-        
+
         // Remove the row with animation
         row.style.opacity = '0';
         row.style.transition = 'opacity 0.3s ease-out';
-        
+
         // Use requestAnimationFrame for smoother timing
         setTimeout(() => {
             // Completely remove the row from DOM
             row.remove();
-            
+
             // Update row numbers
             const rows = tbody.querySelectorAll('.attachment-row');
             rows.forEach((r, index) => {
                 r.querySelector('.row-number').textContent = index + 1;
             });
-            
+
             // Update delete button visibility
             updateDeleteButtons(tbodyId);
             console.log('Row deleted');
         }, 300);
     }
 });
-
-
 </script>

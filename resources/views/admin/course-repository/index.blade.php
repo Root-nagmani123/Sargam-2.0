@@ -184,11 +184,11 @@
                 <div class="d-flex flex-wrap align-items-center gap-2">
 
                     <!-- Upload Documents -->
-                    <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center"
+                    <!-- <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center"
                         data-bs-toggle="modal" data-bs-target="#uploadModal" aria-label="Upload documents">
                         <span class="material-icons material-symbols-rounded me-1 fs-6" aria-hidden="true">upload</span>
                         Upload Documents
-                    </button>
+                    </button> -->
 
                     <!-- Add Category (Primary Action) -->
                     <button type="button" class="btn btn-primary btn-sm d-flex align-items-center"
@@ -264,15 +264,13 @@
                             </td>
                             <td class="pe-4">
                                 <div class="d-flex gap-1" role="group" aria-label="Category actions">
-                                    <a href="javascript:void(0)" class="edit-repo" data-pk="{{ $repo->pk }}"
+                                    <a href="javascript:void(0)" class="edit-repo text-primary" data-pk="{{ $repo->pk }}"
                                         data-name="{{ $repo->course_repository_name }}"
                                         data-details="{{ $repo->course_repository_details }}"
-                                        data-image="{{ $repo->category_image }}" aria-label="Edit category"
-                                        class="text-primary">
+                                        data-image="{{ $repo->category_image }}" aria-label="Edit category">
                                         <span class="material-icons material-symbols-rounded">edit</span>
                                     </a>
-                                    <a class="delete-repo" data-pk="{{ $repo->pk }}" aria-label="Delete category"
-                                        class="text-primary ms-2">
+                                    <a class="delete-repo text-primary ms-2" data-pk="{{ $repo->pk }}" aria-label="Delete category">
                                         <span class="material-icons material-symbols-rounded">delete</span>
                                     </a>
                                 </div>
