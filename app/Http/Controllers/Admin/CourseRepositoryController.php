@@ -400,7 +400,7 @@ class CourseRepositoryController extends Controller
                 'sector_master' => 'nullable|numeric',
                 'ministry_master' => 'nullable|numeric',
                 'attachments' => 'nullable|array',
-                'attachments.*' => 'nullable|file|max:102400',
+                'attachments.*' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10120', // Max 10MB per file
                 'attachment_titles' => 'nullable|array',
                 'attachment_titles.*' => 'nullable|string|max:5000',
                 'keywords' => 'nullable|string|max:4000',
