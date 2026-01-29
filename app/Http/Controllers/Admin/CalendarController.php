@@ -1163,10 +1163,10 @@ class CalendarController extends Controller
             }
 
             // Validate that remarks are provided if remark checkbox is enabled
-            if ($remarkCheckbox == 1 && empty($remarks)) {
-                $errors[] = "Please provide remarks";
-                continue;
-            }
+            // if ($remarkCheckbox == 1 && empty($remarks)) {
+            //     $errors[] = "Please provide remarks";
+            //     continue;
+            // }
 
             // Calculate overall rating
             $overallRating = null;
