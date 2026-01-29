@@ -873,10 +873,9 @@ class CalendarController extends Controller
                 abort(403, 'Missing token');
             }
 
-    public function studentFacultyFeedback(Request $request)
-    {
-        try {
-            $otUrl = '';
+            // ================= TOKEN AUTH =================
+            $key = config('services.moodle.key');
+            $iv  = config('services.moodle.iv');
 
             $username = openssl_decrypt(
                 base64_decode($request->token),
@@ -1164,10 +1163,10 @@ class CalendarController extends Controller
             }
 
             // Validate that remarks are provided if remark checkbox is enabled
-            if ($remarkCheckbox == 1 && empty($remarks)) {
-                $errors[] = "Please provide remarks";
-                continue;
-            }
+            // if ($remarkCheckbox == 1 && empty($remarks)) {
+            //     $errors[] = "Please provide remarks";
+            //     continue;
+            // }
 
             // Calculate overall rating
             $overallRating = null;
