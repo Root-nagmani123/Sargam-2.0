@@ -9,7 +9,7 @@ use App\Models\CourseRepositoryDocument;
 use App\Models\CourseRepositorySubtopic;
 use App\Models\CourseMaster;
 use App\Models\SubjectMaster;
-use App\Models\FacultyMaster;
+use App\Models\FacultyMaster; 
 use App\Models\SectorMaster;
 use App\Models\MinistryMaster;
 use App\Models\Timetable;
