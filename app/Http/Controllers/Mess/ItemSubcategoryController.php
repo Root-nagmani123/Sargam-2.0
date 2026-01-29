@@ -12,7 +12,8 @@ class ItemSubcategoryController extends Controller
     public function index()
     {
         $itemsubcategories = ItemSubcategory::with('category')->orderByDesc('id')->get();
-        return view('mess.itemsubcategories.index', compact('itemsubcategories'));
+        $categories = ItemCategory::orderBy('category_name')->get();
+        return view('mess.itemsubcategories.index', compact('itemsubcategories', 'categories'));
     }
 
     public function create()
