@@ -847,11 +847,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div class="table-responsive" id="course_attachments_container"
                                         style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
                                         <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg-light">
+                                            <thead class="bg">
                                                 <tr>
                                                     <th style="width: 5%;">S.No.</th>
                                                     <th>Attachment Title</th>
-                                                    <th>Upload File</th>
+                                                    <th>Upload File <span>max size: 10MB , allowed types: jpg, jpeg, png, pdf, doc, docx</span></th>
                                                     <th style="width: 8%;">Action</th>
                                                 </tr>
                                             </thead>
@@ -1930,7 +1930,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Don't prevent default handling for critical errors
     });
 
-    var repositoryPk = {{ $repository->pk }};
+    const repositoryPk = {{ $repository->pk }};
 
     // ===== COURSE FILTERING LOGIC =====
     const courseStatusRadios = document.querySelectorAll('input[name="course_status"]');
