@@ -36,6 +36,8 @@ use App\Http\Controllers\Admin\{
     MemoDisciplineController,
     DashboardController,
     CourseRepositoryController,
+    EmployeeIDCardRequestController,
+    FamilyIDCardRequestController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -606,6 +608,31 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update/{id}', 'update')->name('update');
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
+
+    // Employee ID Card Request Routes
+    Route::prefix('admin/employee-idcard')->name('admin.employee_idcard.')->controller(EmployeeIDCardRequestController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{employeeIDCardRequest}', 'show')->name('show');
+        Route::get('/edit/{employeeIDCardRequest}', 'edit')->name('edit');
+        Route::put('/update/{employeeIDCardRequest}', 'update')->name('update');
+        Route::delete('/delete/{employeeIDCardRequest}', 'destroy')->name('destroy');
+        Route::post('/restore/{id}', 'restore')->name('restore');
+        Route::delete('/force-delete/{id}', 'forceDelete')->name('forceDelete');
+    });
+
+    // Family ID Card Request Routes
+    Route::prefix('admin/family-idcard')->name('admin.family_idcard.')->controller(FamilyIDCardRequestController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/show/{familyIDCardRequest}', 'show')->name('show');
+        Route::get('/edit/{familyIDCardRequest}', 'edit')->name('edit');
+        Route::put('/update/{familyIDCardRequest}', 'update')->name('update');
+        Route::delete('/delete/{familyIDCardRequest}', 'destroy')->name('destroy');
+    });
+
     Route::prefix('admin/setup/member')->name('admin.setup.member.')->controller(MemberController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
