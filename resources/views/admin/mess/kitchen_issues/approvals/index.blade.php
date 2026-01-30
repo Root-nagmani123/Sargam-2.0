@@ -1,17 +1,17 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Pending Approvals - Kitchen Issues - Sargam | Lal Bahadur')
+@section('title', 'Pending Approvals - Material Management - Sargam | Lal Bahadur')
 
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Kitchen Issue Approvals" />
+    <x-breadcrum title="Material Management Approvals" />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-12">
-                            <h4>Pending Kitchen Issue Approvals</h4>
+                            <h4>Pending Material Management Approvals</h4>
                         </div>
                     </div>
                     <hr>
@@ -42,7 +42,7 @@
                                     <td>{{ $issue->request_date->format('d-m-Y') }}</td>
                                     <td class="text-center">
                                         <div class="d-inline-flex align-items-center gap-2" role="group">
-                                            <a href="{{ route('admin.mess.kitchen-issue-approvals.show', $issue->pk) }}"
+                                            <a href="{{ route('admin.mess.material-management-approvals.show', $issue->pk) }}"
                                                 class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                                 <iconify-icon icon="solar:eye-bold" width="18"></iconify-icon>
                                                 <span class="d-none d-md-inline">Review</span>

@@ -1,26 +1,26 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Kitchen Issues - Sargam | Lal Bahadur')
+@section('title', 'Material Management - Sargam | Lal Bahadur')
 
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Kitchen Issues" />
+    <x-breadcrum title="Material Management" />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
-                            <h4>Kitchen Issues Management</h4>
+                            <h4>Material Management</h4>
                         </div>
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-end mb-3">
                                 <div class="d-flex align-items-center gap-2">
-                                    <a href="{{ route('admin.mess.kitchen-issues.create') }}"
+                                    <a href="{{ route('admin.mess.material-management.create') }}"
                                         class="btn btn-primary px-3 py-2 rounded-3 shadow-sm">
                                         <i class="material-icons menu-icon material-symbols-rounded"
                                             style="font-size: 20px; vertical-align: middle;">add</i>
-                                        Add New Kitchen Issue
+                                        Add New Material Management
                                     </a>
                                 </div>
                             </div>
@@ -122,21 +122,21 @@
                                     <td>{{ $issue->request_date->format('d-m-Y') }}</td>
                                     <td class="text-center">
                                         <div class="d-inline-flex align-items-center gap-2" role="group">
-                                            <a href="{{ route('admin.mess.kitchen-issues.show', $issue->pk) }}"
+                                            <a href="{{ route('admin.mess.material-management.show', $issue->pk) }}"
                                                 class="btn btn-sm btn-outline-info d-flex align-items-center gap-1">
                                                 <iconify-icon icon="solar:eye-bold" width="18"></iconify-icon>
                                                 <span class="d-none d-md-inline">View</span>
                                             </a>
 
                                             @if($issue->approve_status == 0)
-                                            <a href="{{ route('admin.mess.kitchen-issues.edit', $issue->pk) }}"
+                                            <a href="{{ route('admin.mess.material-management.edit', $issue->pk) }}"
                                                 class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                                 <iconify-icon icon="solar:pen-bold" width="18"></iconify-icon>
                                                 <span class="d-none d-md-inline">Edit</span>
                                             </a>
 
                                             @if($issue->send_for_approval == 0)
-                                            <form action="{{ route('admin.mess.kitchen-issues.send-for-approval', $issue->pk) }}"
+                                            <form action="{{ route('admin.mess.material-management.send-for-approval', $issue->pk) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit"
@@ -148,9 +148,9 @@
                                             </form>
                                             @endif
 
-                                            <form action="{{ route('admin.mess.kitchen-issues.destroy', $issue->pk) }}"
+                                            <form action="{{ route('admin.mess.material-management.destroy', $issue->pk) }}"
                                                 method="POST" class="d-inline"
-                                                onsubmit="return confirm('Are you sure you want to delete this kitchen issue?');">
+                                                onsubmit="return confirm('Are you sure you want to delete this record?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit"
@@ -165,7 +165,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="12" class="text-center">No kitchen issues found</td>
+                                    <td colspan="12" class="text-center">No records found</td>
                                 </tr>
                                 @endforelse
                             </tbody>

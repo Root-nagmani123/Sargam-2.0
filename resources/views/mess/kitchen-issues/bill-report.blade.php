@@ -1,16 +1,16 @@
 @extends('admin.layouts.master')
-@section('title', 'Kitchen Issue Bill Report')
+@section('title', 'Material Management Bill Report')
 @section('setup_content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Kitchen Issue Bill Report</h4>
-        <a href="{{ route('admin.mess.kitchen-issues.index') }}" class="btn btn-secondary">Back to List</a>
+        <h4>Material Management Bill Report</h4>
+        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
     </div>
     
     <!-- Filters -->
     <div class="card mb-3">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.mess.kitchen-issues.bill-report') }}">
+            <form method="GET" action="{{ route('admin.mess.material-management.bill-report') }}">
                 <div class="row">
                     <div class="col-md-3">
                         <label>Store</label>

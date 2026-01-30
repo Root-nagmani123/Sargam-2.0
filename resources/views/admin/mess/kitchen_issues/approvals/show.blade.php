@@ -1,14 +1,14 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Approve Kitchen Issue - Sargam | Lal Bahadur')
+@section('title', 'Approve Material Management - Sargam | Lal Bahadur')
 
 @section('setup_content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Kitchen Issue Approval" />
+    <x-breadcrum title="Material Management Approval" />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
-            <h4 class="card-title mb-3">Review Kitchen Issue #{{ $kitchenIssue->pk }}</h4>
+            <h4 class="card-title mb-3">Review Material Management #{{ $kitchenIssue->pk }}</h4>
             <hr>
 
             <!-- Issue Details -->
@@ -74,26 +74,26 @@
             <!-- Approval Actions -->
             <div class="row">
                 <div class="col-md-6">
-                    <form action="{{ route('admin.mess.kitchen-issue-approvals.approve', $kitchenIssue->pk) }}" method="POST">
+                    <form action="{{ route('admin.mess.material-management-approvals.approve', $kitchenIssue->pk) }}" method="POST">
                         @csrf
                         <div class="mb-3">
                             <label for="approve_remarks" class="form-label">Approval Remarks (Optional)</label>
                             <textarea class="form-control" id="approve_remarks" name="remarks" rows="3"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to approve this kitchen issue?');">
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to approve this record?');">
                             <iconify-icon icon="solar:check-circle-bold" width="20"></iconify-icon> Approve
                         </button>
                     </form>
                 </div>
 
                 <div class="col-md-6">
-                    <form action="{{ route('admin.mess.kitchen-issue-approvals.reject', $kitchenIssue->pk) }}" method="POST">
+                    <form action="{{ route('admin.mess.material-management-approvals.reject', $kitchenIssue->pk) }}" method="POST">
                         @csrf
                         <div class="mb-3">
                             <label for="reject_remarks" class="form-label">Rejection Remarks <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="reject_remarks" name="remarks" rows="3" required></textarea>
                         </div>
-                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to reject this kitchen issue?');">
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to reject this record?');">
                             <iconify-icon icon="solar:close-circle-bold" width="20"></iconify-icon> Reject
                         </button>
                     </form>
@@ -102,7 +102,7 @@
 
             <hr>
             <div class="text-end">
-                <a href="{{ route('admin.mess.kitchen-issue-approvals.index') }}" class="btn btn-secondary">Back to Approvals</a>
+                <a href="{{ route('admin.mess.material-management-approvals.index') }}" class="btn btn-secondary">Back to Approvals</a>
             </div>
         </div>
     </div>

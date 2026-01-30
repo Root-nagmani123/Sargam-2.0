@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
-@section('title', 'Edit Kitchen Issue')
+@section('title', 'Edit Material Management')
 @section('setup_content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Edit Kitchen Issue #{{ $kitchenIssue->pk }}</h4>
-        <a href="{{ route('admin.mess.kitchen-issues.index') }}" class="btn btn-secondary">Back to List</a>
+        <h4>Edit Material Management #{{ $kitchenIssue->pk }}</h4>
+        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
     </div>
     
     @if($errors->any())
@@ -19,7 +19,7 @@
     
     <div class="card">
         <div class="card-body">
-            <form action="{{ route('admin.mess.kitchen-issues.update', $kitchenIssue->pk) }}" method="POST">
+            <form action="{{ route('admin.mess.material-management.update', $kitchenIssue->pk) }}" method="POST">
                 @csrf
                 @method('PUT')
                 
@@ -110,8 +110,8 @@
                 </div>
                 
                 <div class="text-end">
-                    <button type="submit" class="btn btn-primary">Update Kitchen Issue</button>
-                    <a href="{{ route('admin.mess.kitchen-issues.index') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Update Material Management</button>
+                    <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>
