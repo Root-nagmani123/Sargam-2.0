@@ -564,27 +564,27 @@
                 <!-- Tab Content Container -->
                 <div class="tab-content" id="mainNavbarContent">
                     <!-- Home Tab -->
-                    <div class="tab-pane fade show active" id="home" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#home' ? 'show active' : '' }}" id="home" role="tabpanel">
                         @yield('content')
                     </div>
 
                     <!-- Setup Tab -->
-                    <div class="tab-pane fade" id="tab-setup" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}" id="tab-setup" role="tabpanel">
                         @yield('setup_content')
                     </div>
 
                     <!-- Communications Tab -->
-                    <div class="tab-pane fade" id="tab-communications" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}" id="tab-communications" role="tabpanel">
                         @yield('communications_content')
                     </div>
 
                     <!-- Academics Tab -->
-                    <div class="tab-pane fade" id="tab-academics" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}" id="tab-academics" role="tabpanel">
                         @yield('academics_content')
                     </div>
 
                     <!-- Material Management Tab -->
-                    <div class="tab-pane fade" id="tab-material-management" role="tabpanel">
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}" id="tab-material-management" role="tabpanel">
                         @yield('material_management_content')
                     </div>
                 </div>
