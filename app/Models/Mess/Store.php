@@ -6,15 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Store extends Model
 {
-    public const TYPE_MESS    = 'mess';
-    public const TYPE_CANTEEN = 'canteen';
-    public const TYPE_GODOWN  = 'godown';
+    public const TYPE_MESS = 'mess';
 
     public const STATUS_ACTIVE   = 'active';
     public const STATUS_INACTIVE = 'inactive';
 
     protected $table = 'mess_stores';
-    
+
+    protected $attributes = [
+        'store_type' => 'mess',
+    ];
+
     protected $fillable = [
         'store_name',
         'store_code',
@@ -30,9 +32,7 @@ class Store extends Model
     public static function storeTypes(): array
     {
         return [
-            self::TYPE_MESS    => 'Mess',
-            self::TYPE_CANTEEN => 'Canteen',
-            self::TYPE_GODOWN  => 'Godown',
+            self::TYPE_MESS => 'MESS',
         ];
     }
 
