@@ -26,9 +26,8 @@ class ItemSubcategoryController extends Controller
     {
         $data = $this->validatedData($request);
 
+        // Item Code is mandatory and auto-generated
         $itemCode = $this->generateItemCode();
-        
-        // Save code to the correct column
         if (Schema::hasColumn('mess_item_subcategories', 'item_code')) {
             $data['item_code'] = $itemCode;
         } elseif (Schema::hasColumn('mess_item_subcategories', 'subcategory_code')) {
@@ -51,6 +50,11 @@ class ItemSubcategoryController extends Controller
     {
         $itemsubcategory = ItemSubcategory::findOrFail($id);
         $data = $this->validatedData($request, $itemsubcategory);
+        // Item Code is mandatory and must not be changed on update
+        unset($data['item_code']);
+        if (Schema::hasColumn('mess_item_subcategories', 'subcategory_code')) {
+            unset($data['subcategory_code']);
+        }
 
         $itemsubcategory->update($data);
         return redirect()->route('admin.mess.itemsubcategories.index')->with('success', 'Item Subcategory updated successfully');
