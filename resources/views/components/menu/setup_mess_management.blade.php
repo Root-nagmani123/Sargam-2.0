@@ -36,6 +36,11 @@
                 </a>
             </li>
             <li class="sidebar-item">
+                <a class="sidebar-link" href="{{ route('admin.mess.vendor-item-mappings.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Vendor Mapping</span>
+                </a>
+            </li>
+            <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.client-types.index') }}">
                     <span class="hide-menu small small-sm-normal text-nowrap">Client Master</span>
                 </a>
