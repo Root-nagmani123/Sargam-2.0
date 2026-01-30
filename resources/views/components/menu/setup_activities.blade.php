@@ -157,6 +157,10 @@
                                         href="{{ route('admin.family_idcard.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Request Family ID Card</span>
                                     </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('admin.security.vehicle_pass.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Vehicle Pass Request</span>
+                                    </a></li>
                             </ul>
                             <li class="sidebar-item"><a class="sidebar-link"
                                         href="{{ route('course-repository.index') }}">
