@@ -110,12 +110,12 @@ class KitchenIssueController extends Controller
 
             DB::commit();
 
-            return redirect()->route('admin.mess.kitchen-issues.index')
-                           ->with('success', 'Kitchen Issue created successfully');
+            return redirect()->route('admin.mess.material-management.index')
+                           ->with('success', 'Material Management created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()
-                        ->with('error', 'Failed to create Kitchen Issue: ' . $e->getMessage());
+                        ->with('error', 'Failed to create Material Management: ' . $e->getMessage());
         }
     }
 
@@ -146,7 +146,7 @@ class KitchenIssueController extends Controller
 
         // Only allow editing if not approved
         if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED) {
-            return redirect()->route('admin.mess.kitchen-issues.index')
+            return redirect()->route('admin.mess.material-management.index')
                            ->with('error', 'Cannot edit approved kitchen issue');
         }
 
@@ -165,7 +165,7 @@ class KitchenIssueController extends Controller
 
         // Only allow editing if not approved
         if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED) {
-            return redirect()->route('admin.mess.kitchen-issues.index')
+            return redirect()->route('admin.mess.material-management.index')
                            ->with('error', 'Cannot edit approved kitchen issue');
         }
 
@@ -201,12 +201,12 @@ class KitchenIssueController extends Controller
 
             DB::commit();
 
-            return redirect()->route('admin.mess.kitchen-issues.index')
-                           ->with('success', 'Kitchen Issue updated successfully');
+            return redirect()->route('admin.mess.material-management.index')
+                           ->with('success', 'Material Management updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()
-                        ->with('error', 'Failed to update Kitchen Issue: ' . $e->getMessage());
+                        ->with('error', 'Failed to update Material Management: ' . $e->getMessage());
         }
     }
 
@@ -220,17 +220,17 @@ class KitchenIssueController extends Controller
         // Only allow deletion if not approved or completed
         if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED ||
             $kitchenIssue->status == KitchenIssueMaster::STATUS_COMPLETED) {
-            return redirect()->route('admin.mess.kitchen-issues.index')
+            return redirect()->route('admin.mess.material-management.index')
                            ->with('error', 'Cannot delete approved or completed kitchen issue');
         }
 
         try {
             $kitchenIssue->delete();
 
-            return redirect()->route('admin.mess.kitchen-issues.index')
-                           ->with('success', 'Kitchen Issue deleted successfully');
+            return redirect()->route('admin.mess.material-management.index')
+                           ->with('success', 'Material Management deleted successfully');
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to delete Kitchen Issue: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete Material Management: ' . $e->getMessage());
         }
     }
 
@@ -274,7 +274,7 @@ class KitchenIssueController extends Controller
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
         if ($kitchenIssue->send_for_approval == 1) {
-            return back()->with('error', 'Kitchen Issue already sent for approval');
+            return back()->with('error', 'Material Management already sent for approval');
         }
 
         try {
@@ -284,7 +284,7 @@ class KitchenIssueController extends Controller
                 'modified_by' => Auth::id(),
             ]);
 
-            return back()->with('success', 'Kitchen Issue sent for approval successfully');
+            return back()->with('success', 'Material Management sent for approval successfully');
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to send for approval: ' . $e->getMessage());
         }

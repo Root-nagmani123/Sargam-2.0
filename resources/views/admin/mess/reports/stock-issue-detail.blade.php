@@ -5,7 +5,7 @@
     <div class="card-header">
         <h5 class="mb-0">
             <iconify-icon icon="solar:box-minimalistic-bold" class="me-2"></iconify-icon>
-            Stock Issue Details (Kitchen Issues)
+            Stock Issue Details (Material Management)
         </h5>
     </div>
     <div class="card-body">

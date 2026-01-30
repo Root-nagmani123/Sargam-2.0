@@ -48,15 +48,15 @@ class KitchenIssueApprovalController extends Controller
         ])->findOrFail($id);
 
         if ($kitchenIssue->approve_status != KitchenIssueMaster::APPROVE_PENDING) {
-            return redirect()->route('admin.mess.kitchen-issue-approvals.index')
-                           ->with('error', 'This kitchen issue has already been processed');
+            return redirect()->route('admin.mess.material-management-approvals.index')
+                           ->with('error', 'This material management has already been processed');
         }
 
         return view('admin.mess.kitchen_issues.approvals.show', compact('kitchenIssue'));
     }
 
     /**
-     * Approve kitchen issue
+     * Approve material management
      */
     public function approve(Request $request, $id)
     {
@@ -67,13 +67,13 @@ class KitchenIssueApprovalController extends Controller
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
         if ($kitchenIssue->approve_status != KitchenIssueMaster::APPROVE_PENDING) {
-            return back()->with('error', 'This kitchen issue has already been processed');
+            return back()->with('error', 'This material management has already been processed');
         }
 
         try {
             DB::beginTransaction();
 
-            // Update kitchen issue status
+            // Update material management status
             $kitchenIssue->update([
                 'approve_status' => KitchenIssueMaster::APPROVE_APPROVED,
                 'status' => KitchenIssueMaster::STATUS_APPROVED,
@@ -93,16 +93,16 @@ class KitchenIssueApprovalController extends Controller
 
             DB::commit();
 
-            return redirect()->route('admin.mess.kitchen-issue-approvals.index')
-                           ->with('success', 'Kitchen Issue approved successfully');
+            return redirect()->route('admin.mess.material-management-approvals.index')
+                           ->with('success', 'Material Management approved successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to approve Kitchen Issue: ' . $e->getMessage());
+            return back()->with('error', 'Failed to approve Material Management: ' . $e->getMessage());
         }
     }
 
     /**
-     * Reject kitchen issue
+     * Reject material management
      */
     public function reject(Request $request, $id)
     {
@@ -113,13 +113,13 @@ class KitchenIssueApprovalController extends Controller
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
         if ($kitchenIssue->approve_status != KitchenIssueMaster::APPROVE_PENDING) {
-            return back()->with('error', 'This kitchen issue has already been processed');
+            return back()->with('error', 'This material management has already been processed');
         }
 
         try {
             DB::beginTransaction();
 
-            // Update kitchen issue status
+            // Update material management status
             $kitchenIssue->update([
                 'approve_status' => KitchenIssueMaster::APPROVE_REJECTED,
                 'status' => KitchenIssueMaster::STATUS_REJECTED,
@@ -139,11 +139,11 @@ class KitchenIssueApprovalController extends Controller
 
             DB::commit();
 
-            return redirect()->route('admin.mess.kitchen-issue-approvals.index')
-                           ->with('success', 'Kitchen Issue rejected successfully');
+            return redirect()->route('admin.mess.material-management-approvals.index')
+                           ->with('success', 'Material Management rejected successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to reject Kitchen Issue: ' . $e->getMessage());
+            return back()->with('error', 'Failed to reject Material Management: ' . $e->getMessage());
         }
     }
 }

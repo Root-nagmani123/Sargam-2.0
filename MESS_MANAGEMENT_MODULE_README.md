@@ -254,7 +254,7 @@ routes/web.php
 
 | Method | URI | Controller@Method | Description |
 |--------|-----|-------------------|-------------|
-| Resource | /admin/mess/kitchen-issues | KitchenIssueController | Kitchen issues |
+| Resource | /admin/mess/material-management | KitchenIssueController | Material Management |
 | Resource | /admin/mess/kitchen-indents | KitchenIndentController | Kitchen indents |
 
 ### Reports
