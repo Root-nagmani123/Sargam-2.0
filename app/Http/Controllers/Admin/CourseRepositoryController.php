@@ -37,6 +37,7 @@ class CourseRepositoryController extends Controller
             $perPage = in_array($perPage, [10, 15, 25, 50, 100]) ? $perPage : 15;
 
             if ($parentPk) {
+                
                 // Show children of specific parent
                 $parentRepository = CourseRepositoryMaster::findOrFail($parentPk);
                 $repositories = $parentRepository->children()
@@ -88,8 +89,10 @@ class CourseRepositoryController extends Controller
 
                         $documents_count_array[$child->pk] = $documents_count;
                     }
+               
                     
             }
+            //  print_r($repositories->toArray()); exit;
             
             return view('admin.course-repository.index', [
                 'repositories' => $repositories,
@@ -139,7 +142,15 @@ class CourseRepositoryController extends Controller
             
             // Get all documents linked through details with course_repository_details_pk
             // Also include documents directly linked to master via course_repository_master_pk
-            $documents = CourseRepositoryDocument::where('del_type', 1)
+            $documents = CourseRepositoryDocument::with([
+                'detail.course',
+                'detail.subject',
+                'detail.topic',
+                'detail.sector',
+                'detail.ministry',
+                'detail.author'
+            ])
+                ->where('del_type', 1)
                 ->where(function($query) use ($pk) {
                     $query->where('course_repository_master_pk', $pk)
                         ->orWhereIn('course_repository_details_pk', 
@@ -360,7 +371,7 @@ class CourseRepositoryController extends Controller
      * Delete a repository (soft delete)
      * DELETE /course-repository/{pk}
      */
-    public function destroy($pk)
+    public function destroy($pk, Request $request)
     {
         try {
             $repository = CourseRepositoryMaster::findOrFail($pk);
@@ -371,10 +382,27 @@ class CourseRepositoryController extends Controller
                 'delete_by' => auth()->id(),
             ]);
             
+            // Return JSON for AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Category deleted successfully'
+                ]);
+            }
+            
             return redirect()->route('course-repository.index')
                 ->with('success', 'Repository deleted successfully');
         } catch (Exception $e) {
             Log::error('Error deleting repository: ' . $e->getMessage());
+            
+            // Return JSON for AJAX requests
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to delete repository'
+                ], 500);
+            }
+            
             return redirect()->back()->with('error', 'Failed to delete repository');
         }
     }
@@ -405,6 +433,14 @@ class CourseRepositoryController extends Controller
                 'attachment_titles.*' => 'nullable|string|max:5000',
                 'keywords' => 'nullable|string|max:4000',
                 'video_link' => 'nullable|string|max:2000',
+            ], [
+                'category.required' => 'Please select a category (Course, Other, or Institutional)',
+                'attachments.*.mimes' => 'File type not allowed. Please upload: JPG, JPEG, PNG, PDF, DOC, or DOCX',
+                'attachments.*.max' => 'File size exceeds 10MB limit. Please select a smaller file',
+                'attachments.*.file' => 'Please select a valid file',
+                'keywords.max' => 'Keywords cannot exceed 4000 characters',
+                'video_link.max' => 'Video link cannot exceed 2000 characters',
+                'attachment_titles.*.max' => 'File title cannot exceed 5000 characters',
             ]);
             
             // Get the category
@@ -471,16 +507,173 @@ class CourseRepositoryController extends Controller
             
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation error in uploadDocument: ' . json_encode($e->errors()));
+            
+            // Format validation errors into user-friendly message
+            $errorMessages = [];
+            foreach ($e->errors() as $field => $messages) {
+                foreach ($messages as $message) {
+                    $errorMessages[] = $message;
+                }
+            }
+            
             return response()->json([
                 'success' => false,
-                'error' => 'Validation failed',
+                'error' => 'Validation failed. Please check the following:',
                 'errors' => $e->errors(),
+                'error_list' => $errorMessages,
             ], 422);
         } catch (Exception $e) {
             Log::error('Error uploading document: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
             return response()->json([
                 'success' => false,
                 'error' => 'Upload failed: ' . $e->getMessage(),
+                'error_details' => 'Please try again or contact support if the problem persists.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Update document and its details
+     * POST /course-repository/document/{pk}/update
+     */
+    public function updateDocument($pk, Request $request)
+    {
+        // print_r($request->all()); exit;
+        try {
+            $validated = $request->validate([
+                'detail_pk' => 'required|exists:course_repository_details,pk',
+                'file_title' => 'nullable|string|max:5000',
+                'attachment_titles' => 'nullable|array',
+                'attachment_titles.*' => 'nullable|string|max:5000',
+                'course_name' => 'nullable|numeric',
+                'subject_name' => 'nullable|numeric',
+                'timetable_name' => 'nullable|numeric',
+                'session_date' => 'nullable|string',
+                'author_name' => 'nullable|string',
+                'sector_master' => 'nullable|numeric',
+                'ministry_master' => 'nullable|numeric',
+                'keywords' => 'nullable|string|max:4000',
+                'video_link' => 'nullable|string|max:2000',
+                'document_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx,ppt,pptx|max:10120', // Max 10MB
+            ], [
+                'detail_pk.required' => 'Invalid record. Please refresh and try again',
+                'detail_pk.exists' => 'Record not found. Please refresh and try again',
+                'document_file.mimes' => 'File type not allowed. Please upload: JPG, JPEG, PNG, PDF, DOC, DOCX, XLS, XLSX, PPT, or PPTX',
+                'document_file.max' => 'File size exceeds 10MB limit. Please select a smaller file',
+                'document_file.file' => 'Please select a valid file',
+                'keywords.max' => 'Keywords cannot exceed 4000 characters',
+                'video_link.max' => 'Video link cannot exceed 2000 characters',
+                'attachment_titles.*.max' => 'File title cannot exceed 5000 characters',
+                'file_title.max' => 'File title cannot exceed 5000 characters',
+            ]);
+            
+            // Find the document
+            $document = CourseRepositoryDocument::findOrFail($pk);
+            
+            // Find the detail record
+            $detail = CourseRepositoryDetail::findOrFail($validated['detail_pk']);
+            
+            // Update the detail record
+            $detail->update([
+                'course_master_pk' => $validated['course_name'] ?? null,
+                'subject_pk' => $validated['subject_name'] ?? null,
+                'topic_pk' => $validated['timetable_name'] ?? null,
+                'session_date' => $validated['session_date'] ?? null,
+                'author_name' => $validated['author_name'] ?? null,
+                'sector_master_pk' => $validated['sector_master'] ?? null,
+                'ministry_master_pk' => $validated['ministry_master'] ?? null,
+                'keyword' => $validated['keywords'] ?? null,
+                'videolink' => $validated['video_link'] ?? null,
+                'updated_date' => now(),
+                'updated_by' => auth()->id(),
+            ]);
+            
+            // Update the document title - use file_title if provided, otherwise use first attachment_title
+            $fileTitle = $validated['file_title'] ?? null;
+            if (!$fileTitle && isset($validated['attachment_titles']) && is_array($validated['attachment_titles']) && !empty($validated['attachment_titles'])) {
+                $fileTitle = $validated['attachment_titles'][0];
+            }
+            
+            if ($fileTitle) {
+                $document->update([
+                    'file_title' => $fileTitle,
+                ]);
+            }
+            
+            // Handle file uploads (attachments array)
+            if ($request->hasFile('attachments')) {
+                $files = $request->file('attachments');
+                $titles = $validated['attachment_titles'] ?? [];
+                
+                // Get the parent repository to fetch folder structure
+                $parent = CourseRepositoryMaster::findOrFail($document->course_repository_master_pk);
+                $folderPath = $this->buildFolderPath($parent);
+                
+                foreach ($files as $index => $file) {
+                    if ($file && $file->isValid()) {
+                        // Generate unique filename
+                        $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                        
+                        // Store file in hierarchical folder structure
+                        $filePath = $file->storeAs('course-repository/' . $folderPath, $fileName, 'public');
+                        
+                        if ($index === 0) {
+                            // First file (index 0): REPLACE the existing document record
+                            // Delete old file if it exists
+                            if ($document->full_path && Storage::disk('public')->exists($document->full_path)) {
+                                Storage::disk('public')->delete($document->full_path);
+                            }
+                            
+                            // Update the existing document record with new file info
+                            $document->update([
+                                'upload_document' => $fileName,
+                                'full_path' => $filePath,
+                                'file_title' => $titles[$index] ?? $file->getClientOriginalName(),
+                            ]);
+                        } else {
+                            // Additional files (index 1+): CREATE new document records
+                            CourseRepositoryDocument::create([
+                                'upload_document' => $fileName,
+                                'course_repository_master_pk' => $document->course_repository_master_pk,
+                                'course_repository_details_pk' => $validated['detail_pk'],
+                                'course_repository_type' => $document->course_repository_type,
+                                'file_title' => $titles[$index] ?? $file->getClientOriginalName(),
+                                'full_path' => $filePath,
+                                'del_type' => 1, // 1 = active, 0 = deleted
+                            ]);
+                        }
+                    }
+                }
+            }
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Document updated successfully',
+            ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error in updateDocument: ' . json_encode($e->errors()));
+            
+            // Format validation errors into user-friendly message
+            $errorMessages = [];
+            foreach ($e->errors() as $field => $messages) {
+                foreach ($messages as $message) {
+                    $errorMessages[] = $message;
+                }
+            }
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed. Please check the following:',
+                'errors' => $e->errors(),
+                'error_list' => $errorMessages,
+            ], 422);
+        } catch (Exception $e) {
+            Log::error('Error updating document: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+            return response()->json([
+                'success' => false,
+                'error' => 'Update failed: ' . $e->getMessage(),
+                'error_details' => 'Please try again or contact support if the problem persists.',
             ], 500);
         }
     }
@@ -1236,7 +1429,15 @@ class CourseRepositoryController extends Controller
           
             // Get all documents linked through details with course_repository_details_pk
             // Also include documents directly linked to master via course_repository_master_pk
-            $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
+            $documentsQuery = CourseRepositoryDocument::with([
+                'detail.course',
+                'detail.subject',
+                'detail.topic',
+                'detail.sector',
+                'detail.ministry',
+                'detail.author'
+            ])
+                ->where('del_type', 1)
                 ->where(function($query) use ($pk) {
                     $query->where('course_repository_master_pk', $pk)
                         ->orWhereIn('course_repository_details_pk', 
@@ -1268,7 +1469,7 @@ class CourseRepositoryController extends Controller
             }
 
             $documents = $documentsQuery->orderBy('pk', 'desc')->get();
-
+// print_r($documents->toArray()); exit;
             // Build ancestor chain for breadcrumb
             $ancestors = [];
             $current = $repository;

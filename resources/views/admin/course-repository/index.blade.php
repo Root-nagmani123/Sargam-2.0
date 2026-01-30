@@ -259,8 +259,7 @@
                                 </a>
                             </td>
                             <td>
-                                <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-primary border-bottom">{{ $repo->getDocumentCount() }} - documents</a>
+                                <a href="{{ route('course-repository.show', $repo->pk) }}" class="text-primary border-bottom">{{ $documents_count_array[$repo->pk] ?? $repo->getDocumentCount() }} - documents</a>
                             </td>
                             <td class="pe-4">
                                 <div class="d-flex gap-1" role="group" aria-label="Category actions">
