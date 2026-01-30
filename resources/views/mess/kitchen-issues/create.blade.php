@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
-@section('title', 'Create Kitchen Issue')
+@section('title', 'Create Material Management')
 @section('setup_content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Create Kitchen Issue</h4>
-        <a href="{{ route('admin.mess.kitchen-issues.index') }}" class="btn btn-secondary">Back to List</a>
+        <h4>Create Material Management</h4>
+        <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
     </div>
     
     @if($errors->any())
@@ -19,7 +19,7 @@
     
     <div class="card">
         <div class="card-body">
-            <form action="{{ route('admin.mess.kitchen-issues.store') }}" method="POST">
+            <form action="{{ route('admin.mess.material-management.store') }}" method="POST">
                 @csrf
                 
                 <div class="row">
@@ -109,8 +109,8 @@
                 </div>
                 
                 <div class="text-end">
-                    <button type="submit" class="btn btn-primary">Create Kitchen Issue</button>
-                    <a href="{{ route('admin.mess.kitchen-issues.index') }}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Create Material Management</button>
+                    <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
         </div>

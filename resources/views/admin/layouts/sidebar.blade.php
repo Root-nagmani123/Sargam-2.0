@@ -15,7 +15,7 @@
         <div class="tab-pane fade" id="sidebar-academics" role="tabpanel" aria-labelledby="academics-tab">
             @include('admin.layouts.sidebar.academics')
         </div>
-        <div class="tab-pane fade" id="sidebar-material-management" role="tabpanel" aria-labelledby="material-management-tab">
+        <div class="tab-pane fade" id="sidebar-purchase-order" role="tabpanel" aria-labelledby="purchase-order-tab">
             @include('admin.layouts.sidebar.material')
         </div>
     </div>
@@ -50,7 +50,7 @@ function syncSidebarWithMainTabs() {
         '#tab-setup': '#sidebar-setup',
         '#tab-communications': '#sidebar-communications',
         '#tab-academics': '#sidebar-academics',
-        '#tab-material-management': '#sidebar-material-management'
+        '#tab-purchase-order': '#sidebar-purchase-order'
     };
     
     // Function to activate sidebar tab based on main tab

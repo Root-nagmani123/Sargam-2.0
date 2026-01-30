@@ -1,14 +1,14 @@
 @extends('admin.layouts.master')
-@section('title', 'View Kitchen Issue')
+@section('title', 'View Material Management')
 @section('setup_content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Kitchen Issue Details</h4>
+        <h4>Material Management Details</h4>
         <div>
             @if($kitchenIssue->status == 'pending')
-                <a href="{{ route('admin.mess.kitchen-issues.edit', $kitchenIssue->pk) }}" class="btn btn-warning">Edit</a>
+                <a href="{{ route('admin.mess.material-management.edit', $kitchenIssue->pk) }}" class="btn btn-warning">Edit</a>
             @endif
-            <a href="{{ route('admin.mess.kitchen-issues.index') }}" class="btn btn-secondary">Back to List</a>
+            <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
         </div>
     </div>
     
