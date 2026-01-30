@@ -254,7 +254,7 @@
             </li>
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.storeallocations.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Store Allocations</span>
+                    <span class="hide-menu small small-sm-normal text-nowrap">Mess Store Allocation</span>
                 </a>
             </li>
             <li class="sidebar-item">
