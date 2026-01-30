@@ -445,9 +445,9 @@
                         @yield('academics_content')
                     </div>
 
-                    <!-- Material Management Tab -->
-                    <div class="tab-pane fade" id="tab-material-management" role="tabpanel">
-                        @yield('material_management_content')
+                    <!-- Purchase Order Tab -->
+                    <div class="tab-pane fade" id="tab-purchase-order" role="tabpanel">
+                        @yield('purchase_order_content')
                     </div>
                 </div>
             </div>

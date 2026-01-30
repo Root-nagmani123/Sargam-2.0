@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
-@section('title', 'Kitchen Issues')
+@section('title', 'Material Management')
 @section('setup_content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Kitchen Issues</h4>
-        <a href="{{ route('admin.mess.kitchen-issues.create') }}" class="btn btn-primary">Create Kitchen Issue</a>
+        <h4>Material Management</h4>
+        <a href="{{ route('admin.mess.material-management.create') }}" class="btn btn-primary">Create Material Management</a>
     </div>
     
     @if(session('success'))
@@ -18,7 +18,7 @@
     <!-- Filters -->
     <div class="card mb-3">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.mess.kitchen-issues.index') }}">
+            <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
                 <div class="row">
                     <div class="col-md-3">
                         <label>Status</label>
@@ -98,15 +98,15 @@
                         @endif
                     </td>
                     <td>
-                        <a href="{{ route('admin.mess.kitchen-issues.show', $issue->pk) }}" class="btn btn-sm btn-info">View</a>
+                        <a href="{{ route('admin.mess.material-management.show', $issue->pk) }}" class="btn btn-sm btn-info">View</a>
                         @if($issue->status == 'pending')
-                            <a href="{{ route('admin.mess.kitchen-issues.edit', $issue->pk) }}" class="btn btn-sm btn-warning">Edit</a>
+                            <a href="{{ route('admin.mess.material-management.edit', $issue->pk) }}" class="btn btn-sm btn-warning">Edit</a>
                         @endif
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" class="text-center">No kitchen issues found</td>
+                    <td colspan="8" class="text-center">No records found</td>
                 </tr>
             @endforelse
             </tbody>

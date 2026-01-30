@@ -1,16 +1,16 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Create Kitchen Issue - Sargam | Lal Bahadur')
+@section('title', 'Create Material Management - Sargam | Lal Bahadur')
 
 @section('setup_content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Create Kitchen Issue" />
+    <x-breadcrum title="Create Material Management" />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
-            <h4 class="card-title mb-3">Add Kitchen Issue</h4>
+            <h4 class="card-title mb-3">Add Material Management</h4>
             <hr>
-            <form action="{{ route('admin.mess.kitchen-issues.store') }}" method="POST">
+            <form action="{{ route('admin.mess.material-management.store') }}" method="POST">
                 @csrf
                 <div class="row">
                     <div class="col-md-6">
@@ -138,8 +138,8 @@
                 </div>
                 <hr>
                 <div class="mb-3 text-end gap-3">
-                    <button type="submit" class="btn btn-primary">Save Kitchen Issue</button>
-                    <a href="{{ route('admin.mess.kitchen-issues.index') }}" class="btn btn-secondary">Back</a>
+                    <button type="submit" class="btn btn-primary">Save Material Management</button>
+                    <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back</a>
                 </div>
             </form>
         </div>

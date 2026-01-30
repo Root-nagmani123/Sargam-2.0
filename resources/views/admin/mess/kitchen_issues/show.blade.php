@@ -1,15 +1,15 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Kitchen Issue Details - Sargam | Lal Bahadur')
+@section('title', 'Material Management Details - Sargam | Lal Bahadur')
 
 @section('setup_content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Kitchen Issue Details" />
+    <x-breadcrum title="Material Management Details" />
     <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="card-title mb-0">Kitchen Issue #{{ $kitchenIssue->pk }}</h4>
+                <h4 class="card-title mb-0">Material Management #{{ $kitchenIssue->pk }}</h4>
                 <div>
                     @if($kitchenIssue->approve_status == 0)
                     <span class="badge bg-warning">Pending Approval</span>
@@ -132,11 +132,11 @@
             <hr>
             <div class="text-end">
                 @if($kitchenIssue->approve_status == 0)
-                <a href="{{ route('admin.mess.kitchen-issues.edit', $kitchenIssue->pk) }}" class="btn btn-primary">
+                <a href="{{ route('admin.mess.material-management.edit', $kitchenIssue->pk) }}" class="btn btn-primary">
                     <iconify-icon icon="solar:pen-bold" width="18"></iconify-icon> Edit
                 </a>
                 @endif
-                <a href="{{ route('admin.mess.kitchen-issues.index') }}" class="btn btn-secondary">Back to List</a>
+                <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
             </div>
         </div>
     </div>
