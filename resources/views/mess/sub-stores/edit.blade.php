@@ -14,7 +14,7 @@
                 @csrf
                 @method('PUT')
 
-                @include('mess.sub-stores._form', ['subStore' => $subStore, 'stores' => $stores])
+                @include('mess.sub-stores._form', ['subStore' => $subStore])
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-success">Update</button>

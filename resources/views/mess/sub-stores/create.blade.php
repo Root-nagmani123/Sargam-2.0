@@ -9,7 +9,7 @@
             <form method="POST" action="{{ route('admin.mess.sub-stores.store') }}">
                 @csrf
 
-                @include('mess.sub-stores._form', ['subStore' => null, 'stores' => $stores])
+                @include('mess.sub-stores._form', ['subStore' => null])
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-success">Save</button>

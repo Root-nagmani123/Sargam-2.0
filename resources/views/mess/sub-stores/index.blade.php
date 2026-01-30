@@ -23,7 +23,6 @@
                     <thead class="table-light">
                         <tr>
                             <th style="width: 70px; background-color: #af2910; color: #fff; border-color: #af2910;">#</th>
-                            <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Parent Store</th>
                             <th style="background-color: #af2910; color: #fff; border-color: #af2910;">Sub Store Name</th>
                             <th style="width: 120px; background-color: #af2910; color: #fff; border-color: #af2910;">Status</th>
                             <th style="width: 160px; background-color: #af2910; color: #fff; border-color: #af2910;">Action</th>
@@ -33,12 +32,6 @@
                         @forelse($subStores as $subStore)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>
-                                    <div class="fw-semibold">{{ $subStore->parentStore->store_name ?? '-' }}</div>
-                                    @if($subStore->parentStore)
-                                        <div class="text-muted small">Code: {{ $subStore->parentStore->store_code }}</div>
-                                    @endif
-                                </td>
                                 <td><div class="fw-semibold">{{ $subStore->sub_store_name }}</div></td>
                                 <td>
                                     <span class="badge bg-{{ $subStore->status_badge_class }}">
@@ -49,7 +42,6 @@
                                     <div class="d-flex gap-2 flex-wrap">
                                         <button type="button" class="btn btn-sm btn-warning btn-edit-substore"
                                                 data-id="{{ $subStore->id }}"
-                                                data-parent-store-id="{{ $subStore->parent_store_id }}"
                                                 data-sub-store-name="{{ e($subStore->sub_store_name) }}"
                                                 data-status="{{ e($subStore->status ?? 'active') }}"
                                                 title="Edit">Edit</button>
@@ -64,7 +56,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="text-center text-muted">No sub stores found.</td>
+                                <td colspan="4" class="text-center text-muted">No sub stores found.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -86,18 +78,6 @@
                 </div>
                 <div class="modal-body">
                     <div class="row g-3">
-                        <div class="col-12">
-                            <label class="form-label">Parent Store <span class="text-danger">*</span></label>
-                            <select name="parent_store_id" class="form-select" required>
-                                <option value="">Select Parent Store</option>
-                                @foreach($stores as $store)
-                                    <option value="{{ $store->id }}" {{ old('parent_store_id') == $store->id ? 'selected' : '' }}>
-                                        {{ $store->store_name }} ({{ $store->store_code }})
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('parent_store_id')<div class="text-danger small">{{ $message }}</div>@enderror
-                        </div>
                         <div class="col-12">
                             <label class="form-label">Sub Store Name <span class="text-danger">*</span></label>
                             <input type="text" name="sub_store_name" class="form-control" required value="{{ old('sub_store_name') }}">
@@ -137,15 +117,6 @@
                 <div class="modal-body">
                     <div class="row g-3">
                         <div class="col-12">
-                            <label class="form-label">Parent Store <span class="text-danger">*</span></label>
-                            <select name="parent_store_id" id="edit_parent_store_id" class="form-select" required>
-                                <option value="">Select Parent Store</option>
-                                @foreach($stores as $store)
-                                    <option value="{{ $store->id }}">{{ $store->store_name }} ({{ $store->store_code }})</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-12">
                             <label class="form-label">Sub Store Name <span class="text-danger">*</span></label>
                             <input type="text" name="sub_store_name" id="edit_sub_store_name" class="form-control" required>
                         </div>
@@ -175,7 +146,6 @@ document.addEventListener('DOMContentLoaded', function() {
             var id = this.getAttribute('data-id');
             var baseUrl = '{{ url("admin/mess/sub-stores") }}';
             document.getElementById('editSubStoreForm').action = baseUrl + '/' + id;
-            document.getElementById('edit_parent_store_id').value = this.getAttribute('data-parent-store-id') || '';
             document.getElementById('edit_sub_store_name').value = this.getAttribute('data-sub-store-name') || '';
             document.getElementById('edit_status').value = this.getAttribute('data-status') || 'active';
             new bootstrap.Modal(document.getElementById('editSubStoreModal')).show();
