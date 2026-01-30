@@ -60,6 +60,10 @@ class VendorController extends Controller
             'contact_person' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
             'address' => ['nullable', 'string'],
+            'gst_number' => ['nullable', 'string', 'max:50'],
+            'bank_name' => ['nullable', 'string', 'max:255'],
+            'ifsc_code' => ['nullable', 'string', 'max:20'],
+            'account_number' => ['nullable', 'string', 'max:50'],
         ]);
 
         return [
@@ -68,6 +72,10 @@ class VendorController extends Controller
             'contact_person' => $validated['contact_person'] ?? null,
             'phone' => $validated['phone'] ?? null,
             'address' => $validated['address'] ?? null,
+            'gst_number' => $validated['gst_number'] ?? null,
+            'bank_name' => $validated['bank_name'] ?? null,
+            'ifsc_code' => $validated['ifsc_code'] ?? null,
+            'account_number' => $validated['account_number'] ?? null,
         ];
     }
 

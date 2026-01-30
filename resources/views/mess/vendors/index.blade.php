@@ -49,6 +49,10 @@
                                                 data-contact-person="{{ e($vendor->contact_person ?? '') }}"
                                                 data-phone="{{ e($vendor->phone ?? '') }}"
                                                 data-address="{{ e($vendor->address ?? '') }}"
+                                                data-gst-number="{{ e($vendor->gst_number ?? '') }}"
+                                                data-bank-name="{{ e($vendor->bank_name ?? '') }}"
+                                                data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
+                                                data-account-number="{{ e($vendor->account_number ?? '') }}"
                                                 title="Edit">Edit</button>
                                         <form method="POST" action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}" class="d-inline"
                                               onsubmit="return confirm('Are you sure you want to delete this vendor?');">
@@ -108,6 +112,26 @@
                             <textarea name="address" class="form-control" rows="3">{{ old('address') }}</textarea>
                             @error('address')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label">GST Number</label>
+                            <input type="text" name="gst_number" class="form-control" value="{{ old('gst_number') }}" placeholder="Optional">
+                            @error('gst_number')<div class="text-danger small">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Bank Name</label>
+                            <input type="text" name="bank_name" class="form-control" value="{{ old('bank_name') }}" placeholder="Optional">
+                            @error('bank_name')<div class="text-danger small">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">IFSC Code</label>
+                            <input type="text" name="ifsc_code" class="form-control" value="{{ old('ifsc_code') }}" placeholder="Optional">
+                            @error('ifsc_code')<div class="text-danger small">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Account Number</label>
+                            <input type="text" name="account_number" class="form-control" value="{{ old('account_number') }}" placeholder="Optional">
+                            @error('account_number')<div class="text-danger small">{{ $message }}</div>@enderror
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-top bg-light">
@@ -152,6 +176,22 @@
                             <label class="form-label">Address</label>
                             <textarea name="address" id="edit_vendor_address" class="form-control" rows="3"></textarea>
                         </div>
+                        <div class="col-md-6">
+                            <label class="form-label">GST Number</label>
+                            <input type="text" name="gst_number" id="edit_vendor_gst_number" class="form-control" placeholder="Optional">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Bank Name</label>
+                            <input type="text" name="bank_name" id="edit_vendor_bank_name" class="form-control" placeholder="Optional">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">IFSC Code</label>
+                            <input type="text" name="ifsc_code" id="edit_vendor_ifsc_code" class="form-control" placeholder="Optional">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Account Number</label>
+                            <input type="text" name="account_number" id="edit_vendor_account_number" class="form-control" placeholder="Optional">
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-top bg-light">
@@ -176,6 +216,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('edit_vendor_contact_person').value = this.getAttribute('data-contact-person') || '';
             document.getElementById('edit_vendor_phone').value = this.getAttribute('data-phone') || '';
             document.getElementById('edit_vendor_address').value = this.getAttribute('data-address') || '';
+            document.getElementById('edit_vendor_gst_number').value = this.getAttribute('data-gst-number') || '';
+            document.getElementById('edit_vendor_bank_name').value = this.getAttribute('data-bank-name') || '';
+            document.getElementById('edit_vendor_ifsc_code').value = this.getAttribute('data-ifsc-code') || '';
+            document.getElementById('edit_vendor_account_number').value = this.getAttribute('data-account-number') || '';
             new bootstrap.Modal(document.getElementById('editVendorModal')).show();
         });
     });

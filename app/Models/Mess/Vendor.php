@@ -16,5 +16,9 @@ class Vendor extends Model
         'contact_person',
         'phone',
         'address',
+        'gst_number',
+        'bank_name',
+        'ifsc_code',
+        'account_number',
     ];
 }

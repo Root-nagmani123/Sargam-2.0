@@ -113,6 +113,11 @@
                             @error('item_name')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
+                            <label class="form-label">Item Code <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control bg-light" value="" readonly placeholder="Auto-generated on save">
+                            <small class="text-muted">Mandatory. Auto-generated.</small>
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label">Unit Measurement</label>
                             <input type="text" name="unit_measurement" class="form-control" value="{{ old('unit_measurement') }}" placeholder="e.g., kg, liter, piece">
                             @error('unit_measurement')<div class="text-danger small">{{ $message }}</div>@enderror
@@ -173,9 +178,9 @@
                             <input type="text" name="item_name" id="edit_item_name" class="form-control" required>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Item Code</label>
+                            <label class="form-label">Item Code <span class="text-danger">*</span></label>
                             <input type="text" id="edit_item_code_display" class="form-control bg-light" readonly>
-                            <small class="text-muted">Auto-generated; read-only.</small>
+                            <small class="text-muted">Mandatory. Auto-generated; read-only.</small>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Unit Measurement</label>
