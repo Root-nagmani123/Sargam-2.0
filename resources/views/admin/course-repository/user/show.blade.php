@@ -125,6 +125,7 @@
                                     <th class="text-center fw-bold">S.No.</th>
                                     <th class="fw-bold">Document Name</th>
                                     <th class="fw-bold">File Title</th>
+                                    <th class="fw-bold">Video Link</th>
                                     <th class="fw-bold">Course</th>
                                     <th class="fw-bold">Subject</th>
                                     <th class="fw-bold">Topic</th>
@@ -135,15 +136,23 @@
                             </thead>
                             <tbody>
                                 @foreach ($documents as $index => $doc)
-                                <tr class="{{ $loop->odd ? 'table-light' : '' }}" style="cursor: pointer;"
-                                    onclick="window.location='{{ route('admin.course-repository.user.document-details', $doc->pk) }}'">
+                                <tr class="{{ $loop->odd ? 'table-light' : '' }}" style="cursor: pointer;">
+                                  
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>
-                                        <span
-                                            class="material-icons material-symbols-rounded text-danger me-2">picture_as_pdf</span>
+                                       
                                         <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
                                     </td>
                                     <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                    <td>
+                                        @if($doc->detail->videolink)
+                                        <a href="{{ $doc->detail->videolink }}" target="_blank"
+                                            onclick="event.stopPropagation();">
+                                            View Video
+                                        </a>
+                                        @else
+                                        N/A
+                                        @endif
                                     <td>
                                         <small>
                                             @if($doc->detail && $doc->detail->course)
@@ -165,7 +174,7 @@
                                     <td>
                                         <small>
                                             @if($doc->detail && $doc->detail->topic)
-                                            {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
+                                            {{ Str::limit($doc->detail->topic->topic_name, 15) }}
                                             @else
                                             N/A
                                             @endif
