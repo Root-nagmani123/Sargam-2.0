@@ -1,96 +1,193 @@
 @extends('admin.layouts.master')
 
-@section('setup_content')
-<div class="card" style="border-left: 4px solid #004a93;">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">
-            <iconify-icon icon="solar:tag-price-bold" class="me-2"></iconify-icon>
-            Vendor Item Mappings
-        </h5>
-        <a href="{{ route('admin.mess.vendor-item-mappings.create') }}" class="btn btn-primary btn-sm">
-            <iconify-icon icon="solar:add-circle-bold" class="me-1"></iconify-icon>
-            Add New Mapping
-        </a>
-    </div>
-    <div class="card-body">
-        @if(session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                {{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        @endif
+@section('title', 'Vendor Mapping - Sargam | Lal Bahadur')
 
-        @if($mappings->count() > 0)
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-light">
+@section('setup_content')
+<div class="container-fluid">
+    <x-breadcrum title="Vendor Mapping" />
+    <div class="datatables">
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                @endif
+                <div class="row">
+                    <div class="col-6"><h4>Vendor Mapping</h4></div>
+                    <div class="col-6">
+                        <div class="d-flex justify-content-end mb-3">
+                            <a href="{{ route('admin.mess.vendor-item-mappings.create') }}" class="btn btn-primary px-3 py-2 rounded-3 shadow-sm" id="openCreateVendorMapping">
+                                <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px; vertical-align: middle;">add</i>
+                                Add Vendor Mapping
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <table class="table w-100 text-nowrap">
+                    <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Vendor</th>
-                            <th>Item</th>
-                            <th>Rate</th>
-                            <th>Effective From</th>
-                            <th>Status</th>
+                            <th>S.No.</th>
+                            <th>Vendor Name</th>
+                            <th>Item Category</th>
+                            <th>Item Sub Category</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach($mappings as $mapping)
+                        @forelse($mappings as $key => $mapping)
                         <tr>
-                            <td>{{ $mapping->id }}</td>
+                            <td>{{ $mappings->firstItem() + $key }}</td>
+                            <td>{{ $mapping->vendor->vendor_name ?? $mapping->vendor->name ?? 'N/A' }}</td>
                             <td>
-                                <strong>{{ $mapping->vendor->vendor_name ?? 'N/A' }}</strong><br>
-                                <small class="text-muted">{{ $mapping->vendor->vendor_code ?? '' }}</small>
-                            </td>
-                            <td>
-                                {{ $mapping->inventory->item_name ?? 'N/A' }}<br>
-                                <small class="text-muted">{{ $mapping->inventory->item_code ?? '' }}</small>
-                            </td>
-                            <td>
-                                <strong>₹{{ number_format($mapping->rate, 2) }}</strong>
-                            </td>
-                            <td>
-                                {{ $mapping->effective_from ? date('d M Y', strtotime($mapping->effective_from)) : '-' }}
-                            </td>
-                            <td>
-                                @if($mapping->is_active)
-                                    <span class="badge bg-success">Active</span>
+                                @if($mapping->mapping_type === \App\Models\Mess\VendorItemMapping::MAPPING_TYPE_ITEM_CATEGORY && $mapping->itemCategory)
+                                    {{ $mapping->itemCategory->category_name }}
                                 @else
-                                    <span class="badge bg-secondary">Inactive</span>
+                                    —
                                 @endif
                             </td>
                             <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <a href="{{ route('admin.mess.vendor-item-mappings.edit', $mapping->id) }}" 
-                                       class="btn btn-outline-primary" title="Edit">
-                                        <iconify-icon icon="solar:pen-bold"></iconify-icon>
-                                    </a>
-                                    <form action="{{ route('admin.mess.vendor-item-mappings.destroy', $mapping->id) }}" 
-                                          method="POST" class="d-inline"
-                                          onsubmit="return confirm('Are you sure you want to delete this mapping?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-outline-danger" title="Delete">
-                                            <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-                                        </button>
-                                    </form>
-                                </div>
+                                @if($mapping->mapping_type === \App\Models\Mess\VendorItemMapping::MAPPING_TYPE_ITEM_SUB_CATEGORY && $mapping->itemSubcategory)
+                                    {{ $mapping->itemSubcategory->item_name ?? $mapping->itemSubcategory->subcategory_name ?? 'N/A' }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td>
+                                <a href="{{ route('admin.mess.vendor-item-mappings.edit', $mapping->id) }}" class="btn btn-sm btn-warning openEditVendorMapping">Edit</a>
+                                <form action="{{ route('admin.mess.vendor-item-mappings.destroy', $mapping->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this mapping?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                </form>
                             </td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr><td colspan="5" class="text-center">No vendor mappings found</td></tr>
+                        @endforelse
                     </tbody>
                 </table>
+                <div class="d-flex justify-content-center mt-3">{{ $mappings->links() }}</div>
             </div>
+        </div>
+    </div>
+</div>
 
-            <div class="mt-3">
-                {{ $mappings->links() }}
+<!-- Modal -->
+<div class="modal fade" id="vendorMappingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header" style="background: #004a93;">
+                <h5 class="modal-title text-white">Vendor Mapping</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        @else
-            <div class="alert alert-info">
-                <iconify-icon icon="solar:info-circle-bold" class="me-2"></iconify-icon>
-                No vendor item mappings found. Click "Add New Mapping" to create one.
+            <div class="modal-body">
+                <div class="text-center py-4 placeholder-loading d-none">
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                </div>
             </div>
-        @endif
+        </div>
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var modalEl = document.getElementById('vendorMappingModal');
+    var modalBody = modalEl.querySelector('.modal-body');
+    var modalTitle = modalEl.querySelector('.modal-title');
+
+    function initVendorMappingForm() {
+        var wrapCat = modalBody.querySelector('#wrap_item_categories');
+        var wrapSub = modalBody.querySelector('#wrap_item_subcategories');
+        if (!wrapCat || !wrapSub) return;
+        var radios = modalBody.querySelectorAll('.mapping-type-radio');
+        function toggleMappingFields() {
+            var typeCat = modalBody.querySelector('#mapping_type_category');
+            if (!typeCat) return;
+            if (typeCat.checked) {
+                wrapCat.classList.remove('d-none');
+                wrapSub.classList.add('d-none');
+                wrapSub.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+                var subSel = modalBody.querySelector('#item_subcategory_id');
+                if (subSel) subSel.value = '';
+            } else {
+                wrapCat.classList.add('d-none');
+                wrapSub.classList.remove('d-none');
+                wrapCat.querySelectorAll('input[type="checkbox"]').forEach(function(cb) { cb.checked = false; });
+                var catSel = modalBody.querySelector('#item_category_id');
+                if (catSel) catSel.value = '';
+            }
+        }
+        radios.forEach(function(r) { r.addEventListener('change', toggleMappingFields); });
+        toggleMappingFields();
+    }
+
+    function loadForm(url, title) {
+        modalTitle.textContent = title || 'Vendor Mapping';
+        modalBody.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r) { return r.text(); })
+            .then(function(html) {
+                modalBody.innerHTML = html;
+                initVendorMappingForm();
+            })
+            .catch(function() { modalBody.innerHTML = '<div class="alert alert-danger">Failed to load form.</div>'; });
+        (new bootstrap.Modal(modalEl)).show();
+    }
+
+    document.getElementById('openCreateVendorMapping') && document.getElementById('openCreateVendorMapping').addEventListener('click', function(e) {
+        e.preventDefault();
+        loadForm(this.getAttribute('href'), 'Add Vendor Mapping');
+    });
+
+    document.querySelectorAll('.openEditVendorMapping').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            loadForm(this.getAttribute('href'), 'Edit Vendor Mapping');
+        });
+    });
+
+    modalEl.addEventListener('submit', function(e) {
+        var form = e.target;
+        if (form.tagName !== 'FORM') return;
+        e.preventDefault();
+        var submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+        fetch(form.action, {
+            method: form.method || 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            body: new FormData(form)
+        })
+            .then(function(res) {
+                if (res.status === 422) {
+                    return res.text().then(function(html) {
+                        modalBody.innerHTML = html;
+                        initVendorMappingForm();
+                    });
+                }
+                if (!res.ok) throw new Error('Save failed');
+                return res.json();
+            })
+            .then(function(data) {
+                if (data && data.success) {
+                    if (data.reload) {
+                        window.location.reload();
+                    } else {
+                        bootstrap.Modal.getInstance(modalEl) && bootstrap.Modal.getInstance(modalEl).hide();
+                    }
+                }
+            })
+            .catch(function() {
+                modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Error saving. Please try again.</div>');
+            })
+            .finally(function() {
+                if (submitBtn) submitBtn.disabled = false;
+            });
+    });
+});
+</script>
+@endpush
