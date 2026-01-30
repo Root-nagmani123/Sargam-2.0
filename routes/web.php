@@ -562,14 +562,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('purchaseorders/{id}/approve', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'approve'])->name('purchaseorders.approve');
         Route::post('purchaseorders/{id}/reject', [\App\Http\Controllers\Mess\PurchaseOrderController::class, 'reject'])->name('purchaseorders.reject');
         
-        // Kitchen Issue Management
-        Route::resource('kitchen-issues', \App\Http\Controllers\Mess\KitchenIssueController::class);
-        Route::post('kitchen-issues/{id}/send-for-approval', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sendForApproval'])->name('kitchen-issues.send-for-approval');
-        Route::get('kitchen-issues/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('kitchen-issues.records');
-        Route::get('kitchen-issues/reports/bill', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'billReport'])->name('kitchen-issues.bill-report');
+        // Material Management (formerly Kitchen Issue)
+        Route::resource('material-management', \App\Http\Controllers\Mess\KitchenIssueController::class);
+        Route::post('material-management/{id}/send-for-approval', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'sendForApproval'])->name('material-management.send-for-approval');
+        Route::get('material-management/records/ajax', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'getKitchenIssueRecords'])->name('material-management.records');
+        Route::get('material-management/reports/bill', [\App\Http\Controllers\Mess\KitchenIssueController::class, 'billReport'])->name('material-management.bill-report');
         
-        // Kitchen Issue Approval
-        Route::prefix('kitchen-issue-approvals')->name('kitchen-issue-approvals.')->group(function () {
+        // Material Management Approval
+        Route::prefix('material-management-approvals')->name('material-management-approvals.')->group(function () {
             Route::get('/', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'index'])->name('index');
             Route::get('/{id}', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'show'])->name('show');
             Route::post('/{id}/approve', [\App\Http\Controllers\Mess\KitchenIssueApprovalController::class, 'approve'])->name('approve');
