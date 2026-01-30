@@ -35,6 +35,10 @@ class VehiclePassTWApply extends Model
         'veh_card_forward_status',
         'veh_created_by',
         'gov_veh',
+        'applicant_type',
+        'applicant_name',
+        'designation',
+        'department',
     ];
 
     protected $casts = [
