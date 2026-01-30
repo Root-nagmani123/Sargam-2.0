@@ -238,13 +238,11 @@ class KitchenIssueController extends Controller
             DB::commit();
 
             return redirect()->route('admin.mess.material-management.index')
-                ->with('success', 'Selling Voucher created successfully');
+                           ->with('success', 'Material Management created successfully');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->route('admin.mess.material-management.index')
-                ->withInput()
-                ->with('error', 'Failed to create Selling Voucher: ' . $e->getMessage())
-                ->with('open_selling_voucher_modal', true);
+            return back()->withInput()
+                        ->with('error', 'Failed to create Material Management: ' . $e->getMessage());
         }
     }
 
@@ -305,45 +303,12 @@ class KitchenIssueController extends Controller
      */
     public function edit(Request $request, $id)
     {
-        $kitchenIssue = KitchenIssueMaster::with(['items.itemSubcategory', 'clientTypeCategory'])->findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
-        if ($request->wantsJson()) {
-            // Map numeric client_type back to slug
-            $clientTypeSlugMap = [
-                KitchenIssueMaster::CLIENT_EMPLOYEE => 'employee',
-                KitchenIssueMaster::CLIENT_OT => 'ot',
-                KitchenIssueMaster::CLIENT_COURSE => 'course',
-                KitchenIssueMaster::CLIENT_OTHER => 'other',
-            ];
-            $clientTypeSlug = $clientTypeSlugMap[$kitchenIssue->client_type] ?? 'employee';
-            
-            $voucher = [
-                'pk' => $kitchenIssue->pk,
-                'payment_type' => (int) $kitchenIssue->payment_type,
-                'client_type' => (int) $kitchenIssue->client_type,
-                'client_type_pk' => $kitchenIssue->client_type_pk,
-                'client_type_slug' => $clientTypeSlug,
-                'client_id' => $kitchenIssue->client_id,
-                'name_id' => $kitchenIssue->name_id,
-                'client_name' => $kitchenIssue->client_name,
-                'issue_date' => $kitchenIssue->issue_date ? $kitchenIssue->issue_date->format('Y-m-d') : '',
-                'store_id' => $kitchenIssue->store_id,
-                'inve_store_master_pk' => $kitchenIssue->store_id, // For backward compatibility with view
-                'remarks' => $kitchenIssue->remarks,
-            ];
-            $items = $kitchenIssue->items->map(function ($item) {
-                return [
-                    'item_subcategory_id' => $item->item_subcategory_id,
-                    'item_name' => $item->item_name ?? ($item->itemSubcategory->item_name ?? '—'),
-                    'unit' => $item->unit ?? '',
-                    'quantity' => (float) $item->quantity,
-                    'available_quantity' => (float) ($item->available_quantity ?? 0),
-                    'return_quantity' => (float) ($item->return_quantity ?? 0),
-                    'rate' => (float) $item->rate,
-                    'amount' => (float) $item->amount,
-                ];
-            })->values()->toArray();
-            return response()->json(['voucher' => $voucher, 'items' => $items]);
+        // Only allow editing if not approved
+        if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED) {
+            return redirect()->route('admin.mess.material-management.index')
+                           ->with('error', 'Cannot edit approved kitchen issue');
         }
 
         $stores = Store::active()->get();
@@ -358,15 +323,22 @@ class KitchenIssueController extends Controller
     {
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
-        $request->validate([
-            'store_id' => 'required|exists:mess_stores,id',
-            'payment_type' => 'required|integer|in:0,1,2',
-            'client_type_slug' => 'required|string|in:employee,ot,course,other',
-            'client_type_pk' => 'nullable|exists:mess_client_types,id',
-            'client_id' => 'nullable|integer',
-            'name_id' => 'nullable|integer',
-            'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
-            'issue_date' => 'required|date',
+        // Only allow editing if not approved
+        if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED) {
+            return redirect()->route('admin.mess.material-management.index')
+                           ->with('error', 'Cannot edit approved kitchen issue');
+        }
+
+        $validated = $request->validate([
+            'inve_store_master_pk' => 'required|exists:canteen_store_master,pk',
+            'inve_item_master_pk' => 'required',
+            'quantity' => 'required|numeric|min:0.01',
+            'unit_price' => 'required|numeric|min:0',
+            'payment_type' => 'required|integer|in:0,1,2,5',
+            'client_type' => 'nullable|integer',
+            'client_name' => 'nullable|string|max:255',
+            'employee_student_pk' => 'nullable|integer',
+            'issue_date' => 'nullable|date',
             'remarks' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.item_subcategory_id' => 'required|exists:mess_item_subcategories,id',
@@ -421,11 +393,11 @@ class KitchenIssueController extends Controller
             DB::commit();
 
             return redirect()->route('admin.mess.material-management.index')
-                           ->with('success', 'Selling Voucher updated successfully');
+                           ->with('success', 'Material Management updated successfully');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()
-                        ->with('error', 'Failed to update Selling Voucher: ' . $e->getMessage());
+                        ->with('error', 'Failed to update Material Management: ' . $e->getMessage());
         }
     }
 
@@ -436,84 +408,20 @@ class KitchenIssueController extends Controller
     {
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
+        // Only allow deletion if not approved or completed
+        if ($kitchenIssue->approve_status == KitchenIssueMaster::APPROVE_APPROVED ||
+            $kitchenIssue->status == KitchenIssueMaster::STATUS_COMPLETED) {
+            return redirect()->route('admin.mess.material-management.index')
+                           ->with('error', 'Cannot delete approved or completed kitchen issue');
+        }
+
         try {
             $kitchenIssue->delete();
 
             return redirect()->route('admin.mess.material-management.index')
-                           ->with('success', 'Selling Voucher deleted successfully');
+                           ->with('success', 'Material Management deleted successfully');
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to delete Selling Voucher: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * Return modal data (JSON): store name and items with return fields.
-     */
-    public function returnData(Request $request, $id)
-    {
-        $kitchenIssue = KitchenIssueMaster::with(['store', 'items.itemSubcategory'])->findOrFail($id);
-
-        if (!$request->wantsJson()) {
-            return redirect()->route('admin.mess.material-management.index');
-        }
-
-        $items = $kitchenIssue->items->map(function ($item) {
-            return [
-                'id' => $item->pk,
-                'item_name' => $item->item_name ?: ($item->itemSubcategory->item_name ?? '—'),
-                'quantity' => (float) $item->quantity,
-                'unit' => $item->unit ?? '—',
-                'return_quantity' => (float) ($item->return_quantity ?? 0),
-                'return_date' => $item->return_date ? $item->return_date->format('Y-m-d') : '',
-            ];
-        })->values()->toArray();
-
-        return response()->json([
-            'store_name' => $kitchenIssue->storeMaster->store_name ?? '—',
-            'items' => $items,
-        ]);
-    }
-
-    /**
-     * Update return quantities and dates for a selling voucher.
-     */
-    public function updateReturn(Request $request, $id)
-    {
-        $kitchenIssue = KitchenIssueMaster::with('items')->findOrFail($id);
-
-        $request->validate([
-            'items' => 'required|array|min:1',
-            'items.*.id' => 'required|exists:kitchen_issue_items,pk',
-            'items.*.return_quantity' => 'required|numeric|min:0',
-            'items.*.return_date' => 'nullable|date',
-        ]);
-
-        $itemIds = $kitchenIssue->items->pluck('pk')->toArray();
-
-        try {
-            DB::beginTransaction();
-            foreach ($request->items as $row) {
-                $itemPk = (int) $row['id'];
-                if (!in_array($itemPk, $itemIds, true)) {
-                    continue;
-                }
-                $item = KitchenIssueItem::find($itemPk);
-                if (!$item || $item->kitchen_issue_master_pk != $kitchenIssue->pk) {
-                    continue;
-                }
-                $returnQty = (float) ($row['return_quantity'] ?? 0);
-                $returnDate = !empty($row['return_date']) ? $row['return_date'] : null;
-                $item->update([
-                    'return_quantity' => $returnQty,
-                    'return_date' => $returnDate,
-                ]);
-            }
-            DB::commit();
-            return redirect()->route('admin.mess.material-management.index')
-                ->with('success', 'Return updated successfully.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()->with('error', 'Failed to update return: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete Material Management: ' . $e->getMessage());
         }
     }
 
@@ -556,8 +464,8 @@ class KitchenIssueController extends Controller
     {
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
-        if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
-            return back()->with('error', 'Material Management already approved');
+        if ($kitchenIssue->send_for_approval == 1) {
+            return back()->with('error', 'Material Management already sent for approval');
         }
 
         try {

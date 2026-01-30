@@ -1,10 +1,10 @@
 @extends('admin.layouts.master')
-@section('title', 'Selling Voucher')
+@section('title', 'Material Management')
 @section('setup_content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Selling Voucher</h4>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSellingVoucherModal">ADD Selling Voucher</button>
+        <h4>Material Management</h4>
+        <a href="{{ route('admin.mess.material-management.create') }}" class="btn btn-primary">Create Material Management</a>
     </div>
 
     @if(session('success'))
@@ -21,10 +21,10 @@
     <div class="card mb-3">
         <div class="card-body">
             <form method="GET" action="{{ route('admin.mess.material-management.index') }}">
-                <div class="row g-2">
-                    <div class="col-md-2">
-                        <label class="form-label small">Status</label>
-                        <select name="status" class="form-select form-select-sm">
+                <div class="row">
+                    <div class="col-md-3">
+                        <label>Status</label>
+                        <select name="status" class="form-select">
                             <option value="">All</option>
                             <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Pending</option>
                             <option value="2" {{ request('status') == '2' ? 'selected' : '' }}>Approved</option>
@@ -76,92 +76,43 @@
                 </tr>
             </thead>
             <tbody>
-                @php $serial = $kitchenIssues->firstItem() ?: 0; @endphp
-                @forelse($kitchenIssues as $voucher)
-                    @forelse($voucher->items as $item)
-                        <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>{{ $item->item_name ?: ($item->itemSubcategory->item_name ?? '—') }}</td>
-                            <td>{{ $item->quantity }}</td>
-                            <td>{{ $item->return_quantity ?? 0 }}</td>
-                            <td>{{ $voucher->storeMaster->store_name ?? '—' }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>
-                                @if($voucher->clientTypeCategory)
-                                    {{ $voucher->clientTypeCategory->client_name }}
-                                @elseif(in_array($voucher->client_type, [2, 3]))
-                                    {{-- For OT/Course, show course name or client_name --}}
-                                    {{ $voucher->client_name ?? '—' }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>{{ $voucher->payment_type == 1 ? 'Credit' : ($voucher->payment_type == 0 ? 'Cash' : ($voucher->payment_type == 2 ? 'Online' : '—')) }}</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td>
-                                @if($voucher->status == 0)<span class="badge bg-warning">Pending</span>
-                                @elseif($voucher->status == 2)<span class="badge bg-success">Approved</span>
-                                @elseif($voucher->status == 4)<span class="badge bg-primary">Completed</span>
-                                @else<span class="badge bg-secondary">{{ $voucher->status }}</span>@endif
-                            </td>
-                            <td>
-                                @if(($item->return_quantity ?? 0) > 0)
-                                    <span class="badge bg-info">Returned</span>
-                                @endif
-                                <button type="button" class="btn btn-sm btn-outline-secondary ms-1 btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td>{{ $serial++ }}</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>—</td>
-                            <td>{{ $voucher->storeMaster->store_name ?? '—' }}</td>
-                            <td>{{ $voucher->client_type_label ?? '—' }}</td>
-                            <td>
-                                @if($voucher->clientTypeCategory)
-                                    {{ $voucher->clientTypeCategory->client_name }}
-                                @elseif(in_array($voucher->client_type, [2, 3]))
-                                    {{-- For OT/Course, show course name or client_name --}}
-                                    {{ $voucher->client_name ?? '—' }}
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td>{{ $voucher->client_name ?? '—' }}</td>
-                            <td>—</td>
-                            <td>{{ $voucher->created_at ? $voucher->created_at->format('d/m/Y') : '—' }}</td>
-                            <td><span class="badge bg-secondary">{{ $voucher->status }}</span></td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-outline-secondary btn-return-sv" data-voucher-id="{{ $voucher->pk }}" title="Return">Return</button>
-                            </td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-info btn-view-sv" data-voucher-id="{{ $voucher->pk }}" title="View">View</button>
-                                <button type="button" class="btn btn-sm btn-warning btn-edit-sv" data-voucher-id="{{ $voucher->pk }}" title="Edit">Edit</button>
-                                <form action="{{ route('admin.mess.material-management.destroy', $voucher->pk) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this Selling Voucher?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @endforelse
-                @empty
-                    <tr>
-                        <td colspan="13" class="text-center py-4">No selling vouchers found.</td>
-                    </tr>
-                @endforelse
+            @forelse($kitchenIssues as $issue)
+                <tr>
+                    <td>{{ $issue->pk }}</td>
+                    <td>{{ $issue->request_date ? \Carbon\Carbon::parse($issue->request_date)->format('d/m/Y') : '-' }}</td>
+                    <td>{{ $issue->issue_date ? \Carbon\Carbon::parse($issue->issue_date)->format('d/m/Y') : '-' }}</td>
+                    <td>{{ $issue->storeMaster->store_name ?? 'N/A' }}</td>
+                    <td>{{ $issue->quantity }}</td>
+                    <td>
+                        @if($issue->status == 'pending')
+                            <span class="badge bg-warning">Pending</span>
+                        @elseif($issue->status == 'approved')
+                            <span class="badge bg-success">Approved</span>
+                        @elseif($issue->status == 'issued')
+                            <span class="badge bg-primary">Issued</span>
+                        @else
+                            <span class="badge bg-secondary">{{ ucfirst($issue->status) }}</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($issue->payment_type == 1)
+                            <span class="badge bg-success">Paid</span>
+                        @else
+                            <span class="badge bg-danger">Unpaid</span>
+                        @endif
+                    </td>
+                    <td>
+                        <a href="{{ route('admin.mess.material-management.show', $issue->pk) }}" class="btn btn-sm btn-info">View</a>
+                        @if($issue->status == 'pending')
+                            <a href="{{ route('admin.mess.material-management.edit', $issue->pk) }}" class="btn btn-sm btn-warning">Edit</a>
+                        @endif
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="8" class="text-center">No records found</td>
+                </tr>
+            @endforelse
             </tbody>
         </table>
     </div>

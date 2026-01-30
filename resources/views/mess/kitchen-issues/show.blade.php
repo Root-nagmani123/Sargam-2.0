@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
-@section('title', 'Selling Voucher Details')
+@section('title', 'View Material Management')
 @section('setup_content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4>Selling Voucher #{{ $kitchenIssue->pk }}</h4>
+        <h4>Material Management Details</h4>
         <div>
-            @if($kitchenIssue->approve_status != 1 && ($kitchenIssue->status == 0 || $kitchenIssue->status == 'pending'))
+            @if($kitchenIssue->status == 'pending')
                 <a href="{{ route('admin.mess.material-management.edit', $kitchenIssue->pk) }}" class="btn btn-warning">Edit</a>
             @endif
             <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
