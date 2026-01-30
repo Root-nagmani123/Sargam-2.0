@@ -1,57 +1,82 @@
+@php
+    // Determine active tab based on current route/path
+    $activeNavTab = '#home';
+    $path = request()->path();
+    $routeName = request()->route()?->getName() ?? '';
+    if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') || request()->routeIs('calendar.index')) {
+        $activeNavTab = '#home';
+    } elseif (
+        request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
+        request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
+        request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
+        str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
+        str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
+        str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
+        str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
+        str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') ||
+        str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
+        str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
+        str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
+        str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
+        str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
+        str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
+        str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
+        str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
+        str_starts_with($path, 'admin/master') || str_starts_with($path, 'password') ||
+        str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
+    ) {
+        $activeNavTab = '#tab-setup';
+    } elseif (str_starts_with($path, 'communications') || request()->routeIs('*communications*')) {
+        $activeNavTab = '#tab-communications';
+    } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
+        $activeNavTab = '#tab-academics';
+    } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
+        $activeNavTab = '#tab-material-management';
+    }
+@endphp
 <header class="topbar">
     <!-- Skip to Content (GIGW Mandatory) -->
 <a href="#main-content" class="visually-hidden-focusable skip-link">
     Skip to main content
 </a>
 
-<header class="bg-dark text-white border-bottom border-primary" style="height: 40px;">
-    <div class="px-3">
-        <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+<header class="header-top-bar">
+<div class="d-flex align-items-center justify-content-between flex-wrap py-1">
 
-            <!-- Left: Government Identity -->
-            <div class="d-flex align-items-center gap-2">
-                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
-                     alt="Emblem of India" style="height:20px;">
-                <span class="fw-semibold small">
-                    भारत सरकार | Government of India
-                </span>
+<!-- Left: Government Identity -->
+<div class="d-flex align-items-center gap-2">
+    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+         alt="Emblem of India" class="header-flag-icon">
+    <span class="fw-semibold small text-white">
+        भारत सरकार | Government of India
+    </span>
+</div>
+
+<!-- Right: Utilities with vertical separators -->
+<nav aria-label="Utility Navigation">
+    <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
+        <li class="list-inline-item">
+            <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
+        </li>
+        <li class="header-utility-sep" aria-hidden="true"></li>
+        <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
+            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
+            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
+            <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
+        </li>
+        <li class="header-utility-sep" aria-hidden="true"></li>
+        <li class="list-inline-item">
+            <div class="header-lang-dropdown">
+                <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
+                <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
+                    <option selected>English</option>
+                    <option>हिन्दी</option>
+                </select>
             </div>
-
-            <!-- Right: Utilities -->
-            <nav aria-label="Utility Navigation">
-                <ul class="list-inline mb-0 d-flex align-items-center gap-3 small">
-
-                    <!-- Skip to Content -->
-                    <li class="list-inline-item">
-                        <a href="#main-content" class="text-white text-decoration-none">
-                            Skip to content
-                        </a>
-                    </li>
-
-                    <!-- Font Size Controls -->
-                    <li class="list-inline-item d-flex align-items-center gap-1"
-                        aria-label="Font size controls">
-                        <a href="javascript:void(0)"class="text-white px-2"
-                                aria-label="Decrease font size">A-</a>
-                        <a href="javascript:void(0)"class="text-white px-2"
-                                aria-label="Normal font size">A</a>
-                        <a href="javascript:void(0)"class="text-white px-2"
-                                aria-label="Increase font size">A+</a>
-                    </li>
-
-                    <!-- Language Switcher -->
-                    <li class="list-inline-item">
-                        <select class="form-select form-select-sm bg-dark text-white border-0"
-                                aria-label="Select Language">
-                            <option selected>English</option>
-                            <option>हिन्दी</option>
-                        </select>
-                    </li>
-
-                </ul>
-            </nav>
-        </div>
-    </div>
+        </li>
+    </ul>
+</nav>
+</div>
 </header>
 
 <main id="main-content" tabindex="-1"></main>
@@ -67,9 +92,9 @@
                 </li>
             </ul>
 
-            <div class=" py-9 py-xl-0">
-                    <img src="{{ asset('images/ashoka.webp') }}" alt="ashoka emblem" style="height: 40px;"> | 
-                    <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo">
+            <div class="header-brand d-flex align-items-center gap-2 py-2">
+                <img src="{{ asset('images/ashoka.webp') }}" alt="ashoka emblem" class="header-logo-emblem">
+                <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo" class="header-logo">
             </div>
 
             <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
@@ -82,14 +107,13 @@
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container (Desktop) -->
                     <div class="nav-container position-relative d-none d-lg-block">
-                        <ul class="navbar-nav px-4 py-2 gap-2 align-items-center" style="border-radius: 20px; height: 60px; background: #f2f2f2; 
-                       border: 1px solid rgba(0, 0, 0, 0.05);" role="menubar" aria-label="Main navigation">
+                        <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="menubar" aria-label="Main navigation">
 
                             <!-- Home -->
                             <li class="nav-item" role="none">
                                 <a href="#home"
-                                    class="nav-link active rounded-pill px-4 py-2 d-flex align-items-center gap-2"
-                                    data-bs-toggle="tab" role="tab" aria-selected="true" aria-controls="home-panel"
+                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#home' ? 'active' : '' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
                                     id="home-tab">
                                     <span>Home</span>
                                 </a>
@@ -98,54 +122,51 @@
                             <!-- Setup -->
                             <li class="nav-item" role="none">
                                 <a href="#tab-setup"
-                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
-                                    data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
+                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                                     id="setup-tab">
-
                                     @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff'))
                                     <span>Setup</span>
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
                                     <span>Academics</span>
                                     @endif
-
                                 </a>
                             </li>
 
-
                             <!-- Communications -->
                             <li class="nav-item" role="none">
-                                <a href="#"
-                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
-                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                <a href="#tab-communications"
+                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
                                     aria-controls="communications-panel" id="communications-tab">
                                     <span>Communications</span>
                                 </a>
                             </li>
 
                             <!-- Academics -->
-                            <!-- <li class="nav-item" role="none">
+                            <li class="nav-item" role="none">
                                 <a href="#tab-academics"
-                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
-                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-academics' ? 'active' : '' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-academics' ? 'true' : 'false' }}"
                                     aria-controls="academics-panel" id="academics-tab">
                                     <span>Academics</span>
                                 </a>
-                            </li> -->
+                            </li>
 
                             <!-- Material Management -->
                             <li class="nav-item" role="none">
-                                <a href="#"
-                                    class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift"
-                                    data-bs-toggle="tab" role="tab" aria-selected="false"
+                                <a href="#tab-material-management"
+                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
+                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
                                     aria-controls="material-management-panel" id="material-management-tab">
                                     <span>Material Management</span>
                                 </a>
                             </li>
 
-                            <!-- Financial Dropdown - Enhanced -->
+                            <!-- Financial Dropdown -->
                             <li class="nav-item dropdown" role="none">
-                                <a class="nav-link rounded-pill px-4 py-2 d-flex align-items-center gap-2 hover-lift dropdown-toggle-custom"
+                                <a class="nav-link header-nav-link px-3 py-2 d-flex align-items-center gap-1 dropdown-toggle-custom"
                                     href="#" id="financialDropdown" role="menuitem" aria-haspopup="true"
                                     aria-expanded="false" data-bs-toggle="dropdown">
                                     <span>Financial</span>
@@ -171,13 +192,11 @@
                                 </ul>
                             </li>
 
-                            <!-- Search with Enhanced UI -->
+                            <!-- Search -->
                             <li class="nav-item" role="none">
-                                <button class="nav-link rounded-circle px-2 py-2 search-trigger hover-lift"
-                                    style="width: 40px; height: 40px;" aria-label="Open search" aria-expanded="false"
-                                    aria-controls="searchModal">
-                                    <i class="material-icons material-symbols-rounded text-dark"
-                                        style="font-size: 20px;" aria-hidden="true">search</i>
+                                <button class="nav-link header-search-btn search-trigger"
+                                    aria-label="Open search" aria-expanded="false" aria-controls="searchModal">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
                                 </button>
                             </li>
                         </ul>
@@ -185,23 +204,21 @@
 
                 </div>
 
-                <!-- Right Side Actions - Enhanced -->
-                <div class="d-flex align-items-center ms-auto gap-2" style="margin-right: 56px;">
-                    <!-- Notification Icon -->
-                    <div class="dropdown position-relative">
+                <!-- Right Side: Logout + Last Login -->
+                <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
+                    <!-- Notification Icon (optional - keep for functionality) -->
+                    <div class="dropdown position-relative d-none d-md-block">
                         <button type="button"
-                            class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
+                            class="btn btn-link border-0 p-2 text-body-secondary position-relative"
                             id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                            aria-label="Notifications" data-bs-placement="bottom" title="Notifications">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 30px; color: #475569;"
+                            aria-label="Notifications" title="Notifications">
+                            <i class="material-icons material-symbols-rounded header-icon-sm"
                                 aria-hidden="true">notifications_active</i>
                             @php
                             $unreadCount = notification()->getUnreadCount(Auth::user()->user_id ?? 0);
                             @endphp
                             @if($unreadCount > 0)
-                            <span
-                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                style="font-size: 10px;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;">
                                 {{ $unreadCount > 99 ? '99+' : $unreadCount }}
                             </span>
                             @endif
@@ -253,40 +270,30 @@
                         </ul>
                     </div>
 
-                    <!-- Logout Button - Enhanced -->
+                    <!-- Logout Button -->
                     <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
                         @csrf
-                        <button type="submit"
-                            class="btn btn-outline-light border-0 p-2 rounded-circle hover-lift position-relative"
-                            aria-label="Sign out from system" data-bs-toggle="tooltip" data-bs-placement="bottom"
-                            title="Sign Out">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 30px; color: #475569;"
-                                aria-hidden="true">logout</i>
-                            <span class="tooltip-text visually-hidden">Sign out from system</span>
+                        <button type="submit" class="btn btn-link border-0 p-2 text-body-secondary"
+                            aria-label="Sign out from system" title="Sign Out">
+                            <i class="material-icons material-symbols-rounded header-logout-icon" aria-hidden="true">logout</i>
                         </button>
                     </form>
 
-                    <!-- Last Login - Enhanced -->
-                    <div class="d-flex flex-column align-items-end">
-                        <div class="text-muted small d-flex align-items-center gap-1"
-                            style="font-size: 11px; line-height: 14px;">
-                            <i class="material-icons material-symbols-rounded" style="font-size: 14px;"
-                                aria-hidden="true">schedule</i>
-                            <span class="fw-medium">Last login:</span>
-                        </div>
+                    <!-- Last Login -->
+                    <div class="d-flex align-items-center gap-2 header-last-login">
+                        <span class="text-body-secondary small">Last login:</span>
                         @php
                         $lastLogin = Auth::user()->last_login ?? null;
                         if ($lastLogin) {
-                        $date = \Carbon\Carbon::parse($lastLogin);
-                        $formattedDate = $date->format('d-m-Y H:i:s');
-                        $isoDate = $date->toIso8601String();
+                            $date = \Carbon\Carbon::parse($lastLogin);
+                            $formattedDate = $date->format('Y-m-d H:i:s');
+                            $isoDate = $date->toIso8601String();
                         } else {
-                        $formattedDate = 'Never';
-                        $isoDate = '';
+                            $formattedDate = 'Never';
+                            $isoDate = '';
                         }
                         @endphp
-                        <time id="myTime" datetime="{{ $isoDate }}" class="text-dark fw-semibold"
-                            style="font-size: 13px; line-height: 16px;" aria-live="polite">
+                        <time id="myTime" datetime="{{ $isoDate }}" class="text-body-secondary small" aria-live="polite">
                             {{ $formattedDate }}
                         </time>
                     </div>
@@ -298,8 +305,8 @@
                 <ul class="navbar-nav mobile-tabbar" role="menubar" aria-label="Main navigation mobile">
                     <!-- Home -->
                     <li class="nav-item" role="none">
-                        <a href="#home" class="nav-link active mobile-tab-link"
-                            data-bs-toggle="tab" role="tab" aria-selected="true" aria-controls="home-panel"
+                        <a href="#home" class="nav-link mobile-tab-link {{ $activeNavTab === '#home' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
                             id="home-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">home</i>
                             <span>Home</span>
@@ -308,8 +315,8 @@
 
                     <!-- Setup -->
                     <li class="nav-item" role="none">
-                        <a href="#tab-setup" class="nav-link mobile-tab-link"
-                            data-bs-toggle="tab" role="tab" aria-selected="false" aria-controls="setup-panel"
+                        <a href="#tab-setup" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                             id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
                             @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff'))
@@ -323,9 +330,9 @@
 
                     <!-- Communications -->
                     <li class="nav-item" role="none">
-                        <a href="#" class="nav-link mobile-tab-link" data-bs-toggle="tab" role="tab"
-                            aria-selected="false" aria-controls="communications-panel"
-                            id="communications-tab-mobile">
+                        <a href="#tab-communications" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
+                            aria-controls="communications-panel" id="communications-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
                             <span>Comms</span>
                         </a>
@@ -333,9 +340,9 @@
 
                     <!-- Material Management -->
                     <li class="nav-item" role="none">
-                        <a href="#" class="nav-link mobile-tab-link" data-bs-toggle="tab" role="tab"
-                            aria-selected="false" aria-controls="material-management-panel"
-                            id="material-management-tab-mobile">
+                        <a href="#tab-material-management" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
+                            aria-controls="material-management-panel" id="material-management-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
                             <span>Material</span>
                         </a>
@@ -391,16 +398,88 @@
     z-index: 1000;
     border-radius: 4px;
 }
+.skip-link:focus { top: 10px; }
+:focus-visible { outline: 3px solid #ffbf47; outline-offset: 2px; }
 
-.skip-link:focus {
-    top: 10px;
+/* Header - Match reference design */
+.header-top-bar {
+    background: #122442;
+    height: 40px;
+    border: none;
+}
+.header-flag-icon { height: 20px; }
+.header-utility-nav .header-utility-sep {
+    width: 1px;
+    height: 16px;
+    background: rgba(255,255,255,0.5);
+    margin: 0 8px;
+    display: inline-block;
+}
+.header-font-btn { text-decoration: none !important; }
+.header-lang-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 6px;
+    padding: 4px 10px;
+}
+.header-globe-icon { font-size: 18px !important; color: #fff !important; }
+.header-lang-select {
+    background: transparent !important;
+    border: none !important;
+    color: #fff !important;
+    font-size: 0.875rem;
+    padding: 2px 4px;
+    min-width: 80px;
+}
+.header-lang-select option { background: #122442; color: #fff; }
+
+/* Main nav bar - white background */
+.with-vertical .navbar { background: #fff !important }
+.header-brand { gap: 8px !important; }
+.header-logo-emblem { height: 40px; }
+.header-logo { height: 32px; }
+.header-app-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #004a93;
 }
 
-/* Improve focus visibility (GIGW) */
-:focus-visible {
-    outline: 3px solid #ffbf47;
-    outline-offset: 2px;
+/* Nav container - light grey pill */
+.header-main-nav {
+    background: #f0f0f0 !important;
+    border-radius: 12px;
+    height: 48px;
+    border: 1px solid rgba(0,0,0,0.05);
 }
+.header-nav-link {
+    color: #6c757d !important;
+    border-radius: 8px;
+    text-decoration: none !important;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+}
+.header-nav-link:hover { color: #495057 !important; }
+.header-nav-link.active {
+    color: #004a93 !important;
+    border-bottom-color: #004a93;
+    font-weight: 500;
+}
+.header-search-btn {
+    background: transparent !important;
+    border: none !important;
+    color: #6c757d !important;
+    padding: 6px 10px !important;
+    border-radius: 8px;
+}
+.header-search-btn:hover { color: #004a93 !important; }
+
+/* Right side */
+.header-right-actions { margin-right: 1rem; }
+.header-icon-sm { font-size: 24px !important; }
+.header-logout-icon { font-size: 24px !important; }
+.header-last-login { font-size: 0.8125rem; }
 
             @media (max-width: 991.98px) {
                 body {
@@ -1181,9 +1260,14 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
 </script>
 
 <!-- Fallback Tab Switcher (if Bootstrap JS not active) -->
+<script>
+    // Server-computed active tab (from PHP) - used for route-based tab highlighting
+    window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Include both desktop and mobile tabs
@@ -1255,20 +1339,19 @@ document.addEventListener('DOMContentLoaded', function() {
         document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 UTC; path=/;';
     }
 
-    // Determine initial tab based on current route
-    // BUT: respect fresh_login flag - always show home after login
+    // Determine initial tab: fresh login -> home; otherwise use route-based or saved tab
     const isFromLogin = getCookie('fresh_login');
     let initial;
     
     if (isFromLogin) {
         console.log('Fresh login detected - forcing home tab');
         initial = '#home';
-        deleteCookie('fresh_login'); // Clear the flag
-        localStorage.removeItem('activeMainTab'); // Clear saved tab
+        deleteCookie('fresh_login');
+        localStorage.removeItem('activeMainTab');
     } else {
-        const routeTab = detectRouteTab();
-        const savedTab = localStorage.getItem('activeMainTab') || routeTab;
-        initial = savedTab || '#home';
+        const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+        const savedTab = localStorage.getItem('activeMainTab');
+        initial = savedTab || routeTab || '#home';
         console.log('Initial tab:', initial);
     }
     

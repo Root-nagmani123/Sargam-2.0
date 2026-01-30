@@ -62,6 +62,10 @@
         font-size: 0.95rem;
     }
 
+    .form-select {
+        cursor: pointer;
+    }
+
     .form-control:hover,
     .form-select:hover {
         border-color: #ced4da;
@@ -379,6 +383,24 @@
     .modal-dialog .select2-container {
         width: 100% !important;
     }
+
+    /* Fix Select2 dropdown mouse-click: ensure dropdown and options are above modal and clickable */
+    #eventModal .select2-dropdown,
+    #eventModal .select2-container--default .select2-results__options,
+    .modal-dialog .select2-dropdown,
+    .modal-dialog .select2-container--default .select2-results__options {
+        z-index: 1060 !important;
+        pointer-events: auto !important;
+    }
+    #eventModal .select2-container--default .select2-results__option,
+    .modal-dialog .select2-container--default .select2-results__option {
+        pointer-events: auto !important;
+        cursor: pointer !important;
+    }
+    #eventModal .select2-container--default.select2-container--open,
+    .modal-dialog .select2-container--default.select2-container--open {
+        z-index: 1060 !important;
+    }
 </style>
 
 <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
@@ -387,22 +409,20 @@
             @csrf
             <div class="modal-content">
                 <!-- Modal Header -->
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header bg-primary text-white py-3">
                     <div class="d-flex flex-column w-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="modal-title h5 mb-0 text-white" id="eventModalTitle">Add Calendar Event</h2>
-                            &nbsp;&nbsp;&nbsp;&nbsp;
-                            <label for="start_datetime" class="form-label text-white me-2 mb-0">
-                                <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>Date:
-                            </label>
-                            <input type="date" name="start_datetime" id="start_datetime"
-                                class="form-control form-control-sm w-auto text-white" required aria-required="true">
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
-
-                        </div>
-                        <div class="mt-2 d-flex align-items-center">
-
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <h2 class="modal-title h5 mb-0 text-white fw-semibold" id="eventModalTitle">Add Calendar Event</h2>
+                            <div class="d-flex align-items-center gap-2">
+                                <label for="start_datetime" class="form-label text-white mb-0 small">
+                                    <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>Date
+                                </label>
+                                <input type="date" name="start_datetime" id="start_datetime"
+                                    class="form-control form-control-sm w-auto bg-white bg-opacity-25 border-0 text-white" required aria-required="true"
+                                    style="max-width: 10rem;">
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -410,7 +430,7 @@
                 <!-- Modal Body -->
                 <div class="modal-body">
                     <!-- Basic Information -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="basicInfoHeading">
+                    <section class="mb-4 p-4 bg-white rounded-4 shadow-sm border border-opacity-10" aria-labelledby="basicInfoHeading">
                         <h3 id="basicInfoHeading" class="h6 text-primary mb-3 fw-semibold">
                             <i class="bi bi-info-circle-fill me-2"></i>Basic Information
                         </h3>
@@ -419,7 +439,7 @@
                                 <label for="Course_name" class="form-label required">
                                     <i class="bi bi-book"></i>Course Name
                                 </label>
-                                <select name="Course_name" id="Course_name" class="form-control" required
+                                <select name="Course_name" id="Course_name" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Course</option>
                                     @foreach($courseMaster as $course)
@@ -432,7 +452,7 @@
                                 <label for="group_type" class="form-label required">
                                     <i class="bi bi-people"></i>Group Type
                                 </label>
-                                <select name="group_type" id="group_type" class="form-control" required
+                                <select name="group_type" id="group_type" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Group Type</option>
                                 </select>
@@ -442,7 +462,7 @@
                                 <label class="form-label required">
                                     <i class="bi bi-tag"></i>Group Type Name
                                 </label>
-                                <div id="type_name_container" class="border rounded p-3 bg-light-subtle">
+                                <div id="type_name_container" class="border rounded-3 p-3 bg-light-subtle">
                                     <div class="text-center text-muted" id="groupTypePlaceholder">
                                         <i class="bi bi-arrow-right-circle me-2"></i>Select a Group Type first
                                     </div>
@@ -456,7 +476,7 @@
                                 <label for="subject_module" class="form-label required">
                                     <i class="bi bi-grid-3x3"></i>Subject Module
                                 </label>
-                                <select name="subject_module" id="subject_module" class="form-control" required
+                                <select name="subject_module" id="subject_module" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Subject Module</option>
                                     @foreach($subjects as $subject)
@@ -471,7 +491,7 @@
                                 <label for="subject_name" class="form-label required">
                                     <i class="bi bi-journal-text"></i>Subject Name
                                 </label>
-                                <select name="subject_name" id="subject_name" class="form-control" required
+                                <select name="subject_name" id="subject_name" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Subject Name</option>
                                 </select>
@@ -488,7 +508,7 @@
                     </section>
 
                     <!-- Faculty & Venue -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="facultyVenueHeading">
+                    <section class="mb-4 p-4 bg-white rounded-4 shadow-sm border border-opacity-10" aria-labelledby="facultyVenueHeading">
                         <h3 id="facultyVenueHeading" class="h6 text-primary mb-3 fw-semibold">
                             <i class="bi bi-person-badge me-2"></i>Faculty & Venue
                         </h3>
@@ -510,7 +530,7 @@
                                 <label for="faculty_type" class="form-label required">
                                     <i class="bi bi-diagram-3"></i>Faculty Type
                                 </label>
-                                <select name="faculty_type" id="faculty_type" class="form-control" required
+                                <select name="faculty_type" id="faculty_type" class="form-select" required
                                     aria-required="true">
                                     <option value="">Select Faculty Type</option>
                                     <option value="1">Internal</option>
@@ -524,7 +544,7 @@
                                 <label for="vanue" class="form-label required">
                                     <i class="bi bi-geo-alt"></i>Location
                                 </label>
-                                <select name="vanue" id="vanue" class="form-control" required aria-required="true">
+                                <select name="vanue" id="vanue" class="form-select" required aria-required="true">
                                     <option value="">Select Location</option>
                                     @foreach($venueMaster as $loc)
                                     <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
@@ -548,7 +568,7 @@
                     </section>
 
                     <!-- Schedule -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="scheduleHeading">
+                    <section class="mb-4 p-4 bg-white rounded-4 shadow-sm border border-opacity-10" aria-labelledby="scheduleHeading">
                         <h3 id="scheduleHeading" class="h6 text-primary mb-3 fw-semibold">
                             <i class="bi bi-clock-history me-2"></i>Schedule
                         </h3>
@@ -575,7 +595,7 @@
                             <label for="shift" class="form-label required">
                                 <i class="bi bi-calendar-range"></i>Shift
                             </label>
-                            <select name="shift" id="shift" class="form-control" required aria-required="true">
+                            <select name="shift" id="shift" class="form-select" required aria-required="true">
                                 <option value="">Select Shift</option>
                                 @foreach($classSessionMaster as $shift)
                                 <option value="{{ $shift->shift_time }}">
@@ -694,11 +714,11 @@
                 </div>
 
                 <!-- Modal Footer -->
-                <div class="modal-footer">
+                <div class="modal-footer flex-wrap gap-2 py-3 border-top bg-light">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary" id="submitEventBtn">
+                    <button type="submit" class="btn btn-primary px-4" id="submitEventBtn">
                         <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
                         <span class="btn-text">Add Event</span>
                     </button>
@@ -710,6 +730,15 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Allow Select2 dropdown to receive focus/clicks inside Bootstrap 5 modal (fix mouse-click on options)
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal && bootstrap.Modal.prototype._enforceFocus) {
+        var _enforceFocus = bootstrap.Modal.prototype._enforceFocus;
+        bootstrap.Modal.prototype._enforceFocus = function() {
+            if ($(document).find('.select2-container--open').length) return;
+            _enforceFocus.apply(this, arguments);
+        };
+    }
+
     const feedbackToggle = document.getElementById('feedback_checkbox');
     const feedbackOptions = document.getElementById('feedbackOptions');
     const remark = document.getElementById('remarkCheckbox');
@@ -736,17 +765,18 @@ document.addEventListener('DOMContentLoaded', function() {
     const faculty_type = document.getElementById('faculty_type');
     // internalFacultyDiv.style.display = 'none'; // Hide initially
 
-    // Initialize Select2 when modal is shown
+    // Initialize Select2 when modal is shown (dropdownParent = modal so dropdown is inside modal and mouse clicks work)
     $('#eventModal').on('shown.bs.modal', function() {
-        var modalDialog = $('#eventModal').find('.modal-dialog');
-    
-        // Initialize Select2 for faculty field with enhanced styling
+        var $modal = $('#eventModal');
+        var dropdownParent = $modal; // attach to modal so dropdown is inside modal and mouse clicks work
+
+        // Initialize Select2 for faculty field with dropdown inside modal for correct stacking/click
         if (!$('#faculty').hasClass('select2-hidden-accessible')) {
             $('#faculty').select2({
                 placeholder: '👤 Select Faculty',
                 allowClear: true,
                 width: '100%',
-                dropdownParent: modalDialog,
+                dropdownParent: dropdownParent,
                 theme: 'default',
                 selectionCssClass: 'select2-modern',
                 dropdownCssClass: 'select2-modern-dropdown'
@@ -765,7 +795,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 placeholder: '👥 Select Internal Faculty',
                 allowClear: true,
                 width: '100%',
-                dropdownParent: modalDialog,
+                dropdownParent: dropdownParent,
                 theme: 'default',
                 selectionCssClass: 'select2-modern',
                 dropdownCssClass: 'select2-modern-dropdown'
