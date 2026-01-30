@@ -52075,17 +52075,15 @@ h6 {
     opacity: 20%;
 }
 .navbar-nav .nav-link.active {
-    background-color: #B12923;
-    color: #fbf8f8 !important;
+    background-color: transparent;
+    color: #004a93 !important;
     font-size: 16px !important;
     line-height: 24px;
     font-weight: 500 !important;
     padding: 20px !important;
-    border-radius: 26px !important;
     Width: 100% !important;
     Height: 40px !important;
     text-align: center !important;
     justify-content: center !important;
     transition: all 0.3s ease-in-out;
-    box-shadow: 3px 0 3px 0 rgba(232, 191, 189, 0.8);
 }

@@ -9,51 +9,66 @@
     <x-breadcrum title="Member" />
     <x-session_message />
 
-    <!-- start Vertical Steps Example -->
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-0">Add Member</h4>
-            <h6 class="card-subtitle mb-3"></h6>
-            <hr>
-
+    <!-- Add Member Wizard -->
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-header bg-white border-0 py-4 px-4">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-3 bg-primary bg-opacity-10 p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="text-primary" viewBox="0 0 16 16">
+                        <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10c-2.29 0-3.516.68-4.168 1.332-.678.678-.83 1.418-.832 1.664z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="card-title mb-1 fw-semibold text-dark">Add Member</h4>
+                    <p class="text-body-secondary small mb-0">Complete the steps below to register a new member.</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-4">
             <form id="member-form" enctype="multipart/form-data">
                 @csrf
-                <div id="wizard" class="wizard clearfix vertical">
-                    <h3>Member Information</h3>
+                <div id="wizard" class="wizard clearfix vertical mt-2">
+                    <h3 class="fw-semibold text-body">Member Information</h3>
                     <section id="step-1" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
                         <div class="text-center py-5">
-                            <div class="spinner-border" role="status">
+                            <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
                                 <span class="visually-hidden">Loading...</span>
                             </div>
+                            <p class="text-body-secondary mt-3 small">Loading step...</p>
                         </div>
                     </section>
 
-                    <h3>Employment Details</h3>
-                    <section id="step-2" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
+                    <h3 class="fw-semibold text-body">Employment Details</h3>
+                    <section id="step-2" class="step-section"></section>
 
-                    <h3>Role Assignment</h3>
-                    <section id="step-3" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
+                    <h3 class="fw-semibold text-body">Role Assignment</h3>
+                    <section id="step-3" class="step-section"></section>
 
-                    <h3>Contact Information</h3>
-                    <section id="step-4" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
+                    <h3 class="fw-semibold text-body">Contact Information</h3>
+                    <section id="step-4" class="step-section"></section>
 
-                    <h3>Additional Details</h3>
-                    <section id="step-5" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
+                    <h3 class="fw-semibold text-body">Additional Details</h3>
+                    <section id="step-5" class="step-section"></section>
                 </div>
             </form>
-
         </div>
     </div>
-    <!-- end Vertical Steps Example -->
+
+    <style>
+        /* Modern wizard step list (jQuery Steps vertical) */
+        #wizard.wizard.vertical > .steps { padding-right: 1.5rem; }
+        #wizard.wizard.vertical .steps ul { list-style: none; padding: 0; margin: 0; }
+        #wizard.wizard.vertical .steps li { position: relative; padding: 0.6rem 0 0.6rem 2.25rem; }
+        #wizard.wizard.vertical .steps li .number { position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1.75rem; height: 1.75rem; border-radius: 50%; background: var(--bs-secondary-bg); color: var(--bs-secondary-color); font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; justify-content: center; transition: background .2s, color .2s; }
+        #wizard.wizard.vertical .steps li.current .number { background: var(--bs-primary); color: #fff; }
+        #wizard.wizard.vertical .steps li.done .number { background: var(--bs-success); color: #fff; }
+        #wizard.wizard.vertical .steps li a { color: inherit; text-decoration: none; font-size: 0.9375rem; }
+        #wizard.wizard.vertical .steps li.current a { color: #ffffff; font-weight: 600; }
+        #wizard.wizard.vertical .content { min-height: 200px; border: 1px solid var(--bs-border-color); border-radius: 0.5rem; padding: 1.25rem 1.5rem; background: var(--bs-body-bg); }
+        #wizard.wizard.vertical .actions { padding-top: 1.25rem; }
+        #wizard.wizard.vertical .actions a, #wizard.wizard.vertical .actions input { border-radius: 0.375rem; font-weight: 500; padding: 0.5rem 1rem; }
+        #wizard.wizard.vertical .actions .disabled a { opacity: 0.6; cursor: not-allowed; }
+    </style>
 </div>
 
 @section('scripts')
@@ -86,7 +101,7 @@ $(document).ready(function() {
             let canProceed = false;
 
             $.ajax({
-                url: `/member/validate-step/${currentIndex + 1}`,
+                url: "{{ url('member/validate-step') }}/" + (currentIndex + 1),
                 method: "POST",
                 data: stepData + '&_token={{ csrf_token() }}',
                 async: false,
@@ -176,7 +191,7 @@ $(document).ready(function() {
         const stepSection = $(`#wizard-p-${stepNumber - 1}`);
 
         $.ajax({
-            url: `/member/step/${stepNumber}`,
+            url: "{{ route('member.load-step', ['step' => 'STEP_NUM']) }}".replace('STEP_NUM', stepNumber),
             method: "GET",
             success: function(html) {
                 stepSection.html(html);
