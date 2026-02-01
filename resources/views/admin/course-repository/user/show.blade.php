@@ -6,6 +6,7 @@
 <!-- Main Content -->
 <!-- Title Section with Back Button -->
 <div class="container-fluid">
+    @if(isset($repository) && $repository)
     <div class="title-section mb-4">
         <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
@@ -13,13 +14,13 @@
                     class="btn-back btn btn-link p-0 text-decoration-none" aria-label="Go back">
                     <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
                 </button>
-                <h1 class="h2 mb-0 fw-bold text-dark">{{ $repository->course_repository_name }}</h1>
+                <h1 class="h2 mb-0 fw-bold text-dark">{{ $repository->course_repository_name ?? 'Repository Details' }}</h1>
             </div>
         </div>
     </div>
 
     <!-- Breadcrumb Navigation -->
-    @if (!empty($ancestors) || $repository->parent)
+    @if (!empty($ancestors) || isset($repository->parent))
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item">
@@ -39,12 +40,23 @@
         </ol>
     </nav>
     @endif
+    @else
+    <div class="title-section mb-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <button type="button" onclick="window.history.back()"
+                    class="btn-back btn btn-link p-0 text-decoration-none" aria-label="Go back">
+                    <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
+                </button>
+                <h1 class="h2 mb-0 fw-bold text-dark">Filtered Documents</h1>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 <div class="d-flex" id="main-content">
     <!-- Left Sidebar -->
-    <aside class="course-sidebar-wrapper">
-        <x-course-sidebar />
-    </aside>
+    
 
     <!-- Main Content -->
     <main class="flex-grow-1">
@@ -52,16 +64,25 @@
             <!-- Filter Card -->
             @if(isset($courses) && isset($subjects) && isset($faculties))
             @include('admin.course-repository.user.partials.filter-card', [
-            'route' => route('admin.course-repository.user.show', $repository->pk),
-            'courses' => $courses,
-            'subjects' => $subjects,
-            'faculties' => $faculties,
-            'filters' => $filters ?? [],
+                'route' => isset($repository) && $repository ? route('admin.course-repository.user.show', $repository->pk) : route('admin.course-repository.user.index'),
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => $filters ?? [],
             ])
             @endif
 
-            @if($repository->children->count() == 0 && $documents->count() == 0)
-            <!-- Empty State -->
+            @if((!isset($repository) || !$repository) && isset($documents) && $documents->count() == 0)
+            <!-- Empty State - No documents found for filters -->
+            <div class="card shadow-sm">
+                <div class="card-body text-center py-5">
+                    <span class="material-icons material-symbols-rounded"
+                        style="font-size: 48px; color: #ccc;">inbox</span>
+                    <p class="text-muted mt-3">No documents found matching your filters.</p>
+                </div>
+            </div>
+            @elseif(isset($repository) && $repository && isset($repository->children) && $repository->children->count() == 0 && isset($documents) && $documents->count() == 0)
+            <!-- Empty State - Repository has no content -->
             <div class="card shadow-sm">
                 <div class="card-body text-center py-5">
                     <span class="material-icons material-symbols-rounded"
@@ -71,7 +92,7 @@
             </div>
             @else
             <!-- Child Repositories Section -->
-            @if($repository->children->count() > 0)
+            @if(isset($repository) && $repository && $repository->children->count() > 0)
             <div class="course-cards-grid mb-4">
                 <div class="row g-4">
                     @foreach ($repository->children as $child)

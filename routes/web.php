@@ -681,6 +681,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
     Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
     
+
+
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
     Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
@@ -713,6 +715,7 @@ Route::get('/course-repository-user/foundation-course/{courseCode}/week/{weekNum
 Route::get('/course-repository-user/document/{documentId}/details', [CourseRepositoryController::class, 'documentDetails'])->name('admin.course-repository.user.document-details');
 Route::get('/course-repository-user/document/{documentId}/view', [CourseRepositoryController::class, 'documentView'])->name('admin.course-repository.user.document-view');
 Route::get('/course-repository-user/document/{documentId}/video', [CourseRepositoryController::class, 'documentVideo'])->name('admin.course-repository.user.document-video');
+Route::get('/course-repository-user/filter-data', [CourseRepositoryController::class, 'filterData'])->name('admin.course-repository.user.filter-data');
 Route::get('/course-repository-user/{pk}', [CourseRepositoryController::class, 'userShow'])->name('admin.course-repository.user.show');
 
     // Feedback Database Routes
