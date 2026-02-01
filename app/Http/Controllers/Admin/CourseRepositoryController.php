@@ -1521,4 +1521,83 @@ class CourseRepositoryController extends Controller
             'faculty' => $request->query('faculty'),
         ];
     }
+    function filterData(Request $request)
+    {
+        try {
+            $date = $request->query('date');
+            $coursePk = $request->query('course');
+            $subjectPk = $request->query('subject');
+            $week = $request->query('week');
+            $facultyPk = $request->query('faculty');
+
+ $documentsQuery = CourseRepositoryDocument::with([
+                'detail.course',
+                'detail.subject',
+                'detail.topic',
+                'detail.sector',
+                'detail.ministry',
+                'detail.author'
+            ])
+                ->where('del_type', 1);
+              
+
+            // Apply filters if provided
+            $date = $request->query('date');
+            $coursePk = $request->query('course');
+            $subjectPk = $request->query('subject');
+            $facultyPk = $request->query('faculty');
+
+            if ($date || $coursePk || $subjectPk || $facultyPk) {
+                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
+                    if ($coursePk) {
+                        $detailQuery->where('course_master_pk', $coursePk);
+                    }
+                    if ($subjectPk) {
+                        $detailQuery->where('subject_pk', $subjectPk);
+                    }
+                    if ($date) {
+                        $detailQuery->whereDate('session_date', $date);
+                    }
+                    if ($facultyPk) {
+                        $detailQuery->where('author_name', $facultyPk);
+                    }
+                });
+            }
+
+            $documents = $documentsQuery->orderBy('pk', 'desc')->get();
+            // print_r($documents->toArray()); exit;
+
+             $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
+            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+            $faculties = FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get();
+            $repository = null; // Filtered view - no specific repository
+            $documents_count_array = []; // You need to define how to get the documents count array here
+            $ancestors = []; // You need to define how to get the ancestors here
+            return view('admin.course-repository.user.show', [
+                'repository' => $repository,
+                'documents' => $documents,
+                'ancestors' => $ancestors,
+                'documents_count_array' => $documents_count_array,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => [
+                    'date' => $date,
+                    'course' => $coursePk,
+                    'subject' => $subjectPk,
+                    'week' => $request->query('week'),
+                    'faculty' => $facultyPk,
+                ],
+            ]);
+
+          
+        } catch (Exception $e) {
+            Log::error('Error in filterData: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to filter data');
+        }
+        
+    }
 }
