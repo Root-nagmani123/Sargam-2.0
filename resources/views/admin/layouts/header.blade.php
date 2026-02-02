@@ -40,7 +40,7 @@
     Skip to main content
 </a>
 
-<header class="header-top-bar">
+<header class="header-top-bar d-none d-lg-block">
 <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
 
 <!-- Left: Government Identity -->
