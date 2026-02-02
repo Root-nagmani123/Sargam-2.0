@@ -40,4 +40,14 @@ class FamilyIDCardRequest extends Model
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
+
+    /**
+     * Retrieve the model for a bound value (allows viewing archived records).
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $field = $field ?? $this->getRouteKeyName();
+
+        return static::withTrashed()->where($field, $value)->firstOrFail();
+    }
 }

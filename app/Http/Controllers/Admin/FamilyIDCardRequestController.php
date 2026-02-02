@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Exports\FamilyIDCardExport;
 use App\Models\FamilyIDCardRequest;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
 
 class FamilyIDCardRequestController extends Controller
 {
@@ -14,11 +17,16 @@ class FamilyIDCardRequestController extends Controller
      */
     public function index()
     {
-        $requests = FamilyIDCardRequest::latest()
+        $activeRequests = FamilyIDCardRequest::latest()
             ->paginate(200);
 
+        $archivedRequests = FamilyIDCardRequest::onlyTrashed()
+            ->latest()
+            ->paginate(200, ['*'], 'archive_page');
+
         return view('admin.family_idcard.index', [
-            'requests' => $requests,
+            'activeRequests' => $activeRequests,
+            'archivedRequests' => $archivedRequests,
         ]);
     }
 
@@ -171,6 +179,81 @@ class FamilyIDCardRequestController extends Controller
 
         return redirect()
             ->route('admin.family_idcard.index')
-            ->with('success', 'Family ID Card request deleted successfully!');
+            ->with('success', 'Family ID Card request archived successfully!');
+    }
+
+    /**
+     * Restore a soft deleted family ID card request.
+     */
+    public function restore($id)
+    {
+        $familyIDCardRequest = FamilyIDCardRequest::onlyTrashed()->findOrFail($id);
+        $familyIDCardRequest->restore();
+
+        return redirect()
+            ->route('admin.family_idcard.index')
+            ->with('success', 'Family ID Card request restored successfully!');
+    }
+
+    /**
+     * Force delete a soft deleted family ID card request permanently.
+     */
+    public function forceDelete($id)
+    {
+        $familyIDCardRequest = FamilyIDCardRequest::onlyTrashed()->findOrFail($id);
+        $familyIDCardRequest->forceDelete();
+
+        return redirect()
+            ->route('admin.family_idcard.index')
+            ->with('success', 'Family ID Card request deleted permanently!');
+    }
+
+    /**
+     * Export family ID card requests to Excel, CSV or PDF.
+     */
+    public function export(Request $request)
+    {
+        $tab = $request->get('tab', 'active');
+        $format = $request->get('format', 'xlsx');
+
+        if (! in_array($tab, ['active', 'archive', 'all'])) {
+            $tab = 'active';
+        }
+
+        $filename = 'family_idcard_requests_' . $tab . '_' . now()->format('Y-m-d_His');
+
+        if ($format === 'pdf') {
+            $query = match ($tab) {
+                'archive' => FamilyIDCardRequest::onlyTrashed()->latest(),
+                'all' => FamilyIDCardRequest::withTrashed()->latest(),
+                default => FamilyIDCardRequest::latest(),
+            };
+            $requests = $query->get();
+
+            $pdf = Pdf::loadView('admin.family_idcard.export_pdf', [
+                'requests' => $requests,
+                'tab' => $tab,
+                'export_date' => now()->format('d/m/Y H:i'),
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOption('isHtml5ParserEnabled', true)
+                ->setOption('isRemoteEnabled', true);
+
+            return $pdf->download($filename . '.pdf');
+        }
+
+        if ($format === 'csv') {
+            return Excel::download(
+                new FamilyIDCardExport($tab),
+                $filename . '.csv',
+                \Maatwebsite\Excel\Excel::CSV
+            );
+        }
+
+        return Excel::download(
+            new FamilyIDCardExport($tab),
+            $filename . '.xlsx',
+            \Maatwebsite\Excel\Excel::XLSX
+        );
     }
 }

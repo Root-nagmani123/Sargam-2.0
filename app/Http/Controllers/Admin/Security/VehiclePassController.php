@@ -3,29 +3,87 @@
 namespace App\Http\Controllers\Admin\Security;
 
 use App\Http\Controllers\Controller;
+use App\Exports\VehiclePassExport;
 use App\Models\VehiclePassTWApply;
 use App\Models\VehiclePassTWApplyApproval;
 use App\Models\SecVehicleType;
 use App\Models\EmployeeMaster;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class VehiclePassController extends Controller
 {
     public function index()
     {
         $user = Auth::user();
-        
-        // Get employee pk from user credentials
         $employeePk = $user->user_id ?? null;
 
-        $vehiclePasses = VehiclePassTWApply::with(['vehicleType', 'employee', 'approval'])
+        $baseQuery = fn () => VehiclePassTWApply::with(['vehicleType', 'employee', 'approval'])
             ->where('veh_created_by', $employeePk)
-            ->orderBy('created_date', 'desc')
-            ->paginate(10);
+            ->orderBy('created_date', 'desc');
 
-        return view('admin.security.vehicle_pass.index', compact('vehiclePasses'));
+        $activePasses = $baseQuery()->where('vech_card_status', 1)->paginate(10);
+        $archivedPasses = $baseQuery()->whereIn('vech_card_status', [2, 3])->paginate(10, ['*'], 'archive_page');
+
+        return view('admin.security.vehicle_pass.index', compact('activePasses', 'archivedPasses'));
+    }
+
+    /**
+     * Export vehicle pass requests to Excel, CSV or PDF.
+     */
+    public function export(Request $request)
+    {
+        $user = Auth::user();
+        $employeePk = $user->user_id ?? null;
+        $tab = $request->get('tab', 'active');
+        $format = $request->get('format', 'xlsx');
+
+        if (! in_array($tab, ['active', 'archive', 'all'])) {
+            $tab = 'active';
+        }
+
+        $filename = 'vehicle_pass_requests_' . $tab . '_' . now()->format('Y-m-d_His');
+
+        $baseQuery = VehiclePassTWApply::with(['vehicleType', 'employee'])
+            ->where('veh_created_by', $employeePk)
+            ->orderBy('created_date', 'desc');
+
+        if ($format === 'pdf') {
+            $query = match ($tab) {
+                'archive' => (clone $baseQuery)->whereIn('vech_card_status', [2, 3]),
+                'all' => clone $baseQuery,
+                default => (clone $baseQuery)->where('vech_card_status', 1),
+            };
+            $passes = $query->get();
+
+            $pdf = Pdf::loadView('admin.security.vehicle_pass.export_pdf', [
+                'passes' => $passes,
+                'tab' => $tab,
+                'export_date' => now()->format('d/m/Y H:i'),
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOption('isHtml5ParserEnabled', true)
+                ->setOption('isRemoteEnabled', true);
+
+            return $pdf->download($filename . '.pdf');
+        }
+
+        if ($format === 'csv') {
+            return Excel::download(
+                new VehiclePassExport($tab, $employeePk),
+                $filename . '.csv',
+                \Maatwebsite\Excel\Excel::CSV
+            );
+        }
+
+        return Excel::download(
+            new VehiclePassExport($tab, $employeePk),
+            $filename . '.xlsx',
+            \Maatwebsite\Excel\Excel::XLSX
+        );
     }
 
     public function create()
