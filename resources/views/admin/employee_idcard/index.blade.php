@@ -25,9 +25,60 @@
                 </button>
             </li>
         </ul>
-        <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-outline-primary idcard-create-btn px-4 py-2 rounded-pill shadow-sm">
-            Generate New ID Card
-        </a>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="dropdown">
+                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-pill shadow-sm" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">download</i>
+                    Export
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="exportDropdown">
+                    <li><h6 class="dropdown-header text-muted small text-uppercase">Active Requests</h6></li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'active', 'format' => 'xlsx']) }}">
+                            <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
+                            Export Excel
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'active', 'format' => 'csv']) }}">
+                            <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
+                            Export CSV
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header text-muted small text-uppercase">Archived Requests</h6></li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'archive', 'format' => 'xlsx']) }}">
+                            <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
+                            Export Excel
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'archive', 'format' => 'csv']) }}">
+                            <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
+                            Export CSV
+                        </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><h6 class="dropdown-header text-muted small text-uppercase">All Requests</h6></li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'all', 'format' => 'xlsx']) }}">
+                            <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
+                            Export Excel
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.employee_idcard.export', ['tab' => 'all', 'format' => 'csv']) }}">
+                            <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
+                            Export CSV
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-outline-primary idcard-create-btn px-4 py-2 rounded-pill shadow-sm">
+                Generate New ID Card
+            </a>
+        </div>
     </div>
 
     <!-- Table Card -->
@@ -227,6 +278,24 @@
 .idcard-index-tabs .nav-link.active {
     background: #004a93;
     color: #fff;
+}
+
+/* Export dropdown */
+.idcard-index-page .dropdown .btn-outline-success {
+    border-color: #198754;
+    color: #198754;
+    transition: all 0.2s ease;
+}
+.idcard-index-page .dropdown .btn-outline-success:hover {
+    background: #198754;
+    color: #fff;
+    transform: translateY(-1px);
+}
+.idcard-index-page .dropdown-menu .dropdown-item:hover {
+    background: #f8fafc;
+}
+.idcard-index-page .dropdown-menu .dropdown-item:active {
+    background: #e9ecef;
 }
 
 /* Generate New ID Card button */
