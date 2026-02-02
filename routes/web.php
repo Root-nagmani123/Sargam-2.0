@@ -629,7 +629,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
-    //change password work here 
+    //change password work here
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
@@ -680,7 +680,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
     Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
     Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
-    
+
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
@@ -688,10 +688,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
-    
+
     // AJAX endpoints for course repository
     Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
-    
+
     //course repository resource routes (MUST be after AJAX routes)
     Route::resource('course-repository', CourseRepositoryController::class, [
     'parameters' => ['course-repository' => 'pk']
