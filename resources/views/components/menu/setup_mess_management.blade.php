@@ -93,22 +93,12 @@
         <ul class="collapse list-unstyled ps-3" id="collapseMaterialManagement">
             <li class="sidebar-item">
                 <a class="sidebar-link" href="{{ route('admin.mess.material-management.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">All Material Management</span>
+                    <span class="hide-menu small small-sm-normal text-nowrap">Selling Voucher</span>
                 </a>
             </li>
             <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.material-management.create') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Create New Issue</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.material-management-approvals.index') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Pending Approvals</span>
-                </a>
-            </li>
-            <li class="sidebar-item">
-                <a class="sidebar-link" href="{{ route('admin.mess.material-management.bill-report') }}">
-                    <span class="hide-menu small small-sm-normal text-nowrap">Bill Reports</span>
+                <a class="sidebar-link" href="{{ route('admin.mess.selling-voucher-date-range.index') }}">
+                    <span class="hide-menu small small-sm-normal text-nowrap">Selling Voucher With Date Range</span>
                 </a>
             </li>
         </ul>
