@@ -189,21 +189,21 @@
     .offcanvas {
         width: 100% !important;
     }
-    
+
     .offcanvas-header {
         padding: 1rem;
         min-height: 70px;
     }
-    
+
     .offcanvas-title {
         font-size: 1.1rem;
     }
-    
+
     .chat-body {
         height: calc(100vh - 250px);
         padding: 1rem;
     }
-    
+
     .chat-message .message {
         max-width: 85%;
         font-size: 0.9rem;
@@ -528,7 +528,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                     @if(isset($noticeCount[$noticeKey]) && ($noticeCount[$noticeKey] >= 2) && $memo->type_notice_memo != 'Memo')
                                             <span class="position-relative d-inline-block ms-2">
                                                 <!-- Bell Icon -->
-                                                <i class="bi bi-bell-fill text-warning blink" 
+                                                <i class="bi bi-bell-fill text-warning blink"
                                                 title="{{ $noticeCount[$noticeKey] }} notices sent, please send memo"></i>
 
                                                 <!-- Count Badge -->
@@ -538,7 +538,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                             </span>
                                         @endif
 
-                                    @php 
+                                    @php
                                     $role = session()->get('role_name');
                                     @endphp
 
@@ -546,7 +546,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                      @if($memo->type_notice_memo == 'Notice')
                                     <a
                                         class="text-primary d-flex align-items-center view-conversation"
-                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="notice" 
+                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="notice"
                                         data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
                                         <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
                                     </a>
@@ -660,7 +660,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
         </div>
     </div>
     <!-- end Zero Configuration -->
-   
+
     <!-- Enhanced Offcanvas with GIGW Guidelines -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic" role="dialog">
         <div class="offcanvas-header">
@@ -671,9 +671,9 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                 </h4>
                 <h5 id="type_side_menu">Loading...</h5>
             </div>
-            <button type="button" 
-                    class="btn-close" 
-                    data-bs-dismiss="offcanvas" 
+            <button type="button"
+                    class="btn-close"
+                    data-bs-dismiss="offcanvas"
                     aria-label="Close conversation panel"
                     title="Close">
             </button>
@@ -883,10 +883,45 @@ $(document).ready(function() {
 <script>
 $(document).ready(function() {
     // Filter form submission on change
+    /*
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
         $('#filterForm').submit();
     });
-    
+    */
+    $('#filterForm').on('submit', function(e) {
+        e.preventDefault();
+    });
+
+
+    $('#program_name, #type, #status, #from_date, #to_date, #search').on('change keyup', function () {
+
+    let formData = $('#filterForm').serialize();
+
+    $.ajax({
+        url: "{{ route('memo.notice.management.index') }}",
+        type: "GET",
+        data: formData,
+        beforeSend: function () {
+            $('.table-responsive').css('opacity', '0.5');
+        },
+        success: function (response) {
+            let html = $(response).find('.table-responsive').html();
+            $('.table-responsive').html(html).css('opacity', '1');
+
+            // update URL without reload
+            window.history.replaceState({}, '', '?' + formData);
+        },
+        error: function () {
+            alert('Failed to apply filter');
+            $('.table-responsive').css('opacity', '1');
+        }
+    });
+});
+
+
+
+
+
     // Handle Generate Memo button (editable mode)
     $('.generate-memo-btn').on('click', function() {
         let memoId = $(this).data('id');
