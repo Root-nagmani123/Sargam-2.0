@@ -309,7 +309,7 @@ Route::middleware(['auth'])->group(function () {
     // ============================================
     // Security Management Routes (Vehicle & Visitor Pass)
     // ============================================
-    
+
     // Vehicle Type Master Routes
     Route::prefix('security/vehicle-type')->name('admin.security.vehicle_type.')->controller(\App\Http\Controllers\Admin\Security\VehicleTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
@@ -454,7 +454,18 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
             Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
+
+            Route::post(
+    'admin/memo-notice-management/filter', 'filter'
+)->name('filter');
+
+ Route::get(
+    'admin/memo-notice-management/filter', 'clear_filter'
+)->name('clear_filter');
+
         });
+
+
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
@@ -661,7 +672,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
     });
 
-    //change password work here 
+    //change password work here
     Route::get('/change_password', [UserController::class, 'change_password'])->name('admin.password.change_password');
 
     Route::post('/submit_change_password', [UserController::class, 'submit_change_password'])->name('admin.password.submit_change_password');
@@ -712,8 +723,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('course-repository/authors-by-topic', [CourseRepositoryController::class, 'getAuthorsByTopic'])->name('course-repository.authors-by-topic');
     Route::get('course-repository/groups', [CourseRepositoryController::class, 'getGroupsByCourse'])->name('course-repository.groups');
     Route::get('course-repository/timetables', [CourseRepositoryController::class, 'getTimetablesByGroup'])->name('course-repository.timetables');
-    
-
 
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
@@ -723,10 +732,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Search route
     Route::get('course-repository-search', [CourseRepositoryController::class, 'search'])->name('course-repository.search');
-    
+
     // AJAX endpoints for course repository
     Route::get('course-repository/ministries-by-sector', [CourseRepositoryController::class, 'getMynostriesBySector'])->name('course-repository.ministries-by-sector');
-    
+
     //course repository resource routes (MUST be after AJAX routes)
     Route::resource('course-repository', CourseRepositoryController::class, [
     'parameters' => ['course-repository' => 'pk']
@@ -778,7 +787,7 @@ Route::post('/admin/feedback/pending-students/export/excel', [FeedbackController
 // Issue Management Module Routes (CENTCOM)
 // ============================================
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-    
+
     // Issue Management - Main Routes
     Route::get('issue-management', [IssueManagementController::class, 'index'])->name('issue-management.index');
     Route::get('issue-management/centcom', [IssueManagementController::class, 'centcom'])->name('issue-management.centcom');
@@ -787,17 +796,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::get('issue-management/{id}', [IssueManagementController::class, 'show'])->name('issue-management.show');
     Route::get('issue-management/{id}/edit', [IssueManagementController::class, 'edit'])->name('issue-management.edit');
     Route::put('issue-management/{id}', [IssueManagementController::class, 'update'])->name('issue-management.update');
-    
+
     // AJAX Routes
     Route::get('issue-management/sub-categories/{categoryId}', [IssueManagementController::class, 'getSubCategories'])->name('issue-management.sub-categories');
     Route::post('issue-management/{id}/feedback', [IssueManagementController::class, 'addFeedback'])->name('issue-management.add-feedback');
-    
+
     // Category Management
     Route::get('issue-categories', [IssueCategoryController::class, 'index'])->name('issue-categories.index');
     Route::post('issue-categories', [IssueCategoryController::class, 'store'])->name('issue-categories.store');
     Route::put('issue-categories/{id}', [IssueCategoryController::class, 'update'])->name('issue-categories.update');
     Route::delete('issue-categories/{id}', [IssueCategoryController::class, 'destroy'])->name('issue-categories.destroy');
-    
+
     // Sub-Category Management
     Route::get('issue-sub-categories', [IssueSubCategoryController::class, 'index'])->name('issue-sub-categories.index');
     Route::post('issue-sub-categories', [IssueSubCategoryController::class, 'store'])->name('issue-sub-categories.store');
