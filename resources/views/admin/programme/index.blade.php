@@ -4,6 +4,12 @@
 
 @section('setup_content')
 <style>
+/* Programme Index - Bootstrap 5.3 enhanced UI */
+:root {
+    --programme-primary: #004a93;
+    --programme-primary-subtle: rgba(0, 74, 147, 0.08);
+}
+
 /* Fix dropdown visibility in table */
 .table-responsive {
     overflow: visible !important;
@@ -14,24 +20,20 @@
     vertical-align: middle;
 }
 
-.action-dropdown {
-    position: static;
-}
+.action-dropdown { position: static; }
 
 .dropdown-menu {
     z-index: 1050 !important;
     position: fixed !important;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
 }
 
-/* Ensure dropdown items are clickable */
-.dropdown-item {
-    cursor: pointer;
-}
+.dropdown-item { cursor: pointer; }
 
 .btn-group[role="group"] .btn {
-    transition: all 0.3s ease-in-out;
+    transition: all 0.25s ease;
     border-radius: 0;
-    /* Reset for pill-style container */
 }
 
 .btn-group[role="group"] .btn:first-child {
@@ -44,89 +46,89 @@
     border-bottom-right-radius: 50rem !important;
 }
 
-/* Hover + Active States */
-.btn-group .btn:hover {
-    transform: translateY(-1px);
-}
+.btn-group .btn:hover { transform: translateY(-1px); }
 
 .btn-group .btn.active {
-    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 123, 255, 0.3);
+    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 74, 147, 0.25);
 }
 
-/* Accessibility: Focus ring */
 .btn:focus-visible {
-    outline: 3px solid #0d6efd;
+    outline: 3px solid var(--programme-primary);
     outline-offset: 2px;
 }
+
+/* Table enhancements */
+#coursemaster-table_wrapper .dataTables_wrapper {
+    padding: 0;
+}
+
+#coursemaster-table thead th {
+    background: linear-gradient(180deg, var(--programme-primary) 0%, #003d7a 100%);
+    color: #fff !important;
+    font-weight: 600;
+    padding: 0.875rem 1rem;
+    border: none;
+    white-space: nowrap;
+}
+
+#coursemaster-table tbody tr:hover {
+    background-color: var(--programme-primary-subtle) !important;
+}
+
+#coursemaster-table .form-check-input:checked {
+    background-color: var(--programme-primary);
+    border-color: var(--programme-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-group .btn:hover { transform: none; }
+}
 </style>
-<div class="container-fluid">
+<div class="container-fluid px-3 px-md-4 py-3">
     <x-breadcrum title="Course Master" />
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
+        <div class="card border-0 shadow-sm rounded-3 overflow-hidden border-start border-4 border-primary">
+            <div class="card-body p-4 p-lg-5">
 
-               <section class="row align-items-center mb-4" role="region" aria-labelledby="courseMasterHeading">
+                <section class="row align-items-center mb-4" role="region" aria-labelledby="courseMasterHeading">
+                    <div class="col-md-4 col-lg-3">
+                        <h1 id="courseMasterHeading" class="h4 fw-bold mb-2 mb-md-0 d-flex align-items-center gap-2">
+                            <span class="rounded-2 p-2 bg-primary bg-opacity-10">
+                                <i class="bi bi-journal-bookmark-fill text-primary"></i>
+                            </span>
+                            Course Master
+                        </h1>
+                    </div>
+                    <div class="col-md-8 col-lg-9">
+                        <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
+                            <div class="btn-group shadow-sm rounded-pill" role="group" aria-label="Filter courses by status">
+                                <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
+                                    aria-pressed="true" aria-current="true">
+                                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                                    <span>Active</span>
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold" id="filterArchive"
+                                    aria-pressed="false">
+                                    <i class="bi bi-archive me-1" aria-hidden="true"></i>
+                                    <span>Archived</span>
+                                </button>
+                            </div>
+                            <a href="{{ route('programme.create') }}"
+                                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 shadow-sm"
+                                aria-label="Add a new course">
+                                <iconify-icon icon="ep:circle-plus-filled" aria-hidden="true"></iconify-icon>
+                                <span class="fw-semibold">Add Course</span>
+                            </a>
+                        </div>
+                    </div>
+                </section>
 
-    <!-- Page Title -->
-    <div class="col-md-4 col-lg-3">
-        <h1 id="courseMasterHeading" class="h4 fw-bold mb-2 mb-md-0">
-            Course Master
-        </h1>
-    </div>
+                <div class="border-top pt-4 mt-2"></div>
 
-    <!-- Controls -->
-    <div class="col-md-8 col-lg-9">
-        <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
-
-            <!-- Status Filter -->
-            <div class="btn-group shadow-sm rounded-pill"
-                 role="group"
-                 aria-label="Filter courses by status">
-                 
-                <button
-                    type="button"
-                    class="btn btn-success px-4 fw-semibold active"
-                    id="filterActive"
-                    aria-pressed="true"
-                    aria-current="true"
-                >
-                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
-                    <span>Active</span>
-                </button>
-
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary px-4 fw-semibold"
-                    id="filterArchive"
-                    aria-pressed="false"
-                >
-                    <i class="bi bi-archive me-1" aria-hidden="true"></i>
-                    <span>Archived</span>
-                </button>
-            </div>
-
-            <!-- Primary Action -->
-            <a
-                href="{{ route('programme.create') }}"
-                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4"
-                aria-label="Add a new course"
-            >
-                <iconify-icon icon="ep:circle-plus-filled" aria-hidden="true"></iconify-icon>
-                <span class="fw-semibold">Add Course</span>
-            </a>
-
-        </div>
-    </div>
-
-</section>
-
-                <hr>
-
-                <!-- Filter Buttons -->
-                <div class="row mb-3">
-                    <div class="col-4">
-                        <label for="courseFilter" class="form-label mb-1">Course Name</label>
+                <!-- Filters - Bootstrap 5.3 -->
+                <div class="row g-3 mb-4 align-items-end">
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <label for="courseFilter" class="form-label fw-semibold small text-body-secondary text-uppercase mb-2">Course Name</label>
                         <select id="courseFilter" class="form-select">
                             <option value="">All Courses</option>
                             @foreach($courses ?? [] as $pk => $name)
@@ -134,43 +136,46 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-2">
-                        <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2" id="resetFilters">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                            <span>Reset Filters</span>
                         </button>
                     </div>
                 </div>
+
                 <div class="table-responsive">
-                    {!! $dataTable->table(['class' => 'table']) !!}
+                    {!! $dataTable->table(['class' => 'table align-middle mb-0']) !!}
                 </div>
 
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
-<!-- Course View Modal -->
-<div class="modal fade" id="viewCourseModal" tabindex="-1" aria-labelledby="viewCourseModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="viewCourseModalLabel">Course Details</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+<!-- Course View Modal - Bootstrap 5.3 enhanced -->
+<div class="modal fade" id="viewCourseModal" tabindex="-1" aria-labelledby="viewCourseModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+            <div class="modal-header border-0 py-4 text-white" style="background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="viewCourseModalLabel">
+                    <i class="bi bi-info-circle-fill"></i>
+                    Course Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <div id="courseDetailsContent">
-                    <div class="text-center">
-                        <div class="spinner-border text-primary" role="status">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <p class="mt-2">Loading course details...</p>
+                        <p class="mt-3 text-body-secondary">Loading course details...</p>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-0 bg-body-tertiary py-3">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -359,66 +364,71 @@ $(document).ready(function() {
                 if (response.success) {
                     var course = response.course;
                     var content = `
-                            <div class="row">
-                                <div class="col-12">
-                                    <h4 class="text-primary mb-4">${course.course_name}</h4>
-                                </div>
+                            <div class="mb-4">
+                                <h4 class="fw-bold text-primary mb-0">${course.course_name}</h4>
+                                <span class="badge bg-primary bg-opacity-10 text-primary mt-2">${course.course_short_name || 'N/A'}</span>
                             </div>
                             
-                            <div class="row mb-3">
+                            <div class="row g-3 mb-4">
                                 <div class="col-md-6">
-                                    <strong>Course Short Name:</strong>
-                                    <p class="text-muted">${course.course_short_name || 'Not Available'}</p>
+                                    <div class="p-3 bg-body-tertiary rounded-3 border-start border-3 border-primary">
+                                        <label class="form-label small text-body-secondary text-uppercase fw-semibold mb-1">Course Short Name</label>
+                                        <p class="mb-0 fw-medium">${course.course_short_name || 'Not Available'}</p>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <strong>Course Year:</strong>
-                                    <p class="text-muted">${course.course_year || 'Not Available'}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <strong>Start Date:</strong>
-                                    <p class="text-muted">${course.start_date}</p>
+                                    <div class="p-3 bg-body-tertiary rounded-3 border-start border-3 border-primary">
+                                        <label class="form-label small text-body-secondary text-uppercase fw-semibold mb-1">Course Year</label>
+                                        <p class="mb-0 fw-medium">${course.course_year || 'Not Available'}</p>
+                                    </div>
                                 </div>
                                 <div class="col-md-6">
-                                    <strong>End Date:</strong>
-                                    <p class="text-muted">${course.end_date}</p>
+                                    <div class="p-3 bg-body-tertiary rounded-3 border-start border-3 border-info">
+                                        <label class="form-label small text-body-secondary text-uppercase fw-semibold mb-1">Start Date</label>
+                                        <p class="mb-0 fw-medium">${course.start_date}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            
-                            <hr>
-                            
-                            <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <strong>Course Coordinator:</strong>
-                                    <div class="d-flex align-items-center mt-2">
-                                        ${course.coordinator_photo ? 
-                                            `<img src="${course.coordinator_photo}" alt="Coordinator Photo" class="rounded-circle me-2" style="width: 50px; height: 50px; object-fit: cover;">` : 
-                                            `<div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-                                                <i class="bi bi-person text-white"></i>
-                                            </div>`
-                                        }
-                                        <span>${course.coordinator_name}</span>
+                                    <div class="p-3 bg-body-tertiary rounded-3 border-start border-3 border-info">
+                                        <label class="form-label small text-body-secondary text-uppercase fw-semibold mb-1">End Date</label>
+                                        <p class="mb-0 fw-medium">${course.end_date}</p>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="row mb-3">
-                                <div class="col-12">
-                                    <strong>Assistant Coordinators:</strong>
-                                    <div class="mt-2">
+                            <hr class="my-4">
+                            
+                            <div class="mb-4">
+                                <h6 class="fw-semibold text-body-secondary mb-3 d-flex align-items-center gap-2">
+                                    <i class="bi bi-person-badge-fill text-primary"></i>Course Coordinator
+                                </h6>
+                                <div class="d-flex align-items-center gap-3 p-3 bg-body-tertiary rounded-3">
+                                    ${course.coordinator_photo ? 
+                                        `<img src="${course.coordinator_photo}" alt="Coordinator" class="rounded-circle object-fit-cover" style="width: 48px; height: 48px;">` : 
+                                        `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 48px; height: 48px;">
+                                            <i class="bi bi-person text-white"></i>
+                                        </div>`
+                                    }
+                                    <span class="fw-semibold">${course.coordinator_name}</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h6 class="fw-semibold text-body-secondary mb-3 d-flex align-items-center gap-2">
+                                    <i class="bi bi-people-fill text-primary"></i>Assistant Coordinators
+                                </h6>
+                                <div class="d-flex flex-column gap-2">
                         `;
 
                     if (course.assistant_coordinators && course.assistant_coordinators.length > 0) {
                         course.assistant_coordinators.forEach(function(coordinator, index) {
                             var photo = course.assistant_coordinator_photos[index] || null;
                             content += `
-                                    <div class="d-flex align-items-center mb-2">
+                                    <div class="d-flex align-items-center gap-3 p-2 bg-body-tertiary rounded-3">
                                         ${photo ? 
-                                            `<img src="${photo}" alt="Assistant Coordinator Photo" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">` : 
-                                            `<div class="bg-secondary rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
-                                                <i class="bi bi-person text-white"></i>
+                                            `<img src="${photo}" alt="Assistant" class="rounded-circle object-fit-cover" style="width: 36px; height: 36px;">` : 
+                                            `<div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
+                                                <i class="bi bi-person text-white" style="font-size: 0.875rem;"></i>
                                             </div>`
                                         }
                                         <span>${coordinator}</span>
@@ -426,11 +436,10 @@ $(document).ready(function() {
                                 `;
                         });
                     } else {
-                        content += '<p class="text-muted">No Assistant Coordinators assigned</p>';
+                        content += '<p class="text-muted mb-0 py-2">No Assistant Coordinators assigned</p>';
                     }
 
                     content += `
-                                    </div>
                                 </div>
                             </div>
                         `;
